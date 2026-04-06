@@ -7,7 +7,6 @@ export function Hero() {
     <section
       ref={heroRef}
       className="relative min-h-screen flex flex-col items-center justify-center overflow-visible"
-      style={{ background: 'var(--plaster)' }}
     >
       {/* Background PSALMS Logo - Large Outline Style */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4">

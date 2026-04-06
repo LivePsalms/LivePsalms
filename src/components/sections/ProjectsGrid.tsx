@@ -21,10 +21,9 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
   const bottomRow = filteredProjects.slice(3, 7);
 
   return (
-    <section 
-      id="projects" 
+    <section
+      id="projects"
       className="py-16 md:py-24 px-4 md:px-8 lg:px-16"
-      style={{ background: 'var(--plaster)' }}
     >
       {/* Organic section title */}
       <div className="text-center mb-12 md:mb-16">

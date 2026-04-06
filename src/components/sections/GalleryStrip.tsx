@@ -30,7 +30,6 @@ export function GalleryStrip() {
     <div
       ref={scrollRef}
       className="relative w-full overflow-hidden py-12 md:py-16"
-      style={{ background: 'var(--plaster)' }}
     >
       {/* Soft gradient fade at top and bottom for seamless transition */}
       <div 

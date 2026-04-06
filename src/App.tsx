@@ -7,6 +7,7 @@ import { ProjectsGrid } from '@/components/sections/ProjectsGrid';
 import { ProjectDetail } from '@/components/sections/ProjectDetail';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
+import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import type { Project } from '@/types';
 import './App.css';
 
@@ -43,28 +44,33 @@ function App() {
       {/* Video Intro - plays on every page load */}
       {showIntro && <VideoIntro onComplete={handleIntroComplete} />}
       
-      <WaterRipple
-        rippleColor="rgba(40, 35, 30, 0.12)"
-        rippleDuration={1800}
-        maxRipples={6}
-        className="min-h-screen bg-mersi-beige"
-      >
-        <Header showNav={showNav} />
-        
-        {selectedProject ? (
-          <ProjectDetail 
-            project={selectedProject} 
-            onBack={handleBackToProjects} 
-          />
-        ) : (
-          <main>
-            <Hero />
-            <PinnedImageSection />
-            <GalleryStrip />
-            <ProjectsGrid onProjectClick={handleProjectClick} />
-          </main>
-        )}
-      </WaterRipple>
+      <div className="relative min-h-screen" style={{ background: 'var(--plaster)' }}>
+        <WaterRipple
+          rippleColor="rgba(40, 35, 30, 0.12)"
+          rippleDuration={1800}
+          maxRipples={6}
+          className="min-h-screen"
+        >
+          <OrganicBackdrop />
+          <div className="relative" style={{ zIndex: 1 }}>
+            <Header showNav={showNav} />
+
+            {selectedProject ? (
+              <ProjectDetail
+                project={selectedProject}
+                onBack={handleBackToProjects}
+              />
+            ) : (
+              <main>
+                <Hero />
+                <PinnedImageSection />
+                <GalleryStrip />
+                <ProjectsGrid onProjectClick={handleProjectClick} />
+              </main>
+            )}
+          </div>
+        </WaterRipple>
+      </div>
     </>
   );
 }

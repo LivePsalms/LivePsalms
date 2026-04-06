@@ -63,7 +63,6 @@ export function PinnedImageSection() {
     <section
       ref={sectionRef}
       className="relative h-screen w-full overflow-hidden"
-      style={{ background: "var(--plaster)" }}
     >
       {/* Organic decorative elements - soft circles */}
       <div 
