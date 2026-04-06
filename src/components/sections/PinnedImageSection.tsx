@@ -63,23 +63,8 @@ export function PinnedImageSection() {
     <section
       ref={sectionRef}
       className="relative h-screen w-full overflow-hidden"
+      style={{ marginBottom: '-30vh' }}
     >
-      {/* Organic decorative elements - soft circles */}
-      <div 
-        className="absolute pointer-events-none"
-        style={{
-          width: "60vw",
-          height: "60vw",
-          maxWidth: "800px",
-          maxHeight: "800px",
-          background: "radial-gradient(circle, rgba(188,179,163,0.08) 0%, transparent 70%)",
-          borderRadius: "50%",
-          top: "20%",
-          left: "50%",
-          transform: "translateX(-50%)",
-        }}
-      />
-
       {/* Verse - centered */}
       <div
         ref={verseRef}
