@@ -31,36 +31,37 @@ export function GalleryStrip() {
       ref={scrollRef}
       className="relative w-full overflow-hidden py-12 md:py-16"
     >
-      {/* Soft gradient fade at top and bottom for seamless transition */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-24 pointer-events-none z-10"
-        style={{ background: 'linear-gradient(180deg, var(--plaster) 0%, transparent 100%)' }}
-      />
-      <div 
-        className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none z-10"
-        style={{ background: 'linear-gradient(0deg, var(--plaster) 0%, transparent 100%)' }}
-      />
-      
       <div
-        className={`flex gap-6 animate-marquee transition-opacity duration-700 ${
+        className={`flex gap-6 items-center animate-marquee transition-opacity duration-700 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{ width: 'fit-content' }}
       >
-        {allImages.map((image, index) => (
-          <div
-            key={index}
-            className="flex-shrink-0 w-56 md:w-72 h-40 md:h-52 overflow-hidden"
-            style={{ borderRadius: '8px' }}
-          >
-            <img
-              src={image}
-              alt={`Gallery image ${index + 1}`}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-              loading="lazy"
-            />
-          </div>
-        ))}
+        {allImages.map((image, index) => {
+          // Cycle through varied heights so the strip's top/bottom edges aren't perfect lines
+          const heightCycle = [
+            { w: 'w-56 md:w-72', h: 'h-40 md:h-48' },
+            { w: 'w-60 md:w-80', h: 'h-44 md:h-56' },
+            { w: 'w-52 md:w-64', h: 'h-36 md:h-44' },
+            { w: 'w-64 md:w-80', h: 'h-48 md:h-60' },
+            { w: 'w-56 md:w-72', h: 'h-40 md:h-52' },
+          ];
+          const { w, h } = heightCycle[index % heightCycle.length];
+          return (
+            <div
+              key={index}
+              className={`flex-shrink-0 ${w} ${h} overflow-hidden`}
+              style={{ borderRadius: '2px' }}
+            >
+              <img
+                src={image}
+                alt={`Gallery image ${index + 1}`}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                loading="lazy"
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
