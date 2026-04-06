@@ -57,7 +57,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
 
   useLayoutEffect(() => {
     if (!flipStateRef.current || !gridRef.current) return;
-    Flip.from(flipStateRef.current, {
+    const tl = Flip.from(flipStateRef.current, {
       duration: 0.6,
       ease: 'power2.inOut',
       absolute: true,
@@ -68,6 +68,9 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
         gsap.to(elements, { opacity: 0, duration: 0.3 }),
     });
     flipStateRef.current = null;
+    return () => {
+      tl.kill();
+    };
   }, [filteredProjects]);
 
   return (
