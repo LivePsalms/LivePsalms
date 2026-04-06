@@ -1,8 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
+import { Flip } from 'gsap/all';
 import { projects } from '@/data/projects';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
 import { ProjectCard } from '@/components/ui-custom/ProjectCard';
 import type { FilterCategory, Project } from '@/types';
+
+gsap.registerPlugin(Flip);
 
 interface ProjectsGridProps {
   onProjectClick: (project: Project) => void;
@@ -34,11 +38,37 @@ const COL_SPAN_CLASS: Record<number, string> = {
 
 export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('residential');
+  const gridRef = useRef<HTMLDivElement>(null);
+  const flipStateRef = useRef<Flip.FlipState | null>(null);
 
   const filteredProjects = useMemo(() => {
     if (activeFilter === 'all') return projects;
     return projects.filter((project) => project.category === activeFilter);
   }, [activeFilter]);
+
+  const handleFilterChange = (next: FilterCategory) => {
+    if (gridRef.current) {
+      flipStateRef.current = Flip.getState(
+        gridRef.current.querySelectorAll('[data-flip-id]')
+      );
+    }
+    setActiveFilter(next);
+  };
+
+  useLayoutEffect(() => {
+    if (!flipStateRef.current || !gridRef.current) return;
+    Flip.from(flipStateRef.current, {
+      duration: 0.6,
+      ease: 'power2.inOut',
+      absolute: true,
+      stagger: 0.02,
+      onEnter: (elements) =>
+        gsap.fromTo(elements, { opacity: 0 }, { opacity: 1, duration: 0.4 }),
+      onLeave: (elements) =>
+        gsap.to(elements, { opacity: 0, duration: 0.3 }),
+    });
+    flipStateRef.current = null;
+  }, [filteredProjects]);
 
   return (
     <section
@@ -47,11 +77,11 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
     >
       {/* Filter Tabs */}
       <div className="px-4 md:px-8 mb-10 md:mb-14">
-        <FilterTabs activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+        <FilterTabs activeFilter={activeFilter} onFilterChange={handleFilterChange} />
       </div>
 
       {/* Editorial mosaic grid — fully edge-to-edge */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3">
+      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3">
         {/* "Selected Works" label as a grid cell, bottom-aligned, on first row */}
         <div className="md:col-span-3 flex items-end justify-start px-4 md:px-6 pb-2">
           <h2
