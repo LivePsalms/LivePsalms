@@ -11,14 +11,14 @@ interface ProjectsGridProps {
 // Editorial mosaic pattern. Each entry defines a card's column span (out of 12)
 // and aspect ratio. Pattern loops via index modulo. Each row's spans always sum to 12.
 const MOSAIC_PATTERN: Array<{ cols: number; ratio: string }> = [
-  { cols: 7, ratio: '4/3' },
-  { cols: 5, ratio: '3/4' },
-  { cols: 5, ratio: '1/1' },
-  { cols: 7, ratio: '16/9' },
-  { cols: 6, ratio: '4/3' },
-  { cols: 6, ratio: '3/4' },
-  { cols: 8, ratio: '16/9' },
-  { cols: 4, ratio: '1/1' },
+  { cols: 9, ratio: '4/3' },   // 0 — paired with the "Selected Works" label (3+9=12)
+  { cols: 5, ratio: '3/4' },   // 1
+  { cols: 7, ratio: '1/1' },   // 2 — pair (1,2) = 5+7 = 12
+  { cols: 6, ratio: '16/9' },  // 3
+  { cols: 6, ratio: '4/3' },   // 4 — pair (3,4) = 6+6 = 12
+  { cols: 8, ratio: '3/4' },   // 5
+  { cols: 4, ratio: '16/9' },  // 6 — pair (5,6) = 8+4 = 12
+  { cols: 12, ratio: '16/9' }, // 7 — solo full-bleed row (sums to 12 alone)
 ];
 
 // Tailwind requires literal class names, so we map cols → class.
@@ -28,6 +28,8 @@ const COL_SPAN_CLASS: Record<number, string> = {
   6: 'md:col-span-6',
   7: 'md:col-span-7',
   8: 'md:col-span-8',
+  9: 'md:col-span-9',
+  12: 'md:col-span-12',
 };
 
 export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
@@ -62,10 +64,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
 
         {filteredProjects.map((project, index) => {
           const pattern = MOSAIC_PATTERN[index % MOSAIC_PATTERN.length];
-          // First card shares row 1 with the label, so it gets cols (12 - 3 = 9) max.
-          // To keep the pattern simple, override the first card to col-span-9.
-          const colsClass =
-            index === 0 ? 'md:col-span-9' : COL_SPAN_CLASS[pattern.cols];
+          const colsClass = COL_SPAN_CLASS[pattern.cols];
           return (
             <div key={project.id} className={`col-span-1 ${colsClass}`}>
               <ProjectCard
