@@ -1,0 +1,289 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* PSALMS Brand Colors */
+    --plaster: #F0ECE8;
+    --pale-stone: #CECCCA;
+    --warm-sand: #BCB3A3;
+    --deep-umber: #3A3426;
+    --charred: #19130C;
+    --silica: #8A8B90;
+    --alabaster: #F5F0E8;
+    
+    --background: 40 20% 92%;
+    --foreground: 30 10% 15%;
+    --card: 40 20% 92%;
+    --card-foreground: 30 10% 15%;
+    --popover: 40 20% 92%;
+    --popover-foreground: 30 10% 15%;
+    --primary: 30 10% 15%;
+    --primary-foreground: 40 20% 92%;
+    --secondary: 40 15% 85%;
+    --secondary-foreground: 30 10% 15%;
+    --muted: 40 15% 85%;
+    --muted-foreground: 30 5% 40%;
+    --accent: 40 15% 85%;
+    --accent-foreground: 30 10% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 40 10% 80%;
+    --input: 40 10% 80%;
+    --ring: 30 10% 15%;
+    --radius: 0.5rem;
+    
+    /* Custom MERSI colors */
+    --mersi-beige: 40 20% 92%;
+    --mersi-dark: 30 10% 15%;
+    --mersi-orange: 18 75% 55%;
+    --mersi-green: 150 25% 45%;
+    --mersi-cream: 40 30% 96%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--plaster);
+    color: var(--deep-umber);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Text stroke for outline effect */
+  .text-stroke {
+    -webkit-text-stroke: 2px hsl(var(--mersi-dark));
+    color: transparent;
+  }
+  
+  .text-stroke-thin {
+    -webkit-text-stroke: 1px hsl(var(--mersi-dark));
+    color: transparent;
+  }
+  
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+  
+  /* Hover lift effect */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Custom cursor styles */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Image hover zoom */
+.img-zoom {
+  overflow: hidden;
+}
+.img-zoom img {
+  transition: transform 0.6s ease;
+}
+.img-zoom:hover img {
+  transform: scale(1.05);
+}
+
+/* Project card overlay */
+.project-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.project-card:hover .project-overlay {
+  opacity: 1;
+}
+
+/* Filter tab active state */
+.filter-tab {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.filter-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: hsl(var(--mersi-dark));
+  transition: width 0.3s ease;
+}
+
+.filter-tab.active::after,
+.filter-tab:hover::after {
+  width: 100%;
+}
+
+/* Smooth image loading */
+img {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+img[loading] {
+  opacity: 0;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent horizontal overflow */
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Mobile touch improvements */
+@media (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .hover\:scale-105:hover {
+    transform: none;
+  }
+  
+  /* Improve tap targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  header {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ============================================
+   QUOTE STYLES - Brand Storyguide
+   ============================================ */
+
+.quote-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, 4vw, 52px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--deep-umber);
+  max-width: 750px;
+  position: relative;
+  z-index: 1;
+}
+
+.quote-attr {
+  margin-top: 28px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--warm-sand);
+  position: relative;
+  z-index: 1;
+}
+
+.divider {
+  height: 1px;
+  background: var(--pale-stone);
+  margin: 0 clamp(24px, 5vw, 80px);
+  opacity: 0.35;
+}
