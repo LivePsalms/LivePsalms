@@ -5,9 +5,10 @@ interface ProjectCardProps {
   project: Project;
   onClick: () => void;
   index: number;
+  aspectRatio?: string;
 }
 
-export function ProjectCard({ project, onClick, index }: ProjectCardProps) {
+export function ProjectCard({ project, onClick, index, aspectRatio = '4/5' }: ProjectCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -46,26 +47,30 @@ export function ProjectCard({ project, onClick, index }: ProjectCardProps) {
   return (
     <div
       ref={cardRef}
-      className={`project-card relative overflow-hidden cursor-pointer group transition-all duration-700 ${
+      data-flip-id={project.id}
+      className={`project-card relative cursor-pointer group transition-all duration-700 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
       }`}
-      style={{ transitionDelay: `${index * 100}ms` }}
+      style={{ transitionDelay: `${index * 80}ms` }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      {/* Image Container */}
-      <div className="relative aspect-[4/5] overflow-hidden">
+      {/* Image — fills the entire card, no border, no shadow, no rounded corners */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio }}
+      >
         <img
           src={project.thumbnail}
           alt={project.name}
           className={`w-full h-full object-cover transition-transform duration-700 ${
-            isHovered ? 'scale-105' : 'scale-100'
+            isHovered ? 'scale-[1.02]' : 'scale-100'
           }`}
           loading="lazy"
         />
 
-        {/* Hover Overlay */}
+        {/* Hover overlay — soft caption fade-in, no box */}
         <div
           className={`absolute inset-0 ${project.overlayColor} transition-opacity duration-500 flex items-end p-6 ${
             isHovered ? 'opacity-100' : 'opacity-0'
@@ -82,12 +87,12 @@ export function ProjectCard({ project, onClick, index }: ProjectCardProps) {
         </div>
       </div>
 
-      {/* Project Info Below */}
-      <div className="flex items-center justify-between py-3 px-1">
-        <h3 className="text-sm font-semibold text-mersi-dark">
+      {/* Plain text metadata below — no chrome */}
+      <div className="flex items-center justify-between pt-3 px-1">
+        <h3 className="text-xs md:text-sm tracking-wide uppercase text-mersi-dark">
           {project.name}
         </h3>
-        <span className="text-xs text-mersi-dark/60">
+        <span className="text-[10px] md:text-xs tracking-wider uppercase text-mersi-dark/50">
           {getCategoryLabel(project.category)}
         </span>
       </div>
