@@ -17,8 +17,10 @@ function computeSpans(n: number): number[] {
   while (remaining > 0) {
     const expected = rowIdx % 2 === 0 ? 3 : 4;
     const take = Math.min(expected, remaining);
-    // 12-col grid: 1 item = full-bleed (12), 2 = 6 each, 3 = 4 each, 4 = 3 each
-    const span = take === 1 ? 12 : take === 2 ? 6 : take === 3 ? 4 : 3;
+    // 12-col grid: 3 items per row → span 4; 4 items per row → span 3.
+    // Partial short rows (1 or 2 items) keep the span-3 cell so lone items
+    // match the row-of-4 aspect and sit at the left instead of stretching.
+    const span = take === 3 ? 4 : 3;
     for (let k = 0; k < take; k++) spans.push(span);
     remaining -= take;
     rowIdx += 1;
