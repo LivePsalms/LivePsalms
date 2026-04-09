@@ -344,23 +344,23 @@ body {
   [data-layout='grid'] > [data-flip-id][data-span='12'] {
     grid-column: span 12;
   }
-  /* Grid mode: the image box (first child of each item) becomes
-     aspect-ratio-driven so every image in a given row has the same
-     size. Selectors are specific enough (0-3-2) to beat Tailwind
-     `md:h-[…]` classes (0-1-0) without !important. */
-  [data-layout='grid'] > [data-flip-id] > .pg-img {
+  /* Grid mode: each card becomes aspect-ratio-driven so every image
+     in a given row has the same size. Selectors are specific enough
+     (0-3-1) to beat Tailwind `md:h-[…]` classes (0-1-0) without
+     !important. */
+  [data-layout='grid'] > [data-flip-id] {
     height: auto;
   }
-  [data-layout='grid'] > [data-flip-id][data-span='3'] > .pg-img {
+  [data-layout='grid'] > [data-flip-id][data-span='3'] {
     aspect-ratio: 4 / 5;
   }
-  [data-layout='grid'] > [data-flip-id][data-span='4'] > .pg-img {
+  [data-layout='grid'] > [data-flip-id][data-span='4'] {
     aspect-ratio: 5 / 3;
   }
-  [data-layout='grid'] > [data-flip-id][data-span='6'] > .pg-img {
+  [data-layout='grid'] > [data-flip-id][data-span='6'] {
     aspect-ratio: 3 / 2;
   }
-  [data-layout='grid'] > [data-flip-id][data-span='12'] > .pg-img {
+  [data-layout='grid'] > [data-flip-id][data-span='12'] {
     aspect-ratio: 3 / 1;
   }
 }

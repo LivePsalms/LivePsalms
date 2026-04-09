@@ -7,18 +7,6 @@ import type { FilterCategory, Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
 
-// Display label for a project category, matching the editorial reference.
-function categoryLabel(category: Project['category']): string {
-  switch (category) {
-    case 'residential':
-      return 'Résidentiel';
-    case 'retail':
-      return 'Retail';
-    case 'hospitality':
-      return 'Hospitality';
-  }
-}
-
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.
 // Special case: a lone last item spans the full row (full-bleed).
@@ -291,36 +279,15 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
               data-flip-id={project.id}
               data-span={span}
               onClick={() => onProjectClick(project)}
-              className="group flex-shrink-0 md:min-w-0 w-44 md:w-auto cursor-pointer"
+              className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${h} cursor-pointer overflow-hidden`}
+              style={{ borderRadius: '2px' }}
             >
-              <div
-                className={`pg-img relative overflow-hidden ${h}`}
-                style={{ borderRadius: '2px' }}
-              >
-                <img
-                  src={project.thumbnail}
-                  alt={project.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                />
-              </div>
-              <div
-                className="mt-2 md:mt-3 flex items-baseline justify-between gap-2"
-                style={{ fontFamily: 'Outfit, sans-serif' }}
-              >
-                <span
-                  className="text-[10px] md:text-xs font-semibold tracking-[0.08em] truncate"
-                  style={{ color: 'var(--deep-umber)' }}
-                >
-                  {project.name}
-                </span>
-                <span
-                  className="text-[9px] md:text-[10px] tracking-[0.15em] uppercase shrink-0"
-                  style={{ color: 'var(--warm-sand)' }}
-                >
-                  {categoryLabel(project.category)}
-                </span>
-              </div>
+              <img
+                src={project.thumbnail}
+                alt={project.name}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              />
             </div>
           );
         })}
