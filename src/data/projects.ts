@@ -21,7 +21,6 @@ const renewalImages = [
   'renewal4.png',
   'renewal5.jpg',
   'renewal6.png',
-  'renewal7.png',
   'renewal8.png',
   'renewal9.png',
 ];
