@@ -300,28 +300,3 @@ body {
   background-position: 50% 50%;
   background-size: 150px;
 }
-
-/* ============================================
-   PROJECTS GRID — Strip <-> Grid Layout Modes
-   ============================================
-   data-layout is toggled by ProjectsGrid to drive
-   the scroll-scrubbed morph from horizontal strip
-   into the 3/4/3/4 editorial grid.
-*/
-@media (min-width: 768px) {
-  [data-layout='strip'] {
-    flex-wrap: wrap;
-  }
-  [data-layout='strip'] > [data-flip-id] {
-    flex: 1 1 calc((100% - 3rem) / 9);
-    min-width: 0;
-  }
-  [data-layout='grid'] {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    align-items: end;
-  }
-  [data-layout='grid'] > [data-flip-id] {
-    min-width: 0;
-  }
-}
