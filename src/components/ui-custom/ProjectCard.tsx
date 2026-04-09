@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react';
 import type { Project } from '@/types';
 
 interface ProjectCardProps {
@@ -8,84 +7,57 @@ interface ProjectCardProps {
   aspectRatio?: string;
 }
 
-export function ProjectCard({ project, onClick, index, aspectRatio = '4/5' }: ProjectCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
+export function ProjectCard({ project, onClick, aspectRatio = '4/5' }: ProjectCardProps) {
   const getCategoryLabel = (category: string) => {
     switch (category) {
       case 'residential':
-        return 'Résidentiel';
+        return 'Restoration';
       case 'retail':
-        return 'Retail';
+        return 'Renewal';
       case 'hospitality':
-        return 'Hospitality';
+        return 'Serenity';
       default:
         return category;
     }
   };
 
+  const getCategoryClipPath = (category: string) => {
+    switch (category) {
+      case 'residential':
+        return 'url(#clip-pattern3)';
+      case 'retail':
+        return 'url(#clip-pattern5)';
+      case 'hospitality':
+        return 'url(#clip-pattern6)';
+      default:
+        return undefined;
+    }
+  };
+
+  const clipPath = getCategoryClipPath(project.category);
+
   return (
     <div
-      ref={cardRef}
       data-flip-id={project.id}
-      className={`project-card relative cursor-pointer group transition-all duration-700 ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-      }`}
-      style={{ transitionDelay: `${index * 80}ms` }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="project-card relative cursor-pointer group"
       onClick={onClick}
     >
-      {/* Image — fills the entire card, no border, no shadow, no rounded corners */}
-      <div
-        className="relative w-full overflow-hidden"
-        style={{ aspectRatio }}
+      {/* Image clipped by a category-specific SVG mask */}
+      <figure
+        className="relative w-full m-0 overflow-hidden"
+        style={{
+          aspectRatio,
+          clipPath,
+          WebkitClipPath: clipPath,
+        }}
       >
         <img
           src={project.thumbnail}
           alt={project.name}
-          className={`w-full h-full object-cover transition-transform duration-700 ${
-            isHovered ? 'scale-[1.02]' : 'scale-100'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
           loading="lazy"
         />
-
-        {/* Hover overlay — soft caption fade-in, no box */}
-        <div
-          className={`absolute inset-0 ${project.overlayColor} transition-opacity duration-500 flex items-end p-6 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <div className="text-white">
-            <h3 className="text-2xl md:text-3xl font-bold mb-1">
-              {project.name}
-            </h3>
-            <p className="text-sm opacity-80">
-              {getCategoryLabel(project.category)}
-            </p>
-          </div>
-        </div>
-      </div>
+      </figure>
 
       {/* Plain text metadata below — no chrome */}
       <div className="flex items-center justify-between pt-3 px-1">

@@ -6,11 +6,11 @@ export function OrganicBackdrop() {
       className="absolute inset-0 pointer-events-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
-      {/* Wash 1: top of page, white mist (replaces Hero's old mist glow) */}
+      {/* Wash 1: white mist - sits below the hero mask image */}
       <div
         style={{
           position: 'absolute',
-          top: '85vh',
+          top: '128vh',
           left: '-10%',
           right: '-10%',
           height: '420px',
@@ -21,7 +21,7 @@ export function OrganicBackdrop() {
       <div
         style={{
           position: 'absolute',
-          top: '90vh',
+          top: '133vh',
           left: '-20%',
           right: '-20%',
           height: '320px',

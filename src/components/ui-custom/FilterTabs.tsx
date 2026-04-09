@@ -6,14 +6,14 @@ interface FilterTabsProps {
 }
 
 const filters: { label: string; value: FilterCategory }[] = [
-  { label: 'Résidentiel', value: 'residential' },
-  { label: 'Retail', value: 'retail' },
-  { label: 'Hospitality', value: 'hospitality' },
+  { label: 'Restoration', value: 'residential' },
+  { label: 'Renewal', value: 'retail' },
+  { label: 'Serenity', value: 'hospitality' },
 ];
 
 export function FilterTabs({ activeFilter, onFilterChange }: FilterTabsProps) {
   return (
-    <div className="flex items-center justify-center gap-6 md:gap-10 py-6 md:py-10 mb-6 md:mb-10">
+    <div className="flex items-center justify-center gap-6 md:gap-10 pt-0 pb-3 md:pb-4 mb-4 md:mb-6">
       {filters.map((filter) => (
         <button
           key={filter.value}
