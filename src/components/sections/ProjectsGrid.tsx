@@ -71,6 +71,41 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
     return () => ctx.revert();
   }, []);
 
+  // Scroll-linked come-in for the whole image strip, matching the Hero
+  // quote's feel (opacity + y + blur, scrub 3). Applied to the grid
+  // container so its transform sits OUTSIDE Flip's per-item transforms
+  // and the two don't fight during the pinned strip→grid morph. Runs
+  // as a useEffect so it fires AFTER the pin's useLayoutEffect has
+  // captured Flip state on a clean (untransformed) DOM.
+  useEffect(() => {
+    const section = sectionRef.current;
+    const grid = gridRef.current;
+    if (!section || !grid) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        grid,
+        { opacity: 0, y: 40, filter: 'blur(10px)' },
+        {
+          opacity: 1,
+          y: 0,
+          filter: 'blur(0px)',
+          ease: 'power2.out',
+          duration: 1,
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 95%',
+            end: 'top 10%',
+            scrub: 3,
+            invalidateOnRefresh: true,
+          },
+        }
+      );
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
+
   // Reset to the aggregated "all" view when the user scrolls up past the
   // section's bottom edge (section leaves the viewport moving downward).
   // Fires before the pin range engages so it never collides with pinning.

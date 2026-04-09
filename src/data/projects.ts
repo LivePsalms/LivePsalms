@@ -5,7 +5,7 @@ import type { Project } from '@/types';
 // into the grid. IDs and display names are derived from the filename.
 const restorationImages = [
   'restoration1.png',
-  'restoration2.jpg',
+  'restoration2.png',
   'restoration3.jpg',
   'restoration4.jpg',
   'restoration5.png',
@@ -13,6 +13,7 @@ const restorationImages = [
   'restoration7.png',
   'restoration8.png',
   'restoration9.png',
+  'restoration10.png',
 ];
 
 const renewalImages = [
@@ -22,12 +23,16 @@ const renewalImages = [
   'renewal5.jpg',
   'renewal6.png',
   'renewal7.png',
+  'renewal8.png',
+  'renewal9.png',
 ];
 
 const serenityImages = [
   'serenity2.jpg',
   'serenity3.png',
+  'serenity5.png',
   'serenity6.png',
+  'serenity7.png',
 ];
 
 const toProject = (
