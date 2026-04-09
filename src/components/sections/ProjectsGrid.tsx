@@ -138,44 +138,84 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
       return;
     }
 
-    const items = grid.querySelectorAll<HTMLElement>('[data-flip-id]');
+    // Defensive reset: clear any leftover inline positioning from a prior
+    // Strict-Mode effect run (Flip's absolute: true leaves items position:
+    // absolute which skews measurements on the next run).
+    const items = Array.from(
+      grid.querySelectorAll<HTMLElement>('[data-flip-id]')
+    );
     if (items.length === 0) return;
+    for (const el of items) {
+      el.style.position = '';
+      el.style.top = '';
+      el.style.left = '';
+      el.style.width = '';
+      el.style.height = '';
+      el.style.transform = '';
+    }
+    grid.style.minHeight = '';
 
-    // Capture horizontal-strip positions as the timeline's starting frame.
-    grid.dataset.layout = 'strip';
-    // Force a synchronous reflow so strip rules apply before measurement.
-    void grid.offsetHeight;
-    const state = Flip.getState(items);
+    const ctx = gsap.context(() => {
+      // Capture horizontal-strip positions as the timeline's starting frame.
+      grid.dataset.layout = 'strip';
+      // Force a synchronous reflow so strip rules apply before measurement.
+      void grid.offsetHeight;
+      const state = Flip.getState(items);
 
-    // Switch to the final editorial grid layout.
-    grid.dataset.layout = 'grid';
+      // Switch to the final editorial grid layout. Items stay in flow so
+      // the container's natural height is the grid height throughout —
+      // no min-height hack needed.
+      grid.dataset.layout = 'grid';
+      void grid.offsetHeight;
 
-    // Flip.from returns a timeline that tweens FROM captured (strip)
-    // positions TO current (grid) positions. Paused, scrubbed by scroll.
-    const tl = Flip.from(state, {
-      duration: 1,
-      ease: 'none',
-      absolute: true,
-      paused: true,
-    });
-    morphTimelineRef.current = tl;
+      // Flip.from returns a timeline that tweens FROM captured (strip)
+      // positions TO current (grid) positions. Paused, scrubbed by scroll.
+      //
+      // NOTE: we intentionally DO NOT use absolute: true. Flip's absolute
+      // mode takes items out of flow via position: absolute, which (a)
+      // collapses the display: grid container to 0 height and (b) doesn't
+      // release cleanly when the timeline is scrubbed via onUpdate
+      // (the absolute -> relative transition only runs on natural play).
+      // Without absolute, Flip uses transforms (translate + scale) which
+      // scrub correctly in both directions.
+      const tl = Flip.from(state, {
+        duration: 1,
+        ease: 'none',
+        paused: true,
+      });
+      morphTimelineRef.current = tl;
 
-    const st = ScrollTrigger.create({
-      trigger: section,
-      start: 'top top',
-      end: '+=100%',
-      pin: true,
-      scrub: 1,
-      animation: tl,
-      invalidateOnRefresh: true,
-    });
+      // NOTE: attaching a Flip timeline directly via `animation: tl` crashes
+      // ScrollTrigger.refresh() with "animation.revert(...).invalidate is not
+      // a function" because Flip's internal timeline isn't compatible with
+      // ScrollTrigger's revert lifecycle. Scrub manually via onUpdate instead.
+      ScrollTrigger.create({
+        trigger: section,
+        start: 'top top',
+        end: '+=100%',
+        pin: true,
+        scrub: 1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          tl.progress(self.progress);
+        },
+      });
+    }, section);
 
     return () => {
-      st.kill();
-      tl.kill();
-      if (morphTimelineRef.current === tl) {
-        morphTimelineRef.current = null;
+      ctx.revert();
+      grid.style.minHeight = '';
+      // Strip any inline positioning Flip left behind so the next effect
+      // run can measure a clean strip/grid layout.
+      for (const el of items) {
+        el.style.position = '';
+        el.style.top = '';
+        el.style.left = '';
+        el.style.width = '';
+        el.style.height = '';
+        el.style.transform = '';
       }
+      morphTimelineRef.current = null;
     };
   }, [filteredProjects]);
 
@@ -215,7 +255,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
       <div
         ref={gridRef}
         data-layout="strip"
-        className="flex w-full items-end gap-1 md:gap-1.5 px-0 overflow-x-auto md:overflow-visible"
+        className="relative flex w-full items-end gap-1 md:gap-1.5 px-0 overflow-x-auto md:overflow-visible"
       >
         {filteredProjects.map((project, index) => {
           // Slightly varied heights so the top edge breathes like the reference
@@ -236,11 +276,9 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
               key={project.id}
               data-flip-id={project.id}
               onClick={() => onProjectClick(project)}
-              className={`group relative flex-shrink-0 md:min-w-0 w-44 ${h} cursor-pointer overflow-hidden`}
-              style={{
-                borderRadius: '2px',
-                gridColumn: `span ${span} / span ${span}`,
-              }}
+              data-span={span}
+              className={`group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${h} cursor-pointer overflow-hidden`}
+              style={{ borderRadius: '2px' }}
             >
               <img
                 src={project.thumbnail}

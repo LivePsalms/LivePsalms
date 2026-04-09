@@ -324,4 +324,19 @@ body {
   [data-layout='grid'] > [data-flip-id] {
     min-width: 0;
   }
+  /* Span is driven by data-span so Flip's inline-style manipulation
+     can't wipe it out (React inline styles get clobbered by Flip's
+     getState/revert lifecycle). */
+  [data-layout='grid'] > [data-flip-id][data-span='3'] {
+    grid-column: span 3;
+  }
+  [data-layout='grid'] > [data-flip-id][data-span='4'] {
+    grid-column: span 4;
+  }
+  [data-layout='grid'] > [data-flip-id][data-span='6'] {
+    grid-column: span 6;
+  }
+  [data-layout='grid'] > [data-flip-id][data-span='12'] {
+    grid-column: span 12;
+  }
 }
