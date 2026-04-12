@@ -230,13 +230,11 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
     setActiveFilter(next);
   };
 
-  // Strip → grid pinned scroll-scrubbed morph.
+  // Strip → grid auto-playing morph.
   //
-  // The section pins when its top reaches the viewport top. The user's
-  // scroll delta over the pin range (`end: +=100%`) scrubs a paused Flip
-  // timeline that tweens items from their horizontal-strip positions into
-  // the 3/4/3/4 editorial grid. Reversible: scrolling back up through the
-  // pin range scrubs the timeline back to strip state.
+  // When the section scrolls into view the Flip animation plays through
+  // automatically with a smooth ease (not tied to scroll position).
+  // Scrolling back up reverses the animation.
   //
   // Rebuilt whenever filteredProjects changes so each filter's items are
   // measured fresh. Declared BEFORE the filter-reflow effect below so that
@@ -288,36 +286,29 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
       void grid.offsetHeight;
 
       // Flip.from returns a timeline that tweens FROM captured (strip)
-      // positions TO current (grid) positions. Paused, scrubbed by scroll.
+      // positions TO current (grid) positions. Paused initially, played
+      // automatically when the section enters the viewport.
       //
       // NOTE: we intentionally DO NOT use absolute: true. Flip's absolute
-      // mode takes items out of flow via position: absolute, which (a)
-      // collapses the display: grid container to 0 height and (b) doesn't
-      // release cleanly when the timeline is scrubbed via onUpdate
-      // (the absolute -> relative transition only runs on natural play).
-      // Without absolute, Flip uses transforms (translate + scale) which
-      // scrub correctly in both directions.
+      // mode takes items out of flow via position: absolute, which collapses
+      // the display: grid container to 0 height. Without absolute, Flip
+      // uses transforms (translate + scale) which animate cleanly.
       const tl = Flip.from(state, {
-        duration: 1,
-        ease: 'none',
+        duration: 1.2,
+        ease: 'power2.inOut',
         paused: true,
       });
       morphTimelineRef.current = tl;
 
-      // NOTE: attaching a Flip timeline directly via `animation: tl` crashes
-      // ScrollTrigger.refresh() with "animation.revert(...).invalidate is not
-      // a function" because Flip's internal timeline isn't compatible with
-      // ScrollTrigger's revert lifecycle. Scrub manually via onUpdate instead.
+      // Trigger when 80% of the first row of strip items is visible.
+      // Use the first item as trigger — its bottom + 80% of its height.
+      const firstItem = items[0];
       ScrollTrigger.create({
-        trigger: section,
-        start: 'top top',
-        end: '+=100%',
-        pin: true,
-        scrub: 1,
+        trigger: firstItem,
+        start: 'bottom bottom',
         invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          tl.progress(self.progress);
-        },
+        onEnter: () => tl.play(),
+        onLeaveBack: () => tl.reverse(),
       });
     }, section);
 
