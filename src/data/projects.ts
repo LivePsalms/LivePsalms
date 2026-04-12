@@ -6,7 +6,6 @@ import type { Project } from '@/types';
 const restorationImages = [
   'restoration1.png',
   'restoration3.jpg',
-  'restoration4.jpg',
   'restoration5.png',
   'restoration6.png',
   'restoration7.png',
@@ -28,7 +27,6 @@ const serenityImages = [
   'serenity2.jpg',
   'serenity3.png',
   'serenity5.png',
-  'serenity6.png',
   'serenity7.png',
 ];
 
@@ -50,15 +48,43 @@ const toProject = (
   };
 };
 
+// Per-image solid overlay colours sampled to complement each photograph.
+const restorationOverlays = [
+  '#8B8378', // warm taupe
+  '#7A7568', // grey-brown
+  '#A09688', // sand
+  '#6E6960', // dark stone
+  '#9C9488', // pale clay
+  '#8A8070', // muted umber
+  '#7D756A', // driftwood
+  '#938A7E', // putty
+  '#B0A898', // linen
+];
+const renewalOverlays = [
+  '#5A7A6A', // forest sage
+  '#6B8B7A', // muted jade
+  '#4E6E5E', // deep moss
+  '#7A9A8A', // celadon
+  '#5E7E6E', // olive sage
+  '#6A8A7A', // fern
+];
+const serenityOverlays = [
+  '#B08A6A', // warm ochre
+  '#C49A78', // terracotta
+  '#A8866A', // burnt sienna
+  '#BFA080', // dusty coral
+  '#C4A488', // sand gold
+];
+
 export const projects: Project[] = [
   ...restorationImages.map((file, i) =>
-    toProject(file, 'residential', `Restoration ${String(i + 1).padStart(2, '0')}`, 'bg-stone-300/80')
+    toProject(file, 'residential', `Restoration ${String(i + 1).padStart(2, '0')}`, restorationOverlays[i] ?? '#8B8378')
   ),
   ...renewalImages.map((file, i) =>
-    toProject(file, 'retail', `Renewal ${String(i + 1).padStart(2, '0')}`, 'bg-emerald-600/80')
+    toProject(file, 'retail', `Renewal ${String(i + 1).padStart(2, '0')}`, renewalOverlays[i] ?? '#5A7A6A')
   ),
   ...serenityImages.map((file, i) =>
-    toProject(file, 'hospitality', `Serenity ${String(i + 1).padStart(2, '0')}`, 'bg-orange-500/80')
+    toProject(file, 'hospitality', `Serenity ${String(i + 1).padStart(2, '0')}`, serenityOverlays[i] ?? '#B08A6A')
   ),
 ];
 
@@ -76,9 +102,8 @@ export const galleryImages = [
 ];
 
 export const navItems = [
-  { label: 'PROJETS', href: '#projects' },
-  { label: 'AGENCE', href: '#agency' },
-  { label: 'PROCESS', href: '#process' },
+  { label: 'PURPOSE', href: '#purpose' },
+  { label: 'DEVOTION', href: '#devotion' },
   { label: 'SHOP', href: '#shop' },
   { label: 'CONTACT', href: '#contact' },
 ];

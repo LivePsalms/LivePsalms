@@ -4,6 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes water-letter {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-2.5px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(1.5px);
+  }
+}
+
 @layer base {
   :root {
     /* PSALMS Brand Colors */
@@ -354,5 +369,16 @@ body {
   [data-layout='grid'] > [data-flip-id][data-span='3'],
   [data-layout='grid'] > [data-flip-id][data-span='4'] {
     aspect-ratio: 4 / 5;
+  }
+
+}
+
+/* Hover overlay: hidden by default (mobile + strip), shown in grid mode */
+.pg-hover-overlay {
+  display: none !important;
+}
+@media (min-width: 768px) {
+  [data-layout='grid'] .pg-hover-overlay {
+    display: flex !important;
   }
 }

@@ -2,6 +2,34 @@ import { useState, useEffect } from 'react';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 
+function WaterText({ children, className, style, as: Tag = 'a', ...props }: any) {
+  const [isHovered, setIsHovered] = useState(false);
+  const text = typeof children === 'string' ? children : '';
+
+  return (
+    <Tag
+      className={className}
+      style={style}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      {...props}
+    >
+      {text.split('').map((char: string, i: number) => (
+        <span
+          key={i}
+          className="inline-block"
+          style={{
+            animation: isHovered ? `water-letter 2.4s ease-in-out ${i * 100}ms infinite` : 'none',
+            transition: 'transform 0.3s ease',
+          }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </Tag>
+  );
+}
+
 interface HeaderProps {
   showNav?: boolean;
 }
@@ -61,7 +89,7 @@ export function Header({ showNav = true }: HeaderProps) {
         >
           <img 
             src="/logo-icon.png" 
-            alt="PSALMS" 
+            alt="LivePsalms"
             className="h-8 md:h-10 w-auto object-contain"
           />
         </a>
@@ -81,22 +109,23 @@ export function Header({ showNav = true }: HeaderProps) {
           }}
         >
           {navItems.map((item, index) => (
-            <a
+            <WaterText
               key={item.label}
               href={item.href}
-              className="text-[10px] lg:text-[11px] font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
+              as="a"
+              className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300"
               style={{
                 color: 'var(--deep-umber)',
                 opacity: showNav ? 1 : 0,
-                transform: showNav 
-                  ? 'translateY(0)' 
+                transform: showNav
+                  ? 'translateY(0)'
                   : 'translateY(20px)',
                 transition: `all 2.5s cubic-bezier(0.16, 1, 0.3, 1)`,
                 transitionDelay: `${800 + index * 150}ms`,
               }}
             >
               {item.label}
-            </a>
+            </WaterText>
           ))}
           <span 
             style={{
@@ -106,23 +135,45 @@ export function Header({ showNav = true }: HeaderProps) {
               transitionDelay: '1400ms',
             }}
           >—</span>
-          <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] lg:text-[11px] font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
+          <div
+            className="relative group"
             style={{
-              color: 'var(--deep-umber)',
               opacity: showNav ? 1 : 0,
-              transform: showNav 
-                ? 'translateY(0)' 
+              transform: showNav
+                ? 'translateY(0)'
                 : 'translateY(20px)',
               transition: 'all 2.5s cubic-bezier(0.16, 1, 0.3, 1)',
               transitionDelay: '1500ms',
             }}
           >
-            INSTAGRAM
-          </a>
+            <WaterText
+              as="button"
+              type="button"
+              className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 cursor-pointer"
+              style={{ color: 'var(--deep-umber)' }}
+            >
+              SOCIAL
+            </WaterText>
+            <div
+              className="absolute left-1/2 -translate-x-1/2 top-full pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300"
+            >
+              <div
+                className="px-5 py-3 backdrop-blur-md rounded-sm shadow-sm"
+                style={{ background: 'rgba(240, 236, 232, 0.95)' }}
+              >
+                <WaterText
+                  as="a"
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 whitespace-nowrap"
+                  style={{ color: 'var(--deep-umber)' }}
+                >
+                  INSTAGRAM
+                </WaterText>
+              </div>
+            </div>
+          </div>
         </nav>
 
         {/* Mobile Menu Button - 3D emergence effect */}
@@ -175,14 +226,12 @@ export function Header({ showNav = true }: HeaderProps) {
             style={{ background: 'var(--deep-umber)', opacity: 0.2 }}
           />
           <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#social"
             onClick={() => setIsMobileMenuOpen(false)}
             className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
             style={{ color: 'var(--deep-umber)' }}
           >
-            INSTAGRAM
+            SOCIAL
           </a>
         </nav>
       </div>

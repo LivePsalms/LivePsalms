@@ -1,11 +1,18 @@
 import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
+import { motion, AnimatePresence } from 'framer-motion';
 import { projects } from '@/data/projects';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
 import type { FilterCategory, Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
+
+const categoryLabel: Record<Project['category'], string> = {
+  residential: 'Restoration',
+  retail: 'Renewal',
+  hospitality: 'Serenity',
+};
 
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.
@@ -26,6 +33,81 @@ function computeSpans(n: number): number[] {
     rowIdx += 1;
   }
   return spans;
+}
+
+function ProjectCard({
+  project,
+  span,
+  heightClass,
+  onProjectClick,
+}: {
+  project: Project;
+  span: number;
+  heightClass: string;
+  onProjectClick: (project: Project) => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      data-flip-id={project.id}
+      data-span={span}
+      onClick={() => onProjectClick(project)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${heightClass} cursor-pointer overflow-hidden`}
+      style={{ borderRadius: '2px' }}
+    >
+      <img
+        src={project.thumbnail}
+        alt={project.name}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Split overlay — left half slides in from left */}
+      <motion.div
+        className="pg-hover-overlay absolute top-0 left-0 w-1/2 h-full backdrop-blur-sm"
+        style={{ backgroundColor: project.overlayColor }}
+        initial={{ x: '-100%' }}
+        animate={{ x: isHovered ? 0 : '-100%' }}
+        transition={{ duration: 0.5, ease: [0.43, 0.13, 0.23, 0.96] }}
+      />
+
+      {/* Split overlay — right half slides in from right */}
+      <motion.div
+        className="pg-hover-overlay absolute top-0 right-0 w-1/2 h-full backdrop-blur-sm"
+        style={{ backgroundColor: project.overlayColor }}
+        initial={{ x: '100%' }}
+        animate={{ x: isHovered ? 0 : '100%' }}
+        transition={{ duration: 0.5, ease: [0.43, 0.13, 0.23, 0.96] }}
+      />
+
+      {/* Content — fades in after panels meet */}
+      <AnimatePresence>
+        {isHovered && (
+          <motion.div
+            className="pg-hover-overlay absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+          >
+            {/* Logo watermark */}
+            <img
+              src="/logo-icon.png"
+              alt=""
+              className="w-6 md:w-8 opacity-25 invert mb-3"
+            />
+            {/* Category label */}
+            <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">
+              {categoryLabel[project.category]}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 interface ProjectsGridProps {
@@ -281,6 +363,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
       ref={sectionRef}
       id="projects"
       className="pt-24 md:pt-40 pb-16 md:pb-24 px-0"
+      style={{ background: 'var(--plaster)' }}
     >
       {/* Filter Tabs */}
       <div ref={filterWrapRef} className="px-4 md:px-8 mb-4 md:mb-6">
@@ -293,6 +376,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
         ref={gridRef}
         data-layout="strip"
         className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible"
+        style={{ background: 'var(--plaster)' }}
       >
         {filteredProjects.map((project, index) => {
           // Slightly varied strip heights so the top edge breathes like the
@@ -311,21 +395,13 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
           const h = heightCycle[index % heightCycle.length];
           const span = spans[index] ?? 3;
           return (
-            <div
+            <ProjectCard
               key={project.id}
-              data-flip-id={project.id}
-              data-span={span}
-              onClick={() => onProjectClick(project)}
-              className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${h} cursor-pointer overflow-hidden`}
-              style={{ borderRadius: '2px' }}
-            >
-              <img
-                src={project.thumbnail}
-                alt={project.name}
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-              />
-            </div>
+              project={project}
+              span={span}
+              heightClass={h}
+              onProjectClick={onProjectClick}
+            />
           );
         })}
       </div>

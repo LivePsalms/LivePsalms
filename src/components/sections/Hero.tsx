@@ -66,7 +66,7 @@ export function Hero({ showNav = true }: HeroProps) {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4">
           <img
             src="/logo-hero.png"
-            alt="PSALMS"
+            alt="LivePsalms"
             className="w-[95vw] md:w-[80vw] max-w-4xl object-contain"
             style={{
               opacity: 0.12,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
 import { ProjectsGrid } from '@/components/sections/ProjectsGrid';
 import { ProjectDetail } from '@/components/sections/ProjectDetail';
@@ -42,7 +43,7 @@ function App() {
       {/* Video Intro - plays on every page load */}
       {showIntro && <VideoIntro onComplete={handleIntroComplete} />}
       
-      <div className="relative min-h-screen" style={{ background: 'var(--plaster)' }}>
+      <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
           <Header showNav={showNav} />
@@ -64,8 +65,17 @@ function App() {
               <ProjectsGrid onProjectClick={handleProjectClick} />
             </main>
           )}
+          {/* Spacer before footer — inside the z-index stacking context so it
+              covers the sticky footer beneath */}
+          {!selectedProject && (
+            <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--plaster)' }} />
+          )}
         </div>
       </div>
+
+      {/* Sticky reveal footer — behind the main content, revealed when
+          the user scrolls past the end */}
+      {!selectedProject && <Footer />}
 
       {/* Global film-grain overlay */}
       <div className="grain-bg" aria-hidden="true" />
