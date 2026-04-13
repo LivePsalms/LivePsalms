@@ -15,6 +15,11 @@ export function Hero({ showNav = true }: HeroProps) {
   const quoteLine2Ref = useRef<HTMLParagraphElement>(null);
   const quoteAttrRef = useRef<HTMLParagraphElement>(null);
 
+  // Mask scroll-expand refs
+  const maskScrollRef = useRef<HTMLDivElement>(null);
+  const maskClipRef = useRef<HTMLDivElement>(null);
+  const maskImgRef = useRef<HTMLImageElement>(null);
+
   useEffect(() => {
     const container = quoteRef.current;
     const l1 = quoteLine1Ref.current;
@@ -55,6 +60,45 @@ export function Hero({ showNav = true }: HeroProps) {
     return () => ctx.revert();
   }, []);
 
+  /* ── Mask-expand scroll animation ── */
+  useEffect(() => {
+    const scrollEl = maskScrollRef.current;
+    const clipEl = maskClipRef.current;
+    const imgEl = maskImgRef.current;
+    if (!scrollEl || !clipEl || !imgEl) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: scrollEl,
+          start: 'top top',
+          end: '60% top',
+          scrub: 1,
+          pin: false,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      // Expand the clipped mask container from centered/small → full viewport
+      tl.fromTo(
+        clipEl,
+        { width: '75%', height: '45%' },
+        { width: '100%', height: '100%', ease: 'none', duration: 1 },
+        0
+      );
+
+      // Subtle image zoom-out as the mask expands
+      tl.fromTo(
+        imgEl,
+        { scale: 1.15 },
+        { scale: 1, ease: 'none', duration: 1 },
+        0
+      );
+    }, scrollEl);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
       ref={heroRef}
@@ -88,34 +132,39 @@ export function Hero({ showNav = true }: HeroProps) {
         </defs>
       </svg>
 
-      {/* Static masked image */}
+      {/* Scroll-animated masked image */}
       <div
-        className="relative w-full h-screen flex items-center justify-center overflow-hidden"
-        // Pull the mask up so it overlaps the bottom of the logo viewport
-        // instead of sitting in its own full screen below it.
-        style={{
-          marginTop: '-35vh',
-          opacity: showNav ? 1 : 0,
-          transform: showNav ? 'translateY(0)' : 'translateY(40px)',
-          filter: showNav ? 'blur(0px)' : 'blur(12px)',
-          transition: 'all 3.5s cubic-bezier(0.16, 1, 0.3, 1)',
-          transitionDelay: '1900ms',
-        }}
+        ref={maskScrollRef}
+        className="relative"
+        style={{ height: '250vh', marginTop: '-35vh' }}
       >
-        <div className="relative w-[80vw] max-w-5xl" style={{ aspectRatio: '100 / 40' }}>
-          <svg
-            className="w-full h-full block"
-            viewBox="0 0 100 40"
-            preserveAspectRatio="none"
+        <div
+          className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center"
+          style={{
+            opacity: showNav ? 1 : 0,
+            transform: showNav ? 'translateY(0)' : 'translateY(40px)',
+            filter: showNav ? 'blur(0px)' : 'blur(12px)',
+            transition: 'all 3.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            transitionDelay: '1900ms',
+          }}
+        >
+          <div
+            ref={maskClipRef}
+            className="overflow-hidden"
+            style={{
+              clipPath: 'url(#hero-mask-clip)',
+              width: '75%',
+              height: '45%',
+            }}
           >
-            <image
-              clipPath="url(#hero-mask-clip)"
-              preserveAspectRatio="xMidYMid slice"
-              width="100%"
-              height="100%"
-              href="/tropical_jungle.png"
+            <img
+              ref={maskImgRef}
+              src="/tropical_jungle.png"
+              alt=""
+              className="w-full h-full object-cover"
+              style={{ transform: 'scale(1.15)' }}
             />
-          </svg>
+          </div>
         </div>
       </div>
 
@@ -124,7 +173,7 @@ export function Hero({ showNav = true }: HeroProps) {
       <div
         ref={quoteRef}
         className="relative flex flex-col items-center justify-center px-6 text-center"
-        style={{ minHeight: '8vh' }}
+        style={{ minHeight: '8vh', marginTop: '15vh' }}
       >
         <div className="max-w-4xl">
           <p ref={quoteLine1Ref} className="quote-text">

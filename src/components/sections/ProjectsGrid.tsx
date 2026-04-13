@@ -122,6 +122,33 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
   const flipStateRef = useRef<Flip.FlipState | null>(null);
   const morphTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
+  // Smooth fade-in for the entire section
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        section,
+        { opacity: 0 },
+        {
+          opacity: 1,
+          ease: 'power2.out',
+          duration: 1,
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 90%',
+            end: 'top 30%',
+            scrub: 5,
+            invalidateOnRefresh: true,
+          },
+        }
+      );
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
+
   // Scroll-linked reveal for the filter tabs only. The grid stays fully
   // visible at all times — animating its opacity/transform was interfering
   // with SVG clip-path references on the project cards.
@@ -133,17 +160,18 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         filters,
-        { opacity: 0, y: 40 },
+        { opacity: 0, y: 40, filter: 'blur(8px)' },
         {
           opacity: 1,
           y: 0,
+          filter: 'blur(0px)',
           ease: 'power2.out',
           duration: 1,
           scrollTrigger: {
             trigger: section,
-            start: 'top 95%',
-            end: 'top 35%',
-            scrub: 3,
+            start: 'top 85%',
+            end: 'top 20%',
+            scrub: 5,
             invalidateOnRefresh: true,
           },
         }
@@ -353,7 +381,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
     <section
       ref={sectionRef}
       id="projects"
-      className="pt-24 md:pt-40 pb-16 md:pb-24 px-0"
+      className="pt-44 md:pt-64 pb-16 md:pb-24 px-0"
       style={{ background: 'var(--plaster)' }}
     >
       {/* Filter Tabs */}

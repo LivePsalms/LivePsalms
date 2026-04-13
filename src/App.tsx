@@ -15,6 +15,13 @@ function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [showNav, setShowNav] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
     document.body.style.overflow = 'hidden';
