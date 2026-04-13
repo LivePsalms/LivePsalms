@@ -19,7 +19,8 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
   return (
     <section
       ref={sectionRef}
-      className="min-h-screen bg-mersi-beige"
+      className="min-h-screen"
+      style={{ backgroundColor: project.overlayColor }}
     >
       {/* Back Button */}
       <button
