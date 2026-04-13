@@ -88,7 +88,7 @@ function App() {
       <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          <Header showNav={showNav} />
+          <Header showNav={showNav} darkText={isDetailPage} />
 
           <Routes>
             <Route

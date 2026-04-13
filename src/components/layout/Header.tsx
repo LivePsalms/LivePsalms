@@ -32,9 +32,11 @@ function WaterText({ children, className, style, as: Tag = 'a', ...props }: any)
 
 interface HeaderProps {
   showNav?: boolean;
+  darkText?: boolean;
 }
 
-export function Header({ showNav = true }: HeaderProps) {
+export function Header({ showNav = true, darkText = false }: HeaderProps) {
+  const textColor = darkText ? '#000000' : 'var(--deep-umber)';
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -68,7 +70,9 @@ export function Header({ showNav = true }: HeaderProps) {
       }`}
       style={{ 
         perspective: '1000px',
-        background: isScrolled ? 'rgba(240, 236, 232, 0.95)' : 'transparent',
+        background: isScrolled
+          ? (darkText ? 'rgba(0, 0, 0, 0.15)' : 'rgba(240, 236, 232, 0.95)')
+          : 'transparent',
       }}
     >
       <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between">
@@ -115,7 +119,7 @@ export function Header({ showNav = true }: HeaderProps) {
               as="a"
               className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300"
               style={{
-                color: 'var(--deep-umber)',
+                color: textColor,
                 opacity: showNav ? 1 : 0,
                 transform: showNav
                   ? 'translateY(0)'
@@ -129,7 +133,7 @@ export function Header({ showNav = true }: HeaderProps) {
           ))}
           <span 
             style={{
-              color: 'var(--deep-umber)',
+              color: textColor,
               opacity: showNav ? 0.3 : 0,
               transition: 'opacity 2s ease',
               transitionDelay: '1400ms',
@@ -150,7 +154,7 @@ export function Header({ showNav = true }: HeaderProps) {
               as="button"
               type="button"
               className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 cursor-pointer"
-              style={{ color: 'var(--deep-umber)' }}
+              style={{ color: textColor }}
             >
               SOCIAL
             </WaterText>
@@ -167,7 +171,7 @@ export function Header({ showNav = true }: HeaderProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 whitespace-nowrap"
-                  style={{ color: 'var(--deep-umber)' }}
+                  style={{ color: textColor }}
                 >
                   INSTAGRAM
                 </WaterText>
@@ -193,9 +197,9 @@ export function Header({ showNav = true }: HeaderProps) {
           aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? (
-            <X className="w-6 h-6" style={{ color: 'var(--deep-umber)' }} />
+            <X className="w-6 h-6" style={{ color: textColor }} />
           ) : (
-            <Menu className="w-6 h-6" style={{ color: 'var(--deep-umber)' }} />
+            <Menu className="w-6 h-6" style={{ color: textColor }} />
           )}
         </button>
       </div>
@@ -216,7 +220,7 @@ export function Header({ showNav = true }: HeaderProps) {
               href={item.href}
               onClick={() => setIsMobileMenuOpen(false)}
               className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
-              style={{ color: 'var(--deep-umber)' }}
+              style={{ color: textColor }}
             >
               {item.label}
             </a>
@@ -229,7 +233,7 @@ export function Header({ showNav = true }: HeaderProps) {
             href="#social"
             onClick={() => setIsMobileMenuOpen(false)}
             className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
-            style={{ color: 'var(--deep-umber)' }}
+            style={{ color: textColor }}
           >
             SOCIAL
           </a>
