@@ -1,9 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 
+export type TransitionPhase = 'expanding' | 'revealing' | 'idle';
+
 interface SplitTransitionProps {
   isActive: boolean;
   overlayColor: string;
-  onComplete: () => void;
+  phase: TransitionPhase;
+  onPhaseComplete: () => void;
 }
 
 const EASE = [0.65, 0, 0.35, 1] as const;
@@ -11,43 +14,53 @@ const EASE = [0.65, 0, 0.35, 1] as const;
 export function SplitTransition({
   isActive,
   overlayColor,
-  onComplete,
+  phase,
+  onPhaseComplete,
 }: SplitTransitionProps) {
+  const isExpanding = phase === 'expanding';
+  const isRevealing = phase === 'revealing';
+
   return (
     <AnimatePresence>
       {isActive && (
         <>
-          {/* Left panel — scales from center seam outward to the left */}
+          {/* Left panel */}
           <motion.div
-            className="fixed inset-0 z-50 pointer-events-none"
-            style={{ left: 0, right: '50%', backgroundColor: overlayColor }}
-            initial={{ scaleX: 0, originX: 1 }}
-            animate={{ scaleX: 1 }}
-            exit={{ scaleX: 0, originX: 1 }}
-            transition={{
-              duration: 0.7,
-              ease: EASE,
-              exit: { duration: 0.6, delay: 0.2 },
+            className="fixed top-0 bottom-0 left-0 z-50 pointer-events-none"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: isRevealing ? 0 : 1 }}
+            style={{
+              right: '50%',
+              backgroundColor: overlayColor,
+              transformOrigin: isRevealing ? 'left' : 'right',
             }}
-            onAnimationComplete={(definition: Record<string, unknown>) => {
-              if (definition.scaleX === 0) {
-                onComplete();
+            transition={{
+              duration: isExpanding ? 0.7 : 0.6,
+              ease: EASE,
+              delay: isRevealing ? 0.2 : 0,
+            }}
+            onAnimationComplete={() => {
+              if (isExpanding || isRevealing) {
+                onPhaseComplete();
               }
             }}
             aria-hidden="true"
           />
 
-          {/* Right panel — scales from center seam outward to the right */}
+          {/* Right panel */}
           <motion.div
-            className="fixed inset-0 z-50 pointer-events-none"
-            style={{ left: '50%', right: 0, backgroundColor: overlayColor }}
-            initial={{ scaleX: 0, originX: 0 }}
-            animate={{ scaleX: 1 }}
-            exit={{ scaleX: 0, originX: 0 }}
+            className="fixed top-0 bottom-0 right-0 z-50 pointer-events-none"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: isRevealing ? 0 : 1 }}
+            style={{
+              left: '50%',
+              backgroundColor: overlayColor,
+              transformOrigin: isRevealing ? 'right' : 'left',
+            }}
             transition={{
-              duration: 0.7,
+              duration: isExpanding ? 0.7 : 0.6,
               ease: EASE,
-              exit: { duration: 0.6, delay: 0.2 },
+              delay: isRevealing ? 0.2 : 0,
             }}
             aria-hidden="true"
           />

@@ -8,6 +8,7 @@ import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
+import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import type { Project } from '@/types';
 import './App.css';
 
@@ -15,6 +16,8 @@ function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [showIntro, setShowIntro] = useState(true);
   const [showNav, setShowNav] = useState(false);
 
@@ -28,26 +31,30 @@ function App() {
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
     setIsTransitioning(true);
+    setTransitionPhase('expanding');
+    setDirection('forward');
     document.body.style.overflow = 'hidden';
-
-    // Show detail page once the expand animation covers the screen
-    setTimeout(() => {
-      setShowDetail(true);
-    }, 700);
   };
 
-  const handleTransitionComplete = () => {
-    setIsTransitioning(false);
+  const handlePhaseComplete = () => {
+    if (transitionPhase === 'expanding') {
+      // Panels now cover the screen — swap content underneath
+      setShowDetail(direction === 'forward');
+      setTransitionPhase('revealing');
+    } else if (transitionPhase === 'revealing') {
+      setIsTransitioning(false);
+      setTransitionPhase('idle');
+      if (direction === 'back') {
+        setSelectedProject(null);
+        document.body.style.overflow = 'auto';
+      }
+    }
   };
 
   const handleBackToProjects = () => {
     setIsTransitioning(true);
-    setShowDetail(false);
-
-    setTimeout(() => {
-      setSelectedProject(null);
-      document.body.style.overflow = 'auto';
-    }, 800);
+    setTransitionPhase('expanding');
+    setDirection('back');
   };
 
   const handleIntroComplete = () => {
@@ -106,7 +113,8 @@ function App() {
       <SplitTransition
         isActive={isTransitioning}
         overlayColor={selectedProject?.overlayColor || '#8B8378'}
-        onComplete={handleTransitionComplete}
+        phase={transitionPhase}
+        onPhaseComplete={handlePhaseComplete}
       />
 
       {/* Global film-grain overlay */}
