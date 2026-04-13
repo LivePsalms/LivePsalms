@@ -44,7 +44,7 @@ function ProjectCard({
   project: Project;
   span: number;
   heightClass: string;
-  onProjectClick: (project: Project, rect: DOMRect) => void;
+  onProjectClick: (project: Project) => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -52,7 +52,7 @@ function ProjectCard({
     <div
       data-flip-id={project.id}
       data-span={span}
-      onClick={(e) => onProjectClick(project, e.currentTarget.getBoundingClientRect())}
+      onClick={() => onProjectClick(project)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${heightClass} cursor-pointer overflow-hidden`}
@@ -111,7 +111,7 @@ function ProjectCard({
 }
 
 interface ProjectsGridProps {
-  onProjectClick: (project: Project, rect: DOMRect) => void;
+  onProjectClick: (project: Project) => void;
 }
 
 export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {

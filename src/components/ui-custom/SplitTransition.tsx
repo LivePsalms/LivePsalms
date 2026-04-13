@@ -1,155 +1,58 @@
-import { motion } from 'framer-motion';
-import { useEffect, useRef } from 'react';
-
-export type TransitionState = 'idle' | 'expanding' | 'revealing';
-
-export interface TransitionOrigin {
-  centerX: number;
-  centerY: number;
-  height: number;
-  overlayColor: string;
-}
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SplitTransitionProps {
-  state: TransitionState;
-  origin: TransitionOrigin | null;
-  onExpandComplete: () => void;
-  onRevealComplete: () => void;
+  isActive: boolean;
+  overlayColor: string;
+  onComplete: () => void;
 }
 
-const EASE = [0.43, 0.13, 0.23, 0.96] as const;
-const EXPAND_DURATION = 0.7;
-const REVEAL_DURATION = 0.6;
-const HOLD_DELAY = 50;
+const EASE = [0.65, 0, 0.35, 1] as const;
 
 export function SplitTransition({
-  state,
-  origin,
-  onExpandComplete,
-  onRevealComplete,
+  isActive,
+  overlayColor,
+  onComplete,
 }: SplitTransitionProps) {
-  // Clean up hold timer on unmount
-  const holdTimer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(holdTimer.current), []);
-
-  // Skip animation for reduced-motion: advance state machine immediately
-  const prefersReduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  useEffect(() => {
-    if (!prefersReduced) return;
-    if (state === 'expanding') onExpandComplete();
-    if (state === 'revealing') onRevealComplete();
-  }, [state, prefersReduced, onExpandComplete, onRevealComplete]);
-
-  if (state === 'idle' || !origin || prefersReduced) return null;
-
-  const isExpanding = state === 'expanding';
-  const isRevealing = state === 'revealing';
-
-  // Use pixel values throughout for smooth Framer Motion interpolation
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const halfVw = vw / 2;
-
-  const leftPanel = {
-    initial: {
-      left: origin.centerX,
-      width: 0,
-      top: origin.centerY - origin.height / 2,
-      height: origin.height,
-    },
-    expanded: {
-      left: 0,
-      width: halfVw,
-      top: 0,
-      height: vh,
-    },
-    revealed: {
-      left: halfVw,
-      width: 0,
-      top: 0,
-      height: vh,
-    },
-  };
-
-  const rightPanel = {
-    initial: {
-      left: origin.centerX,
-      width: 0,
-      top: origin.centerY - origin.height / 2,
-      height: origin.height,
-    },
-    expanded: {
-      left: halfVw,
-      width: halfVw,
-      top: 0,
-      height: vh,
-    },
-    revealed: {
-      left: halfVw,
-      width: 0,
-      top: 0,
-      height: vh,
-    },
-  };
-
-  const getTarget = (panel: typeof leftPanel) => {
-    if (isExpanding) return panel.expanded;
-    if (isRevealing) return panel.revealed;
-    return panel.initial;
-  };
-
-  const getInitial = (panel: typeof leftPanel) => {
-    if (isExpanding) return panel.initial;
-    return panel.expanded;
-  };
-
-  const duration = isExpanding ? EXPAND_DURATION : REVEAL_DURATION;
-
-  // Only fire completion callback on the left panel (avoids double-fire).
-  // After expanding, wait HOLD_DELAY ms then advance to revealing.
-  const handleAnimationComplete = () => {
-    if (isExpanding) {
-      holdTimer.current = setTimeout(onExpandComplete, HOLD_DELAY);
-    }
-    if (isRevealing) {
-      onRevealComplete();
-    }
-  };
-
   return (
-    <>
-      {/* Left panel */}
-      <motion.div
-        key={`left-${state}`}
-        aria-hidden="true"
-        initial={getInitial(leftPanel)}
-        animate={getTarget(leftPanel)}
-        transition={{ duration, ease: EASE }}
-        onAnimationComplete={handleAnimationComplete}
-        style={{
-          position: 'fixed',
-          backgroundColor: origin.overlayColor,
-          zIndex: 40,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Right panel */}
-      <motion.div
-        key={`right-${state}`}
-        aria-hidden="true"
-        initial={getInitial(rightPanel)}
-        animate={getTarget(rightPanel)}
-        transition={{ duration, ease: EASE }}
-        style={{
-          position: 'fixed',
-          backgroundColor: origin.overlayColor,
-          zIndex: 40,
-          pointerEvents: 'none',
-        }}
-      />
-    </>
+    <AnimatePresence>
+      {isActive && (
+        <>
+          {/* Left panel — scales from center seam outward to the left */}
+          <motion.div
+            className="fixed inset-0 z-50 pointer-events-none"
+            style={{ left: 0, right: '50%', backgroundColor: overlayColor }}
+            initial={{ scaleX: 0, originX: 1 }}
+            animate={{ scaleX: 1 }}
+            exit={{ scaleX: 0, originX: 1 }}
+            transition={{
+              duration: 0.7,
+              ease: EASE,
+              exit: { duration: 0.6, delay: 0.2 },
+            }}
+            onAnimationComplete={(definition: Record<string, unknown>) => {
+              if (definition.scaleX === 0) {
+                onComplete();
+              }
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Right panel — scales from center seam outward to the right */}
+          <motion.div
+            className="fixed inset-0 z-50 pointer-events-none"
+            style={{ left: '50%', right: 0, backgroundColor: overlayColor }}
+            initial={{ scaleX: 0, originX: 0 }}
+            animate={{ scaleX: 1 }}
+            exit={{ scaleX: 0, originX: 0 }}
+            transition={{
+              duration: 0.7,
+              ease: EASE,
+              exit: { duration: 0.6, delay: 0.2 },
+            }}
+            aria-hidden="true"
+          />
+        </>
+      )}
+    </AnimatePresence>
   );
 }

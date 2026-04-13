@@ -8,14 +8,13 @@ import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
-import type { TransitionState, TransitionOrigin } from '@/components/ui-custom/SplitTransition';
 import type { Project } from '@/types';
 import './App.css';
 
 function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [transitionState, setTransitionState] = useState<TransitionState>('idle');
-  const [transitionOrigin, setTransitionOrigin] = useState<TransitionOrigin | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [showNav, setShowNav] = useState(false);
 
@@ -26,30 +25,29 @@ function App() {
     }
   }, []);
 
-  const handleProjectClick = (project: Project, rect: DOMRect) => {
-    setTransitionOrigin({
-      centerX: rect.left + rect.width / 2,
-      centerY: rect.top + rect.height / 2,
-      height: rect.height,
-      overlayColor: project.overlayColor,
-    });
+  const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
-    setTransitionState('expanding');
+    setIsTransitioning(true);
     document.body.style.overflow = 'hidden';
+
+    // Show detail page once the expand animation covers the screen
+    setTimeout(() => {
+      setShowDetail(true);
+    }, 700);
   };
 
-  const handleExpandComplete = () => {
-    setTransitionState('revealing');
-  };
-
-  const handleRevealComplete = () => {
-    setTransitionState('idle');
-    setTransitionOrigin(null);
+  const handleTransitionComplete = () => {
+    setIsTransitioning(false);
   };
 
   const handleBackToProjects = () => {
-    setSelectedProject(null);
-    document.body.style.overflow = 'auto';
+    setIsTransitioning(true);
+    setShowDetail(false);
+
+    setTimeout(() => {
+      setSelectedProject(null);
+      document.body.style.overflow = 'auto';
+    }, 800);
   };
 
   const handleIntroComplete = () => {
@@ -69,13 +67,13 @@ function App() {
     <>
       {/* Video Intro - plays on every page load */}
       {showIntro && <VideoIntro onComplete={handleIntroComplete} />}
-      
+
       <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
           <Header showNav={showNav} />
 
-          {selectedProject ? (
+          {showDetail && selectedProject ? (
             <ProjectDetail
               project={selectedProject}
               onBack={handleBackToProjects}
@@ -94,7 +92,7 @@ function App() {
           )}
           {/* Spacer before footer — inside the z-index stacking context so it
               covers the sticky footer beneath */}
-          {!selectedProject && (
+          {!showDetail && (
             <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--plaster)' }} />
           )}
         </div>
@@ -102,14 +100,13 @@ function App() {
 
       {/* Sticky reveal footer — behind the main content, revealed when
           the user scrolls past the end */}
-      {!selectedProject && <Footer />}
+      {!showDetail && <Footer />}
 
       {/* Split-overlay page transition */}
       <SplitTransition
-        state={transitionState}
-        origin={transitionOrigin}
-        onExpandComplete={handleExpandComplete}
-        onRevealComplete={handleRevealComplete}
+        isActive={isTransitioning}
+        overlayColor={selectedProject?.overlayColor || '#8B8378'}
+        onComplete={handleTransitionComplete}
       />
 
       {/* Global film-grain overlay */}
