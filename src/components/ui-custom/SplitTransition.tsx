@@ -32,7 +32,18 @@ export function SplitTransition({
   const holdTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(holdTimer.current), []);
 
-  if (state === 'idle' || !origin) return null;
+  // Skip animation for reduced-motion: advance state machine immediately
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    if (!prefersReduced) return;
+    if (state === 'expanding') onExpandComplete();
+    if (state === 'revealing') onRevealComplete();
+  }, [state, prefersReduced, onExpandComplete, onRevealComplete]);
+
+  if (state === 'idle' || !origin || prefersReduced) return null;
 
   const isExpanding = state === 'expanding';
   const isRevealing = state === 'revealing';
