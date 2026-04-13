@@ -30,7 +30,7 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
         }`}
       >
         <ArrowLeft className="w-4 h-4" />
-        Retour
+        Return
       </button>
 
       {/* Hero Section */}
@@ -50,21 +50,6 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
               <span className="text-sm text-mersi-dark/70">{project.year}</span>
             )}
           </div>
-
-          {/* Small Image */}
-          {project.images[0] && (
-            <div
-              className={`w-48 h-64 mb-8 overflow-hidden rounded-sm transition-all duration-700 delay-200 ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              }`}
-            >
-              <img
-                src={project.images[0]}
-                alt={project.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
 
           {/* Description */}
           {project.description && (
