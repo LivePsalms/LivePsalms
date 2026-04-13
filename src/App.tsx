@@ -7,11 +7,15 @@ import { ProjectDetail } from '@/components/sections/ProjectDetail';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
+import { SplitTransition } from '@/components/ui-custom/SplitTransition';
+import type { TransitionState, TransitionOrigin } from '@/components/ui-custom/SplitTransition';
 import type { Project } from '@/types';
 import './App.css';
 
 function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [transitionState, setTransitionState] = useState<TransitionState>('idle');
+  const [transitionOrigin, setTransitionOrigin] = useState<TransitionOrigin | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [showNav, setShowNav] = useState(false);
 
@@ -22,9 +26,25 @@ function App() {
     }
   }, []);
 
-  const handleProjectClick = (project: Project) => {
+  const handleProjectClick = (project: Project, rect: DOMRect) => {
+    setTransitionOrigin({
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
+      height: rect.height,
+      overlayColor: project.overlayColor,
+    });
     setSelectedProject(project);
+    setTransitionState('expanding');
     document.body.style.overflow = 'hidden';
+  };
+
+  const handleExpandComplete = () => {
+    setTransitionState('revealing');
+  };
+
+  const handleRevealComplete = () => {
+    setTransitionState('idle');
+    setTransitionOrigin(null);
   };
 
   const handleBackToProjects = () => {
@@ -83,6 +103,14 @@ function App() {
       {/* Sticky reveal footer — behind the main content, revealed when
           the user scrolls past the end */}
       {!selectedProject && <Footer />}
+
+      {/* Split-overlay page transition */}
+      <SplitTransition
+        state={transitionState}
+        origin={transitionOrigin}
+        onExpandComplete={handleExpandComplete}
+        onRevealComplete={handleRevealComplete}
+      />
 
       {/* Global film-grain overlay */}
       <div className="grain-bg" aria-hidden="true" />
