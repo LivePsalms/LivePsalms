@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-export type TransitionState = 'idle' | 'expanding' | 'holding' | 'revealing';
+export type TransitionState = 'idle' | 'expanding' | 'revealing';
 
 export interface TransitionOrigin {
   centerX: number;
@@ -18,9 +18,9 @@ interface SplitTransitionProps {
 }
 
 const EASE = [0.43, 0.13, 0.23, 0.96] as const;
-const EXPAND_DURATION = 0.7;   // 700ms
-const REVEAL_DURATION = 0.6;   // 600ms
-const HOLD_DELAY = 50;         // ms pause between phases
+const EXPAND_DURATION = 0.7;
+const REVEAL_DURATION = 0.6;
+const HOLD_DELAY = 50;
 
 export function SplitTransition({
   state,
@@ -28,20 +28,20 @@ export function SplitTransition({
   onExpandComplete,
   onRevealComplete,
 }: SplitTransitionProps) {
-  // Auto-advance from holding → revealing after a brief pause
-  useEffect(() => {
-    if (state !== 'holding') return;
-    const timer = setTimeout(onExpandComplete, HOLD_DELAY);
-    return () => clearTimeout(timer);
-  }, [state, onExpandComplete]);
+  // Clean up hold timer on unmount
+  const holdTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
 
   if (state === 'idle' || !origin) return null;
 
-  const isExpanding = state === 'expanding' || state === 'holding';
+  const isExpanding = state === 'expanding';
   const isRevealing = state === 'revealing';
 
-  // Expanding: panels grow from card center to viewport edges
-  // Revealing: panels collapse from viewport edges back to center
+  // Use pixel values throughout for smooth Framer Motion interpolation
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const halfVw = vw / 2;
+
   const leftPanel = {
     initial: {
       left: origin.centerX,
@@ -51,15 +51,15 @@ export function SplitTransition({
     },
     expanded: {
       left: 0,
-      width: '50vw',
+      width: halfVw,
       top: 0,
-      height: '100vh',
+      height: vh,
     },
     revealed: {
-      left: '50vw',
+      left: halfVw,
       width: 0,
       top: 0,
-      height: '100vh',
+      height: vh,
     },
   };
 
@@ -71,16 +71,16 @@ export function SplitTransition({
       height: origin.height,
     },
     expanded: {
-      left: '50vw',
-      width: '50vw',
+      left: halfVw,
+      width: halfVw,
       top: 0,
-      height: '100vh',
+      height: vh,
     },
     revealed: {
-      left: '50vw',
+      left: halfVw,
       width: 0,
       top: 0,
-      height: '100vh',
+      height: vh,
     },
   };
 
@@ -97,10 +97,11 @@ export function SplitTransition({
 
   const duration = isExpanding ? EXPAND_DURATION : REVEAL_DURATION;
 
-  // Only fire completion callback on the left panel (avoids double-fire)
+  // Only fire completion callback on the left panel (avoids double-fire).
+  // After expanding, wait HOLD_DELAY ms then advance to revealing.
   const handleAnimationComplete = () => {
     if (isExpanding) {
-      // Will transition to 'holding', then useEffect advances to 'revealing'
+      holdTimer.current = setTimeout(onExpandComplete, HOLD_DELAY);
     }
     if (isRevealing) {
       onRevealComplete();
