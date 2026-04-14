@@ -34,22 +34,31 @@ export function PurposeGallery({ projects, onProjectClick }: PurposeGalleryProps
         );
       });
 
-      gsap.utils.toArray<HTMLElement>('.purpose-overlay').forEach((el) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 1,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: el.closest('.purpose-slide'),
-              start: 'top 60%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
+      gsap.utils.toArray<HTMLElement>('.purpose-overlay').forEach((el, i) => {
+        const slide = el.closest('.purpose-slide') as HTMLElement | null;
+        const rect = slide?.getBoundingClientRect();
+        const alreadyVisible = rect ? rect.top < window.innerHeight * 0.6 : false;
+
+        if (i === 0 || alreadyVisible) {
+          // First slide (or any slide already in view on load): show immediately
+          gsap.set(el, { opacity: 1, y: 0 });
+        } else {
+          gsap.fromTo(
+            el,
+            { opacity: 0, y: 30 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 1,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: slide,
+                start: 'top 60%',
+                toggleActions: 'play none none reverse',
+              },
+            }
+          );
+        }
       });
     }, containerRef);
 
@@ -76,7 +85,8 @@ export function PurposeGallery({ projects, onProjectClick }: PurposeGalleryProps
             alt={project.name}
             className="purpose-img absolute inset-0 w-full h-full object-cover"
           />
-          <div className="purpose-overlay absolute bottom-0 left-0 right-0 p-8 md:p-12 text-center">
+          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+          <div className="purpose-overlay absolute bottom-0 left-0 right-0 p-8 md:p-12 text-center z-10">
             <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-2">
               {project.name}
             </h2>
@@ -84,7 +94,6 @@ export function PurposeGallery({ projects, onProjectClick }: PurposeGalleryProps
               {categoryLabel[project.category]}
             </p>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
         </div>
       ))}
     </div>
