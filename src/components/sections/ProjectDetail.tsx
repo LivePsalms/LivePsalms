@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project } from '@/types';
 import { ArrowLeft } from 'lucide-react';
+import { MoodBoard } from '@/components/sections/MoodBoard';
 
 interface ProjectDetailProps {
   project: Project;
@@ -10,6 +11,15 @@ interface ProjectDetailProps {
 export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [inMoodBoard, setInMoodBoard] = useState(false);
+
+  const handleReturn = () => {
+    if (inMoodBoard) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      onBack();
+    }
+  };
 
   useEffect(() => {
     setIsVisible(true);
@@ -24,7 +34,7 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
     >
       {/* Back Button */}
       <button
-        onClick={onBack}
+        onClick={handleReturn}
         className={`fixed top-24 left-6 lg:left-10 z-50 flex items-center gap-2 text-sm font-medium text-mersi-dark hover:opacity-60 transition-all duration-500 ${
           isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
         }`}
@@ -154,6 +164,8 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
           </div>
         </div>
       )}
+
+      <MoodBoard project={project} onInMoodBoard={setInMoodBoard} />
     </section>
   );
 }
