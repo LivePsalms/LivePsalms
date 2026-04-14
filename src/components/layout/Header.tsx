@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 
-function WaterText({ children, className, style, as: Tag = 'a', ...props }: any) {
+function WaterText({ children, className, style, as: Tag = 'a', ...props }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties; as?: React.ElementType; [key: string]: unknown }) {
   const [isHovered, setIsHovered] = useState(false);
   const text = typeof children === 'string' ? children : '';
 
@@ -38,7 +38,7 @@ interface HeaderProps {
 
 export function Header({ showNav = true, darkText = false }: HeaderProps) {
   const navigate = useNavigate();
-  const textColor = darkText ? '#000000' : 'var(--deep-umber)';
+  const textColor = darkText ? 'rgba(255, 255, 255, 0.75)' : 'var(--deep-umber)';
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 

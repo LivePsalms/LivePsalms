@@ -1,15 +1,10 @@
-import { useRef, useLayoutEffect } from 'react';
+import { useRef, useEffect, useLayoutEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
+import { categoryLabel } from '@/data/projects';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const categoryLabel: Record<Project['category'], string> = {
-  residential: 'Restoration',
-  retail: 'Renewal',
-  hospitality: 'Serenity',
-};
 
 interface PurposeGalleryProps {
   projects: Project[];

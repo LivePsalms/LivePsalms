@@ -1,7 +1,9 @@
 // src/components/sections/MoodBoard.tsx
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { categoryLabel } from '@/data/projects';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,16 +18,9 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const progressTrackRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const onInMoodBoardRef = useRef(onInMoodBoard);
   onInMoodBoardRef.current = onInMoodBoard;
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   useLayoutEffect(() => {
     if (isMobile || !sectionRef.current || !trackRef.current) return;
@@ -320,7 +315,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute bottom-[20%] left-[20%] text-white text-xs tracking-widest uppercase"
             data-speed="0.75"
           >
-            {project.category === 'residential' ? 'Restoration' : project.category === 'retail' ? 'Renewal' : 'Serenity'}
+            {categoryLabel[project.category]}
           </p>
         </div>
 
@@ -361,10 +356,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
 
 // Mobile fallback — simple vertical stack
 function MoodBoardMobile({ project }: { project: Project }) {
-  const categoryLabel =
-    project.category === 'residential' ? 'Restoration'
-    : project.category === 'retail' ? 'Renewal'
-    : 'Serenity';
+  const label = categoryLabel[project.category];
 
   return (
     <div style={{ backgroundColor: project.overlayColor }}>
@@ -431,7 +423,7 @@ function MoodBoardMobile({ project }: { project: Project }) {
           alt={`${project.name} featured`}
           className="w-full h-[50vh] object-cover mb-4"
         />
-        <p className="text-white text-xs tracking-widest uppercase">{categoryLabel}</p>
+        <p className="text-white text-xs tracking-widest uppercase">{label}</p>
       </section>
 
       {/* Zone 5: CTA */}

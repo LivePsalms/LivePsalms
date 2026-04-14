@@ -89,17 +89,6 @@
     display: none;
   }
   
-  /* Text stroke for outline effect */
-  .text-stroke {
-    -webkit-text-stroke: 2px hsl(var(--mersi-dark));
-    color: transparent;
-  }
-  
-  .text-stroke-thin {
-    -webkit-text-stroke: 1px hsl(var(--mersi-dark));
-    color: transparent;
-  }
-  
   /* Animation utilities */
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
@@ -113,14 +102,6 @@
     animation: scaleIn 0.5s ease-out forwards;
   }
   
-  /* Hover lift effect */
-  .hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  .hover-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-  }
 }
 
 @keyframes fadeIn {
@@ -154,73 +135,6 @@
   }
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-marquee {
-  animation: marquee 30s linear infinite;
-}
-
-/* Custom cursor styles */
-.cursor-pointer {
-  cursor: pointer;
-}
-
-/* Image hover zoom */
-.img-zoom {
-  overflow: hidden;
-}
-.img-zoom img {
-  transition: transform 0.6s ease;
-}
-.img-zoom:hover img {
-  transform: scale(1.05);
-}
-
-/* Project card overlay */
-.project-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 2rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.project-card:hover .project-overlay {
-  opacity: 1;
-}
-
-/* Filter tab active state */
-.filter-tab {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.filter-tab::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background-color: hsl(var(--mersi-dark));
-  transition: width 0.3s ease;
-}
-
-.filter-tab.active::after,
-.filter-tab:hover::after {
-  width: 100%;
-}
-
 /* Smooth image loading */
 img {
   opacity: 1;
@@ -230,19 +144,6 @@ img {
 /* ============================================
    MOBILE RESPONSIVE STYLES
    ============================================ */
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Prevent horizontal overflow */
-body {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
 
 /* Mobile touch improvements */
 @media (pointer: coarse) {
@@ -297,6 +198,34 @@ body {
   background: var(--pale-stone);
   margin: 0 clamp(24px, 5vw, 80px);
   opacity: 0.35;
+}
+
+/* ============================================
+   WATER RIPPLE KEYFRAMES
+   ============================================ */
+
+@keyframes water-ripple-ring-1 {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+@keyframes water-ripple-ring-2 {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0.6; }
+  20% { transform: translate(-50%, -50%) scale(0); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+@keyframes water-ripple-ring-3 {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
+  40% { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+.water-ripple-ring-1 {
+  animation: water-ripple-ring-1 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.water-ripple-ring-2 {
+  animation: water-ripple-ring-2 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.water-ripple-ring-3 {
+  animation: water-ripple-ring-3 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 /* ============================================

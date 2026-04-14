@@ -1,5 +1,16 @@
 import type { Project } from '@/types';
 
+/** Warm taupe — used as the default overlay when no colour is available. */
+export const FALLBACK_OVERLAY_COLOR = '#8B8378';
+export const FALLBACK_RENEWAL_COLOR = '#5A7A6A';
+export const FALLBACK_SERENITY_COLOR = '#B08A6A';
+
+export const categoryLabel: Record<Project['category'], string> = {
+  residential: 'Restoration',
+  retail: 'Renewal',
+  hospitality: 'Serenity',
+};
+
 // Project entries for the editorial mosaic. Each image under
 // public/mid_section is named by its category so it can be wired directly
 // into the grid. IDs and display names are derived from the filename.
@@ -78,27 +89,14 @@ const serenityOverlays = [
 
 export const projects: Project[] = [
   ...restorationImages.map((file, i) =>
-    toProject(file, 'residential', `Restoration ${String(i + 1).padStart(2, '0')}`, restorationOverlays[i] ?? '#8B8378')
+    toProject(file, 'residential', `Restoration ${String(i + 1).padStart(2, '0')}`, restorationOverlays[i] ?? FALLBACK_OVERLAY_COLOR)
   ),
   ...renewalImages.map((file, i) =>
-    toProject(file, 'retail', `Renewal ${String(i + 1).padStart(2, '0')}`, renewalOverlays[i] ?? '#5A7A6A')
+    toProject(file, 'retail', `Renewal ${String(i + 1).padStart(2, '0')}`, renewalOverlays[i] ?? FALLBACK_RENEWAL_COLOR)
   ),
   ...serenityImages.map((file, i) =>
-    toProject(file, 'hospitality', `Serenity ${String(i + 1).padStart(2, '0')}`, serenityOverlays[i] ?? '#B08A6A')
+    toProject(file, 'hospitality', `Serenity ${String(i + 1).padStart(2, '0')}`, serenityOverlays[i] ?? FALLBACK_SERENITY_COLOR)
   ),
-];
-
-export const galleryImages = [
-  '/mid_section/restoration1.jpg',
-  '/mid_section/restoration2.jpg',
-  '/mid_section/renewal1.png',
-  '/mid_section/serenity2.jpg',
-  '/mid_section/restoration3.jpg',
-  '/mid_section/renewal3.png',
-  '/mid_section/serenity3.jpg',
-  '/mid_section/restoration5.png',
-  '/mid_section/renewal4.png',
-  '/mid_section/serenity6.png',
 ];
 
 export const navItems = [

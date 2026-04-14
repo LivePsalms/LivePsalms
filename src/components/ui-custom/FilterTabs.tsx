@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import type { FilterCategory } from '@/types';
+import { categoryLabel } from '@/data/projects';
+import type { FilterCategory, Project } from '@/types';
 
 interface FilterTabsProps {
   activeFilter: FilterCategory;
   onFilterChange: (filter: FilterCategory) => void;
 }
 
-const filters: { label: string; value: FilterCategory }[] = [
-  { label: 'Restoration', value: 'residential' },
-  { label: 'Renewal', value: 'retail' },
-  { label: 'Serenity', value: 'hospitality' },
-];
+const filters: { label: string; value: FilterCategory }[] = (
+  Object.entries(categoryLabel) as [Project['category'], string][]
+).map(([value, label]) => ({ label, value }));
 
 function WaterButton({ children, className, style, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const [isHovered, setIsHovered] = useState(false);
@@ -29,7 +28,7 @@ function WaterButton({ children, className, style, ...props }: React.ButtonHTMLA
           key={i}
           className="inline-block"
           style={{
-            animation: isHovered ? `water-letter 2.4s ease-in-out ${i * 100}ms infinite` : 'none',
+            animation: isHovered ? `water-letter 2.4s ease-in-out ${Math.abs(i - (text.length - 1) / 2) * 100}ms infinite` : 'none',
             transition: 'transform 0.3s ease',
           }}
         >

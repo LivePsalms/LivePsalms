@@ -23,7 +23,6 @@ export function ProjectDetail({ project, onBack }: ProjectDetailProps) {
 
   useEffect(() => {
     setIsVisible(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [project]);
 
   return (

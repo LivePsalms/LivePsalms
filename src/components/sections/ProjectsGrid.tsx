@@ -2,17 +2,11 @@ import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
 import { motion, AnimatePresence } from 'framer-motion';
-import { projects } from '@/data/projects';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
+import { categoryLabel } from '@/data/projects';
 import type { FilterCategory, Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
-
-const categoryLabel: Record<Project['category'], string> = {
-  residential: 'Restoration',
-  retail: 'Renewal',
-  hospitality: 'Serenity',
-};
 
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.
@@ -111,10 +105,11 @@ function ProjectCard({
 }
 
 interface ProjectsGridProps {
+  projects: Project[];
   onProjectClick: (project: Project) => void;
 }
 
-export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
+export function ProjectsGrid({ projects, onProjectClick }: ProjectsGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
   const sectionRef = useRef<HTMLElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
@@ -237,7 +232,7 @@ export function ProjectsGrid({ onProjectClick }: ProjectsGridProps) {
   const filteredProjects = useMemo(() => {
     if (activeFilter === 'all') return projects;
     return projects.filter((project) => project.category === activeFilter);
-  }, [activeFilter]);
+  }, [activeFilter, projects]);
 
   const spans = useMemo(
     () => computeSpans(filteredProjects.length),

@@ -1,35 +1,9 @@
 /* App-specific styles */
 
-/* Smooth page transitions */
-.page-transition-enter {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.page-transition-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.page-transition-exit {
-  opacity: 1;
-}
-
-.page-transition-exit-active {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
 /* Custom selection color */
 ::selection {
   background-color: var(--deep-umber);
   color: var(--plaster);
-}
-
-/* Smooth scrolling for anchor links */
-html {
-  scroll-behavior: smooth;
 }
 
 /* Hide scrollbar but keep functionality */
@@ -53,72 +27,6 @@ body::-webkit-scrollbar-thumb {
 
 body::-webkit-scrollbar-thumb:hover {
   background-color: rgba(58, 52, 38, 0.4);
-}
-
-/* Image loading placeholder */
-.img-placeholder {
-  background: linear-gradient(
-    90deg,
-    var(--pale-stone) 0%,
-    var(--plaster) 50%,
-    var(--pale-stone) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Project card hover state */
-.project-card {
-  position: relative;
-}
-
-.project-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.4) 0%,
-    transparent 50%
-  );
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.project-card:hover::before {
-  opacity: 1;
-}
-
-/* Filter tab underline animation */
-.filter-tab-underline {
-  position: relative;
-}
-
-.filter-tab-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background-color: var(--deep-umber);
-  transition: width 0.3s ease;
-}
-
-.filter-tab-underline:hover::after,
-.filter-tab-underline.active::after {
-  width: 100%;
 }
 
 /* Responsive typography adjustments */

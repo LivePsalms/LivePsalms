@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
 interface Ripple {
@@ -29,18 +27,18 @@ export function WaterRipple({
   const lastHoverTime = useRef(0);
   const isTouchDevice = useRef(false);
 
-  // Detect touch device
   useEffect(() => {
     isTouchDevice.current = window.matchMedia('(pointer: coarse)').matches;
   }, []);
 
-  // Cleanup expired ripples
   useEffect(() => {
     const cleanup = setInterval(() => {
-      const now = Date.now();
-      setRipples((prev) =>
-        prev.filter((ripple) => now - ripple.timestamp < rippleDuration)
-      );
+      setRipples((prev) => {
+        if (prev.length === 0) return prev;
+        const now = Date.now();
+        const next = prev.filter((ripple) => now - ripple.timestamp < rippleDuration);
+        return next.length === prev.length ? prev : next;
+      });
     }, 50);
 
     return () => clearInterval(cleanup);
@@ -95,61 +93,6 @@ export function WaterRipple({
       onClick={handleClick}
       onTouchStart={handleTouchStart}
     >
-      <style>{`
-        @keyframes water-ripple-ring-1 {
-          0% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0.8;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0;
-          }
-        }
-
-        @keyframes water-ripple-ring-2 {
-          0% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0.6;
-          }
-          20% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0.6;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0;
-          }
-        }
-
-        @keyframes water-ripple-ring-3 {
-          0% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0.4;
-          }
-          40% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0.4;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0;
-          }
-        }
-
-        .water-ripple-ring-1 {
-          animation: water-ripple-ring-1 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-
-        .water-ripple-ring-2 {
-          animation: water-ripple-ring-2 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-
-        .water-ripple-ring-3 {
-          animation: water-ripple-ring-3 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-      `}</style>
-
       {/* Ripple container - behind content but visible */}
       <div className="pointer-events-none fixed inset-0 z-[5]">
         {ripples.map((ripple) => (
