@@ -4,13 +4,14 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
 import { ProjectsGrid } from '@/components/sections/ProjectsGrid';
+import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { ProjectDetail } from '@/components/sections/ProjectDetail';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
-import { projects } from '@/data/projects';
+import { useProjectColors } from '@/hooks/useProjectColors';
 import type { Project } from '@/types';
 import './App.css';
 
@@ -24,22 +25,19 @@ function App() {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [showNav, setShowNav] = useState(false);
+  const [savedScrollY, setSavedScrollY] = useState(0);
 
+  const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
 
   useEffect(() => {
-    window.scrollTo(0, 0);
     if ('scrollRestoration' in history) {
       history.scrollRestoration = 'manual';
     }
   }, []);
 
-  // Scroll to top on route change
-  useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [location.pathname]);
-
   const handleProjectClick = (project: Project) => {
+    setSavedScrollY(window.scrollY);
     setTransitionColor(project.overlayColor);
     setIsTransitioning(true);
     setTransitionPhase('expanding');
@@ -50,9 +48,16 @@ function App() {
   const handlePhaseComplete = useCallback(() => {
     if (transitionPhase === 'expanding') {
       // Panels cover the screen — navigate now
+      const isGoingHome = pendingNavigation === '/';
       if (pendingNavigation) {
         navigate(pendingNavigation);
         setPendingNavigation(null);
+      }
+      // Scroll to saved position when going back, top when going to detail
+      if (isGoingHome) {
+        window.scrollTo(0, savedScrollY);
+      } else {
+        window.scrollTo(0, 0);
       }
       setTransitionPhase('revealing');
     } else if (transitionPhase === 'revealing') {
@@ -62,7 +67,7 @@ function App() {
         document.body.style.overflow = 'auto';
       }
     }
-  }, [transitionPhase, pendingNavigation, navigate, isDetailPage]);
+  }, [transitionPhase, pendingNavigation, navigate, isDetailPage, savedScrollY]);
 
   const handleBackToProjects = () => {
     setIsTransitioning(true);
@@ -102,14 +107,20 @@ function App() {
                   >
                     <Hero showNav={showNav} />
                   </WaterRipple>
-                  <ProjectsGrid onProjectClick={handleProjectClick} />
+                  <ProjectsGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>
+              }
+            />
+            <Route
+              path="/purpose"
+              element={
+                <PurposeGallery projects={projects} onProjectClick={handleProjectClick} />
               }
             />
             <Route
               path="/purpose/:projectId"
               element={
-                <ProjectDetailRoute onBack={handleBackToProjects} />
+                <ProjectDetailRoute projects={projects} onBack={handleBackToProjects} />
               }
             />
           </Routes>
@@ -153,7 +164,7 @@ function App() {
 }
 
 /** Wrapper that resolves the project from the URL param */
-function ProjectDetailRoute({ onBack }: { onBack: () => void }) {
+function ProjectDetailRoute({ projects, onBack }: { projects: Project[]; onBack: () => void }) {
   const { projectId } = useParams();
   const project = projects.find((p) => p.id === projectId);
 

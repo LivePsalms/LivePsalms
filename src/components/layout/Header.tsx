@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 
@@ -19,7 +20,7 @@ function WaterText({ children, className, style, as: Tag = 'a', ...props }: any)
           key={i}
           className="inline-block"
           style={{
-            animation: isHovered ? `water-letter 2.4s ease-in-out ${i * 100}ms infinite` : 'none',
+            animation: isHovered ? `water-letter 2.4s ease-in-out ${Math.abs(i - (text.length - 1) / 2) * 100}ms infinite` : 'none',
             transition: 'transform 0.3s ease',
           }}
         >
@@ -36,7 +37,8 @@ interface HeaderProps {
 }
 
 export function Header({ showNav = true, darkText = false }: HeaderProps) {
-  const textColor = darkText ? '#000000' : 'var(--deep-umber)';
+  const navigate = useNavigate();
+  const textColor = darkText ? 'rgba(255, 255, 255, 0.55)' : 'var(--deep-umber)';
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -68,10 +70,10 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
           ? 'backdrop-blur-md py-3'
           : 'bg-transparent py-4 md:py-6'
       }`}
-      style={{ 
+      style={{
         perspective: '1000px',
-        background: isScrolled
-          ? (darkText ? 'rgba(0, 0, 0, 0.15)' : 'rgba(240, 236, 232, 0.95)')
+        background: isScrolled && !darkText
+          ? 'rgba(240, 236, 232, 0.95)'
           : 'transparent',
       }}
     >
@@ -91,20 +93,21 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             transformOrigin: 'center top',
           }}
         >
-          <img 
-            src="/logo-icon.png" 
+          <img
+            src="/logo-icon.png"
             alt="LivePsalms"
             className="h-8 md:h-10 w-auto object-contain"
+            style={{ transition: 'filter 0.5s ease' }}
           />
         </a>
 
         {/* Desktop Navigation - 3D emergence effect */}
-        <nav 
+        <nav
           className="hidden md:flex items-center gap-6 lg:gap-8"
           style={{
             opacity: showNav ? 1 : 0,
-            transform: showNav 
-              ? 'translateZ(0) rotateX(0deg) scale(1)' 
+            transform: showNav
+              ? 'translateZ(0) rotateX(0deg) scale(1)'
               : 'translateZ(-150px) rotateX(-35deg) scale(0.8)',
             filter: showNav ? 'blur(0px)' : 'blur(12px)',
             transition: 'all 3.5s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -126,6 +129,12 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
                   : 'translateY(20px)',
                 transition: `all 2.5s cubic-bezier(0.16, 1, 0.3, 1)`,
                 transitionDelay: `${800 + index * 150}ms`,
+              }}
+              onClick={(e: React.MouseEvent) => {
+                if (item.href.startsWith('/')) {
+                  e.preventDefault();
+                  navigate(item.href);
+                }
               }}
             >
               {item.label}
@@ -163,7 +172,7 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             >
               <div
                 className="px-5 py-3 backdrop-blur-md rounded-sm shadow-sm"
-                style={{ background: 'rgba(240, 236, 232, 0.95)' }}
+                style={{ background: darkText ? 'rgba(0, 0, 0, 0.6)' : 'rgba(240, 236, 232, 0.95)' }}
               >
                 <WaterText
                   as="a"
@@ -181,13 +190,13 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
         </nav>
 
         {/* Mobile Menu Button - 3D emergence effect */}
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="md:hidden flex items-center justify-center w-10 h-10 z-50"
           style={{
             opacity: showNav ? 1 : 0,
-            transform: showNav 
-              ? 'translateZ(0) rotateX(0deg) scale(1)' 
+            transform: showNav
+              ? 'translateZ(0) rotateX(0deg) scale(1)'
               : 'translateZ(-100px) rotateX(-25deg) scale(0.85)',
             filter: showNav ? 'blur(0px)' : 'blur(8px)',
             transition: 'all 3.5s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -218,7 +227,13 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             <a
               key={item.label}
               href={item.href}
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={(e) => {
+                if (item.href.startsWith('/')) {
+                  e.preventDefault();
+                  navigate(item.href);
+                }
+                setIsMobileMenuOpen(false);
+              }}
               className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
               style={{ color: textColor }}
             >

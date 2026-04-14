@@ -102,7 +102,7 @@ export const galleryImages = [
 ];
 
 export const navItems = [
-  { label: 'PURPOSE', href: '#purpose' },
+  { label: 'PURPOSE', href: '/purpose' },
   { label: 'DEVOTION', href: '#devotion' },
   { label: 'SHOP', href: '#shop' },
   { label: 'CONTACT', href: '#contact' },
