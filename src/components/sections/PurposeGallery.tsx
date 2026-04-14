@@ -5,6 +5,12 @@ import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const categoryLabel: Record<Project['category'], string> = {
+  residential: 'Restoration',
+  retail: 'Renewal',
+  hospitality: 'Serenity',
+};
+
 interface PurposeGalleryProps {
   projects: Project[];
   onProjectClick: (project: Project) => void;
@@ -64,12 +70,6 @@ export function PurposeGallery({ projects, onProjectClick }: PurposeGalleryProps
 
     return () => ctx.revert();
   }, [projects]);
-
-  const categoryLabel: Record<Project['category'], string> = {
-    residential: 'Restoration',
-    retail: 'Renewal',
-    hospitality: 'Serenity',
-  };
 
   return (
     <div ref={containerRef} className="pt-20">

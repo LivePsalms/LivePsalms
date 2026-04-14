@@ -20,7 +20,7 @@ function WaterText({ children, className, style, as: Tag = 'a', ...props }: any)
           key={i}
           className="inline-block"
           style={{
-            animation: isHovered ? `water-letter 2.4s ease-in-out ${Math.abs(i - (text.length - 1) / 2) * 100}ms infinite` : 'none',
+            animation: isHovered ? `water-letter 2.4s ease-in-out ${i * 100}ms infinite` : 'none',
             transition: 'transform 0.3s ease',
           }}
         >
@@ -38,7 +38,7 @@ interface HeaderProps {
 
 export function Header({ showNav = true, darkText = false }: HeaderProps) {
   const navigate = useNavigate();
-  const textColor = darkText ? 'rgba(255, 255, 255, 0.55)' : 'var(--deep-umber)';
+  const textColor = darkText ? '#000000' : 'var(--deep-umber)';
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -72,8 +72,8 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
       }`}
       style={{
         perspective: '1000px',
-        background: isScrolled && !darkText
-          ? 'rgba(240, 236, 232, 0.95)'
+        background: isScrolled
+          ? (darkText ? 'rgba(0, 0, 0, 0.15)' : 'rgba(240, 236, 232, 0.95)')
           : 'transparent',
       }}
     >
@@ -97,7 +97,6 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             src="/logo-icon.png"
             alt="LivePsalms"
             className="h-8 md:h-10 w-auto object-contain"
-            style={{ transition: 'filter 0.5s ease' }}
           />
         </a>
 
@@ -172,7 +171,7 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             >
               <div
                 className="px-5 py-3 backdrop-blur-md rounded-sm shadow-sm"
-                style={{ background: darkText ? 'rgba(0, 0, 0, 0.6)' : 'rgba(240, 236, 232, 0.95)' }}
+                style={{ background: 'rgba(240, 236, 232, 0.95)' }}
               >
                 <WaterText
                   as="a"
