@@ -37,6 +37,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         x: -(totalWidth - viewportWidth),
         ease: 'none',
         scrollTrigger: {
+          id: 'moodboard-pin',
           trigger: sectionRef.current,
           start: 'top top',
           end: () => `+=${totalWidth - viewportWidth}`,
@@ -50,6 +51,95 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
           onLeave: () => onInMoodBoard?.(false),
           onLeaveBack: () => onInMoodBoard?.(false),
         },
+      });
+
+      // Parallax: offset each element by its data-speed factor
+      gsap.utils.toArray<HTMLElement>('.mb-elem').forEach((el) => {
+        const speed = parseFloat(el.dataset.speed || '0.5');
+        gsap.to(el, {
+          x: () => -(speed - 0.5) * (track.scrollWidth - window.innerWidth) * 0.3,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top top',
+            end: () => `+=${track.scrollWidth - window.innerWidth}`,
+            scrub: 1,
+          },
+        });
+      });
+
+      // Reveal: fade + translate as elements enter viewport
+      gsap.utils.toArray<HTMLElement>('.mb-elem').forEach((el) => {
+        const isHeadline = el.tagName === 'H2' || el.tagName === 'H3';
+        const isCaption = el.classList.contains('text-xs') || el.classList.contains('text-sm');
+        const xOffset = isHeadline ? 100 : isCaption ? 40 : 60;
+        const duration = isHeadline ? 1.4 : isCaption ? 0.9 : 1.1;
+
+        gsap.fromTo(
+          el,
+          { opacity: 0, x: xOffset },
+          {
+            opacity: parseFloat(el.style.opacity) || 1,
+            x: 0,
+            duration,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'left 90%',
+              end: 'left 50%',
+              toggleActions: 'play none none reverse',
+              horizontal: true,
+            },
+          }
+        );
+      });
+
+      // Stagger reveal for service list items
+      gsap.utils.toArray<HTMLElement>('.mb-list-item').forEach((item, i) => {
+        gsap.fromTo(
+          item,
+          { opacity: 0, x: 40 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.8,
+            delay: i * 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: item.closest('.mb-elem'),
+              start: 'left 85%',
+              toggleActions: 'play none none reverse',
+              horizontal: true,
+            },
+          }
+        );
+      });
+
+      // Scale effect on large images as they pass through center
+      gsap.utils.toArray<HTMLElement>('.mb-elem img').forEach((img) => {
+        const parent = img.closest('.mb-elem');
+        if (!parent) return;
+        const isLarge = parent.classList.contains('w-[45vw]') ||
+                        parent.classList.contains('w-[35vw]') ||
+                        parent.classList.contains('w-[50vw]') ||
+                        parent.classList.contains('w-[40vw]');
+        if (!isLarge) return;
+
+        gsap.fromTo(
+          img,
+          { scale: 1.05 },
+          {
+            scale: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: parent,
+              start: 'left 80%',
+              end: 'left 20%',
+              scrub: true,
+              horizontal: true,
+            },
+          }
+        );
       });
     }, sectionRef);
 
