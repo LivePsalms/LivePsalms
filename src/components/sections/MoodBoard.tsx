@@ -14,8 +14,11 @@ interface MoodBoardProps {
 export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressTrackRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const onInMoodBoardRef = useRef(onInMoodBoard);
+  onInMoodBoardRef.current = onInMoodBoard;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -30,26 +33,31 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
     const track = trackRef.current;
 
     const ctx = gsap.context(() => {
-      const totalWidth = track.scrollWidth;
-      const viewportWidth = window.innerWidth;
-
-      gsap.to(track, {
-        x: -(totalWidth - viewportWidth),
+      // Main horizontal scroll tween — store reference for containerAnimation
+      const mainTween = gsap.to(track, {
+        x: () => -(track.scrollWidth - window.innerWidth),
         ease: 'none',
         scrollTrigger: {
           id: 'moodboard-pin',
           trigger: sectionRef.current,
           start: 'top top',
-          end: () => `+=${totalWidth - viewportWidth}`,
+          end: () => `+=${track.scrollWidth - window.innerWidth}`,
           pin: true,
           scrub: 1,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
-            setProgress(self.progress);
-            onInMoodBoard?.(self.progress > 0 && self.progress < 1);
+            // Update progress bar directly via refs (avoid React re-renders)
+            if (progressBarRef.current) {
+              progressBarRef.current.style.width = `${self.progress * 100}%`;
+            }
+            if (progressTrackRef.current) {
+              progressTrackRef.current.style.opacity =
+                self.progress > 0 && self.progress < 1 ? '1' : '0';
+            }
+            onInMoodBoardRef.current?.(self.progress > 0 && self.progress < 1);
           },
-          onLeave: () => onInMoodBoard?.(false),
-          onLeaveBack: () => onInMoodBoard?.(false),
+          onLeave: () => onInMoodBoardRef.current?.(false),
+          onLeaveBack: () => onInMoodBoardRef.current?.(false),
         },
       });
 
@@ -85,10 +93,10 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             ease: 'power3.out',
             scrollTrigger: {
               trigger: el,
+              containerAnimation: mainTween,
               start: 'left 90%',
               end: 'left 50%',
               toggleActions: 'play none none reverse',
-              horizontal: true,
             },
           }
         );
@@ -106,10 +114,10 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             delay: i * 0.1,
             ease: 'power3.out',
             scrollTrigger: {
-              trigger: item.closest('.mb-elem'),
+              trigger: item.closest('.mb-elem') || item,
+              containerAnimation: mainTween,
               start: 'left 85%',
               toggleActions: 'play none none reverse',
-              horizontal: true,
             },
           }
         );
@@ -133,10 +141,10 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             ease: 'none',
             scrollTrigger: {
               trigger: parent,
+              containerAnimation: mainTween,
               start: 'left 80%',
               end: 'left 20%',
               scrub: true,
-              horizontal: true,
             },
           }
         );
@@ -144,7 +152,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [isMobile, onInMoodBoard]);
+  }, [isMobile]);
 
   const bgColor = project.overlayColor;
 
@@ -334,15 +342,17 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
 
       {/* Progress bar */}
       <div
+        ref={progressTrackRef}
         className="fixed bottom-0 left-0 right-0 h-[2px] z-50 transition-opacity duration-300"
         style={{
           backgroundColor: 'rgba(255,255,255,0.15)',
-          opacity: progress > 0 && progress < 1 ? 1 : 0,
+          opacity: 0,
         }}
       >
         <div
-          className="h-full bg-white/60 transition-none"
-          style={{ width: `${progress * 100}%` }}
+          ref={progressBarRef}
+          className="h-full bg-white/60"
+          style={{ width: '0%' }}
         />
       </div>
     </div>
