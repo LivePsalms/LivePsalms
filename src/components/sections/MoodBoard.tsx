@@ -187,7 +187,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         </div>
 
         {/* Zone 2: Data */}
-        <div className="relative flex-shrink-0 h-screen" style={{ width: '180vw' }}>
+        <div className="relative flex-shrink-0 h-screen" style={{ width: '180vw', backgroundColor: `color-mix(in srgb, ${project.overlayColor} 85%, var(--plaster))` }}>
           {/* Polaroid image */}
           <div
             className="mb-elem absolute top-[10%] left-[5%] bg-white p-4 shadow-lg"
@@ -246,7 +246,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         </div>
 
         {/* Zone 3: Craft */}
-        <div className="relative flex-shrink-0 h-screen" style={{ width: '220vw' }}>
+        <div className="relative flex-shrink-0 h-screen" style={{ width: '220vw', backgroundColor: `color-mix(in srgb, ${project.overlayColor} 70%, black 10%)` }}>
           <h3
             className="mb-elem absolute top-[20%] left-[10%] text-[10vw] font-bold text-white leading-none tracking-tight"
             data-speed="0.6"
@@ -289,7 +289,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         </div>
 
         {/* Zone 4: Year */}
-        <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw' }}>
+        <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${project.overlayColor} 90%, black 5%)` }}>
           <div
             className="mb-elem absolute top-[30%] left-[15%] text-[14vw] font-bold text-white/15 leading-none"
             data-speed="0.25"

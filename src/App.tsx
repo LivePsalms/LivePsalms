@@ -29,6 +29,8 @@ function App() {
 
   const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
+  const isPurposePage = location.pathname === '/purpose';
+  const hideFooter = isDetailPage || isPurposePage;
 
   useEffect(() => {
     if ('scrollRestoration' in history) {
@@ -125,13 +127,13 @@ function App() {
             />
           </Routes>
 
-          {!isDetailPage && (
+          {!hideFooter && (
             <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--plaster)' }} />
           )}
         </div>
       </div>
 
-      {!isDetailPage && <Footer />}
+      {!hideFooter && <Footer />}
 
       <SplitTransition
         isActive={isTransitioning}
