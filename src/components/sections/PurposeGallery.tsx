@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect } from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import { categoryLabel } from '@/data/projects';
@@ -16,6 +16,7 @@ export function PurposeGallery({ projects, onProjectClick }: PurposeGalleryProps
 
   useLayoutEffect(() => {
     if (!containerRef.current) return;
+    window.scrollTo(0, 0);
 
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>('.purpose-img').forEach((img) => {

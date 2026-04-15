@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useLayoutEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { ScrollTrigger } from 'gsap/all';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
-import { ProjectsGrid } from '@/components/sections/ProjectsGrid';
+import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
-import { ProjectDetail } from '@/components/sections/ProjectDetail';
+import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
@@ -15,6 +16,10 @@ import { useProjectColors } from '@/hooks/useProjectColors';
 import { FALLBACK_OVERLAY_COLOR } from '@/data/projects';
 import type { Project } from '@/types';
 import './App.css';
+
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
 
 function App() {
   const navigate = useNavigate();
@@ -31,6 +36,19 @@ function App() {
   const isPurposePage = location.pathname === '/purpose';
   const hideFooter = isDetailPage || isPurposePage;
 
+  // Belt-and-suspenders scroll reset for direct URL loads / back-forward nav
+  // where handlePhaseComplete didn't run. We do NOT kill ScrollTriggers here:
+  // by the time this parent update effect fires, the new route's children
+  // have already mounted and registered their own pins (MoodBoard) — killing
+  // them would leave the page in a broken state.
+  useLayoutEffect(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      document.documentElement.style.scrollBehavior = '';
+    });
+  }, [location.pathname]);
+
   const handleProjectClick = (project: Project) => {
     setTransitionColor(project.overlayColor);
     setIsTransitioning(true);
@@ -42,14 +60,24 @@ function App() {
   const handlePhaseComplete = useCallback(() => {
     if (transitionPhase === 'expanding') {
       if (pendingNavigation) {
+        // Reset scroll BEFORE the new route mounts so child layout effects
+        // (e.g. MoodBoard's pinned ScrollTrigger) compute spacer positions
+        // against scroll = 0 instead of the previous page's scroll position.
+        ScrollTrigger.getAll().forEach((st) => st.kill());
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        // CSS `scroll-behavior: smooth` in index.css would otherwise animate
+        // this scrollTo, leaving the next route mounted mid-scroll. Force
+        // instant jump for the route-change reset.
+        const prevBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        document.documentElement.style.scrollBehavior = prevBehavior;
         navigate(pendingNavigation);
         setPendingNavigation(null);
       }
-      // Reset scroll while overlay covers the page
-      document.body.style.overflow = 'auto';
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.style.overflow = 'hidden';
       setTransitionPhase('revealing');
     } else if (transitionPhase === 'revealing') {
       setIsTransitioning(false);
@@ -57,12 +85,6 @@ function App() {
       document.body.style.overflow = 'auto';
     }
   }, [transitionPhase, pendingNavigation, navigate]);
-
-  const handleBackToProjects = () => {
-    setIsTransitioning(true);
-    setTransitionPhase('expanding');
-    setPendingNavigation('/');
-  };
 
   const handleIntroComplete = () => {
     setShowIntro(false);
@@ -92,7 +114,7 @@ function App() {
                   >
                     <Hero showNav={showNav} />
                   </WaterRipple>
-                  <ProjectsGrid projects={projects} onProjectClick={handleProjectClick} />
+                  <PurposeGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>
               }
             />
@@ -105,7 +127,7 @@ function App() {
             <Route
               path="/purpose/:projectId"
               element={
-                <ProjectDetailRoute projects={projects} onBack={handleBackToProjects} />
+                <PurposeDetailRoute projects={projects} />
               }
             />
           </Routes>
@@ -132,7 +154,7 @@ function App() {
 }
 
 /** Wrapper that resolves the project from the URL param */
-function ProjectDetailRoute({ projects, onBack }: { projects: Project[]; onBack: () => void }) {
+function PurposeDetailRoute({ projects }: { projects: Project[] }) {
   const { projectId } = useParams();
   const project = projects.find((p) => p.id === projectId);
 
@@ -144,7 +166,7 @@ function ProjectDetailRoute({ projects, onBack }: { projects: Project[]; onBack:
     );
   }
 
-  return <ProjectDetail project={project} onBack={onBack} />;
+  return <PurposeDetail project={project} />;
 }
 
 export default App;
