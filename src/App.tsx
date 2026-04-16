@@ -8,7 +8,6 @@ import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
-import { VideoIntro } from '@/components/ui-custom/VideoIntro';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
@@ -29,8 +28,6 @@ function App() {
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [transitionColor, setTransitionColor] = useState(FALLBACK_OVERLAY_COLOR);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
-  const [showIntro, setShowIntro] = useState(true);
-  const [showNav, setShowNav] = useState(false);
   const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
@@ -86,21 +83,12 @@ function App() {
     }
   }, [transitionPhase, pendingNavigation, navigate]);
 
-  const handleIntroComplete = () => {
-    setShowIntro(false);
-    setTimeout(() => {
-      setShowNav(true);
-    }, 1000);
-  };
-
   return (
     <>
-      {showIntro && <VideoIntro onComplete={handleIntroComplete} />}
-
       <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          <Header showNav={showNav} darkText={isDetailPage} />
+          <Header darkText={isDetailPage} />
 
           <Routes>
             <Route
@@ -112,7 +100,7 @@ function App() {
                     rippleDuration={1800}
                     maxRipples={6}
                   >
-                    <Hero showNav={showNav} />
+                    <Hero />
                   </WaterRipple>
                   <PurposeGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>

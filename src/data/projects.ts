@@ -35,7 +35,7 @@ const renewalImages = [
 ];
 
 const serenityImages = [
-  'serenity2.jpg',
+  'serenity2.png',
   'serenity3.png',
   'serenity5.png',
   'serenity7.png',

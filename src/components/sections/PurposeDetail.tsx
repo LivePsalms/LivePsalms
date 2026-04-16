@@ -39,8 +39,7 @@ export function PurposeDetail({ project }: PurposeDetailProps) {
             className="flex items-center gap-8 mb-8"
             style={{
               opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
-              transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1) 0.3s, transform 0.9s cubic-bezier(0.16,1,0.3,1) 0.3s',
+              transition: 'opacity 1.6s cubic-bezier(0.22,1,0.36,1) 2.5s',
             }}
           >
             {project.location && (
@@ -57,8 +56,7 @@ export function PurposeDetail({ project }: PurposeDetailProps) {
               className="text-lg md:text-xl text-mersi-dark/80 max-w-md mb-12 leading-relaxed"
               style={{
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0)' : 'translateY(80px)',
-                transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1) 0.45s, transform 1s cubic-bezier(0.16,1,0.3,1) 0.45s',
+                transition: 'opacity 1.8s cubic-bezier(0.22,1,0.36,1) 2.2s',
               }}
             >
               {project.description}
@@ -70,15 +68,14 @@ export function PurposeDetail({ project }: PurposeDetailProps) {
             className="text-6xl md:text-7xl lg:text-8xl font-bold text-mersi-dark tracking-tight"
             style={{
               opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateY(0)' : 'translateY(100px)',
-              transition: 'opacity 1.1s cubic-bezier(0.16,1,0.3,1) 0.55s, transform 1.1s cubic-bezier(0.16,1,0.3,1) 0.55s',
+              transition: 'opacity 2s cubic-bezier(0.22,1,0.36,1) 1.9s',
             }}
           >
             {project.name}
           </h1>
         </div>
 
-        {/* Right Image */}
+        {/* Right Image — rises up from below with a slow, smooth ease. */}
         <div className="relative h-[50vh] lg:h-screen order-1 lg:order-2 overflow-hidden">
           <img
             src={project.thumbnail}
@@ -86,8 +83,9 @@ export function PurposeDetail({ project }: PurposeDetailProps) {
             className="w-full h-full object-cover"
             style={{
               opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateX(0) scale(1)' : 'translateX(80px) scale(1.05)',
-              transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1) 0.2s, transform 1.2s cubic-bezier(0.16,1,0.3,1) 0.2s',
+              transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
+              transition:
+                'opacity 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s, transform 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s',
             }}
           />
         </div>

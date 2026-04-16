@@ -8,6 +8,29 @@ import type { FilterCategory, Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
 
+// Per-image overlay overrides keyed by project id. Falls back to the
+// shared category label when no override exists.
+const overlayLabelById: Record<string, string> = {
+  restoration1: 'Restoration of Peace',
+  restoration3: 'Restoration of Hope',
+  restoration5: 'Restoration of Strength',
+  restoration6: 'Restoration of Wholeness',
+  restoration7: 'Restoration of Purpose',
+  restoration8: 'Restoration of Connection',
+  restoration9: 'Restoration of Identity',
+  restoration10: 'Restoration of Joy',
+  renewal1: 'Renewal of Thinking',
+  renewal3: 'Renewal of Creativity',
+  renewal4: 'Renewal of Integrity',
+  renewal6: 'Renewal of Inner Self',
+  renewal8: 'Renewal of Vision',
+  renewal9: 'Renewal of the Heart',
+  serenity2: 'Serenity of Forgiveness',
+  serenity3: 'Serenity of Surrender',
+  serenity5: 'Serenity of Trust',
+  serenity7: 'Serenity of Presence',
+};
+
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.
 // Special case: a lone last item spans the full row (full-bleed).
@@ -34,20 +57,28 @@ function ProjectCard({
   span,
   heightClass,
   onProjectClick,
+  hoverEnabled,
 }: {
   project: Project;
   span: number;
   heightClass: string;
   onProjectClick: (project: Project) => void;
+  hoverEnabled: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Force-clear hover state if the grid leaves its ready layout mid-hover
+  // (e.g. user scrolls back up and the morph reverses while cursor is over).
+  useEffect(() => {
+    if (!hoverEnabled && isHovered) setIsHovered(false);
+  }, [hoverEnabled, isHovered]);
 
   return (
     <div
       data-flip-id={project.id}
       data-span={span}
       onClick={() => onProjectClick(project)}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => hoverEnabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${heightClass} cursor-pointer overflow-hidden`}
       style={{ borderRadius: '2px' }}
@@ -95,7 +126,7 @@ function ProjectCard({
             />
             {/* Category label */}
             <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">
-              {categoryLabel[project.category]}
+              {overlayLabelById[project.id] ?? categoryLabel[project.category]}
             </span>
           </motion.div>
         )}
@@ -111,6 +142,7 @@ interface PurposeGridProps {
 
 export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
+  const [gridReady, setGridReady] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -275,6 +307,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
     if (prefersReduced) {
       // Skip morph and pin: land directly in the editorial grid.
       grid.dataset.layout = 'grid';
+      setGridReady(true);
       return;
     }
 
@@ -320,6 +353,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
         duration: 1.2,
         ease: 'power2.inOut',
         paused: true,
+        onComplete: () => setGridReady(true),
       });
       morphTimelineRef.current = tl;
 
@@ -331,7 +365,10 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
         start: 'bottom bottom',
         invalidateOnRefresh: true,
         onEnter: () => tl.play(),
-        onLeaveBack: () => tl.reverse(),
+        onLeaveBack: () => {
+          setGridReady(false);
+          tl.reverse();
+        },
       });
     }, section);
 
@@ -415,6 +452,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
               span={span}
               heightClass={h}
               onProjectClick={onProjectClick}
+              hoverEnabled={gridReady}
             />
           );
         })}

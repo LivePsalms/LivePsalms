@@ -79,9 +79,13 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
     >
       <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between">
         {/* Logo - 3D emergence effect */}
-        <a 
-          href="#" 
-          className="flex items-center z-50"
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/');
+          }}
+          className="flex items-center z-50 cursor-pointer"
           style={{
             opacity: showNav ? 1 : 0,
             transform: showNav 
