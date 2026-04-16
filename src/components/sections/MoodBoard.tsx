@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { categoryLabel } from '@/data/projects';
+import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -71,30 +72,64 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         });
       });
 
-      // Reveal: fade + translate as elements enter viewport
+      // Reveal: images use fade + x-translate; text uses line mask reveal (overflow hidden + translateY)
       gsap.utils.toArray<HTMLElement>('.mb-elem').forEach((el) => {
-        const isHeadline = el.tagName === 'H2' || el.tagName === 'H3';
-        const isCaption = el.classList.contains('text-xs') || el.classList.contains('text-sm');
-        const xOffset = isHeadline ? 100 : isCaption ? 40 : 60;
-        const duration = isHeadline ? 1.4 : isCaption ? 0.9 : 1.1;
+        const isText = el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'P' ||
+                       el.classList.contains('text-xs') || el.classList.contains('text-sm') ||
+                       el.classList.contains('text-white');
+        const hasImage = el.querySelector('img');
 
-        gsap.fromTo(
-          el,
-          { opacity: 0, x: xOffset },
-          {
-            opacity: parseFloat(el.style.opacity) || 1,
-            x: 0,
-            duration,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: el,
-              containerAnimation: mainTween,
-              start: 'left 90%',
-              end: 'left 50%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
+        if (isText && !hasImage) {
+          // Line mask reveal for text: wrap content, slide up from behind overflow mask
+          el.style.overflow = 'hidden';
+          const inner = document.createElement('div');
+          inner.style.willChange = 'transform';
+          while (el.firstChild) inner.appendChild(el.firstChild);
+          el.appendChild(inner);
+
+          const isHeadline = el.tagName === 'H2' || el.tagName === 'H3';
+          const dur = isHeadline ? 1.4 : 1.1;
+
+          gsap.fromTo(
+            inner,
+            { yPercent: 110 },
+            {
+              yPercent: 0,
+              duration: dur,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                containerAnimation: mainTween,
+                start: 'left 90%',
+                end: 'left 50%',
+                toggleActions: 'play none none reverse',
+              },
+            }
+          );
+        } else {
+          // Non-text elements keep the original fade + x-translate
+          const isCaption = el.classList.contains('text-xs') || el.classList.contains('text-sm');
+          const xOffset = isCaption ? 40 : 60;
+          const dur = isCaption ? 0.9 : 1.1;
+
+          gsap.fromTo(
+            el,
+            { opacity: 0, x: xOffset },
+            {
+              opacity: parseFloat(el.style.opacity) || 1,
+              x: 0,
+              duration: dur,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                containerAnimation: mainTween,
+                start: 'left 90%',
+                end: 'left 50%',
+                toggleActions: 'play none none reverse',
+              },
+            }
+          );
+        }
       });
 
       // Stagger reveal for service list items
@@ -120,7 +155,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
 
       // Scale effect on large images as they pass through center
       gsap.utils.toArray<HTMLElement>('.mb-elem img').forEach((img) => {
-        const parent = img.closest('.mb-elem');
+        const parent = img.closest<HTMLElement>('.mb-elem');
         if (!parent) return;
         const isLarge = parent.classList.contains('w-[45vw]') ||
                         parent.classList.contains('w-[35vw]') ||
@@ -167,10 +202,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute top-[15%] left-[8%] w-[45vw] h-[70vh] overflow-hidden"
             data-speed="0.3"
           >
-            <img
+            <PhotoDevelopImage
               src={project.thumbnail}
               alt={project.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              threshold={0.05}
             />
           </div>
 
@@ -196,10 +232,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute top-[10%] left-[5%] bg-white p-4 shadow-lg"
             data-speed="0.8"
           >
-            <img
+            <PhotoDevelopImage
               src={project.images[1] || project.thumbnail}
               alt={`${project.name} detail`}
-              className="w-[280px] h-[360px] object-cover"
+              className="w-[280px] h-[360px]"
+              threshold={0.05}
             />
             <p className="text-xs mt-3 tracking-wide text-black/60">
               {project.location || 'Location'} — {project.year || '2025'}
@@ -221,10 +258,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute bottom-[15%] right-[20%] w-[35vw] h-[50vh] overflow-hidden"
             data-speed="0.4"
           >
-            <img
+            <PhotoDevelopImage
               src={project.images[2] || project.thumbnail}
               alt={`${project.name} view`}
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              threshold={0.05}
             />
           </div>
 
@@ -261,10 +299,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute top-[55%] left-[25%] w-[50vw] h-[35vh] overflow-hidden"
             data-speed="0.3"
           >
-            <img
+            <PhotoDevelopImage
               src={project.images[3] || project.images[1] || project.thumbnail}
               alt={`${project.name} craft`}
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              threshold={0.05}
             />
           </div>
 
@@ -282,10 +321,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute top-[15%] right-[25%] bg-white/95 p-3 shadow-xl"
             data-speed="0.7"
           >
-            <img
+            <PhotoDevelopImage
               src={project.images[4] || project.images[0]}
               alt="Detail study"
-              className="w-[200px] h-[250px] object-cover"
+              className="w-[200px] h-[250px]"
+              threshold={0.05}
             />
             <p className="text-[10px] mt-2 tracking-wider text-black/50 uppercase">Detail Study</p>
           </div>
@@ -304,10 +344,11 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             className="mb-elem absolute top-[20%] right-[20%] w-[40vw] h-[60vh] overflow-hidden shadow-2xl"
             data-speed="0.5"
           >
-            <img
+            <PhotoDevelopImage
               src={project.images[5] || project.thumbnail}
               alt={`${project.name} featured`}
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              threshold={0.05}
             />
           </div>
 
@@ -362,10 +403,10 @@ function MoodBoardMobile({ project }: { project: Project }) {
     <div style={{ backgroundColor: project.overlayColor }}>
       {/* Zone 1: Hero */}
       <section className="min-h-screen p-6 flex flex-col justify-center">
-        <img
+        <PhotoDevelopImage
           src={project.thumbnail}
           alt={project.name}
-          className="w-full h-[60vh] object-cover mb-8"
+          className="w-full h-[60vh] mb-8"
         />
         <h2 className="text-[15vw] font-bold text-white/90 leading-none mb-4">
           {project.name.toUpperCase()}
@@ -378,10 +419,10 @@ function MoodBoardMobile({ project }: { project: Project }) {
       {/* Zone 2: Data */}
       <section className="min-h-screen p-6 flex flex-col justify-center">
         <div className="bg-white p-4 shadow-lg w-fit mb-8">
-          <img
+          <PhotoDevelopImage
             src={project.images[1] || project.thumbnail}
             alt={`${project.name} detail`}
-            className="w-[240px] h-[300px] object-cover"
+            className="w-[240px] h-[300px]"
           />
           <p className="text-xs mt-3 text-black/60">
             {project.location || 'Location'} — {project.year || '2025'}
@@ -405,10 +446,10 @@ function MoodBoardMobile({ project }: { project: Project }) {
       {/* Zone 3: Craft */}
       <section className="min-h-screen p-6 flex flex-col justify-center">
         <h3 className="text-[15vw] font-bold text-white leading-none mb-8">CRAFT</h3>
-        <img
+        <PhotoDevelopImage
           src={project.images[3] || project.images[1] || project.thumbnail}
           alt={`${project.name} craft`}
-          className="w-full h-[40vh] object-cover mb-8"
+          className="w-full h-[40vh] mb-8"
         />
         <p className="text-white/80 text-sm leading-relaxed">
           {project.description || 'Every detail matters. From material selection to spatial flow, we consider how spaces evolve with their inhabitants.'}
@@ -418,10 +459,10 @@ function MoodBoardMobile({ project }: { project: Project }) {
       {/* Zone 4: Year */}
       <section className="min-h-screen p-6 flex flex-col justify-center">
         <div className="text-[20vw] font-bold text-white/15 mb-8">{project.year || '2025'}</div>
-        <img
+        <PhotoDevelopImage
           src={project.images[5] || project.thumbnail}
           alt={`${project.name} featured`}
-          className="w-full h-[50vh] object-cover mb-4"
+          className="w-full h-[50vh] mb-4"
         />
         <p className="text-white text-xs tracking-widest uppercase">{label}</p>
       </section>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useLayoutEffect } from 'react';
+import { useState, useCallback, useLayoutEffect, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ScrollTrigger } from 'gsap/all';
 import { Header } from '@/components/layout/Header';
@@ -28,6 +28,8 @@ function App() {
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [transitionColor, setTransitionColor] = useState(FALLBACK_OVERLAY_COLOR);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
+  const exitingRef = useRef(false);
   const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
@@ -45,6 +47,38 @@ function App() {
       document.documentElement.style.scrollBehavior = '';
     });
   }, [location.pathname]);
+
+  // Intercept browser back button on detail pages to play exit animation
+  useEffect(() => {
+    if (!isDetailPage || isExiting) return;
+
+    // Push a duplicate entry so popstate fires without leaving the page
+    window.history.pushState(null, '', location.pathname);
+
+    const handlePopState = () => {
+      if (exitingRef.current) return;
+      exitingRef.current = true;
+      setIsExiting(true);
+
+      // Find the current project's overlay color for the transition
+      const projectId = location.pathname.split('/purpose/')[1];
+      const project = projects.find((p) => p.id === projectId);
+      setTransitionColor(project?.overlayColor || FALLBACK_OVERLAY_COLOR);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isDetailPage, isExiting, location.pathname, projects]);
+
+  // When text exit completes, start SplitTransition and navigate back
+  const handleExitComplete = useCallback(() => {
+    setIsTransitioning(true);
+    setTransitionPhase('expanding');
+    setPendingNavigation('/');
+    document.body.style.overflow = 'hidden';
+    setIsExiting(false);
+    exitingRef.current = false;
+  }, []);
 
   const handleProjectClick = (project: Project) => {
     setTransitionColor(project.overlayColor);
@@ -115,7 +149,11 @@ function App() {
             <Route
               path="/purpose/:projectId"
               element={
-                <PurposeDetailRoute projects={projects} />
+                <PurposeDetailRoute
+                  projects={projects}
+                  exiting={isExiting}
+                  onExitComplete={handleExitComplete}
+                />
               }
             />
           </Routes>
@@ -142,7 +180,15 @@ function App() {
 }
 
 /** Wrapper that resolves the project from the URL param */
-function PurposeDetailRoute({ projects }: { projects: Project[] }) {
+function PurposeDetailRoute({
+  projects,
+  exiting,
+  onExitComplete,
+}: {
+  projects: Project[];
+  exiting: boolean;
+  onExitComplete: () => void;
+}) {
   const { projectId } = useParams();
   const project = projects.find((p) => p.id === projectId);
 
@@ -154,7 +200,13 @@ function PurposeDetailRoute({ projects }: { projects: Project[] }) {
     );
   }
 
-  return <PurposeDetail project={project} />;
+  return (
+    <PurposeDetail
+      project={project}
+      exiting={exiting}
+      onExitComplete={onExitComplete}
+    />
+  );
 }
 
 export default App;
