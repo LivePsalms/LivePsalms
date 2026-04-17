@@ -349,23 +349,33 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
       // mode takes items out of flow via position: absolute, which collapses
       // the display: grid container to 0 height. Without absolute, Flip
       // uses transforms (translate + scale) which animate cleanly.
+      let hoverDelayId: ReturnType<typeof gsap.delayedCall> | null = null;
+
       const tl = Flip.from(state, {
         duration: 1.2,
         ease: 'power2.inOut',
         paused: true,
-        onComplete: () => setGridReady(true),
       });
       morphTimelineRef.current = tl;
 
       // Trigger when 80% of the first row of strip items is visible.
       // Use the first item as trigger — its bottom + 80% of its height.
+      //
+      // Hover activation is delayed by the morph duration to guarantee
+      // the visual transition finishes first (GSAP's onComplete can
+      // fire early in React Strict-Mode dev builds where the Flip
+      // timeline ends up with near-zero effective duration).
       const firstItem = items[0];
       ScrollTrigger.create({
         trigger: firstItem,
         start: 'bottom bottom',
         invalidateOnRefresh: true,
-        onEnter: () => tl.play(),
+        onEnter: () => {
+          tl.play();
+          hoverDelayId = gsap.delayedCall(1.3, () => setGridReady(true));
+        },
         onLeaveBack: () => {
+          if (hoverDelayId) { hoverDelayId.kill(); hoverDelayId = null; }
           setGridReady(false);
           tl.reverse();
         },
