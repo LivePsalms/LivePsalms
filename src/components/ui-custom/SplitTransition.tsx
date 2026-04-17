@@ -24,13 +24,27 @@ export function SplitTransition({
     <AnimatePresence>
       {isActive && (
         <>
+          {/* Static seam cover — sits above both panels during expand
+              to hide the sub-pixel anti-aliasing gap from scaleX transforms */}
+          {!isRevealing && (
+            <div
+              className="fixed top-0 bottom-0 z-[51] pointer-events-none"
+              style={{
+                left: 'calc(50% - 3px)',
+                width: '6px',
+                backgroundColor: overlayColor,
+              }}
+              aria-hidden="true"
+            />
+          )}
+
           {/* Left panel */}
           <motion.div
             className="fixed top-0 bottom-0 left-0 z-50 pointer-events-none"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: isRevealing ? 0 : 1 }}
             style={{
-              right: '50%',
+              right: 'calc(50% - 4px)',
               backgroundColor: overlayColor,
               transformOrigin: isRevealing ? 'left' : 'right',
             }}
@@ -53,7 +67,7 @@ export function SplitTransition({
             initial={{ scaleX: 0 }}
             animate={{ scaleX: isRevealing ? 0 : 1 }}
             style={{
-              left: '50%',
+              left: 'calc(50% - 4px)',
               backgroundColor: overlayColor,
               transformOrigin: isRevealing ? 'right' : 'left',
             }}
