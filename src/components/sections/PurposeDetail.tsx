@@ -30,7 +30,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
   useEffect(() => {
     setIsVisible(true);
     setTextReady(false);
-    const timer = setTimeout(() => setTextReady(true), 2600);
+    const timer = setTimeout(() => setTextReady(true), 1400);
     return () => clearTimeout(timer);
   }, [project]);
 
@@ -75,8 +75,8 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
           {(project.location || project.year) && (
             <LineMaskReveal
               className="flex items-center gap-8 mb-8 text-sm text-mersi-dark/70"
-              duration={900}
-              stagger={80}
+              duration={1400}
+              stagger={120}
               threshold={0.1}
               enabled={textReady}
             >
@@ -90,8 +90,8 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
           {project.description && (
             <LineMaskReveal
               className="text-lg md:text-xl text-mersi-dark/80 max-w-md mb-12 leading-relaxed"
-              duration={1000}
-              stagger={90}
+              duration={1500}
+              stagger={130}
               threshold={0.1}
               enabled={textReady}
             >
@@ -102,8 +102,8 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
           {/* Project Title */}
           <LineMaskReveal
             className="text-6xl md:text-7xl lg:text-8xl font-bold text-mersi-dark tracking-tight"
-            duration={1100}
-            stagger={100}
+            duration={1600}
+            stagger={140}
             threshold={0.1}
             enabled={textReady}
           >
