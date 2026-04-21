@@ -229,6 +229,19 @@ img {
 }
 
 /* ============================================
+   JOURNEY ARROW — gentle float animation
+   ============================================ */
+
+@keyframes journeyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+.journey-arrow {
+  animation: journeyFloat 2.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+/* ============================================
    GLOBAL GRAIN OVERLAY
    ============================================ */
 

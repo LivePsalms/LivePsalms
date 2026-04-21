@@ -11,7 +11,9 @@ interface PurposeDetailProps {
   onExitComplete?: () => void;
 }
 
+
 export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetailProps) {
+  const isRestoration1 = project.id === 'restoration1';
   const [isVisible, setIsVisible] = useState(false);
   const [textReady, setTextReady] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -70,45 +72,122 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
       {/* Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen overflow-hidden">
         {/* Left Content */}
-        <div ref={heroContentRef} className="flex flex-col justify-center px-6 lg:px-16 py-32 lg:py-20 order-2 lg:order-1">
-          {/* Location & Year */}
-          {(project.location || project.year) && (
-            <LineMaskReveal
-              className="flex items-center gap-8 mb-8 text-sm text-mersi-dark/70"
-              duration={1400}
-              stagger={120}
-              threshold={0.1}
-              enabled={textReady}
-            >
-              <span>
-                {[project.location, project.year].filter(Boolean).join(' — ')}
-              </span>
-            </LineMaskReveal>
-          )}
+        <div ref={heroContentRef} className="relative flex flex-col justify-start px-6 lg:px-16 pt-24 lg:pt-28 pb-32 lg:pb-20 order-2 lg:order-1">
+          {isRestoration1 ? (
+            <>
+              {/* Label */}
+              <LineMaskReveal
+                className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10"
+                duration={1400}
+                stagger={120}
+                threshold={0.1}
+                enabled={textReady}
+              >
+                <span>Restoration of Peace</span>
+              </LineMaskReveal>
 
-          {/* Description */}
-          {project.description && (
-            <LineMaskReveal
-              className="text-lg md:text-xl text-mersi-dark/80 max-w-md mb-12 leading-relaxed"
-              duration={1500}
-              stagger={130}
-              threshold={0.1}
-              enabled={textReady}
-            >
-              <p>{project.description}</p>
-            </LineMaskReveal>
-          )}
+              {/* Title */}
+              <div
+                className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12 overflow-hidden"
+              >
+                <h1
+                  style={{
+                    fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)',
+                    lineHeight: 0.95,
+                    transform: textReady ? 'translateY(0)' : 'translateY(110%)',
+                    transition: 'transform 1.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                  }}
+                >
+                  Beside Still Waters
+                </h1>
+              </div>
 
-          {/* Project Title */}
-          <LineMaskReveal
-            className="text-6xl md:text-7xl lg:text-8xl font-bold text-mersi-dark tracking-tight"
-            duration={1600}
-            stagger={140}
-            threshold={0.1}
-            enabled={textReady}
-          >
-            <h1>{project.name}</h1>
-          </LineMaskReveal>
+              {/* Scripture quote */}
+              <div className="mb-20">
+                <LineMaskReveal
+                  className="font-['Cormorant_Garamond'] italic text-2xl md:text-3xl text-white/60 leading-snug"
+                  duration={1500}
+                  stagger={100}
+                  threshold={0.1}
+                  enabled={textReady}
+                >
+                  <p>&ldquo;He makes me lie down in green pastures,</p>
+                  <p>he leads me beside quiet waters,</p>
+                  <p>he refreshes my soul.&rdquo;</p>
+                </LineMaskReveal>
+                <p
+                  className="mt-3 not-italic text-xs tracking-[0.25em] uppercase text-white/40"
+                  style={{
+                    opacity: textReady ? 1 : 0,
+                    transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.6s',
+                  }}
+                >
+                  Psalm 23:2&ndash;3
+                </p>
+              </div>
+
+              {/* Down arrow + Journey */}
+              <div
+                className="absolute bottom-[30%] right-8 lg:right-12 flex items-center gap-3 text-white/50"
+                style={{
+                  opacity: textReady ? 1 : 0,
+                  transition: 'opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1s',
+                }}
+              >
+                <svg
+                  className="w-4 h-4 journey-arrow"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M8 1v12M3 9l5 5 5-5" />
+                </svg>
+                <span className="text-xs tracking-[0.2em] uppercase">Journey</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Location & Year */}
+              {(project.location || project.year) && (
+                <LineMaskReveal
+                  className="flex items-center gap-8 mb-8 text-sm text-mersi-dark/70"
+                  duration={1400}
+                  stagger={120}
+                  threshold={0.1}
+                  enabled={textReady}
+                >
+                  <span>
+                    {[project.location, project.year].filter(Boolean).join(' — ')}
+                  </span>
+                </LineMaskReveal>
+              )}
+
+              {/* Description */}
+              {project.description && (
+                <LineMaskReveal
+                  className="text-lg md:text-xl text-mersi-dark/80 max-w-md mb-12 leading-relaxed"
+                  duration={1500}
+                  stagger={130}
+                  threshold={0.1}
+                  enabled={textReady}
+                >
+                  <p>{project.description}</p>
+                </LineMaskReveal>
+              )}
+
+              {/* Project Title */}
+              <LineMaskReveal
+                className="text-6xl md:text-7xl lg:text-8xl font-bold text-mersi-dark tracking-tight"
+                duration={1600}
+                stagger={140}
+                threshold={0.1}
+                enabled={textReady}
+              >
+                <h1>{project.name}</h1>
+              </LineMaskReveal>
+            </>
+          )}
         </div>
 
         {/* Right Image — meditative radial reveal */}
