@@ -30,6 +30,8 @@ function App() {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const exitingRef = useRef(false);
+  const savedScrollY = useRef<number | null>(null);
+  const isBackNav = useRef(false);
   const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
@@ -41,11 +43,23 @@ function App() {
   // have already mounted and registered their own pins (MoodBoard) — killing
   // them would leave the page in a broken state.
   useLayoutEffect(() => {
-    document.documentElement.style.scrollBehavior = 'auto';
-    window.scrollTo(0, 0);
-    requestAnimationFrame(() => {
-      document.documentElement.style.scrollBehavior = '';
-    });
+    if (isBackNav.current) {
+      // Restore saved scroll position after back navigation
+      const y = savedScrollY.current ?? 0;
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollTo(0, y);
+      requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = '';
+      });
+      savedScrollY.current = null;
+      isBackNav.current = false;
+    } else {
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = '';
+      });
+    }
   }, [location.pathname]);
 
   // Intercept browser back button on detail pages to play exit animation
@@ -58,6 +72,7 @@ function App() {
     const handlePopState = () => {
       if (exitingRef.current) return;
       exitingRef.current = true;
+      isBackNav.current = true;
       setIsExiting(true);
 
       // Find the current project's overlay color for the transition
@@ -81,6 +96,7 @@ function App() {
   }, []);
 
   const handleProjectClick = (project: Project) => {
+    savedScrollY.current = window.scrollY;
     setTransitionColor(project.overlayColor);
     setIsTransitioning(true);
     setTransitionPhase('expanding');
@@ -100,11 +116,12 @@ function App() {
         // CSS `scroll-behavior: smooth` in index.css would otherwise animate
         // this scrollTo, leaving the next route mounted mid-scroll. Force
         // instant jump for the route-change reset.
+        const restoreY = isBackNav.current ? (savedScrollY.current ?? 0) : 0;
         const prevBehavior = document.documentElement.style.scrollBehavior;
         document.documentElement.style.scrollBehavior = 'auto';
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+        window.scrollTo(0, restoreY);
+        document.documentElement.scrollTop = restoreY;
+        document.body.scrollTop = restoreY;
         document.documentElement.style.scrollBehavior = prevBehavior;
         navigate(pendingNavigation);
         setPendingNavigation(null);
