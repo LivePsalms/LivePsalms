@@ -39,6 +39,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const onInMoodBoardRef = useRef(onInMoodBoard);
   onInMoodBoardRef.current = onInMoodBoard;
   const isPeace = project.id === 'restoration1';
+  const isHope = project.id === 'restoration3';
 
   useLayoutEffect(() => {
     if (isMobile || !sectionRef.current || !trackRef.current) return;
@@ -201,9 +202,9 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const bgColor = project.overlayColor;
 
   if (isMobile) {
-    return isPeace
-      ? <PeaceMobile />
-      : <MoodBoardMobile project={project} />;
+    if (isPeace) return <PeaceMobile />;
+    if (isHope) return <HopeMobile project={project} />;
+    return <MoodBoardMobile project={project} />;
   }
 
   return (
@@ -212,7 +213,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
         ref={trackRef}
         className="flex h-screen will-change-transform"
       >
-        {isPeace ? <PeaceZones project={project} /> : <DefaultZones project={project} />}
+        {isPeace ? <PeaceZones project={project} /> : isHope ? <HopeZones project={project} /> : <DefaultZones project={project} />}
       </div>
 
       {/* Progress bar */}
@@ -871,6 +872,451 @@ function PeaceMobile() {
       {/* Final image */}
       <section style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={R1.stoneBedLight} alt="Serene stone bed" className="w-full aspect-video" />
+      </section>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HOPE ZONES — Restoration of Hope devotional (desktop)
+   ════════════════════════════════════════════════════════════════ */
+
+function HopeZones({ project }: { project: Project }) {
+  const ov = project.overlayColor;
+
+  const sameCategoryProjects = projects.filter(p => p.category === project.category);
+  const currentIndex = sameCategoryProjects.findIndex(p => p.id === project.id);
+  const nextProject = sameCategoryProjects[(currentIndex + 1) % sameCategoryProjects.length];
+
+  return (
+    <>
+      {/* ── Zone 1: Hope Title ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '120vw' }}>
+        <div
+          className="mb-elem absolute top-[10%] left-[5%] w-[42vw] h-[78vh] overflow-hidden"
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image1.png" alt="Hope doorway" className="w-full h-full" threshold={0.05} />
+        </div>
+
+        <h2
+          className="mb-elem absolute bottom-[24%] left-[52%] font-['Cormorant_Garamond'] italic font-light leading-[0.85] tracking-tight text-white"
+          style={{ fontSize: 'clamp(5rem, 14vw, 16rem)' }}
+          data-speed="0.5"
+        >
+          Hope
+        </h2>
+
+        <div
+          className="mb-elem mb-text absolute top-[18%] left-[52%] text-sm tracking-[0.15em] uppercase max-w-[280px] leading-relaxed text-white/70"
+          data-speed="0.5"
+        >
+          Let&rsquo;s explore a future you cannot see yet, and the God who holds it.
+        </div>
+      </div>
+
+      {/* ── Zone 2: The Hook ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+        <h3
+          className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
+          style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
+          data-speed="0.5"
+        >
+          Hope is a fragile thing.
+        </h3>
+
+        <div
+          className="mb-elem mb-text absolute top-[46%] left-[5%] text-sm text-white/80 max-w-[280px] leading-[1.85] tracking-wide"
+          data-speed="0.5"
+        >
+          It can survive extraordinary hardship, but it can also be slowly suffocated by the weight of unanswered prayers, closed doors, and the quiet fear that maybe things will never get better. Perhaps you&rsquo;re in a season where hope feels more like a word on a greeting card than something real&mdash;a concept that sounds beautiful in theory but feels impossible in your actual life.
+        </div>
+
+        <div
+          className="mb-elem absolute top-[5%] bottom-0 left-[28%] w-[50vw] overflow-hidden"
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image2.png" alt="Hope landscape" className="w-full h-full object-cover" threshold={0.05} />
+        </div>
+
+        <div
+          className="mb-elem mb-text absolute top-[32%] left-[65%] text-sm text-white/70 max-w-[260px] leading-[1.85] tracking-wide"
+          data-speed="0.5"
+        >
+          You&rsquo;ve prayed. You&rsquo;ve waited. You&rsquo;ve tried to be faithful. And yet the breakthrough hasn&rsquo;t come. The healing hasn&rsquo;t happened. The relationship hasn&rsquo;t been reconciled. And in the silence, a dangerous whisper creeps in: &ldquo;What if this is all there is?&rdquo;
+        </div>
+
+        <div
+          className="mb-elem absolute top-[5%] bottom-0 right-[5%] w-[35vw] overflow-hidden"
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image3.png" alt="Hope detail" className="w-full h-full" imgClassName="object-contain" threshold={0.05} />
+        </div>
+      </div>
+
+      {/* ── Zone 3: The Scripture ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '195vw', backgroundColor: `color-mix(in srgb, ${ov} 70%, black 8%)` }}>
+        <p
+          className="mb-elem absolute top-[30%] text-xs tracking-[0.3em] uppercase text-white/60"
+          style={{ left: '3vw' }}
+          data-speed="0.5"
+        >
+          The Scripture
+        </p>
+
+        <div
+          className="mb-elem mb-text absolute top-[38%] text-sm text-white/80 max-w-[24vw] leading-[1.85] tracking-wide"
+          style={{ left: '3vw' }}
+          data-speed="0.5"
+        >
+          Jeremiah 29:11 is one of the most beloved verses in Scripture, but its full power is lost if we don&rsquo;t understand when God spoke it. This was not a promise delivered in a season of triumph. It was a letter&mdash;written by the prophet Jeremiah&mdash;to a people in exile. The Israelites had been ripped from their homeland and carried off to Babylon.
+        </div>
+
+        {/* Gallery row */}
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '35vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image4.png" alt="Scripture scene" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '73vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image5.png" alt="Exile landscape" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '111vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image6.png" alt="Promise fulfilled" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem mb-text absolute bottom-[10%] text-sm text-white/80 max-w-[24vw] leading-[1.85] tracking-wide"
+          style={{ left: '149vw' }}
+          data-speed="0.5"
+        >
+          False prophets were telling them the exile would be brief, that God would rescue them any day now. But God&rsquo;s actual message through Jeremiah was far more challenging: settle in. Build houses. Plant gardens. The exile would last seventy years. And it is into that crushing news that God speaks this promise of hope.
+        </div>
+      </div>
+
+      {/* ── Zone 4: God's Promise + Timeless Principle ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '5vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image7.png" alt="God's plans" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem mb-text absolute top-[30%] text-sm text-white/80 max-w-[24vw] leading-[1.85] tracking-wide"
+          style={{ left: '43vw' }}
+          data-speed="0.5"
+        >
+          He doesn&rsquo;t deny the difficulty. He doesn&rsquo;t promise a quick fix. He says, in essence: &ldquo;I know this is not what you wanted to hear. But I have not abandoned you. I have plans for you&mdash;and those plans end in flourishing, not destruction.&rdquo; The hope God offers is not tied to a timeline we control. It is anchored in a future He has already secured. And then comes the invitation: &ldquo;You will seek me and find me when you seek me with all your heart. I will be found by you,&rdquo; declares the Lord. Restoration doesn&rsquo;t begin with a change in circumstances. It begins with a turning of the heart.
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '70vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image8.png" alt="Hope restored" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <p
+          className="mb-elem absolute top-[10%] text-xs tracking-[0.3em] uppercase text-white/60"
+          style={{ left: '118vw' }}
+          data-speed="0.5"
+        >
+          The Timeless Principle
+        </p>
+
+        <h3
+          className="mb-elem absolute top-[18%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.2] max-w-[34vw]"
+          style={{ left: '118vw', fontSize: 'clamp(1.5rem, 3.5vw, 3.5rem)' }}
+          data-speed="0.5"
+        >
+          God&rsquo;s plans for us do not expire in seasons of waiting.
+        </h3>
+
+        <div
+          className="mb-elem mb-text absolute bottom-[18%] text-sm text-white/70 max-w-[340px] leading-[1.85] tracking-wide"
+          style={{ left: '118vw' }}
+          data-speed="0.5"
+        >
+          Hope is not wishful thinking&mdash;it is the confident assurance that God&rsquo;s intentions toward us are good, even when our circumstances suggest otherwise. Restoration of hope does not require an escape from the hard season. It requires a redirecting of our gaze toward the One who holds the future we cannot yet see.
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '155vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image11.png" alt="Future hope" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+      </div>
+
+      {/* ── Zone 5: The Application ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '190vw', backgroundColor: `color-mix(in srgb, ${ov} 75%, black 5%)` }}>
+        <p
+          className="mb-elem absolute top-[20%] text-xs tracking-[0.3em] uppercase text-white/60"
+          style={{ left: '5vw' }}
+          data-speed="0.5"
+        >
+          The Application
+        </p>
+
+        <div
+          className="mb-elem mb-text absolute top-[28%] text-sm text-white/80 max-w-[24vw] leading-[1.85] tracking-wide"
+          style={{ left: '5vw' }}
+          data-speed="0.5"
+        >
+          If you are in a season of waiting and your hope is wearing thin, do something countercultural today: plant something. Not because the exile is over, but because you believe God when He says it won&rsquo;t last forever. This could be literal&mdash;plant a seed, tend a garden. Or it could be metaphorical&mdash;invest in a friendship, start that project you&rsquo;ve been putting off, sign up for the class.
+        </div>
+
+        <div
+          className="mb-elem mb-text absolute bottom-[15%] font-['Cormorant_Garamond'] italic text-xl text-white/90 max-w-[24vw] leading-relaxed border-l border-white/30 pl-5"
+          style={{ left: '5vw' }}
+          data-speed="0.5"
+        >
+          &ldquo;Planting in exile is an act of defiant hope.&rdquo;
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '35vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image10.png" alt="Planting in exile" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '73vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image13.png" alt="Defiant hope" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+
+        <div
+          className="mb-elem mb-text absolute top-[38%] text-sm text-white/70 max-w-[24vw] leading-[1.85] tracking-wide"
+          style={{ left: '114vw' }}
+          data-speed="0.5"
+        >
+          It declares that you trust God&rsquo;s future more than your present feelings. And as you plant, seek Him. Not casually. With all your heart. Because He has promised: when you search for Him wholeheartedly, you will find Him. And finding Him is the beginning of every restoration.
+        </div>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '141vw', width: '35vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image12.png" alt="Restoration moment" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+      </div>
+
+      {/* ── Zone 6: Prayer ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 90%, black 5%)` }}>
+        <p
+          className="mb-elem absolute top-[18%] text-xs tracking-[0.3em] uppercase text-white/60"
+          style={{ left: '5vw' }}
+          data-speed="0.5"
+        >
+          A Prayer for Restoration
+        </p>
+
+        <div
+          className="mb-elem mb-text absolute top-[24%] font-['Cormorant_Garamond'] italic text-white/90 max-w-[24vw] leading-[1.7]"
+          style={{ left: '5vw', fontSize: 'clamp(0.95rem, 1.6vw, 1.4rem)' }}
+          data-speed="0.5"
+        >
+          Father, I confess that my hope has grown thin. I&rsquo;ve been waiting, and the waiting has worn me down. But today I choose to believe Your word over my weariness. You said You have plans for me&mdash;plans for a hope and a future. I can&rsquo;t see that future yet, but I trust the One who holds it. Restore my hope, Lord. Give me the courage to plant in exile, to build in the waiting, and to seek You with everything I have. I believe that You will be found. Bring me back, Lord. Bring me home. Amen.
+        </div>
+
+        <p
+          className="mb-elem absolute bottom-[3%] text-xs tracking-widest uppercase text-white/50"
+          style={{ left: '5vw' }}
+          data-speed="0.5"
+        >
+          Jeremiah 29:11 &mdash; Restoration of Hope
+        </p>
+
+        <div
+          className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
+          style={{ left: '35vw', width: '55vw' }}
+          data-speed="0.5"
+        >
+          <PhotoDevelopImage src="/restoration3/image14.png" alt="Hope fulfilled" className="w-full h-full" imgClassName="object-contain" revealed />
+        </div>
+      </div>
+
+      {/* ── Zone 7: CTA ── */}
+      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
+        <div className="flex flex-col items-center text-center max-w-lg px-8">
+          <h3
+            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
+            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+          >
+            Continue Restoring Your Hope
+          </h3>
+          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
+            Sign up for our newsletter to receive devotions that restores you
+          </p>
+          <div className="flex w-full max-w-md">
+            <input
+              type="email"
+              placeholder="Your email address"
+              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
+            />
+            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
+              Subscribe
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Zone 8: Next Devotion Hero ── */}
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
+        <div className="grid grid-cols-2 h-full">
+          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
+            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
+              Next Devotion
+            </p>
+            <h3
+              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
+              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
+            >
+              {nextProject.name}
+            </h3>
+            {nextProject.description && (
+              <p className="text-lg text-white/60 max-w-md leading-relaxed">
+                {nextProject.description}
+              </p>
+            )}
+          </div>
+          <div className="relative h-full overflow-hidden">
+            <PhotoDevelopImage
+              src={nextProject.thumbnail}
+              alt={nextProject.name}
+              className="w-full h-full"
+              threshold={0.05}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HOPE MOBILE — vertical devotional stack
+   ════════════════════════════════════════════════════════════════ */
+
+function HopeMobile({ project }: { project: Project }) {
+  const bg = project.overlayColor;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
+
+  return (
+    <div style={{ backgroundColor: bg }}>
+      {/* Hope Title */}
+      <section className="min-h-screen p-6 flex flex-col items-center justify-center text-center">
+        <p className="text-sm tracking-[0.2em] uppercase text-white/45 mb-8 max-w-xs">
+          Let&rsquo;s explore a future you cannot see yet, and the God who holds it.
+        </p>
+        <h2
+          className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[0.9]"
+          style={{ fontSize: 'clamp(4rem, 18vw, 10rem)' }}
+        >
+          Hope
+        </h2>
+        <div className="w-10 h-px bg-white/20 mt-10" />
+      </section>
+
+      {/* Opening — image + text */}
+      <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
+        <PhotoDevelopImage src="/restoration3/image1.png" alt="Hope doorway" className="w-full aspect-[2/3] mb-10" />
+        <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
+          Hope is a fragile thing.
+        </h3>
+        <p className="text-sm text-white/60 leading-[1.85] mb-6">
+          It can survive extraordinary hardship, but it can also be slowly suffocated by the weight of unanswered prayers, closed doors, and the quiet fear that maybe things will never get better. Perhaps you&rsquo;re in a season where hope feels more like a word on a greeting card than something real&mdash;a concept that sounds beautiful in theory but feels impossible in your actual life.
+        </p>
+        <p className="text-sm text-white/50 leading-[1.85]">
+          You&rsquo;ve prayed. You&rsquo;ve waited. You&rsquo;ve tried to be faithful. And yet the breakthrough hasn&rsquo;t come. The healing hasn&rsquo;t happened. The relationship hasn&rsquo;t been reconciled. And in the silence, a dangerous whisper creeps in: &ldquo;What if this is all there is?&rdquo;
+        </p>
+      </section>
+
+      {/* Scripture */}
+      <section className="p-6 pb-16" style={{ backgroundColor: bgDark }}>
+        <p className="text-xs tracking-[0.3em] uppercase text-white/35 mb-10">The Scripture</p>
+        <p className="text-sm text-white/60 leading-[1.85] mb-8">
+          Jeremiah 29:11 is one of the most beloved verses in Scripture, but its full power is lost if we don&rsquo;t understand when God spoke it. This was not a promise delivered in a season of triumph. It was a letter&mdash;written by the prophet Jeremiah&mdash;to a people in exile.
+        </p>
+        <PhotoDevelopImage src="/restoration3/image4.png" alt="Scripture scene" className="w-full aspect-[2/3] mb-8" />
+        <p className="text-sm text-white/60 leading-[1.85] mb-8">
+          False prophets were telling them the exile would be brief. But God&rsquo;s actual message was far more challenging: settle in. Build houses. Plant gardens. The exile would last seventy years. And it is into that crushing news that God speaks this promise of hope. He doesn&rsquo;t deny the difficulty. He doesn&rsquo;t promise a quick fix. He says: &ldquo;I have not abandoned you. I have plans for you&mdash;and those plans end in flourishing, not destruction.&rdquo;
+        </p>
+        <PhotoDevelopImage src="/restoration3/image5.png" alt="Exile landscape" className="w-full aspect-video mb-8" />
+        <p className="text-sm text-white/60 leading-[1.85]">
+          And then comes the invitation: &ldquo;You will seek me and find me when you seek me with all your heart. I will be found by you,&rdquo; declares the Lord. Restoration doesn&rsquo;t begin with a change in circumstances. It begins with a turning of the heart&mdash;toward the God who has been there all along, even in exile.
+        </p>
+      </section>
+
+      {/* Image pair */}
+      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+        <PhotoDevelopImage src="/restoration3/image2.png" alt="Hope landscape" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/restoration3/image7.png" alt="God's plans" className="w-full aspect-[2/3]" />
+      </section>
+
+      {/* Timeless Principle */}
+      <section className="p-6 py-20" style={{ backgroundColor: bgLight }}>
+        <p className="text-xs tracking-[0.3em] uppercase text-white/35 mb-10">The Timeless Principle</p>
+        <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/85 text-2xl leading-snug mb-8">
+          God&rsquo;s plans for us do not expire in seasons of waiting.
+        </h3>
+        <p className="text-sm text-white/50 leading-[1.85] mb-10">
+          Hope is not wishful thinking&mdash;it is the confident assurance that God&rsquo;s intentions toward us are good, even when our circumstances suggest otherwise. Restoration of hope does not require an escape from the hard season. It requires a redirecting of our gaze toward the One who holds the future we cannot yet see.
+        </p>
+        <PhotoDevelopImage src="/restoration3/image8.png" alt="Hope restored" className="w-full aspect-[3/2]" />
+      </section>
+
+      {/* Application */}
+      <section className="p-6 pb-16" style={{ backgroundColor: bgDark }}>
+        <p className="text-xs tracking-[0.3em] uppercase text-white/35 mb-10">The Application</p>
+        <p className="text-sm text-white/60 leading-[1.85] mb-8">
+          If you are in a season of waiting and your hope is wearing thin, do something countercultural today: plant something. Not because the exile is over, but because you believe God when He says it won&rsquo;t last forever. This could be literal&mdash;plant a seed, tend a garden. Or it could be metaphorical&mdash;invest in a friendship, start that project you&rsquo;ve been putting off, sign up for the class.
+        </p>
+        <div className="font-['Cormorant_Garamond'] italic text-lg text-white/65 border-l border-white/20 pl-5 mb-8 leading-relaxed">
+          &ldquo;Planting in exile is an act of defiant hope.&rdquo;
+        </div>
+        <p className="text-sm text-white/50 leading-[1.85] mb-10">
+          It declares that you trust God&rsquo;s future more than your present feelings. And as you plant, seek Him. Not casually. With all your heart. Because He has promised: when you search for Him wholeheartedly, you will find Him. And finding Him is the beginning of every restoration.
+        </p>
+        <PhotoDevelopImage src="/restoration3/image10.png" alt="Planting in exile" className="w-full aspect-[2/3]" />
+      </section>
+
+      {/* Prayer */}
+      <section className="p-6 py-20 text-center" style={{ backgroundColor: bg }}>
+        <p className="text-xs tracking-[0.3em] uppercase text-white/35 mb-12">A Prayer for Restoration</p>
+        <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
+          Father, I confess that my hope has grown thin. I&rsquo;ve been waiting, and the waiting has worn me down. But today I choose to believe Your word over my weariness. You said You have plans for me&mdash;plans for a hope and a future. I can&rsquo;t see that future yet, but I trust the One who holds it. Restore my hope, Lord. Give me the courage to plant in exile, to build in the waiting, and to seek You with everything I have. I believe that You will be found. Bring me back, Lord. Bring me home. Amen.
+        </p>
+        <PhotoDevelopImage src="/restoration3/image13.png" alt="Hope fulfilled" className="w-full aspect-[2/3]" />
+      </section>
+
+      {/* Final image */}
+      <section style={{ backgroundColor: bg }}>
+        <PhotoDevelopImage src="/restoration3/image14.png" alt="Restoration complete" className="w-full aspect-video" />
       </section>
     </div>
   );

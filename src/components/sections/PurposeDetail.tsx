@@ -14,6 +14,7 @@ interface PurposeDetailProps {
 
 export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetailProps) {
   const isRestoration1 = project.id === 'restoration1';
+  const isRestoration3 = project.id === 'restoration3';
   const [isVisible, setIsVisible] = useState(false);
   const [textReady, setTextReady] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -73,7 +74,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen overflow-hidden">
         {/* Left Content */}
         <div ref={heroContentRef} className="relative flex flex-col justify-start px-6 lg:px-16 pt-24 lg:pt-28 pb-32 lg:pb-20 order-2 lg:order-1">
-          {isRestoration1 ? (
+          {(isRestoration1 || isRestoration3) ? (
             <>
               {/* Label */}
               <LineMaskReveal
@@ -83,7 +84,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                 threshold={0.1}
                 enabled={textReady}
               >
-                <span>Restoration of Peace</span>
+                <span>{isRestoration1 ? 'Restoration of Peace' : 'The Restoration of Hope'}</span>
               </LineMaskReveal>
 
               {/* Title */}
@@ -98,7 +99,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                     transition: 'transform 1.6s cubic-bezier(0.22, 1, 0.36, 1)',
                   }}
                 >
-                  Beside Still Waters
+                  {isRestoration1 ? 'Beside Still Waters' : 'A Future You Cannot See Yet'}
                 </h1>
               </div>
 
@@ -111,9 +112,20 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   threshold={0.1}
                   enabled={textReady}
                 >
-                  <p>&ldquo;He makes me lie down in green pastures,</p>
-                  <p>he leads me beside quiet waters,</p>
-                  <p>he refreshes my soul.&rdquo;</p>
+                  {isRestoration1 ? (
+                    <>
+                      <p>&ldquo;He makes me lie down in green pastures,</p>
+                      <p>he leads me beside quiet waters,</p>
+                      <p>he refreshes my soul.&rdquo;</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>&ldquo;For I know the plans I have for you,&rdquo;</p>
+                      <p>declares the Lord, &ldquo;plans to prosper you</p>
+                      <p>and not to harm you, plans to give you</p>
+                      <p>hope and a future.&rdquo;</p>
+                    </>
+                  )}
                 </LineMaskReveal>
                 <p
                   className="mt-3 not-italic text-xs tracking-[0.25em] uppercase text-white/40"
@@ -122,13 +134,13 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                     transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.6s',
                   }}
                 >
-                  Psalm 23:2&ndash;3
+                  {isRestoration1 ? <>Psalm 23:2&ndash;3</> : 'Jeremiah 29:11'}
                 </p>
               </div>
 
               {/* Down arrow + Journey */}
               <div
-                className="absolute bottom-[30%] right-8 lg:right-12 flex items-center gap-3 text-white/50"
+                className="self-end flex items-center gap-3 text-white/50 mt-auto"
                 style={{
                   opacity: textReady ? 1 : 0,
                   transition: 'opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1s',
