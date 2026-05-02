@@ -29,7 +29,7 @@ export const BibleVerse = Mark.create({
         ...HTMLAttributes,
         'data-bible-verse': '',
         style:
-          'font-style: italic; text-decoration: underline; text-decoration-color: #F59E0B; text-underline-offset: 3px; cursor: pointer;',
+          'font-style: italic; text-decoration: underline; text-decoration-color: #C49A78; text-underline-offset: 3px; cursor: pointer;',
       },
       0,
     ];
@@ -88,7 +88,7 @@ function findVerseDecorations(doc: Parameters<typeof Decoration.inline>[0]): Dec
           'data-bible-verse': '',
           'data-reference': match[0],
           style:
-            'font-style: italic; text-decoration: underline; text-decoration-color: #F59E0B; text-underline-offset: 3px; cursor: pointer;',
+            'font-style: italic; text-decoration: underline; text-decoration-color: #C49A78; text-underline-offset: 3px; cursor: pointer;',
         })
       );
     }

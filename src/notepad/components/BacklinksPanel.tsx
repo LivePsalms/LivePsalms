@@ -23,9 +23,9 @@ interface BacklinkCard {
 // ---------------------------------------------------------------------------
 
 const typeConfig: Record<NoteType, TypeConfig> = {
-  devotion: { icon: PenLine, color: '#34D399', label: 'DEVOTION NOTES' },
-  sermon:   { icon: Mic,      color: '#38BDF8', label: 'SERMON NOTES' },
-  theme:    { icon: Sparkles, color: '#A78BFA', label: 'THEMES' },
+  devotion: { icon: PenLine, color: '#6B8B7A', label: 'DEVOTION NOTES' },
+  sermon:   { icon: Mic,      color: '#7A9BAE', label: 'SERMON NOTES' },
+  theme:    { icon: Sparkles, color: '#D4A0A0', label: 'THEMES' },
 };
 
 // ---------------------------------------------------------------------------

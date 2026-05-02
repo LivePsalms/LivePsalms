@@ -52,9 +52,9 @@ import type { Note, Folder, NoteType } from '../types';
 // ---------------------------------------------------------------------------
 
 const NOTE_TYPE_CONFIG: Record<NoteType, { icon: typeof PenLine; color: string; label: string }> = {
-  devotion: { icon: PenLine, color: '#34D399', label: 'Devotion' },
-  sermon: { icon: Mic, color: '#38BDF8', label: 'Sermon' },
-  theme: { icon: Sparkles, color: '#A78BFA', label: 'Theme' },
+  devotion: { icon: PenLine, color: '#6B8B7A', label: 'Devotion' },
+  sermon: { icon: Mic, color: '#7A9BAE', label: 'Sermon' },
+  theme: { icon: Sparkles, color: '#D4A0A0', label: 'Theme' },
 };
 
 // ---------------------------------------------------------------------------

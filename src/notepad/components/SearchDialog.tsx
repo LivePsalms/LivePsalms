@@ -115,7 +115,7 @@ export function SearchDialog() {
               value={`verse-${ref}`}
               onSelect={() => handleSelectNote(noteId)}
             >
-              <BookOpen style={{ color: '#F59E0B' }} />
+              <BookOpen style={{ color: '#C49A78' }} />
               <span>{ref}</span>
               <span className="ml-auto text-xs opacity-50 truncate max-w-[140px]">{noteTitle}</span>
             </CommandItem>

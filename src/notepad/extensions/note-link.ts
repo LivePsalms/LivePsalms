@@ -28,7 +28,7 @@ export const NoteLink = Mark.create({
       {
         ...HTMLAttributes,
         'data-note-link': '',
-        style: 'text-decoration: underline; text-decoration-color: #38BDF8; text-underline-offset: 3px; cursor: pointer;',
+        style: 'text-decoration: underline; text-decoration-color: #7A9BAE; text-underline-offset: 3px; cursor: pointer;',
       },
       0,
     ];
