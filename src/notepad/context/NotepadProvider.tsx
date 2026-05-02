@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Note, Folder, NoteType } from '../types';
+import type { Note, Folder, NoteType, FolderIcon } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
 
@@ -21,7 +21,7 @@ export interface NotepadContextValue {
   renameNote: (id: string, title: string) => Promise<Note>;
 
   // Folder actions
-  createFolder: (name: string, parentId: string | null) => Promise<Folder>;
+  createFolder: (name: string, parentId: string | null, icon?: FolderIcon, color?: string) => Promise<Folder>;
   renameFolder: (id: string, name: string) => Promise<Folder>;
   deleteFolder: (id: string) => Promise<void>;
 
@@ -126,10 +126,10 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
   );
 
   const createFolder = useCallback(
-    async (name: string, parentId: string | null): Promise<Folder> => {
+    async (name: string, parentId: string | null, icon?: FolderIcon, color?: string): Promise<Folder> => {
       const siblings = folders.filter((f) => f.parentId === parentId);
       const order = siblings.length;
-      const folder = await adapterRef.current.createFolder({ name, parentId, order });
+      const folder = await adapterRef.current.createFolder({ name, parentId, order, icon, color });
       await refresh();
       return folder;
     },

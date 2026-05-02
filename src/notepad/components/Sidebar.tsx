@@ -44,6 +44,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useNotepad } from '../context/useNotepad';
+import { NewFolderDialog, FOLDER_ICONS } from './NewFolderDialog';
 import type { Note, Folder, NoteType } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -471,6 +472,14 @@ function FolderItem({
               ) : (
                 <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
               )}
+              {(() => {
+                const iconEntry = FOLDER_ICONS.find((i) => i.key === folder.icon);
+                if (iconEntry) {
+                  const FIcon = iconEntry.icon;
+                  return <FIcon className="w-3.5 h-3.5 shrink-0" style={{ color: folder.color || 'var(--silica)' }} />;
+                }
+                return null;
+              })()}
               <span
                 className="text-[12px] font-medium truncate text-left flex-1"
                 style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
@@ -654,10 +663,7 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
     [moveNote],
   );
 
-  const handleCreateFolder = () => {
-    const name = prompt('Folder name:');
-    if (name && name.trim()) createFolder(name.trim(), null);
-  };
+  const [showNewFolder, setShowNewFolder] = useState(false);
 
   return (
     <div
@@ -758,7 +764,7 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
 
         {/* + New Folder button */}
         <button
-          onClick={handleCreateFolder}
+          onClick={() => setShowNewFolder(true)}
           className="flex items-center gap-1.5 mt-4 px-2 py-1.5 rounded hover:bg-black/5 transition-colors w-full"
           style={{ fontFamily: 'Outfit, sans-serif' }}
         >
@@ -767,6 +773,8 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
             + New Folder
           </span>
         </button>
+
+        <NewFolderDialog open={showNewFolder} onOpenChange={setShowNewFolder} />
 
         {/* Tags section */}
         {allTags.length > 0 && (
