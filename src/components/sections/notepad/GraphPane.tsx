@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Mic, PenLine, Sparkles, Maximize2 } from 'lucide-react';
+import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 
 const graphNodes = [
   { id: 1, x: 55, y: 35, type: 'scripture' as const, label: 'Rom 8:28' },
@@ -26,7 +26,7 @@ const nodeIcons: Record<string, typeof BookOpen> = {
   scripture: BookOpen, sermon: Mic, devotion: PenLine, theme: Sparkles,
 };
 
-export function GraphPane({ graphOpen }: { graphOpen: boolean }) {
+export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { graphOpen: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
   const [graphMode, setGraphMode] = useState<'global' | 'local'>('global');
   const [graphFilters, setGraphFilters] = useState({
     scripture: true, sermon: true, devotion: true, theme: true,
@@ -43,13 +43,13 @@ export function GraphPane({ graphOpen }: { graphOpen: boolean }) {
 
   return (
     <aside
-      className="shrink-0 overflow-hidden border-l flex-col hidden md:flex"
+      className="overflow-hidden border-l flex-col hidden md:flex"
       style={{
-        width: graphOpen ? '35%' : 0,
+        flex: expanded ? '1 1 0%' : (graphOpen ? '0 0 35%' : '0 0 0px'),
         borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
         background: 'rgba(240, 236, 232, 0.4)',
         opacity: graphOpen ? 1 : 0,
-        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+        transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
       }}
     >
       <div className="p-4 space-y-3 shrink-0">
@@ -127,10 +127,17 @@ export function GraphPane({ graphOpen }: { graphOpen: boolean }) {
       </div>
 
       <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
-        <button className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors">
-          <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+        <button
+          onClick={onToggleExpand}
+          className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors"
+        >
+          {expanded ? (
+            <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+          ) : (
+            <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+          )}
           <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
-            EXPAND FULL SCREEN
+            {expanded ? 'COLLAPSE' : 'EXPAND'}
           </span>
         </button>
       </div>

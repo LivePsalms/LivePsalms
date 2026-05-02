@@ -12,6 +12,7 @@ import { GraphPane } from './notepad/GraphPane';
 function NotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [graphOpen, setGraphOpen] = useState(true);
+  const [graphExpanded, setGraphExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
 
   const handleOpenSearch = useCallback(() => {
@@ -27,14 +28,15 @@ function NotepadWorkspace() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar toggle — always visible */}
+        {/* Sidebar — hidden when graph is expanded */}
         <div
           className="shrink-0 flex flex-col border-r"
           style={{
-            width: sidebarOpen ? 220 : 48,
-            borderColor: 'var(--pale-stone)',
+            width: graphExpanded ? 0 : (sidebarOpen ? 220 : 48),
+            borderColor: graphExpanded ? 'transparent' : 'var(--pale-stone)',
             background: 'rgba(240, 236, 232, 0.6)',
             transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflow: 'hidden',
           }}
         >
           {/* Sidebar header with COLLECTION + toggle */}
@@ -77,8 +79,16 @@ function NotepadWorkspace() {
           </div>
         </div>
 
-        {/* Editor Pane */}
-        <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
+        {/* Editor Pane — hidden when graph is expanded */}
+        <main
+          className="overflow-y-auto flex flex-col min-w-0"
+          style={{
+            flex: graphExpanded ? '0 0 0px' : '1 1 0%',
+            opacity: graphExpanded ? 0 : 1,
+            transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+            overflow: 'hidden',
+          }}
+        >
           {/* Tab Bar */}
           <div className="flex items-center gap-0 border-b shrink-0" style={{ borderColor: 'var(--pale-stone)' }}>
             {(['content', 'backlinks', 'info'] as const).map((tab) => (
@@ -106,7 +116,7 @@ function NotepadWorkspace() {
         </main>
 
         {/* Graph Pane (static placeholder — functionality deferred) */}
-        <GraphPane graphOpen={graphOpen} />
+        <GraphPane graphOpen={graphOpen} expanded={graphExpanded} onToggleExpand={() => setGraphExpanded(!graphExpanded)} />
       </div>
 
       <SearchDialog />
