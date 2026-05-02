@@ -324,3 +324,64 @@ img {
     display: flex !important;
   }
 }
+
+/* TipTap Notepad Editor */
+.notepad-editor .tiptap {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--deep-umber);
+  outline: none;
+}
+
+.notepad-editor .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--silica);
+  pointer-events: none;
+  height: 0;
+}
+
+.notepad-editor .tiptap h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.75rem;
+  font-weight: 300;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--charred);
+}
+
+.notepad-editor .tiptap h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--charred);
+}
+
+.notepad-editor .tiptap h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--charred);
+}
+
+.notepad-editor .tiptap blockquote {
+  border-left: 2px solid var(--warm-sand);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--deep-umber);
+  opacity: 0.8;
+}
+
+.notepad-editor .tiptap ul,
+.notepad-editor .tiptap ol {
+  padding-left: 1.25rem;
+}
+
+.notepad-editor .tiptap p {
+  margin-bottom: 0.75rem;
+}
