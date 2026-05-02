@@ -7,6 +7,7 @@ import { Hero } from '@/components/sections/Hero';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
+import { Notepad } from '@/components/sections/Notepad';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
@@ -35,7 +36,8 @@ function App() {
   const projects = useProjectColors();
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
-  const hideFooter = isDetailPage || isPurposePage;
+  const isNotepadPage = location.pathname === '/notepad';
+  const hideFooter = isDetailPage || isPurposePage || isNotepadPage;
 
   // Belt-and-suspenders scroll reset for direct URL loads / back-forward nav
   // where handlePhaseComplete didn't run. We do NOT kill ScrollTriggers here:
@@ -139,7 +141,7 @@ function App() {
       <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          <Header darkText={isDetailPage} />
+          {!isNotepadPage && <Header darkText={isDetailPage} />}
 
           <Routes>
             <Route
@@ -157,6 +159,7 @@ function App() {
                 </main>
               }
             />
+            <Route path="/notepad" element={<Notepad />} />
             <Route
               path="/purpose"
               element={

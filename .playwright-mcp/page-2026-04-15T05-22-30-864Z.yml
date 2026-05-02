@@ -1,0 +1,78 @@
+- generic [ref=e6]:
+  - banner [ref=e7]:
+    - generic [ref=e8]:
+      - link "LivePsalms" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+        - img "LivePsalms" [ref=e10]
+      - navigation [ref=e11]:
+        - link "P U R P O S E" [ref=e12] [cursor=pointer]:
+          - /url: /purpose
+          - generic [ref=e13]: P
+          - generic [ref=e14]: U
+          - generic [ref=e15]: R
+          - generic [ref=e16]: P
+          - generic [ref=e17]: O
+          - generic [ref=e18]: S
+          - generic [ref=e19]: E
+        - link "D E V O T I O N" [ref=e20] [cursor=pointer]:
+          - /url: "#devotion"
+          - generic [ref=e21]: D
+          - generic [ref=e22]: E
+          - generic [ref=e23]: V
+          - generic [ref=e24]: O
+          - generic [ref=e25]: T
+          - generic [ref=e26]: I
+          - generic [ref=e27]: O
+          - generic [ref=e28]: "N"
+        - link "S H O P" [ref=e29] [cursor=pointer]:
+          - /url: "#shop"
+          - generic [ref=e30]: S
+          - generic [ref=e31]: H
+          - generic [ref=e32]: O
+          - generic [ref=e33]: P
+        - link "C O N T A C T" [ref=e34] [cursor=pointer]:
+          - /url: "#contact"
+          - generic [ref=e35]: C
+          - generic [ref=e36]: O
+          - generic [ref=e37]: "N"
+          - generic [ref=e38]: T
+          - generic [ref=e39]: A
+          - generic [ref=e40]: C
+          - generic [ref=e41]: T
+        - generic [ref=e42]: —
+        - button "S O C I A L" [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: S
+          - generic [ref=e46]: O
+          - generic [ref=e47]: C
+          - generic [ref=e48]: I
+          - generic [ref=e49]: A
+          - generic [ref=e50]: L
+  - generic [ref=e181]:
+    - generic [ref=e182]:
+      - heading "Restoration 04" [level=1] [ref=e184]
+      - img "Restoration 04" [ref=e186]
+    - generic [ref=e189]:
+      - generic [ref=e190]:
+        - img "Restoration 04" [ref=e192]
+        - heading "RESTORATION 04" [level=2] [ref=e193]
+        - paragraph [ref=e195]: A space where architecture meets editorial design.
+      - generic [ref=e196]:
+        - generic [ref=e197]:
+          - img "Restoration 04 detail" [ref=e198]
+          - paragraph [ref=e199]: Location — 2025
+        - img "Restoration 04 view" [ref=e201]
+      - generic [ref=e202]:
+        - heading "CRAFT" [level=3] [ref=e203]
+        - img "Restoration 04 craft" [ref=e205]
+        - paragraph [ref=e207]: Every detail matters. From material selection to spatial flow, we consider how spaces evolve with their inhabitants.
+        - generic [ref=e208]:
+          - img "Detail study" [ref=e209]
+          - paragraph [ref=e210]: Detail Study
+      - generic [ref=e211]:
+        - generic [ref=e212]: "2025"
+        - img "Restoration 04 featured" [ref=e214]
+        - paragraph [ref=e215]: Restoration
+      - generic [ref=e217]:
+        - heading "Let's Talk" [level=3] [ref=e218]
+        - paragraph [ref=e219]: Ready to create something extraordinary? Reach out and let's start a conversation about your next project.
+        - button "Get in Touch" [ref=e220] [cursor=pointer]

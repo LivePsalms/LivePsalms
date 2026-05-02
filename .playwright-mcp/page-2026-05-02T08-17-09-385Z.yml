@@ -1,0 +1,130 @@
+- generic [ref=e3]:
+  - generic:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "LivePsalms" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "LivePsalms" [ref=e7]
+        - navigation [ref=e8]:
+          - link "P U R P O S E" [ref=e9] [cursor=pointer]:
+            - /url: /purpose
+            - generic [ref=e10]: P
+            - generic [ref=e11]: U
+            - generic [ref=e12]: R
+            - generic [ref=e13]: P
+            - generic [ref=e14]: O
+            - generic [ref=e15]: S
+            - generic [ref=e16]: E
+          - link "N O T E P A D" [ref=e17] [cursor=pointer]:
+            - /url: /notepad
+            - generic [ref=e18]: "N"
+            - generic [ref=e19]: O
+            - generic [ref=e20]: T
+            - generic [ref=e21]: E
+            - generic [ref=e22]: P
+            - generic [ref=e23]: A
+            - generic [ref=e24]: D
+          - link "D E V O T I O N" [ref=e25] [cursor=pointer]:
+            - /url: "#devotion"
+            - generic [ref=e26]: D
+            - generic [ref=e27]: E
+            - generic [ref=e28]: V
+            - generic [ref=e29]: O
+            - generic [ref=e30]: T
+            - generic [ref=e31]: I
+            - generic [ref=e32]: O
+            - generic [ref=e33]: "N"
+          - link "S H O P" [ref=e34] [cursor=pointer]:
+            - /url: "#shop"
+            - generic [ref=e35]: S
+            - generic [ref=e36]: H
+            - generic [ref=e37]: O
+            - generic [ref=e38]: P
+          - link "C O N T A C T" [ref=e39] [cursor=pointer]:
+            - /url: "#contact"
+            - generic [ref=e40]: C
+            - generic [ref=e41]: O
+            - generic [ref=e42]: "N"
+            - generic [ref=e43]: T
+            - generic [ref=e44]: A
+            - generic [ref=e45]: C
+            - generic [ref=e46]: T
+          - generic [ref=e47]: —
+          - button "S O C I A L" [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: S
+            - generic [ref=e51]: O
+            - generic [ref=e52]: C
+            - generic [ref=e53]: I
+            - generic [ref=e54]: A
+            - generic [ref=e55]: L
+    - generic [ref=e56]:
+      - generic [ref=e58]:
+        - button "Close sidebar" [ref=e59] [cursor=pointer]:
+          - img [ref=e60]
+        - button "Search notes… ⌘K" [ref=e63] [cursor=pointer]:
+          - img [ref=e64]
+          - generic [ref=e67]: Search notes…
+          - generic [ref=e68]: ⌘K
+        - button "NEW NOTE" [ref=e69] [cursor=pointer]:
+          - img [ref=e70]
+          - generic [ref=e71]: NEW NOTE
+        - button "Upload" [ref=e72] [cursor=pointer]:
+          - img [ref=e73]
+        - button "Close graph" [ref=e77] [cursor=pointer]:
+          - img [ref=e78]
+      - generic [ref=e81]:
+        - complementary [ref=e82]:
+          - generic [ref=e84]:
+            - heading "COLLECTION" [level=3] [ref=e85]
+            - generic [ref=e86]:
+              - img [ref=e87]
+              - textbox "Filter notes..." [ref=e90]
+            - button "+ New Folder" [ref=e91] [cursor=pointer]:
+              - img [ref=e92]
+              - generic [ref=e94]: + New Folder
+        - main [ref=e95]:
+          - generic [ref=e96]:
+            - button "Content" [ref=e97] [cursor=pointer]: Content
+            - button "Backlinks" [ref=e99] [cursor=pointer]
+            - button "Info" [ref=e100] [cursor=pointer]
+          - generic [ref=e101]: Select a note or create a new one
+        - complementary [ref=e102]:
+          - generic [ref=e103]:
+            - heading "GRAPH" [level=3] [ref=e104]
+            - generic [ref=e105]:
+              - button "Global" [ref=e106] [cursor=pointer]
+              - button "Local" [ref=e107] [cursor=pointer]
+            - generic [ref=e108]:
+              - button "Scripture" [ref=e109] [cursor=pointer]:
+                - img [ref=e110]
+                - text: Scripture
+              - button "Sermon" [ref=e112] [cursor=pointer]:
+                - img [ref=e113]
+                - text: Sermon
+              - button "Devotion" [ref=e116] [cursor=pointer]:
+                - img [ref=e117]
+                - text: Devotion
+              - button "Theme" [ref=e119] [cursor=pointer]:
+                - img [ref=e120]
+                - text: Theme
+          - img [ref=e124]:
+            - generic [ref=e137] [cursor=pointer]: Rom 8:28
+            - generic [ref=e141] [cursor=pointer]: Hard season
+            - generic [ref=e144] [cursor=pointer]: Trusting God's Plan
+            - generic [ref=e147] [cursor=pointer]: Sovereignty
+            - generic [ref=e150] [cursor=pointer]: Jer 29:11
+            - generic [ref=e153] [cursor=pointer]: Peace in the storm
+            - generic [ref=e156] [cursor=pointer]: Ps 46:10
+            - generic [ref=e159] [cursor=pointer]: Trust
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - generic [ref=e164]: Scripture
+              - generic [ref=e167]: Sermon
+              - generic [ref=e170]: Devotion
+              - generic [ref=e173]: Theme
+            - button "EXPAND FULL SCREEN" [ref=e174] [cursor=pointer]:
+              - img [ref=e175]
+              - generic [ref=e180]: EXPAND FULL SCREEN
+      - generic [ref=e181]:
+        - heading "Search" [level=2] [ref=e182]
+        - paragraph [ref=e183]: Search notes, verses, tags...

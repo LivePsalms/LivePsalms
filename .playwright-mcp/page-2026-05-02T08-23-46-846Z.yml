@@ -1,0 +1,89 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - button "Close sidebar" [ref=e7] [cursor=pointer]:
+        - img [ref=e153]
+      - button "Search notes… ⌘K" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - generic [ref=e15]: Search notes…
+        - generic [ref=e16]: ⌘K
+      - button "NEW NOTE" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e19]: NEW NOTE
+      - button "Upload" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+      - button "Close graph" [ref=e25] [cursor=pointer]:
+        - img [ref=e156]
+    - generic [ref=e29]:
+      - complementary [ref=e30]:
+        - generic [ref=e32]:
+          - heading "COLLECTION" [level=3] [ref=e33]
+          - generic [ref=e34]:
+            - img [ref=e35]
+            - textbox "Filter notes..." [ref=e38]
+          - generic [ref=e40] [cursor=pointer]:
+            - button [ref=e41]:
+              - img [ref=e42]
+            - img [ref=e49]
+            - generic [ref=e51]: Untitled
+          - button "+ New Folder" [ref=e52] [cursor=pointer]:
+            - img [ref=e53]
+            - generic [ref=e55]: + New Folder
+          - generic [ref=e159]:
+            - heading "TAGS" [level=3] [ref=e160]
+            - generic [ref=e162] [cursor=pointer]:
+              - generic [ref=e163]: "##trust"
+              - generic [ref=e164]: (1)
+      - main [ref=e56]:
+        - generic [ref=e57]:
+          - button "Content" [ref=e58] [cursor=pointer]: Content
+          - button "Backlinks" [ref=e60] [cursor=pointer]
+          - button "Info" [ref=e61] [cursor=pointer]
+        - generic [ref=e62]:
+          - textbox "Untitled" [ref=e146]
+          - generic [ref=e147]: May 2, 2026
+          - generic [ref=e166]: "#trust"
+          - separator [ref=e148]
+          - textbox [active] [ref=e151]:
+            - paragraph [ref=e152]: "Lord, this season feels heavy but I trust 28 and I hold onto #trust in Romans 8:"
+      - complementary [ref=e63]:
+        - generic [ref=e64]:
+          - heading "GRAPH" [level=3] [ref=e65]
+          - generic [ref=e66]:
+            - button "Global" [ref=e67] [cursor=pointer]
+            - button "Local" [ref=e68] [cursor=pointer]
+          - generic [ref=e69]:
+            - button "Scripture" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - text: Scripture
+            - button "Sermon" [ref=e73] [cursor=pointer]:
+              - img [ref=e74]
+              - text: Sermon
+            - button "Devotion" [ref=e77] [cursor=pointer]:
+              - img [ref=e78]
+              - text: Devotion
+            - button "Theme" [ref=e80] [cursor=pointer]:
+              - img [ref=e81]
+              - text: Theme
+        - img [ref=e85]:
+          - generic [ref=e98] [cursor=pointer]: Rom 8:28
+          - generic [ref=e102] [cursor=pointer]: Hard season
+          - generic [ref=e105] [cursor=pointer]: Trusting God's Plan
+          - generic [ref=e108] [cursor=pointer]: Sovereignty
+          - generic [ref=e111] [cursor=pointer]: Jer 29:11
+          - generic [ref=e114] [cursor=pointer]: Peace in the storm
+          - generic [ref=e117] [cursor=pointer]: Ps 46:10
+          - generic [ref=e120] [cursor=pointer]: Trust
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e125]: Scripture
+            - generic [ref=e128]: Sermon
+            - generic [ref=e131]: Devotion
+            - generic [ref=e134]: Theme
+          - button "EXPAND FULL SCREEN" [ref=e135] [cursor=pointer]:
+            - img [ref=e136]
+            - generic [ref=e141]: EXPAND FULL SCREEN
+    - generic [ref=e142]:
+      - heading "Search" [level=2] [ref=e143]
+      - paragraph [ref=e144]: Search notes, verses, tags...
+  - status [ref=e145]

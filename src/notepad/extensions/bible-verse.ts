@@ -1,5 +1,9 @@
-import { Mark, markInputRule, markPasteRule } from '@tiptap/core';
-import { VERSE_INPUT_REGEX, VERSE_PASTE_REGEX } from './bible-verse-utils';
+import { Mark, markPasteRule } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { VERSE_REGEX, VERSE_PASTE_REGEX } from './bible-verse-utils';
+
+const bibleVersePluginKey = new PluginKey('bibleVerseHighlight');
 
 export const BibleVerse = Mark.create({
   name: 'bibleVerse',
@@ -31,12 +35,26 @@ export const BibleVerse = Mark.create({
     ];
   },
 
-  addInputRules() {
+  addProseMirrorPlugins() {
     return [
-      markInputRule({
-        find: VERSE_INPUT_REGEX,
-        type: this.type,
-        getAttributes: (match) => ({ reference: match[1] }),
+      new Plugin({
+        key: bibleVersePluginKey,
+        state: {
+          init(_, { doc }) {
+            return findVerseDecorations(doc);
+          },
+          apply(tr, oldDecorations) {
+            if (tr.docChanged) {
+              return findVerseDecorations(tr.doc);
+            }
+            return oldDecorations;
+          },
+        },
+        props: {
+          decorations(state) {
+            return bibleVersePluginKey.getState(state) as DecorationSet;
+          },
+        },
       }),
     ];
   },
@@ -51,3 +69,30 @@ export const BibleVerse = Mark.create({
     ];
   },
 });
+
+function findVerseDecorations(doc: Parameters<typeof Decoration.inline>[0]): DecorationSet {
+  const decorations: Decoration[] = [];
+
+  doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return;
+
+    const regex = new RegExp(VERSE_REGEX.source, 'g');
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(node.text)) !== null) {
+      const from = pos + match.index;
+      const to = from + match[0].length;
+
+      decorations.push(
+        Decoration.inline(from, to, {
+          'data-bible-verse': '',
+          'data-reference': match[0],
+          style:
+            'font-style: italic; text-decoration: underline; text-decoration-color: #F59E0B; text-underline-offset: 3px; cursor: pointer;',
+        })
+      );
+    }
+  });
+
+  return DecorationSet.create(doc, decorations);
+}

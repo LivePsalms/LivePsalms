@@ -56,10 +56,9 @@ export function NotepadToolbar({
     <>
       {/* Toolbar */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 flex items-end"
+        className="flex items-center shrink-0 z-40"
         style={{
-          height: 108,
-          paddingBottom: 0,
+          height: 48,
           background: 'rgba(240, 236, 232, 0.97)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -67,10 +66,9 @@ export function NotepadToolbar({
           fontFamily: 'Outfit, sans-serif',
         }}
       >
-        {/* Inner row — sits at the bottom 48px of the 108px block */}
         <div
           className="flex items-center w-full gap-1 px-3"
-          style={{ height: 48, paddingTop: 0 }}
+          style={{ height: 48 }}
         >
           {/* Sidebar toggle */}
           <button

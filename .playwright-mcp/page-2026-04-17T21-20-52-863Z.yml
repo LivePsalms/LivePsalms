@@ -1,0 +1,44 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "LivePsalms" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img "LivePsalms" [ref=e8]
+      - button "Toggle menu" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+    - generic:
+      - navigation:
+        - link "PURPOSE":
+          - /url: /purpose
+        - link "DEVOTION":
+          - /url: "#devotion"
+        - link "SHOP":
+          - /url: "#shop"
+        - link "CONTACT":
+          - /url: "#contact"
+        - link "SOCIAL":
+          - /url: "#social"
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e16]: Restoration 02
+      - img "Restoration 02" [ref=e20]
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - img "Restoration 02" [ref=e24]
+        - heading "RESTORATION 02" [level=2] [ref=e25]
+        - paragraph [ref=e26]: A space where architecture meets editorial design.
+      - generic [ref=e28]:
+        - img "Restoration 02 detail" [ref=e30]
+        - paragraph [ref=e31]: Location — 2025
+      - generic [ref=e32]:
+        - heading "CRAFT" [level=3] [ref=e33]
+        - img "Restoration 02 craft" [ref=e35]
+        - paragraph [ref=e36]: Every detail matters. From material selection to spatial flow, we consider how spaces evolve with their inhabitants.
+      - generic [ref=e37]:
+        - generic [ref=e38]: "2025"
+        - img "Restoration 02 featured" [ref=e40]
+        - paragraph [ref=e41]: Restoration
+      - generic [ref=e42]:
+        - heading "Let's Talk" [level=3] [ref=e43]
+        - paragraph [ref=e44]: Ready to create something extraordinary? Reach out and let's start a conversation about your next project.
+        - button "Get in Touch" [ref=e45] [cursor=pointer]

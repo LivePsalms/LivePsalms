@@ -10,7 +10,7 @@ import {
   Sparkles,
   GripVertical,
 } from 'lucide-react';
-import { DragDropProvider, DragEndEvent } from '@dnd-kit/react';
+import { DragDropProvider } from '@dnd-kit/react';
 import { useSortable, isSortable } from '@dnd-kit/react/sortable';
 import {
   ContextMenu,
@@ -639,7 +639,7 @@ export function NotepadSidebar() {
   });
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    (event: { canceled: boolean; operation: { source: unknown } }) => {
       if (event.canceled) return;
       const source = event.operation.source;
       if (!source || !isSortable(source)) return;

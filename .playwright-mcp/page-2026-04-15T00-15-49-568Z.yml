@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - banner [ref=e7]:
+      - generic [ref=e8]:
+        - link "LivePsalms" [ref=e9] [cursor=pointer]:
+          - /url: "#"
+          - img "LivePsalms" [ref=e10]
+        - navigation [ref=e11]:
+          - link "P U R P O S E" [ref=e12] [cursor=pointer]:
+            - /url: /purpose
+            - generic [ref=e13]: P
+            - generic [ref=e14]: U
+            - generic [ref=e15]: R
+            - generic [ref=e16]: P
+            - generic [ref=e17]: O
+            - generic [ref=e18]: S
+            - generic [ref=e19]: E
+          - link "D E V O T I O N" [ref=e20] [cursor=pointer]:
+            - /url: "#devotion"
+            - generic [ref=e21]: D
+            - generic [ref=e22]: E
+            - generic [ref=e23]: V
+            - generic [ref=e24]: O
+            - generic [ref=e25]: T
+            - generic [ref=e26]: I
+            - generic [ref=e27]: O
+            - generic [ref=e28]: "N"
+          - link "S H O P" [ref=e29] [cursor=pointer]:
+            - /url: "#shop"
+            - generic [ref=e30]: S
+            - generic [ref=e31]: H
+            - generic [ref=e32]: O
+            - generic [ref=e33]: P
+          - link "C O N T A C T" [ref=e34] [cursor=pointer]:
+            - /url: "#contact"
+            - generic [ref=e35]: C
+            - generic [ref=e36]: O
+            - generic [ref=e37]: "N"
+            - generic [ref=e38]: T
+            - generic [ref=e39]: A
+            - generic [ref=e40]: C
+            - generic [ref=e41]: T
+          - generic [ref=e42]: —
+          - button "S O C I A L" [ref=e44] [cursor=pointer]:
+            - generic [ref=e45]: S
+            - generic [ref=e46]: O
+            - generic [ref=e47]: C
+            - generic [ref=e48]: I
+            - generic [ref=e49]: A
+            - generic [ref=e50]: L
+    - main [ref=e51]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic:
+            - img "LivePsalms"
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: "\"He leads me beside still waters."
+          - paragraph [ref=e61]: He restores my soul."
+          - paragraph [ref=e62]: Psalm 23:2-3
+      - generic [ref=e63]:
+        - generic [ref=e65]:
+          - button "R e s t o r a t i o n" [ref=e67] [cursor=pointer]:
+            - generic [ref=e68]: R
+            - generic [ref=e69]: e
+            - generic [ref=e70]: s
+            - generic [ref=e71]: t
+            - generic [ref=e72]: o
+            - generic [ref=e73]: r
+            - generic [ref=e74]: a
+            - generic [ref=e75]: t
+            - generic [ref=e76]: i
+            - generic [ref=e77]: o
+            - generic [ref=e78]: "n"
+          - button "R e n e w a l" [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]: R
+            - generic [ref=e82]: e
+            - generic [ref=e83]: "n"
+            - generic [ref=e84]: e
+            - generic [ref=e85]: w
+            - generic [ref=e86]: a
+            - generic [ref=e87]: l
+          - button "S e r e n i t y" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: S
+            - generic [ref=e91]: e
+            - generic [ref=e92]: r
+            - generic [ref=e93]: e
+            - generic [ref=e94]: "n"
+            - generic [ref=e95]: i
+            - generic [ref=e96]: t
+            - generic [ref=e97]: "y"
+        - generic [ref=e98]:
+          - img "Restoration 01" [ref=e100] [cursor=pointer]
+          - img "Restoration 02" [ref=e104] [cursor=pointer]
+          - img "Restoration 03" [ref=e108] [cursor=pointer]
+          - img "Restoration 04" [ref=e112] [cursor=pointer]
+          - img "Restoration 05" [ref=e116] [cursor=pointer]
+          - img "Restoration 06" [ref=e120] [cursor=pointer]
+          - img "Restoration 07" [ref=e124] [cursor=pointer]
+          - img "Restoration 08" [ref=e128] [cursor=pointer]
+          - img "Renewal 01" [ref=e132] [cursor=pointer]
+          - img "Renewal 02" [ref=e136] [cursor=pointer]
+          - img "Renewal 03" [ref=e140] [cursor=pointer]
+          - img "Renewal 04" [ref=e144] [cursor=pointer]
+          - img "Renewal 05" [ref=e148] [cursor=pointer]
+          - img "Renewal 06" [ref=e152] [cursor=pointer]
+          - img "Serenity 01" [ref=e156] [cursor=pointer]
+          - img "Serenity 02" [ref=e160] [cursor=pointer]
+          - img "Serenity 03" [ref=e164] [cursor=pointer]
+          - img "Serenity 04" [ref=e168] [cursor=pointer]
+  - generic [ref=e175]:
+    - generic:
+      - generic:
+        - img "Live Psalms"
+    - generic [ref=e178]:
+      - link "Privacy" [ref=e179] [cursor=pointer]:
+        - /url: "#"
+      - paragraph [ref=e180]: ©2026 Live Psalms

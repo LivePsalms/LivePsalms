@@ -1,0 +1,74 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "LivePsalms" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img "LivePsalms" [ref=e8]
+      - button "Toggle menu" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+    - generic:
+      - navigation:
+        - link "PURPOSE":
+          - /url: /purpose
+        - link "DEVOTION":
+          - /url: "#devotion"
+        - link "SHOP":
+          - /url: "#shop"
+        - link "CONTACT":
+          - /url: "#contact"
+        - link "SOCIAL":
+          - /url: "#social"
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e16]: Restoration of Peace
+        - generic [ref=e17]:
+          - generic [ref=e19]: Beside Still Waters
+          - generic [ref=e21]: Beside Still Waters
+        - generic [ref=e22]:
+          - generic [ref=e24]: “He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul.”
+          - generic [ref=e26]: “He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul.”
+          - generic [ref=e28]: “He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul.”
+          - generic [ref=e30]: Psalm 23:2–3
+        - generic [ref=e31]:
+          - img [ref=e32]
+          - generic [ref=e34]: Journey
+      - img "Restoration 01" [ref=e38]
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - paragraph [ref=e41]: Let’s take a moment and let God restore the peace in and around you.
+        - heading "Peace" [level=2] [ref=e42]
+      - generic [ref=e44]:
+        - img "Courtyard doorway" [ref=e46]
+        - heading "When was the last time you truly felt at rest?" [level=3] [ref=e47]
+        - paragraph [ref=e48]: Not just asleep, but at rest—deep in your bones, quiet in your thoughts, unhurried in your spirit? For most of us, that kind of stillness feels like a distant memory. We carry tension in our shoulders before our feet even hit the floor in the morning.
+        - paragraph [ref=e49]: We live in a world that rewards constant motion. Productivity is praised. Busyness is a badge. And somewhere along the way, rest became something we felt guilty about instead of something we were created for.
+      - generic [ref=e50]:
+        - paragraph [ref=e51]: The Scripture
+        - paragraph [ref=e52]: David, the writer of Psalm 23, was no stranger to chaos. He had been hunted by a king, betrayed by friends, and burdened by war. Yet in the middle of all that turmoil, he wrote what may be the most peaceful passage in all of Scripture.
+        - img "Outdoor shower" [ref=e54]
+        - paragraph [ref=e55]: "Notice the language: “He makes me lie down.” God doesn’t suggest rest. He makes us lie down. Like a shepherd who knows that an exhausted sheep will wander into danger, God sometimes brings us to a full stop because He knows what we need more than we do."
+        - img "Stone bed" [ref=e57]
+        - paragraph [ref=e58]:
+          - text: And then He leads us beside “quiet waters.” Not raging rivers. Not crashing waves. Quiet waters. The Hebrew word for “refreshes” here is the word
+          - emphasis [ref=e59]: shub
+          - text: —which literally means “to return” or “to restore.” God’s restoration brings you back to wholeness.
+      - generic [ref=e60]:
+        - img "Bath with plants" [ref=e62]
+        - img "Warm sauna" [ref=e64]
+      - generic [ref=e65]:
+        - paragraph [ref=e66]: The Timeless Principle
+        - heading "God’s restoration begins not with doing more, but with allowing ourselves to be led into stillness." [level=3] [ref=e67]
+        - paragraph [ref=e68]: Peace is not the absence of problems; it is the presence of a Shepherd who knows exactly where to take us when we are depleted.
+        - img "Tranquil pool" [ref=e70]
+      - generic [ref=e71]:
+        - paragraph [ref=e72]: The Application
+        - paragraph [ref=e73]: Maybe you’re reading this in the middle of a packed schedule, on your phone between meetings, or late at night when the house is finally quiet. Wherever you are, consider this an invitation from your Shepherd. He is not asking you to earn rest—He is leading you to it.
+        - generic [ref=e74]: “Lord, lead me beside still waters. Refresh my soul.”
+        - paragraph [ref=e75]: Today, set aside just ten minutes. No phone. No agenda. No noise. And then let Him. Don’t rush it. Just be led.
+        - img "Resting couch" [ref=e77]
+      - generic [ref=e78]:
+        - paragraph [ref=e79]: A Prayer for Restoration
+        - paragraph [ref=e80]: Lord, I confess that I have been running on empty. I have searched for rest in places that cannot give it. Today, I come to You, the Shepherd of my soul. Lead me to the green pastures and the quiet waters that only You can provide. Refresh what is weary in me. Restore what has been lost. Bring me back to wholeness, peace, and strength. I trust Your leading. Amen.
+        - img "Peaceful nook" [ref=e82]
+      - img "Serene stone bed" [ref=e85]
