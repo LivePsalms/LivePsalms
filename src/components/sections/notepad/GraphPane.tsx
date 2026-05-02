@@ -103,8 +103,12 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { gra
         </div>
       </div>
 
-      <div className="flex-1 relative">
-        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+      <div className="flex-1 relative overflow-hidden">
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="10 10 80 80"
+          preserveAspectRatio="xMidYMid meet"
+        >
           {filteredEdges.map((edge, i) => {
             const from = graphNodes.find((n) => n.id === edge.from);
             const to = graphNodes.find((n) => n.id === edge.to);
