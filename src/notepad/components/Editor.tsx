@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
 import {
-  Bold,
-  Italic,
-  Heading1,
-  Heading2,
-  Heading3,
+  Undo2,
+  Redo2,
+  Heading,
   List,
   ListOrdered,
   Quote,
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Underline as UnderlineIcon,
+  ChevronDown,
 } from 'lucide-react';
 import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
@@ -78,6 +82,7 @@ export function NotepadEditor() {
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Start writing...' }),
+      Underline,
       BibleVerse,
       NoteLink,
       TagMark,
@@ -246,6 +251,16 @@ export function NotepadEditor() {
       n.title.toLowerCase().includes(noteLinkSearch.toLowerCase()),
   );
 
+  // Heading dropdown
+  const [headingOpen, setHeadingOpen] = useState(false);
+
+  const currentHeading = editor
+    ? editor.isActive('heading', { level: 1 }) ? 'H1'
+    : editor.isActive('heading', { level: 2 }) ? 'H2'
+    : editor.isActive('heading', { level: 3 }) ? 'H3'
+    : 'H'
+    : 'H';
+
   // -------------------------------------------------------------------------
   // No active note — placeholder
   // -------------------------------------------------------------------------
@@ -273,169 +288,222 @@ export function NotepadEditor() {
   // -------------------------------------------------------------------------
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '2rem 2.5rem',
-        overflowY: 'auto',
-        position: 'relative',
-      }}
-    >
-      {/* Title */}
-      <input
-        type="text"
-        value={activeNote.title}
-        onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
-        placeholder="Untitled"
-        style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: '2rem',
-          fontWeight: 300,
-          color: 'var(--charred)',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          width: '100%',
-          marginBottom: '0.35rem',
-          padding: 0,
-        }}
-      />
-
-      {/* Date */}
-      <div
-        style={{
-          fontFamily: "'Outfit', sans-serif",
-          fontSize: '0.8rem',
-          color: 'var(--silica)',
-          marginBottom: '0.75rem',
-          letterSpacing: '0.03em',
-        }}
-      >
-        {formatDate(activeNote.createdAt)}
-      </div>
-
-      {/* Tags */}
-      {activeNote.tags.length > 0 && (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+      {/* Fixed formatting toolbar */}
+      {editor && (
         <div
+          className="shrink-0 flex items-center gap-0.5 px-3 border-b"
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.4rem',
-            marginBottom: '0.75rem',
+            height: 40,
+            background: 'rgba(240, 236, 232, 0.97)',
+            borderColor: 'var(--pale-stone)',
+            fontFamily: 'Outfit, sans-serif',
           }}
         >
-          {activeNote.tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: '0.78rem',
-                background: 'rgba(188, 179, 163, 0.2)',
-                color: 'var(--deep-umber)',
-                borderRadius: '4px',
-                padding: '2px 8px',
-              }}
+          {/* Undo / Redo */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            title="Undo"
+          >
+            <Undo2 size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            title="Redo"
+          >
+            <Redo2 size={15} />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          {/* Heading dropdown */}
+          <div className="relative">
+            <ToolbarButton
+              onClick={() => setHeadingOpen(!headingOpen)}
+              active={currentHeading !== 'H'}
+              title="Heading"
             >
-              {tag}
-            </span>
-          ))}
+              <Heading size={15} />
+              <span className="text-[9px] ml-0.5">{currentHeading !== 'H' ? currentHeading : ''}</span>
+              <ChevronDown size={10} className="ml-0.5 opacity-50" />
+            </ToolbarButton>
+            {headingOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 rounded-md shadow-lg z-50 py-1"
+                style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
+              >
+                {([1, 2, 3] as const).map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => { editor.chain().focus().toggleHeading({ level }).run(); setHeadingOpen(false); }}
+                    className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                    style={{
+                      color: editor.isActive('heading', { level }) ? 'var(--charred)' : 'var(--deep-umber)',
+                      fontWeight: editor.isActive('heading', { level }) ? 600 : 400,
+                      fontFamily: 'Outfit, sans-serif',
+                    }}
+                  >
+                    Heading {level}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { editor.chain().focus().setParagraph().run(); setHeadingOpen(false); }}
+                  className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Paragraph
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* List buttons */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            active={editor.isActive('bulletList')}
+            title="Bullet List"
+          >
+            <List size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            active={editor.isActive('orderedList')}
+            title="Ordered List"
+          >
+            <ListOrdered size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            active={editor.isActive('blockquote')}
+            title="Blockquote"
+          >
+            <Quote size={15} />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          {/* Inline formatting */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            active={editor.isActive('bold')}
+            title="Bold"
+          >
+            <Bold size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            active={editor.isActive('italic')}
+            title="Italic"
+          >
+            <Italic size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            active={editor.isActive('strike')}
+            title="Strikethrough"
+          >
+            <Strikethrough size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            active={editor.isActive('code')}
+            title="Inline Code"
+          >
+            <Code size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            active={editor.isActive('underline')}
+            title="Underline"
+          >
+            <UnderlineIcon size={15} />
+          </ToolbarButton>
         </div>
       )}
 
-      {/* Divider */}
-      <hr
-        style={{
-          border: 'none',
-          borderTop: '1px solid var(--pale-stone)',
-          marginBottom: '1.5rem',
-        }}
-      />
-
-      {/* Bubble Menu */}
-      {editor && (
-        <BubbleMenu
-          editor={editor}
+      {/* Scrollable content area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 2.5rem', position: 'relative' }}>
+        {/* Title */}
+        <input
+          type="text"
+          value={activeNote.title}
+          onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
+          placeholder="Untitled"
           style={{
-            display: 'flex',
-            gap: '2px',
-            background: 'rgba(240, 236, 232, 0.97)',
-            border: '1px solid var(--pale-stone)',
-            borderRadius: '8px',
-            padding: '4px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: '2rem',
+            fontWeight: 300,
+            color: 'var(--charred)',
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            width: '100%',
+            marginBottom: '0.35rem',
+            padding: 0,
+          }}
+        />
+
+        {/* Date */}
+        <div
+          style={{
+            fontFamily: "'Outfit', sans-serif",
+            fontSize: '0.8rem',
+            color: 'var(--silica)',
+            marginBottom: '0.75rem',
+            letterSpacing: '0.03em',
           }}
         >
-          <BubbleButton
-            active={editor.isActive('bold')}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            title="Bold"
-          >
-            <Bold size={14} />
-          </BubbleButton>
-          <BubbleButton
-            active={editor.isActive('italic')}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            title="Italic"
-          >
-            <Italic size={14} />
-          </BubbleButton>
-          <BubbleDivider />
-          <BubbleButton
-            active={editor.isActive('heading', { level: 1 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            title="Heading 1"
-          >
-            <Heading1 size={14} />
-          </BubbleButton>
-          <BubbleButton
-            active={editor.isActive('heading', { level: 2 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            title="Heading 2"
-          >
-            <Heading2 size={14} />
-          </BubbleButton>
-          <BubbleButton
-            active={editor.isActive('heading', { level: 3 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            title="Heading 3"
-          >
-            <Heading3 size={14} />
-          </BubbleButton>
-          <BubbleDivider />
-          <BubbleButton
-            active={editor.isActive('bulletList')}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            title="Bullet List"
-          >
-            <List size={14} />
-          </BubbleButton>
-          <BubbleButton
-            active={editor.isActive('orderedList')}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            title="Ordered List"
-          >
-            <ListOrdered size={14} />
-          </BubbleButton>
-          <BubbleButton
-            active={editor.isActive('blockquote')}
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            title="Blockquote"
-          >
-            <Quote size={14} />
-          </BubbleButton>
-        </BubbleMenu>
-      )}
+          {formatDate(activeNote.createdAt)}
+        </div>
 
-      {/* Editor content */}
-      <div
-        onMouseOver={handleMouseOver}
-        onMouseOut={handleMouseOut}
-        onClick={handleClick}
-        style={{ flex: 1 }}
-      >
-        <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
+        {/* Tags */}
+        {activeNote.tags.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.4rem',
+              marginBottom: '0.75rem',
+            }}
+          >
+            {activeNote.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: '0.78rem',
+                  background: 'rgba(188, 179, 163, 0.2)',
+                  color: 'var(--deep-umber)',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Divider */}
+        <hr
+          style={{
+            border: 'none',
+            borderTop: '1px solid var(--pale-stone)',
+            marginBottom: '1.5rem',
+          }}
+        />
+
+        {/* Editor content */}
+        <div
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
+          onClick={handleClick}
+          style={{ flex: 1 }}
+        >
+          <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
+        </div>
       </div>
 
       {/* Verse tooltip */}
@@ -590,39 +658,37 @@ export function NotepadEditor() {
 // Internal sub-components
 // ---------------------------------------------------------------------------
 
-interface BubbleButtonProps {
+interface ToolbarButtonProps {
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
   title: string;
   children: React.ReactNode;
 }
 
-function BubbleButton({ active, onClick, title, children }: BubbleButtonProps) {
+function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       title={title}
+      className="flex items-center justify-center rounded transition-colors"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '28px',
-        height: '28px',
+        width: 30,
+        height: 28,
+        cursor: disabled ? 'default' : 'pointer',
+        background: active ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
+        color: disabled ? 'var(--pale-stone)' : active ? 'var(--charred)' : 'var(--deep-umber)',
         border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        background: active ? 'var(--warm-sand)' : 'transparent',
-        color: active ? 'var(--charred)' : 'var(--deep-umber)',
-        transition: 'background 0.15s',
+        opacity: disabled ? 0.4 : 1,
       }}
       onMouseEnter={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background =
-            'rgba(188, 179, 163, 0.3)';
+        if (!active && !disabled)
+          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(188, 179, 163, 0.2)';
       }}
       onMouseLeave={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+        if (!active && !disabled)
+          (e.currentTarget as HTMLButtonElement).style.background = active ? 'rgba(188, 179, 163, 0.35)' : 'transparent';
       }}
     >
       {children}
@@ -630,14 +696,14 @@ function BubbleButton({ active, onClick, title, children }: BubbleButtonProps) {
   );
 }
 
-function BubbleDivider() {
+function ToolbarDivider() {
   return (
     <div
       style={{
-        width: '1px',
-        height: '20px',
+        width: 1,
+        height: 20,
         background: 'var(--pale-stone)',
-        margin: '4px 2px',
+        margin: '0 4px',
         alignSelf: 'center',
       }}
     />
