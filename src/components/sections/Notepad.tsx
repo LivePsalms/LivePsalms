@@ -28,15 +28,14 @@ function NotepadWorkspace() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — hidden when graph is expanded */}
+        {/* Sidebar — stays visible when graph expands */}
         <div
           className="shrink-0 flex flex-col border-r"
           style={{
-            width: graphExpanded ? 0 : (sidebarOpen ? 220 : 48),
-            borderColor: graphExpanded ? 'transparent' : 'var(--pale-stone)',
+            width: sidebarOpen ? 220 : 48,
+            borderColor: 'var(--pale-stone)',
             background: 'rgba(240, 236, 232, 0.6)',
             transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-            overflow: 'hidden',
           }}
         >
           {/* Sidebar header with COLLECTION + toggle */}
