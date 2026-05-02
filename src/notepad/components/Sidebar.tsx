@@ -595,7 +595,7 @@ function FolderItem({
 // NotepadSidebar (main export)
 // ---------------------------------------------------------------------------
 
-export function NotepadSidebar() {
+export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectionHeader?: boolean } = {}) {
   const {
     notes,
     folders,
@@ -666,12 +666,14 @@ export function NotepadSidebar() {
     >
       <div className="flex-1 overflow-y-auto p-4 space-y-0">
         {/* Collection Header */}
-        <h3
-          className="text-[10px] font-medium tracking-[0.2em] mb-3"
-          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-        >
-          COLLECTION
-        </h3>
+        {!hideCollectionHeader && (
+          <h3
+            className="text-[10px] font-medium tracking-[0.2em] mb-3"
+            style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+          >
+            COLLECTION
+          </h3>
+        )}
 
         {/* Active tag filter indicator */}
         {tagFilter && (

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
@@ -20,27 +21,61 @@ function NotepadWorkspace() {
   return (
     <div className="fixed inset-0 flex flex-col" style={{ top: 0 }}>
       <NotepadToolbar
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         graphOpen={graphOpen}
         onToggleGraph={() => setGraphOpen(!graphOpen)}
         onOpenSearch={handleOpenSearch}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside
-          className="shrink-0 overflow-y-auto overflow-x-hidden border-r"
+        {/* Sidebar toggle — always visible */}
+        <div
+          className="shrink-0 flex flex-col border-r"
           style={{
-            width: sidebarOpen ? 220 : 0,
-            borderColor: sidebarOpen ? 'var(--pale-stone)' : 'transparent',
+            width: sidebarOpen ? 220 : 48,
+            borderColor: 'var(--pale-stone)',
             background: 'rgba(240, 236, 232, 0.6)',
-            opacity: sidebarOpen ? 1 : 0,
-            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          <NotepadSidebar />
-        </aside>
+          {/* Sidebar header with COLLECTION + toggle */}
+          <div
+            className="flex items-center shrink-0 px-4 pt-4 pb-2"
+            style={{ minHeight: 40 }}
+          >
+            {sidebarOpen && (
+              <h3
+                className="text-[10px] font-medium tracking-[0.2em] flex-1"
+                style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+              >
+                COLLECTION
+              </h3>
+            )}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="flex items-center justify-center w-7 h-7 rounded hover:bg-black/5 transition-colors cursor-pointer"
+              title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              style={{ marginLeft: sidebarOpen ? 0 : 'auto', marginRight: sidebarOpen ? 0 : 'auto' }}
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-3.5 h-3.5" style={{ color: 'var(--silica)' }} />
+              ) : (
+                <PanelLeftOpen className="w-3.5 h-3.5" style={{ color: 'var(--silica)' }} />
+              )}
+            </button>
+          </div>
+
+          {/* Sidebar content — hidden when collapsed */}
+          <div
+            className="flex-1 overflow-y-auto overflow-x-hidden"
+            style={{
+              opacity: sidebarOpen ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: sidebarOpen ? 'auto' : 'none',
+            }}
+          >
+            {sidebarOpen && <NotepadSidebar hideCollectionHeader />}
+          </div>
+        </div>
 
         {/* Editor Pane */}
         <main className="flex-1 overflow-y-auto flex flex-col min-w-0">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
+  ArrowLeft,
   Search,
   Plus,
   Upload,
@@ -23,8 +23,6 @@ import { UploadModal } from './UploadModal';
 // ---------------------------------------------------------------------------
 
 interface NotepadToolbarProps {
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
   graphOpen: boolean;
   onToggleGraph: () => void;
   onOpenSearch: () => void;
@@ -35,12 +33,11 @@ interface NotepadToolbarProps {
 // ---------------------------------------------------------------------------
 
 export function NotepadToolbar({
-  sidebarOpen,
-  onToggleSidebar,
   graphOpen,
   onToggleGraph,
   onOpenSearch,
 }: NotepadToolbarProps) {
+  const navigate = useNavigate();
   const { createNote } = useNotepad();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -70,18 +67,22 @@ export function NotepadToolbar({
           className="flex items-center w-full gap-1 px-3"
           style={{ height: 48 }}
         >
-          {/* Sidebar toggle */}
+          {/* Back button */}
           <button
-            onClick={onToggleSidebar}
+            onClick={() => navigate('/')}
             className={`${btnClass} w-8 h-8`}
-            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            title="Back to home"
           >
-            {sidebarOpen ? (
-              <PanelLeftClose className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
-            ) : (
-              <PanelLeftOpen className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
-            )}
+            <ArrowLeft className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
           </button>
+
+          {/* Logo */}
+          <img
+            src="/logo-icon.png"
+            alt="LivePsalms"
+            className="h-6 w-auto object-contain cursor-pointer"
+            onClick={() => navigate('/')}
+          />
 
           {/* Search bar button */}
           <button
