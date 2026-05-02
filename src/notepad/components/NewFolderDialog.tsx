@@ -47,10 +47,6 @@ const FOLDER_ICONS: { key: FolderIcon; icon: typeof Heart; label: string }[] = [
 ];
 
 const FOLDER_COLORS = [
-  { value: '#F59E0B', label: 'Amber' },
-  { value: '#38BDF8', label: 'Sky' },
-  { value: '#34D399', label: 'Emerald' },
-  { value: '#A78BFA', label: 'Violet' },
   { value: '#C49A78', label: 'Terracotta' },
   { value: '#6B8B7A', label: 'Sage' },
   { value: '#D4A0A0', label: 'Dusty Rose' },
