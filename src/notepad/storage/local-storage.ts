@@ -1,0 +1,94 @@
+import { v4 as uuidv4 } from 'uuid';
+import type { Note, Folder } from '../types';
+import type { StorageAdapter } from './adapter';
+
+const NOTES_KEY = 'notepad_notes';
+const FOLDERS_KEY = 'notepad_folders';
+
+export class LocalStorageAdapter implements StorageAdapter {
+  private readNotes(): Note[] {
+    const raw = localStorage.getItem(NOTES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  private writeNotes(notes: Note[]): void {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  }
+
+  private readFolders(): Folder[] {
+    const raw = localStorage.getItem(FOLDERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  private writeFolders(folders: Folder[]): void {
+    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+  }
+
+  async getNotes(): Promise<Note[]> {
+    return this.readNotes();
+  }
+
+  async getNote(id: string): Promise<Note | null> {
+    return this.readNotes().find((n) => n.id === id) ?? null;
+  }
+
+  async createNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
+    const now = new Date().toISOString();
+    const newNote: Note = { ...note, id: uuidv4(), createdAt: now, updatedAt: now };
+    const notes = this.readNotes();
+    notes.push(newNote);
+    this.writeNotes(notes);
+    return newNote;
+  }
+
+  async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
+    const notes = this.readNotes();
+    const index = notes.findIndex((n) => n.id === id);
+    if (index === -1) throw new Error(`Note ${id} not found`);
+    notes[index] = { ...notes[index], ...updates, updatedAt: new Date().toISOString() };
+    this.writeNotes(notes);
+    return notes[index];
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    this.writeNotes(this.readNotes().filter((n) => n.id !== id));
+  }
+
+  async duplicateNote(id: string): Promise<Note> {
+    const note = this.readNotes().find((n) => n.id === id);
+    if (!note) throw new Error(`Note ${id} not found`);
+    const now = new Date().toISOString();
+    const dup: Note = { ...note, id: uuidv4(), title: `${note.title} (copy)`, createdAt: now, updatedAt: now };
+    const notes = this.readNotes();
+    notes.push(dup);
+    this.writeNotes(notes);
+    return dup;
+  }
+
+  async getFolders(): Promise<Folder[]> {
+    return this.readFolders();
+  }
+
+  async createFolder(folder: Omit<Folder, 'id'>): Promise<Folder> {
+    const newFolder: Folder = { ...folder, id: uuidv4() };
+    const folders = this.readFolders();
+    folders.push(newFolder);
+    this.writeFolders(folders);
+    return newFolder;
+  }
+
+  async updateFolder(id: string, updates: Partial<Folder>): Promise<Folder> {
+    const folders = this.readFolders();
+    const index = folders.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error(`Folder ${id} not found`);
+    folders[index] = { ...folders[index], ...updates };
+    this.writeFolders(folders);
+    return folders[index];
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    this.writeFolders(this.readFolders().filter((f) => f.id !== id));
+    const notes = this.readNotes().map((n) => (n.folderId === id ? { ...n, folderId: 'root' } : n));
+    this.writeNotes(notes);
+  }
+}
