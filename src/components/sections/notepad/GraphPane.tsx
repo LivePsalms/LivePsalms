@@ -126,17 +126,7 @@ export function GraphPane({ graphOpen }: { graphOpen: boolean }) {
         </svg>
       </div>
 
-      <div className="p-4 shrink-0 space-y-3" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          {Object.entries(nodeColors).map(([type, color]) => (
-            <div key={type} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-              <span className="text-[10px]" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
         <button className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors">
           <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
           <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
