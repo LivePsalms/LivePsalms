@@ -19,7 +19,7 @@ const graphEdges = [
 ];
 
 const nodeColors: Record<string, string> = {
-  scripture: '#F59E0B', sermon: '#38BDF8', devotion: '#34D399', theme: '#A78BFA',
+  scripture: '#C49A78', sermon: '#7A9BAE', devotion: '#6B8B7A', theme: '#D4A0A0',
 };
 
 const nodeIcons: Record<string, typeof BookOpen> = {
