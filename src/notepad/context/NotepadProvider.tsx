@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { Note, Folder, NoteType, FolderIcon } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
+import type { GraphNode, GraphEdge } from '../graph/types';
+import { useGraph } from '../graph/use-graph';
 
 export interface NotepadContextValue {
   // State
@@ -29,6 +31,13 @@ export interface NotepadContextValue {
   importNotes: (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
 
   refresh: () => Promise<void>;
+
+  // Graph
+  graphNodes: GraphNode[];
+  graphEdges: GraphEdge[];
+  graphActiveNodeId: string | null;
+  graphLoading: boolean;
+  rebuildGraph: () => void;
 }
 
 export const NotepadContext = createContext<NotepadContextValue | null>(null);
@@ -46,6 +55,8 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
+
+  const graph = useGraph(notes, activeNoteId);
 
   const refresh = useCallback(async () => {
     const [fetchedNotes, fetchedFolders] = await Promise.all([
@@ -180,6 +191,11 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     deleteFolder,
     importNotes,
     refresh,
+    graphNodes: graph.nodes,
+    graphEdges: graph.edges,
+    graphActiveNodeId: graph.activeNodeId,
+    graphLoading: graph.isLoading,
+    rebuildGraph: graph.rebuildGraph,
   };
 
   return <NotepadContext.Provider value={value}>{children}</NotepadContext.Provider>;
