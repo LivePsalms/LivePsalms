@@ -23,3 +23,5 @@ export interface Folder {
   icon?: FolderIcon;
   color?: string;
 }
+
+export type { ScriptureNode, GraphEdge, GraphNode, AdjacencyList } from './graph/types';
