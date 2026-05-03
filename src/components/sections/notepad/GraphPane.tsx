@@ -214,6 +214,20 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     if (simRef.current) simRef.current.stop();
 
     const canvas = canvasRef.current;
+    const container = containerRef.current;
+
+    // Ensure canvas is sized to container before creating simulation
+    if (canvas && container) {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width === 300 && canvas.height === 150) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+      }
+    }
+
     const width = canvas?.width ? canvas.width / (window.devicePixelRatio || 1) : 400;
     const height = canvas?.height ? canvas.height / (window.devicePixelRatio || 1) : 400;
 
@@ -383,28 +397,28 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       </div>
 
       <div ref={containerRef} className="flex-1 relative overflow-hidden">
-        {graphLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ cursor: hoveredNodeId ? 'pointer' : 'grab' }}
+          onMouseMove={handleMouseMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+        />
+        {graphLoading && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-[11px] tracking-wider" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
               Building graph...
             </span>
           </div>
-        ) : graphNodes.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center p-8">
+        )}
+        {!graphLoading && graphNodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
             <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
               Create notes with [[links]] or Bible verse references to see your knowledge graph.
             </p>
           </div>
-        ) : (
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full"
-            style={{ cursor: hoveredNodeId ? 'pointer' : 'grab' }}
-            onMouseMove={handleMouseMove}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onWheel={handleWheel}
-          />
         )}
       </div>
 
