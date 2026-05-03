@@ -1,33 +1,69 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
+} from 'd3-force';
 import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { useNotepad } from '@/notepad/context/useNotepad';
 
-const graphNodes = [
-  { id: 1, x: 55, y: 35, type: 'scripture' as const, label: 'Rom 8:28' },
-  { id: 2, x: 40, y: 55, type: 'devotion' as const, label: 'Hard season' },
-  { id: 3, x: 70, y: 58, type: 'sermon' as const, label: "Trusting God's Plan" },
-  { id: 4, x: 30, y: 75, type: 'theme' as const, label: 'Sovereignty' },
-  { id: 5, x: 60, y: 80, type: 'scripture' as const, label: 'Jer 29:11' },
-  { id: 6, x: 80, y: 40, type: 'devotion' as const, label: 'Peace in the storm' },
-  { id: 7, x: 45, y: 20, type: 'scripture' as const, label: 'Ps 46:10' },
-  { id: 8, x: 75, y: 72, type: 'theme' as const, label: 'Trust' },
-];
+interface SimNode extends SimulationNodeDatum {
+  id: string;
+  type: 'devotion' | 'sermon' | 'theme' | 'scripture';
+  title: string;
+  weight: number;
+  radius: number;
+}
 
-const graphEdges = [
-  { from: 1, to: 2 }, { from: 1, to: 3 }, { from: 2, to: 4 },
-  { from: 2, to: 5 }, { from: 3, to: 1 }, { from: 5, to: 4 },
-  { from: 6, to: 7 }, { from: 6, to: 1 }, { from: 8, to: 5 }, { from: 8, to: 3 },
-];
+interface SimLink extends SimulationLinkDatum<SimNode> {
+  edgeType: 'explicit' | 'scripture_reference';
+  weight: number;
+}
 
-const nodeColors: Record<string, string> = {
-  scripture: '#C49A78', sermon: '#7A9BAE', devotion: '#6B8B7A', theme: '#D4A0A0',
+const NODE_COLORS: Record<string, string> = {
+  scripture: '#C49A78',
+  sermon: '#7A9BAE',
+  devotion: '#6B8B7A',
+  theme: '#D4A0A0',
 };
 
-const nodeIcons: Record<string, typeof BookOpen> = {
-  scripture: BookOpen, sermon: Mic, devotion: PenLine, theme: Sparkles,
+const NODE_ICONS: Record<string, typeof BookOpen> = {
+  scripture: BookOpen,
+  sermon: Mic,
+  devotion: PenLine,
+  theme: Sparkles,
 };
 
-export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { graphOpen: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
-  const [graphMode, setGraphMode] = useState<'global' | 'local'>('global');
+function computeRadius(type: string, weight: number): number {
+  const base = type === 'scripture' ? 8 : 6;
+  return Math.min(24, Math.max(6, base + weight * 2));
+}
+
+interface GraphPaneProps {
+  graphOpen: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+}
+
+export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: GraphPaneProps) {
+  const { graphNodes, graphEdges, graphActiveNodeId, graphLoading, openNote } = useNotepad();
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const simRef = useRef<ReturnType<typeof forceSimulation<SimNode>> | null>(null);
+  const nodesRef = useRef<SimNode[]>([]);
+  const linksRef = useRef<SimLink[]>([]);
+
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const transformRef = useRef({ x: 0, y: 0, scale: 1 });
+  const dragRef = useRef({
+    dragging: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
+  });
+
   const [graphFilters, setGraphFilters] = useState({
     scripture: true, sermon: true, devotion: true, theme: true,
   });
@@ -36,16 +72,263 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { gra
     setGraphFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const filteredNodes = graphNodes.filter((n) => graphFilters[n.type]);
-  const filteredEdges = graphEdges.filter(
-    (e) => filteredNodes.some((n) => n.id === e.from) && filteredNodes.some((n) => n.id === e.to)
-  );
+  // --- Drawing ---
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const { x: tx, y: ty, scale } = transformRef.current;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
+
+    const hovered = hoveredNodeId;
+    const activeId = graphActiveNodeId;
+
+    // Connected IDs for hover highlight
+    const connectedIds = new Set<string>();
+    if (hovered) {
+      connectedIds.add(hovered);
+      for (const link of linksRef.current) {
+        const src = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
+        const tgt = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
+        if (src === hovered) connectedIds.add(tgt);
+        if (tgt === hovered) connectedIds.add(src);
+      }
+    }
+
+    // Draw edges
+    for (const link of linksRef.current) {
+      const src = link.source as SimNode;
+      const tgt = link.target as SimNode;
+      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
+
+      const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
+      const alpha = hovered ? (isHighlighted ? 0.8 : 0.08) : 0.3;
+
+      ctx.beginPath();
+      ctx.moveTo(src.x, src.y);
+      ctx.lineTo(tgt.x, tgt.y);
+      ctx.strokeStyle = `rgba(188, 179, 163, ${alpha})`;
+      ctx.lineWidth = 1 + link.weight;
+      ctx.stroke();
+    }
+
+    // Draw nodes
+    for (const node of nodesRef.current) {
+      if (node.x == null || node.y == null) continue;
+
+      const isConnected = !hovered || connectedIds.has(node.id);
+      const alpha = hovered ? (isConnected ? 1 : 0.15) : 0.85;
+      const color = NODE_COLORS[node.type] ?? '#999';
+
+      // Active note glow
+      if (node.id === activeId) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius + 6, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}25`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}15`;
+        ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Label
+      if (node.radius > 10 || node.id === hovered || node.id === activeId) {
+        ctx.font = '11px Outfit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(62, 50, 40, ${alpha})`;
+        ctx.fillText(node.title, node.x, node.y + node.radius + 14);
+      }
+    }
+
+    // Hover tooltip for small nodes
+    if (hovered) {
+      const node = nodesRef.current.find((n) => n.id === hovered);
+      if (node && node.x != null && node.y != null && node.radius <= 10 && node.id !== activeId) {
+        ctx.font = '11px Outfit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(62, 50, 40, 0.9)';
+        ctx.fillText(node.title, node.x, node.y - node.radius - 8);
+      }
+    }
+
+    ctx.restore();
+  }, [hoveredNodeId, graphActiveNodeId]);
+
+  // Redraw on hover change
+  useEffect(() => {
+    drawCanvas();
+  }, [hoveredNodeId, drawCanvas]);
+
+  // --- Build simulation from graph data ---
+  useEffect(() => {
+    if (graphLoading) return;
+
+    const filtered = graphNodes.filter((n) => graphFilters[n.type]);
+    const filteredIds = new Set(filtered.map((n) => n.id));
+
+    // Preserve positions
+    const prevPos = new Map<string, { x: number; y: number }>();
+    for (const node of nodesRef.current) {
+      if (node.x != null && node.y != null) prevPos.set(node.id, { x: node.x, y: node.y });
+    }
+
+    const simNodes: SimNode[] = filtered.map((n) => {
+      const prev = prevPos.get(n.id);
+      return {
+        id: n.id, type: n.type, title: n.title, weight: n.weight,
+        radius: computeRadius(n.type, n.weight),
+        x: prev?.x, y: prev?.y,
+      };
+    });
+
+    const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
+
+    const simLinks: SimLink[] = graphEdges
+      .filter((e) => filteredIds.has(e.source) && filteredIds.has(e.target))
+      .map((e) => ({
+        source: nodeMap.get(e.source)!,
+        target: nodeMap.get(e.target)!,
+        edgeType: e.type,
+        weight: e.weight,
+      }))
+      .filter((l) => l.source && l.target);
+
+    nodesRef.current = simNodes;
+    linksRef.current = simLinks;
+
+    if (simRef.current) simRef.current.stop();
+
+    const canvas = canvasRef.current;
+    const width = canvas?.width ? canvas.width / (window.devicePixelRatio || 1) : 400;
+    const height = canvas?.height ? canvas.height / (window.devicePixelRatio || 1) : 400;
+
+    const sim = forceSimulation<SimNode>(simNodes)
+      .force('link',
+        forceLink<SimNode, SimLink>(simLinks)
+          .id((d) => d.id)
+          .distance((d) => 120 / d.weight)
+          .strength((d) => 0.004 * d.weight)
+      )
+      .force('charge', forceManyBody<SimNode>().strength(-600))
+      .force('center', forceCenter(width / 2, height / 2).strength(0.0004))
+      .force('collide', forceCollide<SimNode>().radius((d) => d.radius + 2))
+      .alphaDecay(0.02)
+      .velocityDecay(0.1)
+      .on('tick', drawCanvas);
+
+    simRef.current = sim;
+
+    return () => { sim.stop(); };
+  }, [graphNodes, graphEdges, graphLoading, graphFilters, drawCanvas]);
+
+  // --- Canvas resize ---
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    const observer = new ResizeObserver(() => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+
+      if (simRef.current) {
+        const cf = simRef.current.force('center') as ReturnType<typeof forceCenter> | undefined;
+        if (cf) cf.x(rect.width / 2).y(rect.height / 2);
+        simRef.current.alpha(0.3).restart();
+      }
+      drawCanvas();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [drawCanvas]);
+
+  // --- Mouse interactions ---
+  const screenToWorld = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const { x: tx, y: ty, scale } = transformRef.current;
+    return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+  }, []);
+
+  const findNodeAt = useCallback((wx: number, wy: number): SimNode | null => {
+    for (let i = nodesRef.current.length - 1; i >= 0; i--) {
+      const node = nodesRef.current[i];
+      if (node.x == null || node.y == null) continue;
+      const dx = wx - node.x, dy = wy - node.y;
+      if (dx * dx + dy * dy <= (node.radius + 4) ** 2) return node;
+    }
+    return null;
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (dragRef.current.dragging) {
+      transformRef.current.x = dragRef.current.origTx + (e.clientX - dragRef.current.startX);
+      transformRef.current.y = dragRef.current.origTy + (e.clientY - dragRef.current.startY);
+      drawCanvas();
+      return;
+    }
+    const { x, y } = screenToWorld(e.clientX, e.clientY);
+    setHoveredNodeId(findNodeAt(x, y)?.id ?? null);
+  }, [screenToWorld, findNodeAt, drawCanvas]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const { x, y } = screenToWorld(e.clientX, e.clientY);
+    if (!findNodeAt(x, y)) {
+      dragRef.current = {
+        dragging: true, startX: e.clientX, startY: e.clientY,
+        origTx: transformRef.current.x, origTy: transformRef.current.y,
+      };
+    }
+  }, [screenToWorld, findNodeAt]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (dragRef.current.dragging) { dragRef.current.dragging = false; return; }
+    const { x, y } = screenToWorld(e.clientX, e.clientY);
+    const node = findNodeAt(x, y);
+    if (node && node.type !== 'scripture') openNote(node.id);
+  }, [screenToWorld, findNodeAt, openNote]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    const t = transformRef.current;
+    const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
+    t.x = mx - (mx - t.x) * (newScale / t.scale);
+    t.y = my - (my - t.y) * (newScale / t.scale);
+    t.scale = newScale;
+    drawCanvas();
+  }, [drawCanvas]);
 
   return (
     <aside
       className="overflow-hidden border-l flex-col hidden md:flex"
       style={{
-        flex: expanded ? '1 1 0%' : (graphOpen ? '0 0 35%' : '0 0 0px'),
+        flex: expanded ? '1 1 0%' : graphOpen ? '0 0 35%' : '0 0 0px',
         borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
         background: 'rgba(240, 236, 232, 0.4)',
         opacity: graphOpen ? 1 : 0,
@@ -59,39 +342,35 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { gra
 
         <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--pale-stone)' }}>
           <button
-            onClick={() => setGraphMode('global')}
-            className="px-3 py-1.5 text-[10px] font-medium tracking-wider transition-colors"
-            style={{
-              background: graphMode === 'global' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
-              color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif',
-            }}
+            className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
+            style={{ background: 'rgba(188, 179, 163, 0.35)', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
           >
             Global
           </button>
           <button
-            onClick={() => setGraphMode('local')}
-            className="px-3 py-1.5 text-[10px] font-medium tracking-wider transition-colors"
-            style={{
-              background: graphMode === 'local' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
-              color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif',
-            }}
+            disabled
+            className="px-3 py-1.5 text-[10px] font-medium tracking-wider flex items-center gap-1.5"
+            style={{ background: 'transparent', color: 'var(--silica)', fontFamily: 'Outfit, sans-serif', opacity: 0.5, cursor: 'default' }}
           >
             Local
+            <span className="text-[8px] tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(188, 179, 163, 0.3)', color: 'var(--silica)' }}>
+              Coming Soon
+            </span>
           </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {(Object.keys(graphFilters) as Array<keyof typeof graphFilters>).map((key) => {
-            const Icon = nodeIcons[key];
+            const Icon = NODE_ICONS[key];
             return (
               <button
                 key={key}
                 onClick={() => toggleFilter(key)}
                 className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium tracking-wider transition-all"
                 style={{
-                  border: `1px solid ${graphFilters[key] ? nodeColors[key] : 'var(--pale-stone)'}`,
-                  background: graphFilters[key] ? `${nodeColors[key]}15` : 'transparent',
-                  color: graphFilters[key] ? nodeColors[key] : 'var(--silica)',
+                  border: `1px solid ${graphFilters[key] ? NODE_COLORS[key] : 'var(--pale-stone)'}`,
+                  background: graphFilters[key] ? `${NODE_COLORS[key]}15` : 'transparent',
+                  color: graphFilters[key] ? NODE_COLORS[key] : 'var(--silica)',
                   fontFamily: 'Outfit, sans-serif',
                 }}
               >
@@ -103,31 +382,30 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: { gra
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox="10 10 80 80"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {filteredEdges.map((edge, i) => {
-            const from = graphNodes.find((n) => n.id === edge.from);
-            const to = graphNodes.find((n) => n.id === edge.to);
-            if (!from || !to) return null;
-            return <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="var(--warm-sand)" strokeWidth="0.3" opacity="0.6" />;
-          })}
-          {filteredNodes.map((node) => {
-            const isActive = node.label === 'Hard season';
-            return (
-              <g key={node.id} className="cursor-pointer">
-                {isActive && <circle cx={node.x} cy={node.y} r="4" fill={nodeColors[node.type]} opacity="0.15" />}
-                <circle cx={node.x} cy={node.y} r={isActive ? 2.5 : 1.8} fill={nodeColors[node.type]} opacity={isActive ? 1 : 0.8} />
-                <text x={node.x} y={node.y + 4.5} textAnchor="middle" fontSize="2.2" fill="var(--deep-umber)" opacity="0.7" fontFamily="Outfit, sans-serif">
-                  {node.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+      <div ref={containerRef} className="flex-1 relative overflow-hidden">
+        {graphLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[11px] tracking-wider" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+              Building graph...
+            </span>
+          </div>
+        ) : graphNodes.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+              Create notes with [[links]] or Bible verse references to see your knowledge graph.
+            </p>
+          </div>
+        ) : (
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full"
+            style={{ cursor: hoveredNodeId ? 'pointer' : 'grab' }}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
+          />
+        )}
       </div>
 
       <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
