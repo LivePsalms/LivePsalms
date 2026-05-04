@@ -62,6 +62,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   const nodesRef = useRef<SimNode[]>([]);
   const linksRef = useRef<SimLink[]>([]);
   const hasInitialFitRef = useRef(false);
+  const tickCountRef = useRef(0);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [popoverNodeId, setPopoverNodeId] = useState<string | null>(null);
@@ -353,6 +354,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     linksRef.current = simLinks;
 
     if (simRef.current) simRef.current.stop();
+    tickCountRef.current = 0;
 
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -385,28 +387,29 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       .force('tags', forceSharedTags<SimNode>(0.0003))
       .alphaDecay(0.015)
       .velocityDecay(0.15)
-      .stop();
+      .on('tick', () => {
+        tickCountRef.current++;
+        drawCanvas();
 
-    // Pre-compute layout synchronously so nodes appear in final positions
-    sim.tick(300);
+        // Auto-fit after enough ticks for simulation to roughly settle
+        if (!hasInitialFitRef.current && tickCountRef.current === 80) {
+          hasInitialFitRef.current = true;
 
-    // Auto-fit zoom to show all nodes
-    if (!hasInitialFitRef.current) {
-      hasInitialFitRef.current = true;
+          const activeNodes = nodesRef.current.filter((n) => n.x != null && n.y != null);
+          if (activeNodes.length === 0) return;
 
-      const activeNodes = nodesRef.current.filter((n) => n.x != null && n.y != null);
-      if (activeNodes.length > 0) {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const n of activeNodes) {
-          minX = Math.min(minX, n.x! - n.radius - 20);
-          minY = Math.min(minY, n.y! - n.radius - 20);
-          maxX = Math.max(maxX, n.x! + n.radius + 20);
-          maxY = Math.max(maxY, n.y! + n.radius + 20);
-        }
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (const n of activeNodes) {
+            minX = Math.min(minX, n.x! - n.radius - 20);
+            minY = Math.min(minY, n.y! - n.radius - 20);
+            maxX = Math.max(maxX, n.x! + n.radius + 20);
+            maxY = Math.max(maxY, n.y! + n.radius + 20);
+          }
 
-        const graphW = maxX - minX;
-        const graphH = maxY - minY;
-        if (graphW > 0 && graphH > 0) {
+          const graphW = maxX - minX;
+          const graphH = maxY - minY;
+          if (graphW <= 0 || graphH <= 0) return;
+
           const padding = 30;
           const scaleX = (width - padding * 2) / graphW;
           const scaleY = (height - padding * 2) / graphH;
@@ -420,10 +423,8 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
             scale: fitScale,
           };
         }
-      }
-    }
+      });
 
-    drawCanvas();
     simRef.current = sim;
 
     return () => { sim.stop(); };
