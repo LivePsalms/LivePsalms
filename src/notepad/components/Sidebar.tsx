@@ -648,6 +648,18 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
     return true;
   });
 
+  // Group root notes by type
+  const notesByType = new Map<NoteType, typeof rootNotes>();
+  for (const note of rootNotes) {
+    const group = notesByType.get(note.type) ?? [];
+    group.push(note);
+    notesByType.set(note.type, group);
+  }
+  const typeOrder: NoteType[] = ['devotion', 'sermon', 'theme'];
+  const [typeGroupsExpanded, setTypeGroupsExpanded] = useState<Record<string, boolean>>({
+    devotion: true, sermon: true, theme: true,
+  });
+
   const handleDragEnd = useCallback(
     (event: { canceled: boolean; operation: { source: unknown } }) => {
       if (event.canceled) return;
@@ -722,22 +734,57 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
         {/* Folder tree with drag-and-drop */}
         <DragDropProvider onDragEnd={handleDragEnd}>
           <div className="space-y-1">
-            {/* Root notes */}
-            {rootNotes.map((note, idx) => (
-              <SortableNote
-                key={note.id}
-                note={note}
-                index={idx}
-                folderId="root"
-                isActive={note.id === activeNoteId}
-                folders={folders}
-                onOpen={openNote}
-                onRename={(id, title) => renameNote(id, title)}
-                onDuplicate={(id) => duplicateNote(id)}
-                onDelete={(id) => deleteNote(id)}
-                onMove={(noteId, fId) => moveNote(noteId, fId)}
-              />
-            ))}
+            {/* Root notes grouped by type */}
+            {typeOrder.map((type) => {
+              const group = notesByType.get(type);
+              if (!group || group.length === 0) return null;
+              const config = NOTE_TYPE_CONFIG[type];
+              const TypeIcon = config.icon;
+              const isExpanded = typeGroupsExpanded[type] ?? true;
+              return (
+                <div key={type} className="mb-1">
+                  <button
+                    className="flex items-center gap-1.5 w-full px-1 py-1 rounded hover:bg-black/5 transition-colors cursor-pointer"
+                    onClick={() => setTypeGroupsExpanded((prev) => ({ ...prev, [type]: !prev[type] }))}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                    ) : (
+                      <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                    )}
+                    <TypeIcon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+                    <span
+                      className="text-[10px] font-medium tracking-[0.15em]"
+                      style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+                    >
+                      {config.label.toUpperCase()}
+                    </span>
+                    <span className="text-[10px] ml-auto" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+                      {group.length}
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-2">
+                      {group.map((note, idx) => (
+                        <SortableNote
+                          key={note.id}
+                          note={note}
+                          index={idx}
+                          folderId="root"
+                          isActive={note.id === activeNoteId}
+                          folders={folders}
+                          onOpen={openNote}
+                          onRename={(id, title) => renameNote(id, title)}
+                          onDuplicate={(id) => duplicateNote(id)}
+                          onDelete={(id) => deleteNote(id)}
+                          onMove={(noteId, fId) => moveNote(noteId, fId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* Root folders */}
             {rootFolders.map((folder) => (
