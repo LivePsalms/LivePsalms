@@ -3,15 +3,19 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
-  FileText,
   FolderPlus,
   PenLine,
   Mic,
   Sparkles,
-  GripVertical,
+  MoreVertical,
 } from 'lucide-react';
-import { DragDropProvider } from '@dnd-kit/react';
-import { useSortable, isSortable } from '@dnd-kit/react/sortable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -253,13 +257,11 @@ function NewNoteDialog({ open, onOpenChange, folderId, onCreate }: NewNoteDialog
 }
 
 // ---------------------------------------------------------------------------
-// SortableNote
+// NoteItem
 // ---------------------------------------------------------------------------
 
-interface SortableNoteProps {
+interface NoteItemProps {
   note: Note;
-  index: number;
-  folderId: string;
   isActive: boolean;
   folders: Folder[];
   onOpen: (id: string) => void;
@@ -269,10 +271,8 @@ interface SortableNoteProps {
   onMove: (noteId: string, folderId: string) => void;
 }
 
-function SortableNote({
+function NoteItem({
   note,
-  index,
-  folderId,
   isActive,
   folders,
   onOpen,
@@ -280,18 +280,11 @@ function SortableNote({
   onDuplicate,
   onDelete,
   onMove,
-}: SortableNoteProps) {
-  const { ref, handleRef, isDragging } = useSortable({
-    id: note.id,
-    index,
-    group: folderId,
-    type: 'note',
-    accept: ['note'],
-  });
-
+}: NoteItemProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const config = NOTE_TYPE_CONFIG[note.type];
   const Icon = config.icon;
@@ -301,30 +294,64 @@ function SortableNote({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
-            ref={ref as React.RefCallback<HTMLDivElement>}
             className="flex items-center gap-1.5 px-1 py-1.5 rounded cursor-pointer transition-colors group"
             style={{
               background: isActive ? 'rgba(188, 179, 163, 0.3)' : 'transparent',
-              opacity: isDragging ? 0.4 : 1,
               fontFamily: 'Outfit, sans-serif',
             }}
             onClick={() => onOpen(note.id)}
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
           >
-            {/* Drag handle */}
-            <span
-              ref={handleRef as React.RefCallback<HTMLSpanElement>}
-              className="shrink-0 cursor-grab active:cursor-grabbing"
-              style={{
-                opacity: hovering ? 1 : 0,
-                transition: 'opacity 0.15s',
-                color: 'var(--silica)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical className="w-3 h-3" />
-            </span>
+            {/* Options icon — click to open dropdown */}
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <span
+                  className="shrink-0 cursor-pointer rounded hover:bg-black/10 transition-all"
+                  style={{
+                    opacity: hovering || menuOpen ? 1 : 0,
+                    transition: 'opacity 0.15s',
+                    color: 'var(--silica)',
+                    padding: '1px',
+                  }}
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}
+                >
+                  <MoreVertical className="w-3 h-3" />
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    const next = prompt('Rename note:', note.title);
+                    if (next && next.trim()) onRename(note.id, next.trim());
+                  }}
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => { setMenuOpen(false); setMoveOpen(true); }}
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Move to Folder
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => { setMenuOpen(false); onDuplicate(note.id); }}
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => { setMenuOpen(false); setDeleteOpen(true); }}
+                  className="text-red-600 focus:text-red-600"
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
 
@@ -491,12 +518,10 @@ function FolderItem({
             {/* Children */}
             {open && (
               <div className="ml-3 mt-0.5 space-y-0.5">
-                {filteredNotes.map((note, idx) => (
-                  <SortableNote
+                {filteredNotes.map((note) => (
+                  <NoteItem
                     key={note.id}
                     note={note}
-                    index={idx}
-                    folderId={folder.id}
                     isActive={note.id === activeNoteId}
                     folders={allFolders}
                     onOpen={onOpen}
@@ -660,22 +685,6 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
     devotion: true, sermon: true, theme: true,
   });
 
-  const handleDragEnd = useCallback(
-    (event: { canceled: boolean; operation: { source: unknown } }) => {
-      if (event.canceled) return;
-      const source = event.operation.source;
-      if (!source || !isSortable(source)) return;
-      const sourceGroup = source.group;
-      const initialGroup = source.initialGroup;
-      if (sourceGroup !== initialGroup) {
-        const noteId = String(source.id);
-        const targetFolderId = sourceGroup !== undefined ? String(sourceGroup) : 'root';
-        moveNote(noteId, targetFolderId);
-      }
-    },
-    [moveNote],
-  );
-
   const [showNewFolder, setShowNewFolder] = useState(false);
 
   return (
@@ -731,84 +740,80 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
           />
         </div>
 
-        {/* Folder tree with drag-and-drop */}
-        <DragDropProvider onDragEnd={handleDragEnd}>
-          <div className="space-y-1">
-            {/* Root notes grouped by type */}
-            {typeOrder.map((type) => {
-              const group = notesByType.get(type);
-              if (!group || group.length === 0) return null;
-              const config = NOTE_TYPE_CONFIG[type];
-              const TypeIcon = config.icon;
-              const isExpanded = typeGroupsExpanded[type] ?? true;
-              return (
-                <div key={type} className="mb-1">
-                  <button
-                    className="flex items-center gap-1.5 w-full px-1 py-1 rounded hover:bg-black/5 transition-colors cursor-pointer"
-                    onClick={() => setTypeGroupsExpanded((prev) => ({ ...prev, [type]: !prev[type] }))}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
-                    ) : (
-                      <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
-                    )}
-                    <TypeIcon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
-                    <span
-                      className="text-[10px] font-medium tracking-[0.15em]"
-                      style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-                    >
-                      {config.label.toUpperCase()}
-                    </span>
-                    <span className="text-[10px] ml-auto" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-                      {group.length}
-                    </span>
-                  </button>
-                  {isExpanded && (
-                    <div className="ml-2">
-                      {group.map((note, idx) => (
-                        <SortableNote
-                          key={note.id}
-                          note={note}
-                          index={idx}
-                          folderId="root"
-                          isActive={note.id === activeNoteId}
-                          folders={folders}
-                          onOpen={openNote}
-                          onRename={(id, title) => renameNote(id, title)}
-                          onDuplicate={(id) => duplicateNote(id)}
-                          onDelete={(id) => deleteNote(id)}
-                          onMove={(noteId, fId) => moveNote(noteId, fId)}
-                        />
-                      ))}
-                    </div>
+        {/* Note and folder tree */}
+        <div className="space-y-1">
+          {/* Root notes grouped by type */}
+          {typeOrder.map((type) => {
+            const group = notesByType.get(type);
+            if (!group || group.length === 0) return null;
+            const config = NOTE_TYPE_CONFIG[type];
+            const TypeIcon = config.icon;
+            const isExpanded = typeGroupsExpanded[type] ?? true;
+            return (
+              <div key={type} className="mb-1">
+                <button
+                  className="flex items-center gap-1.5 w-full px-1 py-1 rounded hover:bg-black/5 transition-colors cursor-pointer"
+                  onClick={() => setTypeGroupsExpanded((prev) => ({ ...prev, [type]: !prev[type] }))}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                  ) : (
+                    <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
                   )}
-                </div>
-              );
-            })}
+                  <TypeIcon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+                  <span
+                    className="text-[10px] font-medium tracking-[0.15em]"
+                    style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    {config.label.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] ml-auto" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+                    {group.length}
+                  </span>
+                </button>
+                {isExpanded && (
+                  <div className="ml-2">
+                    {group.map((note) => (
+                      <NoteItem
+                        key={note.id}
+                        note={note}
+                        isActive={note.id === activeNoteId}
+                        folders={folders}
+                        onOpen={openNote}
+                        onRename={(id, title) => renameNote(id, title)}
+                        onDuplicate={(id) => duplicateNote(id)}
+                        onDelete={(id) => deleteNote(id)}
+                        onMove={(noteId, fId) => moveNote(noteId, fId)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-            {/* Root folders */}
-            {rootFolders.map((folder) => (
-              <FolderItem
-                key={folder.id}
-                folder={folder}
-                notes={notes}
-                allFolders={folders}
-                activeNoteId={activeNoteId}
-                filterText={filterText}
-                tagFilter={tagFilter}
-                onOpen={openNote}
-                onCreateNote={(fId, type) => createNote(fId, type)}
-                onRenameNote={(id, title) => renameNote(id, title)}
-                onDuplicateNote={(id) => duplicateNote(id)}
-                onDeleteNote={(id) => deleteNote(id)}
-                onMoveNote={(noteId, fId) => moveNote(noteId, fId)}
-                onRenameFolder={(id, name) => renameFolder(id, name)}
-                onDeleteFolder={(id) => deleteFolder(id)}
-                onCreateSubfolder={(parentId, name) => createFolder(name, parentId)}
-              />
-            ))}
-          </div>
-        </DragDropProvider>
+          {/* Root folders */}
+          {rootFolders.map((folder) => (
+            <FolderItem
+              key={folder.id}
+              folder={folder}
+              notes={notes}
+              allFolders={folders}
+              activeNoteId={activeNoteId}
+              filterText={filterText}
+              tagFilter={tagFilter}
+              onOpen={openNote}
+              onCreateNote={(fId, type) => createNote(fId, type)}
+              onRenameNote={(id, title) => renameNote(id, title)}
+              onDuplicateNote={(id) => duplicateNote(id)}
+              onDeleteNote={(id) => deleteNote(id)}
+              onMoveNote={(noteId, fId) => moveNote(noteId, fId)}
+              onRenameFolder={(id, name) => renameFolder(id, name)}
+              onDeleteFolder={(id) => deleteFolder(id)}
+              onCreateSubfolder={(parentId, name) => createFolder(name, parentId)}
+            />
+          ))}
+        </div>
 
         {/* + New Folder button */}
         <button
