@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Note, Folder } from '../types';
 import type { StorageAdapter } from './adapter';
+import { countWordsFromTipTapJSON } from '../utils/word-count';
 
 const NOTES_KEY = 'notepad_notes';
 const FOLDERS_KEY = 'notepad_folders';
@@ -34,7 +35,13 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async createNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
     const now = new Date().toISOString();
-    const newNote: Note = { ...note, id: uuidv4(), createdAt: now, updatedAt: now };
+    const newNote: Note = {
+      ...note,
+      id: uuidv4(),
+      wordCount: countWordsFromTipTapJSON(note.content),
+      createdAt: now,
+      updatedAt: now,
+    };
     const notes = this.readNotes();
     notes.push(newNote);
     this.writeNotes(notes);
@@ -45,7 +52,15 @@ export class LocalStorageAdapter implements StorageAdapter {
     const notes = this.readNotes();
     const index = notes.findIndex((n) => n.id === id);
     if (index === -1) throw new Error(`Note ${id} not found`);
-    notes[index] = { ...notes[index], ...updates, updatedAt: new Date().toISOString() };
+    const wordCount = updates.content !== undefined
+      ? countWordsFromTipTapJSON(updates.content)
+      : notes[index].wordCount;
+    notes[index] = {
+      ...notes[index],
+      ...updates,
+      wordCount,
+      updatedAt: new Date().toISOString(),
+    };
     this.writeNotes(notes);
     return notes[index];
   }
