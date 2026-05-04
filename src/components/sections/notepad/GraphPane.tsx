@@ -63,6 +63,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   const linksRef = useRef<SimLink[]>([]);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [popoverNodeId, setPopoverNodeId] = useState<string | null>(null);
   const transformRef = useRef({ x: 0, y: 0, scale: 1 });
   const dragRef = useRef({
     dragging: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
@@ -75,6 +76,99 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   const toggleFilter = (key: keyof typeof graphFilters) => {
     setGraphFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const drawPopover = useCallback((ctx: CanvasRenderingContext2D, node: SimNode) => {
+    if (node.x == null || node.y == null) return;
+
+    const maxWidth = 250;
+    const padding = 12;
+    const lineHeight = 16;
+    const headerFont = 'bold 12px Outfit, sans-serif';
+    const bodyFont = '11px Outfit, sans-serif';
+    const smallFont = '9px Outfit, sans-serif';
+
+    // Measure and wrap body text
+    ctx.font = bodyFont;
+    const bodyText = node.scriptureText || 'Verse text unavailable.';
+    const words = bodyText.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    for (const word of words) {
+      const test = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth - padding * 2) {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = test;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    const headerHeight = 20;
+    const bodyHeight = lines.length * lineHeight;
+    const translationHeight = 16;
+    const totalHeight = padding + headerHeight + bodyHeight + translationHeight + padding;
+
+    ctx.font = headerFont;
+    const headerWidth = ctx.measureText(node.title).width;
+    ctx.font = bodyFont;
+    const maxLineWidth = Math.max(...lines.map((l) => ctx.measureText(l).width), headerWidth);
+    const boxWidth = Math.min(maxWidth, maxLineWidth + padding * 2);
+
+    const boxX = node.x - boxWidth / 2;
+    const boxY = node.y - node.radius - totalHeight - 12;
+
+    // Background rounded rect
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.strokeStyle = 'rgba(188, 179, 163, 0.5)';
+    ctx.lineWidth = 1;
+    const r = 8;
+    ctx.beginPath();
+    ctx.moveTo(boxX + r, boxY);
+    ctx.lineTo(boxX + boxWidth - r, boxY);
+    ctx.quadraticCurveTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + r);
+    ctx.lineTo(boxX + boxWidth, boxY + totalHeight - r);
+    ctx.quadraticCurveTo(boxX + boxWidth, boxY + totalHeight, boxX + boxWidth - r, boxY + totalHeight);
+    ctx.lineTo(boxX + r, boxY + totalHeight);
+    ctx.quadraticCurveTo(boxX, boxY + totalHeight, boxX, boxY + totalHeight - r);
+    ctx.lineTo(boxX, boxY + r);
+    ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Pointer triangle
+    ctx.beginPath();
+    ctx.moveTo(node.x - 6, boxY + totalHeight);
+    ctx.lineTo(node.x, boxY + totalHeight + 8);
+    ctx.lineTo(node.x + 6, boxY + totalHeight);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(node.x - 6, boxY + totalHeight);
+    ctx.lineTo(node.x, boxY + totalHeight + 8);
+    ctx.lineTo(node.x + 6, boxY + totalHeight);
+    ctx.strokeStyle = 'rgba(188, 179, 163, 0.5)';
+    ctx.stroke();
+
+    // Header
+    ctx.font = headerFont;
+    ctx.fillStyle = 'rgba(62, 50, 40, 1)';
+    ctx.textAlign = 'left';
+    ctx.fillText(node.title, boxX + padding, boxY + padding + 12);
+
+    // Body lines
+    ctx.font = bodyFont;
+    ctx.fillStyle = 'rgba(62, 50, 40, 0.8)';
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], boxX + padding, boxY + padding + headerHeight + (i + 1) * lineHeight);
+    }
+
+    // Translation label
+    ctx.font = smallFont;
+    ctx.fillStyle = 'rgba(62, 50, 40, 0.5)';
+    ctx.fillText(node.scriptureTranslation || 'WEB', boxX + padding, boxY + padding + headerHeight + bodyHeight + translationHeight);
+  }, []);
 
   // --- Drawing ---
   const drawCanvas = useCallback(() => {
@@ -170,8 +264,16 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       }
     }
 
+    // Scripture popover
+    if (popoverNodeId) {
+      const pNode = nodesRef.current.find((n) => n.id === popoverNodeId);
+      if (pNode && pNode.x != null && pNode.y != null) {
+        drawPopover(ctx, pNode);
+      }
+    }
+
     ctx.restore();
-  }, [hoveredNodeId, graphActiveNodeId]);
+  }, [hoveredNodeId, graphActiveNodeId, popoverNodeId, drawPopover]);
 
   // Redraw on hover change
   useEffect(() => {
@@ -328,7 +430,16 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     if (dragRef.current.dragging) { dragRef.current.dragging = false; return; }
     const { x, y } = screenToWorld(e.clientX, e.clientY);
     const node = findNodeAt(x, y);
-    if (node && node.type !== 'scripture') openNote(node.id);
+    if (node) {
+      if (node.type === 'scripture') {
+        setPopoverNodeId((prev) => prev === node.id ? null : node.id);
+      } else {
+        setPopoverNodeId(null);
+        openNote(node.id);
+      }
+    } else {
+      setPopoverNodeId(null);
+    }
   }, [screenToWorld, findNodeAt, openNote]);
 
   // Attach wheel listener with { passive: false } to allow preventDefault
