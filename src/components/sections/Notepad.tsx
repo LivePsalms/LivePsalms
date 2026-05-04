@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
+import { useAuth } from '@/auth/useAuth';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
 import { NotepadEditor } from '@/notepad/components/Editor';
@@ -124,8 +125,9 @@ function NotepadWorkspace() {
 }
 
 export function Notepad() {
+  const { adapter } = useAuth();
   return (
-    <NotepadProvider>
+    <NotepadProvider adapter={adapter}>
       <NotepadWorkspace />
     </NotepadProvider>
   );

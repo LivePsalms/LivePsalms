@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Note, Folder, NoteType, FolderIcon } from '../types';
+import type { Note, Folder, NoteType, FolderIcon, JournalTheme } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
 import type { GraphNode, GraphEdge } from '../graph/types';
@@ -32,6 +32,10 @@ export interface NotepadContextValue {
 
   refresh: () => Promise<void>;
 
+  // Journal theme
+  journalTheme: JournalTheme;
+  setJournalTheme: (theme: JournalTheme) => void;
+
   // Graph
   graphNodes: GraphNode[];
   graphEdges: GraphEdge[];
@@ -49,11 +53,32 @@ interface NotepadProviderProps {
 }
 
 export function NotepadProvider({ children, adapter: adapterProp }: NotepadProviderProps) {
+  const [adapterVersion, setAdapterVersion] = useState(0);
   const adapterRef = useRef<StorageAdapter>(adapterProp ?? new LocalStorageAdapter());
+
+  // Update adapter when prop changes (user logs in/out)
+  useEffect(() => {
+    if (adapterProp && adapterProp !== adapterRef.current) {
+      adapterRef.current = adapterProp;
+      setAdapterVersion((v) => v + 1);
+    }
+  }, [adapterProp]);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [journalTheme, setJournalThemeState] = useState<JournalTheme>(() => {
+    try {
+      return (localStorage.getItem('psalms-journal-theme') as JournalTheme) || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
+  const setJournalTheme = useCallback((theme: JournalTheme) => {
+    setJournalThemeState(theme);
+    try { localStorage.setItem('psalms-journal-theme', theme); } catch { /* noop */ }
+  }, []);
 
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
 
@@ -70,7 +95,7 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, adapterVersion]);
 
   const openNote = useCallback((id: string | null) => {
     setActiveNoteId(id);
@@ -192,6 +217,8 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     deleteFolder,
     importNotes,
     refresh,
+    journalTheme,
+    setJournalTheme,
     graphNodes: graph.nodes,
     graphEdges: graph.edges,
     graphActiveNodeId: graph.activeNodeId,

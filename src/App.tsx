@@ -15,6 +15,7 @@ import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useProjectColors } from '@/hooks/useProjectColors';
 import { FALLBACK_OVERLAY_COLOR } from '@/data/projects';
 import type { Project } from '@/types';
+import { AuthProvider } from '@/auth/AuthProvider';
 import './App.css';
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -137,8 +138,9 @@ function App() {
   }, [transitionPhase, pendingNavigation, navigate]);
 
   return (
-    <>
-      <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
+    <AuthProvider>
+      <>
+        <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
           {!isNotepadPage && <Header darkText={isDetailPage} />}
@@ -196,6 +198,7 @@ function App() {
       <div className="grain-bg" aria-hidden="true" />
 
     </>
+    </AuthProvider>
   );
 }
 
