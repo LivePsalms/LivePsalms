@@ -1,0 +1,181 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Note, Folder } from '../types';
+import type { StorageAdapter } from './adapter';
+import { countWordsFromTipTapJSON } from '../utils/word-count';
+
+/**
+ * StorageAdapter backed by Supabase PostgreSQL.
+ * All queries are automatically scoped to the authenticated user via RLS.
+ */
+export class SupabaseStorageAdapter implements StorageAdapter {
+  constructor(private client: SupabaseClient, private userId: string) {}
+
+  // ── Notes ──────────────────────────────────────────────────────────
+
+  async getNotes(): Promise<Note[]> {
+    const { data, error } = await this.client
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []).map(this.mapNote);
+  }
+
+  async getNote(id: string): Promise<Note | null> {
+    const { data, error } = await this.client
+      .from('notes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? this.mapNote(data) : null;
+  }
+
+  async createNote(
+    note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Note> {
+    const { data, error } = await this.client
+      .from('notes')
+      .insert({
+        user_id: this.userId,
+        title: note.title,
+        content: note.content,
+        folder_id: note.folderId === 'root' ? null : note.folderId,
+        type: note.type,
+        tags: note.tags,
+        word_count: countWordsFromTipTapJSON(note.content),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapNote(data);
+  }
+
+  async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
+    const mapped: Record<string, unknown> = {};
+    if (updates.title !== undefined) mapped.title = updates.title;
+    if (updates.content !== undefined) {
+      mapped.content = updates.content;
+      mapped.word_count = countWordsFromTipTapJSON(updates.content);
+    }
+    if (updates.folderId !== undefined) {
+      mapped.folder_id = updates.folderId === 'root' ? null : updates.folderId;
+    }
+    if (updates.type !== undefined) mapped.type = updates.type;
+    if (updates.tags !== undefined) mapped.tags = updates.tags;
+
+    const { data, error } = await this.client
+      .from('notes')
+      .update(mapped)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapNote(data);
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    const { error } = await this.client.from('notes').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async duplicateNote(id: string): Promise<Note> {
+    const original = await this.getNote(id);
+    if (!original) throw new Error(`Note ${id} not found`);
+    return this.createNote({
+      title: `${original.title} (copy)`,
+      content: original.content,
+      folderId: original.folderId,
+      type: original.type,
+      tags: original.tags,
+      wordCount: original.wordCount,
+    });
+  }
+
+  // ── Folders ────────────────────────────────────────────────────────
+
+  async getFolders(): Promise<Folder[]> {
+    const { data, error } = await this.client
+      .from('folders')
+      .select('*')
+      .order('order', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []).map(this.mapFolder);
+  }
+
+  async createFolder(folder: Omit<Folder, 'id'>): Promise<Folder> {
+    const { data, error } = await this.client
+      .from('folders')
+      .insert({
+        user_id: this.userId,
+        name: folder.name,
+        parent_id: folder.parentId,
+        order: folder.order,
+        icon: folder.icon ?? null,
+        color: folder.color ?? null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapFolder(data);
+  }
+
+  async updateFolder(id: string, updates: Partial<Folder>): Promise<Folder> {
+    const mapped: Record<string, unknown> = {};
+    if (updates.name !== undefined) mapped.name = updates.name;
+    if (updates.parentId !== undefined) mapped.parent_id = updates.parentId;
+    if (updates.order !== undefined) mapped.order = updates.order;
+    if (updates.icon !== undefined) mapped.icon = updates.icon;
+    if (updates.color !== undefined) mapped.color = updates.color;
+
+    const { data, error } = await this.client
+      .from('folders')
+      .update(mapped)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapFolder(data);
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    // Move notes in this folder to root (null folder_id)
+    await this.client
+      .from('notes')
+      .update({ folder_id: null })
+      .eq('folder_id', id);
+
+    const { error } = await this.client.from('folders').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // ── Mappers (snake_case DB → camelCase app) ────────────────────────
+
+  private mapNote = (row: Record<string, unknown>): Note => ({
+    id: row.id as string,
+    title: row.title as string,
+    content: row.content as string,
+    folderId: (row.folder_id as string) ?? 'root',
+    type: row.type as Note['type'],
+    tags: (row.tags as string[]) ?? [],
+    wordCount: (row.word_count as number) ?? 0,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  });
+
+  private mapFolder = (row: Record<string, unknown>): Folder => ({
+    id: row.id as string,
+    name: row.name as string,
+    parentId: (row.parent_id as string) ?? null,
+    order: row.order as number,
+    icon: row.icon as Folder['icon'],
+    color: row.color as string | undefined,
+  });
+}
