@@ -75,6 +75,8 @@ export function useGraph(notes: Note[], activeNoteId: string | null): UseGraphRe
       title: note.title,
       weight: weights.get(note.id) ?? 0,
       tags: note.tags,
+      scriptureText: '',
+      scriptureTranslation: '',
     }));
 
     for (const sn of scriptureNodes) {
@@ -85,6 +87,8 @@ export function useGraph(notes: Note[], activeNoteId: string | null): UseGraphRe
           title: `${sn.book} ${sn.chapter}:${sn.verseStart}${sn.verseEnd ? `-${sn.verseEnd}` : ''}`,
           weight: weights.get(sn.id) ?? 0,
           tags: [],
+          scriptureText: sn.text,
+          scriptureTranslation: sn.translation,
         });
       }
     }

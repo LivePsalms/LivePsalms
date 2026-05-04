@@ -19,6 +19,8 @@ interface SimNode extends SimulationNodeDatum {
   weight: number;
   radius: number;
   tags: string[];
+  scriptureText: string;
+  scriptureTranslation: string;
 }
 
 interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -195,6 +197,8 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         id: n.id, type: n.type, title: n.title, weight: n.weight,
         radius: computeRadius(n.type, n.weight),
         tags: n.tags,
+        scriptureText: n.scriptureText,
+        scriptureTranslation: n.scriptureTranslation,
         x: prev?.x, y: prev?.y,
       };
     });

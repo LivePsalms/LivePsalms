@@ -24,6 +24,8 @@ export interface GraphNode {
   title: string;
   weight: number;
   tags: string[];
+  scriptureText: string;
+  scriptureTranslation: string;
   x?: number;
   y?: number;
   vx?: number;
