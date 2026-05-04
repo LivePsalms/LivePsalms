@@ -9,7 +9,7 @@ import {
   type SimulationLinkDatum,
 } from 'd3-force';
 import { forceSharedTags } from '@/notepad/graph/force-shared-tags';
-import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2, Settings2 } from 'lucide-react';
 import { useNotepad } from '@/notepad/context/useNotepad';
 
 interface SimNode extends SimulationNodeDatum {
@@ -60,7 +60,7 @@ interface GraphPaneProps {
 }
 
 export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: GraphPaneProps) {
-  const { graphNodes, graphEdges, graphActiveNodeId, graphLoading, openNote } = useNotepad();
+  const { graphNodes, graphEdges, graphActiveNodeId, graphLoading, openNote, getNeighborhood } = useNotepad();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +81,24 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
 
   const toggleFilter = (key: keyof typeof graphFilters) => {
     setGraphFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const [graphMode, setGraphMode] = useState<'global' | 'local'>('global');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [graphSettings, setGraphSettings] = useState({
+    depth: 1,
+    linkDistance: 120,
+    linkForce: 0.004,
+    repelForce: 600,
+    centerForce: 0.0004,
+  });
+
+  const defaultSettings = {
+    depth: 1,
+    linkDistance: 120,
+    linkForce: 0.004,
+    repelForce: 600,
+    centerForce: 0.0004,
   };
 
   const drawPopover = useCallback((ctx: CanvasRenderingContext2D, node: SimNode) => {
@@ -628,22 +646,37 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
           GRAPH
         </h3>
 
-        <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--pale-stone)' }}>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--pale-stone)' }}>
+            <button
+              onClick={() => setGraphMode('global')}
+              className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
+              style={{
+                background: graphMode === 'global' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
+                color: 'var(--deep-umber)',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              Global
+            </button>
+            <button
+              onClick={() => setGraphMode('local')}
+              className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
+              style={{
+                background: graphMode === 'local' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
+                color: 'var(--deep-umber)',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              Local
+            </button>
+          </div>
           <button
-            className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
-            style={{ background: 'rgba(188, 179, 163, 0.35)', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className="p-1.5 rounded hover:bg-black/5 transition-colors"
+            title="Graph settings"
           >
-            Global
-          </button>
-          <button
-            disabled
-            className="px-3 py-1.5 text-[10px] font-medium tracking-wider flex items-center gap-1.5"
-            style={{ background: 'transparent', color: 'var(--silica)', fontFamily: 'Outfit, sans-serif', opacity: 0.5, cursor: 'default' }}
-          >
-            Local
-            <span className="text-[8px] tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(188, 179, 163, 0.3)', color: 'var(--silica)' }}>
-              Coming Soon
-            </span>
+            <Settings2 className="w-3.5 h-3.5" style={{ color: 'var(--silica)' }} />
           </button>
         </div>
 
@@ -668,6 +701,55 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
             );
           })}
         </div>
+
+        {settingsOpen && (
+          <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--pale-stone)' }}>
+            {graphMode === 'local' && (
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Depth</label>
+                <input type="range" min={1} max={3} step={1} value={graphSettings.depth}
+                  onChange={(e) => setGraphSettings((s) => ({ ...s, depth: Number(e.target.value) }))}
+                  className="flex-1 h-1 accent-[#C49A78]" />
+                <span className="text-[10px] w-8 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.depth}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Link Distance</label>
+              <input type="range" min={60} max={300} step={10} value={graphSettings.linkDistance}
+                onChange={(e) => setGraphSettings((s) => ({ ...s, linkDistance: Number(e.target.value) }))}
+                className="flex-1 h-1 accent-[#C49A78]" />
+              <span className="text-[10px] w-8 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.linkDistance}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Link Force</label>
+              <input type="range" min={0.001} max={0.01} step={0.001} value={graphSettings.linkForce}
+                onChange={(e) => setGraphSettings((s) => ({ ...s, linkForce: Number(e.target.value) }))}
+                className="flex-1 h-1 accent-[#C49A78]" />
+              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.linkForce.toFixed(3)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Repel Force</label>
+              <input type="range" min={100} max={2000} step={50} value={graphSettings.repelForce}
+                onChange={(e) => setGraphSettings((s) => ({ ...s, repelForce: Number(e.target.value) }))}
+                className="flex-1 h-1 accent-[#C49A78]" />
+              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.repelForce}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Center Force</label>
+              <input type="range" min={0.0001} max={0.001} step={0.0001} value={graphSettings.centerForce}
+                onChange={(e) => setGraphSettings((s) => ({ ...s, centerForce: Number(e.target.value) }))}
+                className="flex-1 h-1 accent-[#C49A78]" />
+              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.centerForce.toFixed(4)}</span>
+            </div>
+            <button
+              onClick={() => setGraphSettings(defaultSettings)}
+              className="text-[10px] font-medium tracking-wider px-2 py-1 rounded hover:bg-black/5 transition-colors"
+              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Reset Defaults
+            </button>
+          </div>
+        )}
       </div>
 
       <div ref={containerRef} className="flex-1 relative overflow-hidden">
