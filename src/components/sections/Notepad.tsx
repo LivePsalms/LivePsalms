@@ -1,13 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuth } from '@/auth/useAuth';
+import { useNotepad } from '@/notepad/context/useNotepad';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
 import { NotepadEditor } from '@/notepad/components/Editor';
 import { BacklinksPanel } from '@/notepad/components/BacklinksPanel';
 import { InfoPanel } from '@/notepad/components/InfoPanel';
 import { SearchDialog } from '@/notepad/components/SearchDialog';
+import { MigrationDialog } from '@/notepad/components/MigrationDialog';
 import { GraphPane } from './notepad/GraphPane';
 
 function NotepadWorkspace() {
@@ -15,6 +17,23 @@ function NotepadWorkspace() {
   const [graphOpen, setGraphOpen] = useState(true);
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
+
+  const { user, adapter } = useAuth();
+  const { refresh } = useNotepad();
+  const [showMigration, setShowMigration] = useState(false);
+
+  // Check for local notes when user logs in
+  useEffect(() => {
+    if (user) {
+      const localNotes = localStorage.getItem('notepad_notes');
+      if (localNotes) {
+        const parsed = JSON.parse(localNotes);
+        if (parsed.length > 0) {
+          setShowMigration(true);
+        }
+      }
+    }
+  }, [user]);
 
   const handleOpenSearch = useCallback(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
@@ -120,6 +139,12 @@ function NotepadWorkspace() {
       </div>
 
       <SearchDialog />
+      <MigrationDialog
+        open={showMigration}
+        onClose={() => setShowMigration(false)}
+        targetAdapter={adapter}
+        onMigrationComplete={refresh}
+      />
     </div>
   );
 }
