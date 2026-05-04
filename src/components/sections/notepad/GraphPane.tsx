@@ -21,17 +21,11 @@ interface SimNode extends SimulationNodeDatum {
   tags: string[];
   scriptureText: string;
   scriptureTranslation: string;
-  birthTime?: number;
-  removing?: boolean;
-  removeTime?: number;
 }
 
 interface SimLink extends SimulationLinkDatum<SimNode> {
   edgeType: 'explicit' | 'scripture_reference' | 'cross_reference';
   weight: number;
-  birthTime?: number;
-  removing?: boolean;
-  removeTime?: number;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -238,13 +232,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
       let alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
 
-      // Fade out removing edges
-      if (link.removing && link.removeTime) {
-        const elapsed = Date.now() - link.removeTime;
-        alpha *= Math.max(0, 1 - elapsed / 200);
-        if (alpha <= 0) continue;
-      }
-
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
@@ -253,41 +240,12 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       ctx.stroke();
     }
 
-    // Traveling light on new edges
-    for (const link of linksRef.current) {
-      if (!link.birthTime) continue;
-      const src = link.source as SimNode;
-      const tgt = link.target as SimNode;
-      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
-
-      const elapsed = Date.now() - link.birthTime;
-      if (elapsed < 400) {
-        const progress = elapsed / 400;
-        const dotX = src.x + (tgt.x - src.x) * progress;
-        const dotY = src.y + (tgt.y - src.y) * progress;
-        const dotAlpha = progress > 0.75 ? (1 - progress) / 0.25 : 1;
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(188, 179, 163, 1)';
-        ctx.globalAlpha = dotAlpha;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-
     // Draw nodes
     for (const node of nodesRef.current) {
       if (node.x == null || node.y == null) continue;
 
       const isConnected = !hovered || connectedIds.has(node.id);
-      let alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
-
-      // Fade out removing nodes
-      if (node.removing && node.removeTime) {
-        const elapsed = Date.now() - node.removeTime;
-        alpha *= Math.max(0, 1 - elapsed / 200);
-        if (alpha <= 0) continue;
-      }
+      const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
       const color = NODE_COLORS[node.type] ?? '#999';
 
       // Active note glow
@@ -300,22 +258,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         ctx.arc(node.x, node.y, node.radius + 5, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
-      }
-
-      // Node bloom animation
-      if (node.birthTime) {
-        const elapsed = Date.now() - node.birthTime;
-        if (elapsed < 600) {
-          const progress = elapsed / 600;
-          const ringRadius = node.radius * (1 + 2 * progress);
-          const ringAlpha = 0.4 * (1 - progress);
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.globalAlpha = ringAlpha;
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        }
       }
 
       // Node circle
@@ -408,63 +350,8 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       }))
       .filter((l) => l.source && l.target);
 
-    // Track new nodes with birthTime for bloom animation
-    const prevNodeIds = new Set(nodesRef.current.filter(n => !n.removing).map((n) => n.id));
-    const now = Date.now();
-    for (const node of simNodes) {
-      if (!prevNodeIds.has(node.id)) {
-        node.birthTime = now;
-      }
-    }
-
-    // Track new links with birthTime for traveling light animation
-    const prevLinkKeys = new Set(
-      linksRef.current.filter(l => !l.removing).map((l) => {
-        const src = typeof l.source === 'object' ? l.source.id : String(l.source);
-        const tgt = typeof l.target === 'object' ? l.target.id : String(l.target);
-        return `${src}->${tgt}`;
-      })
-    );
-    for (const link of simLinks) {
-      const src = typeof link.source === 'object' ? link.source.id : String(link.source);
-      const tgt = typeof link.target === 'object' ? link.target.id : String(link.target);
-      if (!prevLinkKeys.has(`${src}->${tgt}`)) {
-        link.birthTime = now;
-      }
-    }
-
-    // Detect removed nodes — keep temporarily for fade-out
-    const newNodeIds = new Set(simNodes.map((n) => n.id));
-    const removingNodes: SimNode[] = [];
-    for (const oldNode of nodesRef.current) {
-      if (!newNodeIds.has(oldNode.id) && !oldNode.removing) {
-        removingNodes.push({ ...oldNode, removing: true, removeTime: now });
-      } else if (oldNode.removing && oldNode.removeTime && now - oldNode.removeTime < 200) {
-        removingNodes.push(oldNode);
-      }
-    }
-
-    const newLinkKeys = new Set(
-      simLinks.map((l) => {
-        const src = typeof l.source === 'object' ? l.source.id : String(l.source);
-        const tgt = typeof l.target === 'object' ? l.target.id : String(l.target);
-        return `${src}->${tgt}`;
-      })
-    );
-    const removingLinks: SimLink[] = [];
-    for (const oldLink of linksRef.current) {
-      const src = typeof oldLink.source === 'object' ? oldLink.source.id : String(oldLink.source);
-      const tgt = typeof oldLink.target === 'object' ? oldLink.target.id : String(oldLink.target);
-      const key = `${src}->${tgt}`;
-      if (!newLinkKeys.has(key) && !oldLink.removing) {
-        removingLinks.push({ ...oldLink, removing: true, removeTime: now });
-      } else if (oldLink.removing && oldLink.removeTime && now - oldLink.removeTime < 200) {
-        removingLinks.push(oldLink);
-      }
-    }
-
-    nodesRef.current = [...simNodes, ...removingNodes];
-    linksRef.current = [...simLinks, ...removingLinks];
+    nodesRef.current = simNodes;
+    linksRef.current = simLinks;
 
     if (simRef.current) simRef.current.stop();
     tickCountRef.current = 0;
@@ -508,7 +395,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         if (!hasInitialFitRef.current && tickCountRef.current === 80) {
           hasInitialFitRef.current = true;
 
-          const activeNodes = nodesRef.current.filter((n) => !n.removing && n.x != null && n.y != null);
+          const activeNodes = nodesRef.current.filter((n) => n.x != null && n.y != null);
           if (activeNodes.length === 0) return;
 
           let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -569,42 +456,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     return () => observer.disconnect();
   }, [drawCanvas]);
 
-  // Animation loop — runs only while animations are active
-  useEffect(() => {
-    let rafId: number = 0;
-    let running = false;
-
-    function hasActiveAnimations(): boolean {
-      const now = Date.now();
-      for (const node of nodesRef.current) {
-        if (node.birthTime && now - node.birthTime < 600) return true;
-        if (node.removing && node.removeTime && now - node.removeTime < 200) return true;
-      }
-      for (const link of linksRef.current) {
-        if (link.birthTime && now - link.birthTime < 400) return true;
-        if (link.removing && link.removeTime && now - link.removeTime < 200) return true;
-      }
-      return false;
-    }
-
-    function loop() {
-      if (hasActiveAnimations()) {
-        drawCanvas();
-        rafId = requestAnimationFrame(loop);
-      } else {
-        running = false;
-      }
-    }
-
-    if (!graphLoading && graphNodes.length > 0 && hasActiveAnimations()) {
-      running = true;
-      rafId = requestAnimationFrame(loop);
-    }
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [graphNodes, graphEdges, graphLoading, drawCanvas]);
 
   // --- Mouse interactions ---
   const screenToWorld = useCallback((clientX: number, clientY: number) => {
