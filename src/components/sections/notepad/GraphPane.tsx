@@ -327,19 +327,24 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     if (node && node.type !== 'scripture') openNote(node.id);
   }, [screenToWorld, findNodeAt, openNote]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
+  // Attach wheel listener with { passive: false } to allow preventDefault
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    const factor = e.deltaY > 0 ? 0.92 : 1.08;
-    const t = transformRef.current;
-    const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
-    t.x = mx - (mx - t.x) * (newScale / t.scale);
-    t.y = my - (my - t.y) * (newScale / t.scale);
-    t.scale = newScale;
-    drawCanvas();
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const factor = e.deltaY > 0 ? 0.92 : 1.08;
+      const t = transformRef.current;
+      const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
+      t.x = mx - (mx - t.x) * (newScale / t.scale);
+      t.y = my - (my - t.y) * (newScale / t.scale);
+      t.scale = newScale;
+      drawCanvas();
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
   }, [drawCanvas]);
 
   return (
@@ -408,7 +413,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
         />
         {graphLoading && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

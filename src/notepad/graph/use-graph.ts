@@ -106,6 +106,11 @@ export function useGraph(notes: Note[], activeNoteId: string | null): UseGraphRe
       for (const note of notes) {
         await syncNoteEdges(note);
       }
+      // Ensure cross-reference edges exist for all scripture nodes
+      const scriptureNodes = getAllScriptureNodes();
+      for (const sn of scriptureNodes) {
+        await createCrossReferenceEdges(sn.id);
+      }
       const map = new Map<string, string>();
       for (const note of notes) map.set(note.id, note.content);
       prevContentsRef.current = map;
