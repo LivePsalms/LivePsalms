@@ -7,7 +7,13 @@ import {
   Upload,
   PanelRightClose,
   PanelRightOpen,
+  LogIn,
+  User,
 } from 'lucide-react';
+import { useAuth } from '@/auth/useAuth';
+import { useUserTier } from '../hooks/useUserTier';
+import { TierBadge } from './TierBadge';
+import { LevelUpModal } from './LevelUpModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +46,10 @@ export function NotepadToolbar({
   const navigate = useNavigate();
   const { createNote } = useNotepad();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const { user, profile, signOut } = useAuth();
+  const { currentTier, showLevelUp, levelUpTier, dismissLevelUp } = useUserTier(
+    profile?.highestNoteCount ?? 0
+  );
 
   const handleNewNote = (type: NoteType) => {
     createNote('root', type);
@@ -192,11 +202,73 @@ export function NotepadToolbar({
               <PanelRightOpen className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
             )}
           </button>
+
+          {/* Divider */}
+          <div
+            className="mx-2 self-stretch"
+            style={{
+              width: 1,
+              background: 'var(--pale-stone)',
+              marginTop: 10,
+              marginBottom: 10,
+            }}
+          />
+
+          {/* Auth area */}
+          {user ? (
+            <div className="flex items-center gap-1">
+              {currentTier && (
+                <TierBadge tier={currentTier} noteCount={profile?.noteCount ?? 0} />
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={`${btnClass} w-8 h-8 rounded-full overflow-hidden`}>
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" style={{ fontFamily: 'Outfit, sans-serif', minWidth: 140 }}>
+                  <DropdownMenuItem onClick={() => navigate('/profile')} style={{ fontSize: 12 }}>
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await signOut();
+                      navigate('/');
+                    }}
+                    style={{ fontSize: 12 }}
+                  >
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              className={`${btnClass} flex items-center gap-1.5 px-3 h-8`}
+              style={{ fontFamily: 'Outfit, sans-serif' }}
+            >
+              <LogIn className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+              <span
+                className="text-[10px] font-medium tracking-wider"
+                style={{ color: 'var(--deep-umber)' }}
+              >
+                SIGN IN
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Upload modal */}
       <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
+
+      {/* Level-up modal */}
+      <LevelUpModal open={showLevelUp} tier={levelUpTier} onDismiss={dismissLevelUp} />
     </>
   );
 }
