@@ -8,6 +8,7 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from 'd3-force';
+import { forceSharedTags } from '@/notepad/graph/force-shared-tags';
 import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import { useNotepad } from '@/notepad/context/useNotepad';
 
@@ -243,6 +244,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       .force('charge', forceManyBody<SimNode>().strength(-600))
       .force('center', forceCenter(width / 2, height / 2).strength(0.0004))
       .force('collide', forceCollide<SimNode>().radius((d) => d.radius + 2))
+      .force('tags', forceSharedTags<SimNode>(0.0003))
       .alphaDecay(0.02)
       .velocityDecay(0.1)
       .on('tick', drawCanvas);
