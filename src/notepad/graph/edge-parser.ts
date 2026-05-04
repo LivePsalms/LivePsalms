@@ -2,7 +2,7 @@ import { VERSE_REGEX, BOOK_PATTERNS } from '../extensions/bible-verse-utils';
 
 interface ParsedEdge {
   target: string;
-  type: 'explicit' | 'scripture_reference';
+  type: 'explicit' | 'scripture_reference' | 'cross_reference';
   weight: number;
 }
 

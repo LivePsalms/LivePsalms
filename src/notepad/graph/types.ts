@@ -13,7 +13,7 @@ export interface GraphEdge {
   id: string;
   source: string;
   target: string;
-  type: 'explicit' | 'scripture_reference';
+  type: 'explicit' | 'scripture_reference' | 'cross_reference';
   weight: number;
   createdAt: string;
 }
@@ -23,6 +23,7 @@ export interface GraphNode {
   type: 'devotion' | 'sermon' | 'theme' | 'scripture';
   title: string;
   weight: number;
+  tags: string[];
   x?: number;
   y?: number;
   vx?: number;
