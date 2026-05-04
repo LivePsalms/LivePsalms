@@ -622,6 +622,7 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
 
   const [filterText, setFilterText] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   // Compute all tags sorted by count descending
   const allTags = (() => {
@@ -779,38 +780,53 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
         {/* Tags section */}
         {allTags.length > 0 && (
           <div className="mt-6 pt-4" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
-            <h3
-              className="text-[10px] font-medium tracking-[0.2em] mb-3"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+            <button
+              className="flex items-center gap-1 w-full cursor-pointer hover:bg-black/5 rounded px-1 py-0.5 transition-colors"
+              onClick={() => setTagsExpanded(!tagsExpanded)}
             >
-              TAGS
-            </h3>
-            <div className="space-y-1.5">
-              {allTags.map(([tag, count]) => {
-                const isActive = tagFilter === tag;
-                return (
-                  <div
-                    key={tag}
-                    className="flex items-center justify-between px-2 py-1 rounded cursor-pointer hover:bg-black/5 transition-colors"
-                    style={{
-                      background: isActive ? 'rgba(188, 179, 163, 0.3)' : 'transparent',
-                      fontFamily: 'Outfit, sans-serif',
-                    }}
-                    onClick={() => setTagFilter(isActive ? null : tag)}
-                  >
-                    <span
-                      className="text-[11px]"
-                      style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+              {tagsExpanded ? (
+                <ChevronDown className="w-3 h-3" style={{ color: 'var(--silica)' }} />
+              ) : (
+                <ChevronRight className="w-3 h-3" style={{ color: 'var(--silica)' }} />
+              )}
+              <h3
+                className="text-[10px] font-medium tracking-[0.2em]"
+                style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+              >
+                TAGS
+              </h3>
+              <span className="text-[10px] ml-1" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+                ({allTags.length})
+              </span>
+            </button>
+            {tagsExpanded && (
+              <div className="space-y-1.5 mt-2">
+                {allTags.map(([tag, count]) => {
+                  const isActive = tagFilter === tag;
+                  return (
+                    <div
+                      key={tag}
+                      className="flex items-center justify-between px-2 py-1 rounded cursor-pointer hover:bg-black/5 transition-colors"
+                      style={{
+                        background: isActive ? 'rgba(188, 179, 163, 0.3)' : 'transparent',
+                        fontFamily: 'Outfit, sans-serif',
+                      }}
+                      onClick={() => setTagFilter(isActive ? null : tag)}
                     >
-                      #{tag}
-                    </span>
-                    <span className="text-[10px]" style={{ color: 'var(--silica)' }}>
-                      ({count})
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                      <span
+                        className="text-[11px]"
+                        style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                      >
+                        #{tag}
+                      </span>
+                      <span className="text-[10px]" style={{ color: 'var(--silica)' }}>
+                        ({count})
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
