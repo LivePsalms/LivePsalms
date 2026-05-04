@@ -16,6 +16,7 @@ import { useProjectColors } from '@/hooks/useProjectColors';
 import { FALLBACK_OVERLAY_COLOR } from '@/data/projects';
 import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/AuthProvider';
+import { LoginPage } from '@/auth/LoginPage';
 import './App.css';
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -38,7 +39,8 @@ function App() {
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
   const isNotepadPage = location.pathname === '/notepad';
-  const hideFooter = isDetailPage || isPurposePage || isNotepadPage;
+  const isLoginPage = location.pathname === '/login';
+  const hideFooter = isDetailPage || isPurposePage || isNotepadPage || isLoginPage;
 
   // Belt-and-suspenders scroll reset for direct URL loads / back-forward nav
   // where handlePhaseComplete didn't run. We do NOT kill ScrollTriggers here:
@@ -143,7 +145,7 @@ function App() {
         <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadPage && <Header darkText={isDetailPage} />}
+          {!isNotepadPage && !isLoginPage && <Header darkText={isDetailPage} />}
 
           <Routes>
             <Route
@@ -162,6 +164,7 @@ function App() {
               }
             />
             <Route path="/notepad" element={<Notepad />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route
               path="/purpose"
               element={
