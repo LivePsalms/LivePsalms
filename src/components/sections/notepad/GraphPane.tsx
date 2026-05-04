@@ -49,8 +49,8 @@ const NODE_ICONS: Record<string, typeof BookOpen> = {
 };
 
 function computeRadius(type: string, weight: number): number {
-  const base = type === 'scripture' ? 8 : 6;
-  return Math.min(24, Math.max(6, base + weight * 2));
+  const base = type === 'scripture' ? 14 : 10;
+  return Math.min(40, Math.max(8, base + weight * 3));
 }
 
 interface GraphPaneProps {
@@ -87,18 +87,18 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [graphSettings, setGraphSettings] = useState({
     depth: 1,
-    linkDistance: 120,
-    linkForce: 0.004,
-    repelForce: 600,
-    centerForce: 0.0004,
+    linkDistance: 70,
+    linkForce: 0.008,
+    repelForce: 350,
+    centerForce: 0.002,
   });
 
   const defaultSettings = {
     depth: 1,
-    linkDistance: 120,
-    linkForce: 0.004,
-    repelForce: 600,
-    centerForce: 0.0004,
+    linkDistance: 70,
+    linkForce: 0.008,
+    repelForce: 350,
+    centerForce: 0.002,
   };
 
   const drawPopover = useCallback((ctx: CanvasRenderingContext2D, node: SimNode) => {
@@ -230,7 +230,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
 
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      let alpha = hovered ? (isHighlighted ? 0.8 : 0.08) : 0.3;
+      let alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
 
       // Fade out removing edges
       if (link.removing && link.removeTime) {
@@ -242,8 +242,8 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
-      ctx.strokeStyle = `rgba(188, 179, 163, ${alpha})`;
-      ctx.lineWidth = 1 + link.weight;
+      ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
+      ctx.lineWidth = 1.5 + link.weight * 1.5;
       ctx.stroke();
     }
 
@@ -274,7 +274,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       if (node.x == null || node.y == null) continue;
 
       const isConnected = !hovered || connectedIds.has(node.id);
-      let alpha = hovered ? (isConnected ? 1 : 0.15) : 0.85;
+      let alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
 
       // Fade out removing nodes
       if (node.removing && node.removeTime) {
@@ -287,12 +287,12 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       // Active note glow
       if (node.id === activeId) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 6, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}25`;
+        ctx.arc(node.x, node.y, node.radius + 10, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 3, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}15`;
+        ctx.arc(node.x, node.y, node.radius + 5, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
@@ -321,22 +321,22 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       ctx.globalAlpha = 1;
 
       // Label
-      if (node.radius > 10 || node.id === hovered || node.id === activeId) {
-        ctx.font = '11px Outfit, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = `rgba(62, 50, 40, ${alpha})`;
-        ctx.fillText(node.title, node.x, node.y + node.radius + 14);
-      }
+      ctx.font = `${node.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
+      ctx.fillText(node.title, node.x, node.y + node.radius + 14);
     }
 
-    // Hover tooltip for small nodes
+    // Hover tooltip (above node, in addition to the label below)
     if (hovered) {
       const node = nodesRef.current.find((n) => n.id === hovered);
-      if (node && node.x != null && node.y != null && node.radius <= 10 && node.id !== activeId) {
-        ctx.font = '11px Outfit, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(62, 50, 40, 0.9)';
-        ctx.fillText(node.title, node.x, node.y - node.radius - 8);
+      if (node && node.x != null && node.y != null) {
+        // Draw a subtle highlight ring around the hovered node
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = `${NODE_COLORS[node.type] ?? '#999'}80`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     }
 
