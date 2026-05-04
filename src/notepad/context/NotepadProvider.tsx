@@ -38,6 +38,7 @@ export interface NotepadContextValue {
   graphActiveNodeId: string | null;
   graphLoading: boolean;
   rebuildGraph: () => void;
+  getNeighborhood: (nodeId: string, depth: number) => Set<string>;
 }
 
 export const NotepadContext = createContext<NotepadContextValue | null>(null);
@@ -196,6 +197,7 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     graphActiveNodeId: graph.activeNodeId,
     graphLoading: graph.isLoading,
     rebuildGraph: graph.rebuildGraph,
+    getNeighborhood: graph.getNeighborhood,
   };
 
   return <NotepadContext.Provider value={value}>{children}</NotepadContext.Provider>;

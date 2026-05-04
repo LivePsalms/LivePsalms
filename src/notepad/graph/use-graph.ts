@@ -7,6 +7,7 @@ import { getAllScriptureNodes, createScriptureNode, scriptureNodeExists } from '
 import { buildAdjacencyList, computeNodeWeights } from './adjacency-list';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
 import { createCrossReferenceEdges } from './cross-reference';
+import { getNeighborhoodNodeIds } from './local-graph';
 
 export interface UseGraphResult {
   nodes: GraphNode[];
@@ -14,6 +15,7 @@ export interface UseGraphResult {
   activeNodeId: string | null;
   isLoading: boolean;
   rebuildGraph: () => void;
+  getNeighborhood: (nodeId: string, depth: number) => Set<string>;
 }
 
 async function syncNoteEdges(note: Note): Promise<void> {
@@ -163,11 +165,18 @@ export function useGraph(notes: Note[], activeNoteId: string | null): UseGraphRe
     syncChanges();
   }, [notes, isLoading, buildFullGraph]);
 
+  const getNeighborhood = useCallback((nodeId: string, depth: number): Set<string> => {
+    const allEdges = getAllEdges();
+    const adjacency = buildAdjacencyList(allEdges);
+    return getNeighborhoodNodeIds(nodeId, depth, adjacency);
+  }, []);
+
   return {
     nodes: graphNodes,
     edges: graphEdges,
     activeNodeId: activeNoteId,
     isLoading,
     rebuildGraph: buildFullGraph,
+    getNeighborhood,
   };
 }
