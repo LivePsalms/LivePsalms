@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuth } from '@/auth/useAuth';
 import { useNotepad } from '@/notepad/context/useNotepad';
@@ -11,6 +11,7 @@ import { InfoPanel } from '@/notepad/components/InfoPanel';
 import { SearchDialog } from '@/notepad/components/SearchDialog';
 import { MigrationDialog } from '@/notepad/components/MigrationDialog';
 import { GraphPane } from './notepad/GraphPane';
+import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
 
 function NotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -21,6 +22,10 @@ function NotepadWorkspace() {
   const { user, adapter } = useAuth();
   const { refresh } = useNotepad();
   const [showMigration, setShowMigration] = useState(false);
+
+  const isOnline = useOnlineStatus();
+  const isLoggedIn = !!user;
+  const isOfflineAndLoggedIn = !isOnline && isLoggedIn;
 
   // Check for local notes when user logs in
   useEffect(() => {
@@ -46,6 +51,21 @@ function NotepadWorkspace() {
         onToggleGraph={() => setGraphOpen(!graphOpen)}
         onOpenSearch={handleOpenSearch}
       />
+
+      {isOfflineAndLoggedIn && (
+        <div
+          className="flex items-center justify-center gap-2 py-2 text-xs"
+          style={{
+            background: 'rgba(232, 169, 58, 0.15)',
+            borderBottom: '1px solid rgba(232, 169, 58, 0.3)',
+            color: 'var(--deep-umber)',
+            fontFamily: 'Outfit, sans-serif',
+          }}
+        >
+          <WifiOff className="w-3.5 h-3.5" />
+          You're offline — viewing cached notes
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — stays visible when graph expands */}
