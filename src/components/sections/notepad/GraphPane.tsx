@@ -49,8 +49,8 @@ const NODE_ICONS: Record<string, typeof BookOpen> = {
 };
 
 function computeRadius(type: string, weight: number, sizeMultiplier: number = 1): number {
-  const base = type === 'scripture' ? 18 : 14;
-  return Math.min(60, Math.max(10, (base + weight * 4) * sizeMultiplier));
+  const base = type === 'scripture' ? 22 : 18;
+  return Math.min(70, Math.max(12, (base + weight * 5) * sizeMultiplier));
 }
 
 interface GraphPaneProps {
@@ -87,20 +87,20 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [graphSettings, setGraphSettings] = useState({
     depth: 1,
-    linkDistance: 70,
-    linkForce: 0.008,
-    repelForce: 350,
-    centerForce: 0.002,
+    linkDistance: 30,
+    linkForce: 0.01,
+    repelForce: 120,
+    centerForce: 0.15,
     nodeSize: 1,
     edgeThickness: 1,
   });
 
   const defaultSettings = {
     depth: 1,
-    linkDistance: 70,
-    linkForce: 0.008,
-    repelForce: 350,
-    centerForce: 0.002,
+    linkDistance: 30,
+    linkForce: 0.01,
+    repelForce: 120,
+    centerForce: 0.15,
     nodeSize: 1,
     edgeThickness: 1,
   };
@@ -247,7 +247,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (1.5 + link.weight * 1.5) * graphSettings.edgeThickness;
+      ctx.lineWidth = (2 + link.weight * 2) * graphSettings.edgeThickness;
       ctx.stroke();
     }
 
@@ -493,42 +493,11 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       )
       .force('charge', forceManyBody<SimNode>().strength(-graphSettings.repelForce))
       .force('center', forceCenter(width / 2, height / 2).strength(graphSettings.centerForce))
-      .force('collide', forceCollide<SimNode>().radius((d) => d.radius + 2))
+      .force('collide', forceCollide<SimNode>().radius((d) => d.radius * 0.8))
       .force('tags', forceSharedTags<SimNode>(0.0003))
-      .alphaDecay(0.02)
-      .velocityDecay(0.1)
-      .on('tick', drawCanvas)
-      .on('end', () => {
-        // Auto-fit zoom: compute bounding box of all nodes and zoom to fit
-        const activeNodes = nodesRef.current.filter((n) => !n.removing && n.x != null && n.y != null);
-        if (activeNodes.length === 0) return;
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const n of activeNodes) {
-          minX = Math.min(minX, n.x! - n.radius);
-          minY = Math.min(minY, n.y! - n.radius - 20);
-          maxX = Math.max(maxX, n.x! + n.radius);
-          maxY = Math.max(maxY, n.y! + n.radius + 20);
-        }
-
-        const graphW = maxX - minX;
-        const graphH = maxY - minY;
-        if (graphW <= 0 || graphH <= 0) return;
-
-        const padding = 40;
-        const scaleX = (width - padding * 2) / graphW;
-        const scaleY = (height - padding * 2) / graphH;
-        const fitScale = Math.min(scaleX, scaleY, 2); // cap at 2x
-
-        const cx = (minX + maxX) / 2;
-        const cy = (minY + maxY) / 2;
-        transformRef.current = {
-          x: width / 2 - cx * fitScale,
-          y: height / 2 - cy * fitScale,
-          scale: fitScale,
-        };
-        drawCanvas();
-      });
+      .alphaDecay(0.015)
+      .velocityDecay(0.15)
+      .on('tick', drawCanvas);
 
     simRef.current = sim;
 
@@ -794,7 +763,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
             </div>
             <div className="flex items-center gap-2">
               <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Center Force</label>
-              <input type="range" min={0.0001} max={0.001} step={0.0001} value={graphSettings.centerForce}
+              <input type="range" min={0.001} max={0.3} step={0.005} value={graphSettings.centerForce}
                 onChange={(e) => setGraphSettings((s) => ({ ...s, centerForce: Number(e.target.value) }))}
                 className="flex-1 h-1 accent-[#C49A78]" />
               <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.centerForce.toFixed(4)}</span>
