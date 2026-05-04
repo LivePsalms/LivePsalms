@@ -360,7 +360,16 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   useEffect(() => {
     if (graphLoading) return;
 
-    const filtered = graphNodes.filter((n) => graphFilters[n.type]);
+    let filtered = graphNodes;
+    if (graphMode === 'local') {
+      if (graphActiveNodeId) {
+        const neighborhood = getNeighborhood(graphActiveNodeId, graphSettings.depth);
+        filtered = filtered.filter((n) => neighborhood.has(n.id));
+      } else {
+        filtered = [];
+      }
+    }
+    filtered = filtered.filter((n) => graphFilters[n.type]);
     const filteredIds = new Set(filtered.map((n) => n.id));
 
     // Preserve positions
@@ -475,11 +484,11 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       .force('link',
         forceLink<SimNode, SimLink>(simLinks)
           .id((d) => d.id)
-          .distance((d) => 120 / d.weight)
-          .strength((d) => 0.004 * d.weight)
+          .distance((d) => graphSettings.linkDistance / d.weight)
+          .strength((d) => graphSettings.linkForce * d.weight)
       )
-      .force('charge', forceManyBody<SimNode>().strength(-600))
-      .force('center', forceCenter(width / 2, height / 2).strength(0.0004))
+      .force('charge', forceManyBody<SimNode>().strength(-graphSettings.repelForce))
+      .force('center', forceCenter(width / 2, height / 2).strength(graphSettings.centerForce))
       .force('collide', forceCollide<SimNode>().radius((d) => d.radius + 2))
       .force('tags', forceSharedTags<SimNode>(0.0003))
       .alphaDecay(0.02)
@@ -489,7 +498,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     simRef.current = sim;
 
     return () => { sim.stop(); };
-  }, [graphNodes, graphEdges, graphLoading, graphFilters, drawCanvas]);
+  }, [graphNodes, graphEdges, graphLoading, graphFilters, graphMode, graphSettings, graphActiveNodeId, getNeighborhood, drawCanvas]);
 
   // --- Canvas resize ---
   useEffect(() => {
@@ -768,10 +777,12 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
             </span>
           </div>
         )}
-        {!graphLoading && graphNodes.length === 0 && (
+        {!graphLoading && (graphNodes.length === 0 || (graphMode === 'local' && !graphActiveNodeId)) && (
           <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
             <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              Create notes with [[links]] or Bible verse references to see your knowledge graph.
+              {graphMode === 'local' && !graphActiveNodeId
+                ? 'Select a note to see its local graph.'
+                : 'Create notes with [[links]] or Bible verse references to see your knowledge graph.'}
             </p>
           </div>
         )}
