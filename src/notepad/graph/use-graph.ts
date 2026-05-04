@@ -6,6 +6,7 @@ import { getAllEdges, createEdge, deleteEdgesBySource, deleteEdgesForNode } from
 import { getAllScriptureNodes, createScriptureNode, scriptureNodeExists } from './scripture-store';
 import { buildAdjacencyList, computeNodeWeights } from './adjacency-list';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
+import { createCrossReferenceEdges } from './cross-reference';
 
 export interface UseGraphResult {
   nodes: GraphNode[];
@@ -40,6 +41,7 @@ async function syncNoteEdges(note: Note): Promise<void> {
           translation: 'WEB',
           text,
         });
+        await createCrossReferenceEdges(ref.id);
       }
     }
   }
