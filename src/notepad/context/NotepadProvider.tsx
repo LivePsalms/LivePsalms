@@ -109,6 +109,7 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
         folderId,
         type,
         tags: [],
+        wordCount: 0,
       });
       await refresh();
       setActiveNoteId(note.id);

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { UserProfile } from './types';
 import type { StorageAdapter } from '@/notepad/storage/adapter';
@@ -30,7 +30,6 @@ const localAdapter = new LocalStorageAdapter();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -78,10 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setAdapter(new SupabaseStorageAdapter(supabase, s.user.id));
+        setAdapter(new SupabaseStorageAdapter(supabase!, s.user.id));
         fetchProfile(s.user.id).then((p) => {
           setProfile(p);
           setLoading(false);
@@ -94,10 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, s) => {
-        setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
-          setAdapter(new SupabaseStorageAdapter(supabase, s.user.id));
+          setAdapter(new SupabaseStorageAdapter(supabase!, s.user.id));
           const p = await fetchProfile(s.user.id);
           setProfile(p);
         } else {

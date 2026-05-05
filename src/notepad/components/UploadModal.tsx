@@ -214,6 +214,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
         tags: autoDetectVerses
           ? extractVerseRefs(text).slice(0, 10)
           : [],
+        wordCount: 0,
       }));
 
       // Auto-create cross-links between drafts that share verse refs

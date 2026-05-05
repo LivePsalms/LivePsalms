@@ -8,12 +8,18 @@ import { countWordsFromTipTapJSON } from '../utils/word-count';
  * All queries are automatically scoped to the authenticated user via RLS.
  */
 export class SupabaseStorageAdapter implements StorageAdapter {
-  constructor(private client: SupabaseClient, private userId: string) {}
+  #client: SupabaseClient;
+  #userId: string;
+
+  constructor(client: SupabaseClient, userId: string) {
+    this.#client = client;
+    this.#userId = userId;
+  }
 
   // ── Notes ──────────────────────────────────────────────────────────
 
   async getNotes(): Promise<Note[]> {
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('notes')
       .select('*')
       .order('created_at', { ascending: false });
@@ -23,7 +29,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
   }
 
   async getNote(id: string): Promise<Note | null> {
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('notes')
       .select('*')
       .eq('id', id)
@@ -36,10 +42,10 @@ export class SupabaseStorageAdapter implements StorageAdapter {
   async createNote(
     note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<Note> {
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('notes')
       .insert({
-        user_id: this.userId,
+        user_id: this.#userId,
         title: note.title,
         content: note.content,
         folder_id: note.folderId === 'root' ? null : note.folderId,
@@ -67,7 +73,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     if (updates.type !== undefined) mapped.type = updates.type;
     if (updates.tags !== undefined) mapped.tags = updates.tags;
 
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('notes')
       .update(mapped)
       .eq('id', id)
@@ -79,7 +85,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
   }
 
   async deleteNote(id: string): Promise<void> {
-    const { error } = await this.client.from('notes').delete().eq('id', id);
+    const { error } = await this.#client.from('notes').delete().eq('id', id);
     if (error) throw error;
   }
 
@@ -99,7 +105,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
   // ── Folders ────────────────────────────────────────────────────────
 
   async getFolders(): Promise<Folder[]> {
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('folders')
       .select('*')
       .order('order', { ascending: true });
@@ -109,10 +115,10 @@ export class SupabaseStorageAdapter implements StorageAdapter {
   }
 
   async createFolder(folder: Omit<Folder, 'id'>): Promise<Folder> {
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('folders')
       .insert({
-        user_id: this.userId,
+        user_id: this.#userId,
         name: folder.name,
         parent_id: folder.parentId,
         order: folder.order,
@@ -134,7 +140,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     if (updates.icon !== undefined) mapped.icon = updates.icon;
     if (updates.color !== undefined) mapped.color = updates.color;
 
-    const { data, error } = await this.client
+    const { data, error } = await this.#client
       .from('folders')
       .update(mapped)
       .eq('id', id)
@@ -147,18 +153,18 @@ export class SupabaseStorageAdapter implements StorageAdapter {
 
   async deleteFolder(id: string): Promise<void> {
     // Move notes in this folder to root (null folder_id)
-    await this.client
+    await this.#client
       .from('notes')
       .update({ folder_id: null })
       .eq('folder_id', id);
 
-    const { error } = await this.client.from('folders').delete().eq('id', id);
+    const { error } = await this.#client.from('folders').delete().eq('id', id);
     if (error) throw error;
   }
 
   // ── Mappers (snake_case DB → camelCase app) ────────────────────────
 
-  private mapNote = (row: Record<string, unknown>): Note => ({
+  mapNote = (row: Record<string, unknown>): Note => ({
     id: row.id as string,
     title: row.title as string,
     content: row.content as string,
@@ -170,7 +176,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     updatedAt: row.updated_at as string,
   });
 
-  private mapFolder = (row: Record<string, unknown>): Folder => ({
+  mapFolder = (row: Record<string, unknown>): Folder => ({
     id: row.id as string,
     name: row.name as string,
     parentId: (row.parent_id as string) ?? null,
