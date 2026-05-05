@@ -126,13 +126,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) throw new Error('Supabase not configured');
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/notepad` },
+    });
     if (error) throw error;
   }, []);
 
   const signInWithApple = useCallback(async () => {
     if (!supabase) throw new Error('Supabase not configured');
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: `${window.location.origin}/notepad` },
+    });
     if (error) throw error;
   }, []);
 

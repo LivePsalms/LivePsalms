@@ -2,6 +2,32 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 
+function mapAuthError(message: string, mode: 'login' | 'signup'): string {
+  const m = message.toLowerCase();
+  if (mode === 'login') {
+    if (m.includes('invalid login credentials') || m.includes('invalid_credentials')) {
+      return 'Wrong email or password.';
+    }
+    if (m.includes('email not confirmed')) {
+      return 'Please verify your email before signing in.';
+    }
+    if (m.includes('user not found')) {
+      return 'No account found with that email.';
+    }
+  } else {
+    if (m.includes('user already registered') || m.includes('already_registered')) {
+      return 'An account with that email already exists.';
+    }
+    if (m.includes('password should be at least')) {
+      return 'Password must be at least 6 characters.';
+    }
+    if (m.includes('unable to validate email')) {
+      return 'Please enter a valid email address.';
+    }
+  }
+  return message;
+}
+
 type Mode = 'login' | 'signup';
 
 export function LoginPage() {
@@ -41,7 +67,8 @@ export function LoginPage() {
         navigate('/notepad');
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const raw = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      setError(mapAuthError(raw, mode));
     } finally {
       setLoading(false);
     }
