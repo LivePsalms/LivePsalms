@@ -6,7 +6,7 @@ type Mode = 'login' | 'signup';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, signInWithGoogle, user } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithApple, user } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +56,15 @@ export function LoginPage() {
     }
   };
 
+  const handleApple = async () => {
+    setError(null);
+    try {
+      await signInWithApple();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
@@ -90,7 +99,7 @@ export function LoginPage() {
         {/* Google sign-in */}
         <button
           onClick={handleGoogle}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg mb-4 hover:bg-black/5 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg mb-2 hover:bg-black/5 transition-colors"
           style={{
             border: '1px solid var(--pale-stone)',
             fontFamily: 'Outfit, sans-serif',
@@ -105,6 +114,23 @@ export function LoginPage() {
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
           Continue with Google
+        </button>
+
+        {/* Apple sign-in */}
+        <button
+          onClick={handleApple}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg mb-4 hover:opacity-90 transition-opacity"
+          style={{
+            background: '#000',
+            color: '#fff',
+            fontFamily: 'Outfit, sans-serif',
+            fontSize: 13,
+          }}
+        >
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="#fff">
+            <path d="M13.357 9.563c-.018-2.001 1.633-2.962 1.708-3.009-.93-1.359-2.376-1.545-2.892-1.566-1.232-.124-2.404.726-3.029.726-.625 0-1.59-.708-2.612-.689-1.343.02-2.583.781-3.275 1.984-1.396 2.42-.357 6.005 1.005 7.97.666.962 1.46 2.043 2.498 2.005 1.004-.041 1.383-.65 2.595-.65 1.21 0 1.553.65 2.612.628 1.078-.018 1.762-.985 2.422-1.95.762-1.118 1.078-2.205 1.097-2.262-.024-.011-2.108-.808-2.129-3.187zM11.394 3.69c.553-.671.926-1.602.824-2.527-.797.032-1.762.531-2.334 1.2-.513.594-.962 1.541-.84 2.45.888.069 1.797-.451 2.35-1.123z"/>
+          </svg>
+          Continue with Apple
         </button>
 
         {/* Divider */}

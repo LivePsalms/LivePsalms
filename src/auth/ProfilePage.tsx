@@ -317,6 +317,12 @@ export function ProfilePage() {
                 ? 'Linked'
                 : 'Not linked'}
             </p>
+            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+              Apple:{' '}
+              {user?.app_metadata?.providers?.includes('apple')
+                ? 'Linked'
+                : 'Not linked'}
+            </p>
           </div>
         </div>
 

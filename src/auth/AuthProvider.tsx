@@ -16,6 +16,7 @@ export interface AuthContextValue {
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Pick<UserProfile, 'fullName' | 'dateOfBirth' | 'avatarUrl'>>) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -129,6 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    if (!supabase) throw new Error('Supabase not configured');
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
+    if (error) throw error;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -207,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signIn,
     signInWithGoogle,
+    signInWithApple,
     signOut,
     updateProfile,
     refreshProfile,
