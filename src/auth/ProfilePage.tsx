@@ -98,7 +98,7 @@ export function ProfilePage() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate('/notepad');
   };
 
   const sectionStyle = {
