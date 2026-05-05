@@ -3,7 +3,7 @@ import { getTierForCount, getNextTier } from '../gamification/tiers';
 import type { Tier } from '../gamification/tiers';
 
 interface UseUserTierResult {
-  currentTier: Tier | null;
+  currentTier: Tier;
   nextTier: Tier | null;
   showLevelUp: boolean;
   levelUpTier: Tier | null;
