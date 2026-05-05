@@ -29,9 +29,9 @@ export function useUserTier(highestNoteCount: number): UseUserTierResult {
 
     // Check if tier changed upward
     const prevThreshold = prevTierRef.current?.threshold ?? 0;
-    const currentThreshold = currentTier?.threshold ?? 0;
+    const currentThreshold = currentTier.threshold;
 
-    if (currentThreshold > prevThreshold && currentTier) {
+    if (currentThreshold > prevThreshold) {
       setLevelUpTier(currentTier);
       setShowLevelUp(true);
     }
