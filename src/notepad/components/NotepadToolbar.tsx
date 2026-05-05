@@ -46,7 +46,7 @@ export function NotepadToolbar({
   const navigate = useNavigate();
   const { createNote } = useNotepad();
   const [uploadOpen, setUploadOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const { currentTier, showLevelUp, levelUpTier, dismissLevelUp } = useUserTier(
     profile?.highestNoteCount ?? 0
   );
@@ -215,7 +215,9 @@ export function NotepadToolbar({
           />
 
           {/* Auth area */}
-          {user ? (
+          {authLoading ? (
+            <div className="w-8 h-8" />
+          ) : user ? (
             <div className="flex items-center gap-1">
               {currentTier && (
                 <TierBadge tier={currentTier} noteCount={profile?.noteCount ?? 0} />

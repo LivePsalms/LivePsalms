@@ -22,7 +22,7 @@ function NotepadWorkspace() {
   const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
 
   const navigate = useNavigate();
-  const { user, adapter } = useAuth();
+  const { user, adapter, loading: authLoading } = useAuth();
   const { refresh } = useNotepad();
   const [showMigration, setShowMigration] = useState(false);
 
@@ -32,7 +32,7 @@ function NotepadWorkspace() {
 
   // First-time user: redirect to welcome screen, then show signed-in toast
   useEffect(() => {
-    if (!user) return;
+    if (authLoading || !user) return;
     const welcomedKey = `welcomed_${user.id}`;
     if (!localStorage.getItem(welcomedKey)) {
       navigate('/welcome');
@@ -46,7 +46,7 @@ function NotepadWorkspace() {
         ?? 'friend';
       toast.success(`Welcome back, ${firstName}!`);
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Check for local notes when user logs in
   useEffect(() => {
