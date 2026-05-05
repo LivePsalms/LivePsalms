@@ -237,7 +237,7 @@ export function NotepadToolbar({
                   <DropdownMenuItem
                     onClick={async () => {
                       await signOut();
-                      navigate('/');
+                      navigate('/notepad');
                     }}
                     style={{ fontSize: 12 }}
                   >
