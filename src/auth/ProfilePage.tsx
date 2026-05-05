@@ -222,32 +222,30 @@ export function ProfilePage() {
         </div>
 
         {/* Tier Display */}
-        {currentTier && (
-          <div style={sectionStyle}>
-            <p style={labelStyle}>SPIRITUAL RANK</p>
-            <p
-              className="text-xl font-medium mb-1"
-              style={{
-                color: 'var(--deep-umber)',
-                fontFamily: 'Cormorant Garamond, serif',
-              }}
-            >
-              {currentTier.name}
-            </p>
-            <p
-              className="text-xs italic mb-3"
-              style={{
-                color: 'var(--silica)',
-                fontFamily: 'Cormorant Garamond, serif',
-              }}
-            >
-              "{currentTier.scripture}" — {currentTier.reference}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              {totalNotes} {totalNotes === 1 ? 'note' : 'notes'} written
-            </p>
-          </div>
-        )}
+        <div style={sectionStyle}>
+          <p style={labelStyle}>SPIRITUAL RANK</p>
+          <p
+            className="text-xl font-medium mb-1"
+            style={{
+              color: 'var(--deep-umber)',
+              fontFamily: 'Cormorant Garamond, serif',
+            }}
+          >
+            {currentTier.name}
+          </p>
+          <p
+            className="text-xs italic mb-3"
+            style={{
+              color: 'var(--silica)',
+              fontFamily: 'Cormorant Garamond, serif',
+            }}
+          >
+            "{currentTier.scripture}" — {currentTier.reference}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+            {totalNotes} {totalNotes === 1 ? 'note' : 'notes'} written
+          </p>
+        </div>
 
         {/* Edit Profile */}
         <div style={sectionStyle}>
