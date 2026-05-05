@@ -7,6 +7,12 @@ export interface Tier {
 
 export const TIERS: Tier[] = [
   {
+    name: 'New Flame',
+    threshold: 0,
+    scripture: 'Do not despise these small beginnings, for the Lord rejoices to see the work begin',
+    reference: 'Zechariah 4:10',
+  },
+  {
     name: 'Spark',
     threshold: 10,
     scripture: 'The Lord is my light and my salvation',
@@ -52,10 +58,10 @@ export const TIERS: Tier[] = [
 
 /**
  * Get the current tier for a given highest note count.
- * Returns null if below the first threshold (< 10).
+ * Always returns a tier — defaults to TIERS[0] (New Flame, threshold 0).
  */
-export function getTierForCount(highestNoteCount: number): Tier | null {
-  let current: Tier | null = null;
+export function getTierForCount(highestNoteCount: number): Tier {
+  let current: Tier = TIERS[0];
   for (const tier of TIERS) {
     if (highestNoteCount >= tier.threshold) {
       current = tier;
