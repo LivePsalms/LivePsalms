@@ -366,8 +366,11 @@ export function ProfilePage() {
                   <AlertDialogDescription
                     style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13 }}
                   >
-                    This will permanently delete your account, all your notes,
-                    folders, and profile data. This action cannot be undone.
+                    Are you sure you want to go ahead with this feature? This will
+                    permanently delete your account, all your notes, folders, and
+                    profile data. This action cannot be undone. If you'd like to
+                    keep a copy of your notes, use 'Export All Notes' above
+                    before deleting.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
