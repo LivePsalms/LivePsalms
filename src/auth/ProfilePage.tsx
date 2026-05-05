@@ -223,7 +223,7 @@ export function ProfilePage() {
 
         {/* Tier Display */}
         <div style={sectionStyle}>
-          <p style={labelStyle}>SPIRITUAL RANK</p>
+          <p style={labelStyle}>JOURNEY RANK</p>
           <p
             className="text-xl font-medium mb-1"
             style={{

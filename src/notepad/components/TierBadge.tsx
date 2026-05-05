@@ -41,7 +41,7 @@ export function TierBadge({ tier, noteCount }: TierBadgeProps) {
           className="text-[10px] tracking-[0.2em] font-medium mb-2"
           style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
         >
-          SPIRITUAL RANK
+          JOURNEY RANK
         </p>
         <p
           className="text-lg font-medium mb-1"
