@@ -1,6 +1,7 @@
 import { Observable } from './observable';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Note } from '../types';
+import { repairNoteLinks } from '../storage/repair-note-links';
 
 export interface NoteCollectionState {
   notes: Note[];
@@ -16,6 +17,7 @@ const EMPTY_STATE: NoteCollectionState = {
 
 export class NoteCollection extends Observable<NoteCollectionState> {
   private adapter: StorageAdapter;
+  private repairAttempted = false;
 
   constructor(adapter: StorageAdapter) {
     super(EMPTY_STATE);
@@ -23,7 +25,20 @@ export class NoteCollection extends Observable<NoteCollectionState> {
   }
 
   async init(): Promise<void> {
-    const notes = await this.adapter.getNotes();
+    let notes = await this.adapter.getNotes();
+
+    if (!this.repairAttempted && notes.length > 0) {
+      this.repairAttempted = true;
+      try {
+        const result = await repairNoteLinks(notes, this.adapter);
+        if (result.rewiredLinks > 0) {
+          notes = await this.adapter.getNotes();
+        }
+      } catch (err) {
+        console.warn('[NoteCollection] repair pass failed:', err);
+      }
+    }
+
     this.update((prev) => ({ ...prev, notes }));
   }
 
@@ -97,6 +112,7 @@ export class NoteCollection extends Observable<NoteCollectionState> {
 
   rebindAdapter(next: StorageAdapter): void {
     this.adapter = next;
+    this.repairAttempted = false;
     this.update(() => EMPTY_STATE);
   }
 
