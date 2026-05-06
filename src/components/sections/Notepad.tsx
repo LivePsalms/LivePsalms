@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuth } from '@/auth/useAuth';
-import { useNotepad } from '@/notepad/context/useNotepad';
+import { useNotepadActions } from '@/notepad/context/useNotepadActions';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
 import { NotepadEditor } from '@/notepad/components/Editor';
@@ -23,7 +23,8 @@ function NotepadWorkspace() {
 
   const navigate = useNavigate();
   const { user, adapter, loading: authLoading } = useAuth();
-  const { refresh } = useNotepad();
+  const actions = useNotepadActions();
+  const refresh = () => actions.init();
   const [showMigration, setShowMigration] = useState(false);
 
   const isOnline = useOnlineStatus();
