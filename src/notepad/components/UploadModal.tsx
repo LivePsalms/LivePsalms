@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, FileText, X } from 'lucide-react';
-import { useNotepad } from '../context/useNotepad';
+import { useFolderHierarchy } from '../context/useFolderHierarchy';
+import { useNotepadActions } from '../context/useNotepadActions';
 import { extractVerseRefs } from '../extensions/bible-verse-utils';
 import type { Note } from '../types';
 
@@ -160,7 +161,9 @@ function formatBytes(bytes: number): string {
 // ---------------------------------------------------------------------------
 
 export function UploadModal({ open, onOpenChange }: UploadModalProps) {
-  const { folders, importNotes } = useNotepad();
+  const { folders } = useFolderHierarchy();
+  const actions = useNotepadActions();
+  const importNotes = actions.importNotes.bind(actions);
 
   const [files, setFiles] = useState<File[]>([]);
   const [folderId, setFolderId] = useState<string>('root');

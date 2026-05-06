@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useNotepad } from '../context/useNotepad';
+import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import type { FolderIcon } from '../types';
 
 const FOLDER_ICONS: { key: FolderIcon; icon: typeof Heart; label: string }[] = [
@@ -61,7 +61,8 @@ interface NewFolderDialogProps {
 }
 
 export function NewFolderDialog({ open, onOpenChange }: NewFolderDialogProps) {
-  const { folders, createFolder } = useNotepad();
+  const { folders, hierarchy } = useFolderHierarchy();
+  const createFolder = hierarchy.createFolder.bind(hierarchy);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string>('root');
   const [selectedIcon, setSelectedIcon] = useState<FolderIcon>('book');

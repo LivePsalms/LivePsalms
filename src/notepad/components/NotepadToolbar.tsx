@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useNotepad } from '../context/useNotepad';
+import { useNoteCollection } from '../context/useNoteCollection';
 import type { NoteType } from '../types';
 import { UploadModal } from './UploadModal';
 
@@ -44,7 +44,8 @@ export function NotepadToolbar({
   onOpenSearch,
 }: NotepadToolbarProps) {
   const navigate = useNavigate();
-  const { createNote } = useNotepad();
+  const { collection } = useNoteCollection();
+  const createNote = collection.createNote.bind(collection);
   const [uploadOpen, setUploadOpen] = useState(false);
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const { currentTier, showLevelUp, levelUpTier, dismissLevelUp } = useUserTier(
