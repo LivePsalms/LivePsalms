@@ -72,6 +72,9 @@ export function BacklinksPanel() {
       if (note.id === activeNote.id) continue;
       if (!note.content) continue;
 
+      // Check by noteId in raw JSON (covers [[links]] inserted via the link picker)
+      const linkedById = note.content.includes(`"noteId":"${activeNote.id}"`);
+
       let plainText = '';
       try {
         const json = JSON.parse(note.content) as TipTapNode;
@@ -80,9 +83,15 @@ export function BacklinksPanel() {
         plainText = note.content;
       }
 
-      if (!plainText.includes(activeNote.title)) continue;
+      // Also check plain text title match (covers manual mentions)
+      const linkedByTitle = activeNote.title.trim().length > 0 &&
+        plainText.toLowerCase().includes(activeNote.title.toLowerCase());
 
-      const snippet = buildSnippet(plainText, activeNote.title);
+      if (!linkedById && !linkedByTitle) continue;
+
+      // Build snippet: prefer title-based location, fall back to start of text
+      const snippet = buildSnippet(plainText, activeNote.title) ||
+        plainText.slice(0, 80) + (plainText.length > 80 ? '…' : '');
       const type = note.type;
 
       if (!result[type]) result[type] = [];

@@ -1,8 +1,10 @@
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import type { Note, Folder, NoteType, FolderIcon, JournalTheme } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
+import { repairNoteLinks } from '../storage/repair-note-links';
 import type { GraphNode, GraphEdge } from '../graph/types';
 import { useGraph } from '../graph/use-graph';
 
@@ -84,14 +86,48 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
 
   const graph = useGraph(notes, activeNoteId);
 
+  // Tracks whether we've already attempted a repair pass for the current
+  // adapter. Prevents the auto-heal from running every refresh — it only
+  // fires once per adapter lifetime (i.e. once after sign-in or sign-out).
+  const repairAttemptedRef = useRef(false);
+
   const refresh = useCallback(async () => {
     const [fetchedNotes, fetchedFolders] = await Promise.all([
       adapterRef.current.getNotes(),
       adapterRef.current.getFolders(),
     ]);
+
+    // One-shot auto-heal for legacy data: notes imported under the old
+    // migration code have `noteLink` marks pointing at dead localStorage
+    // ids. Match by `noteTitle` and rewrite to the current id so cross-note
+    // graph edges resolve again.
+    if (!repairAttemptedRef.current && fetchedNotes.length > 0) {
+      repairAttemptedRef.current = true;
+      try {
+        const result = await repairNoteLinks(fetchedNotes, adapterRef.current);
+        if (result.repairedNotes > 0) {
+          toast.success(
+            `Repaired ${result.rewiredLinks} broken cross-reference${result.rewiredLinks === 1 ? '' : 's'}.`
+          );
+          const refreshed = await adapterRef.current.getNotes();
+          setNotes(refreshed);
+          setFolders(fetchedFolders);
+          return;
+        }
+      } catch (err) {
+        console.warn('[NotepadProvider] note-link repair pass failed:', err);
+      }
+    }
+
     setNotes(fetchedNotes);
     setFolders(fetchedFolders);
   }, []);
+
+  // Reset the repair guard when the adapter swaps (sign-in / sign-out) so
+  // that the next sign-in re-evaluates whether a repair is needed.
+  useEffect(() => {
+    repairAttemptedRef.current = false;
+  }, [adapterVersion]);
 
   useEffect(() => {
     refresh();

@@ -60,6 +60,30 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     return this.mapNote(data);
   }
 
+  async importNote(note: Note): Promise<Note> {
+    // Preserve id, created_at, and updated_at so cross-note links embedded in
+    // content (which reference notes by their original id) stay valid.
+    const { data, error } = await this.#client
+      .from('notes')
+      .insert({
+        id: note.id,
+        user_id: this.#userId,
+        title: note.title,
+        content: note.content,
+        folder_id: note.folderId === 'root' ? null : note.folderId,
+        type: note.type,
+        tags: note.tags,
+        word_count: note.wordCount ?? countWordsFromTipTapJSON(note.content),
+        created_at: note.createdAt,
+        updated_at: note.updatedAt,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapNote(data);
+  }
+
   async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
     const mapped: Record<string, unknown> = {};
     if (updates.title !== undefined) mapped.title = updates.title;
@@ -118,6 +142,26 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     const { data, error } = await this.#client
       .from('folders')
       .insert({
+        user_id: this.#userId,
+        name: folder.name,
+        parent_id: folder.parentId,
+        order: folder.order,
+        icon: folder.icon ?? null,
+        color: folder.color ?? null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapFolder(data);
+  }
+
+  async importFolder(folder: Folder): Promise<Folder> {
+    // Preserve id so notes that reference this folder via folderId stay linked.
+    const { data, error } = await this.#client
+      .from('folders')
+      .insert({
+        id: folder.id,
         user_id: this.#userId,
         name: folder.name,
         parent_id: folder.parentId,

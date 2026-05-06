@@ -85,29 +85,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       url.hash.includes('error=');
 
     if (!isOAuthCallback) {
-      // Normal page load — resolve initial session immediately
-      supabase.auth.getSession().then(({ data: { session: s } }) => {
-        setUser(s?.user ?? null);
-        if (s?.user) {
-          setAdapter(new SupabaseStorageAdapter(supabase!, s.user.id));
-          fetchProfile(s.user.id).then((p) => {
-            setProfile(p);
-            setLoading(false);
-          });
-        } else {
-          setAdapter(localAdapter);
-          setLoading(false);
-        }
-      });
+      // Normal page load — resolve initial session immediately.
+      // Profile fetch is fired in the background; it must NOT gate `loading`,
+      // because a slow/failed/missing profile would otherwise leave the UI stuck.
+      supabase.auth.getSession()
+        .then(({ data: { session: s } }) => {
+          setUser(s?.user ?? null);
+          if (s?.user) {
+            setAdapter(new SupabaseStorageAdapter(supabase!, s.user.id));
+            fetchProfile(s.user.id)
+              .then(setProfile)
+              .catch(() => setProfile(null));
+          } else {
+            setAdapter(localAdapter);
+          }
+        })
+        .catch(() => setUser(null))
+        .finally(() => setLoading(false));
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
+      (_event, s) => {
         setUser(s?.user ?? null);
         if (s?.user) {
           setAdapter(new SupabaseStorageAdapter(supabase!, s.user.id));
-          const p = await fetchProfile(s.user.id);
-          setProfile(p);
+          fetchProfile(s.user.id)
+            .then(setProfile)
+            .catch(() => setProfile(null));
           // Strip OAuth params from URL after successful sign-in
           if (isOAuthCallback) {
             window.history.replaceState({}, document.title, window.location.pathname);

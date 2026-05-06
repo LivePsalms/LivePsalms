@@ -48,6 +48,13 @@ export class LocalStorageAdapter implements StorageAdapter {
     return newNote;
   }
 
+  async importNote(note: Note): Promise<Note> {
+    const notes = this.readNotes().filter((n) => n.id !== note.id);
+    notes.push(note);
+    this.writeNotes(notes);
+    return note;
+  }
+
   async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
     const notes = this.readNotes();
     const index = notes.findIndex((n) => n.id === id);
@@ -90,6 +97,13 @@ export class LocalStorageAdapter implements StorageAdapter {
     folders.push(newFolder);
     this.writeFolders(folders);
     return newFolder;
+  }
+
+  async importFolder(folder: Folder): Promise<Folder> {
+    const folders = this.readFolders().filter((f) => f.id !== folder.id);
+    folders.push(folder);
+    this.writeFolders(folders);
+    return folder;
   }
 
   async updateFolder(id: string, updates: Partial<Folder>): Promise<Folder> {

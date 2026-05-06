@@ -85,7 +85,6 @@ export function InfoPanel() {
       noteType,
       created: formatDate(activeNote.createdAt),
       updated: formatDate(activeNote.updatedAt),
-      tags: activeNote.tags.length > 0 ? activeNote.tags.join(', ') : '—',
     };
   }, [activeNote, notes, folders]);
 
@@ -102,7 +101,6 @@ export function InfoPanel() {
     { label: 'Bible References', value: stats.verseCount },
     { label: 'Outgoing Links', value: stats.outgoingLinks },
     { label: 'Incoming Links', value: stats.incomingBacklinks },
-    { label: 'Tags', value: stats.tags },
     { label: 'Created', value: stats.created },
     { label: 'Last Updated', value: stats.updated },
   ];

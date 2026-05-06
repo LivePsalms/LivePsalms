@@ -16,6 +16,8 @@ import {
   Code,
   Underline as UnderlineIcon,
   ChevronDown,
+  Palette,
+  Check,
 } from 'lucide-react';
 import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
@@ -23,6 +25,9 @@ import { TagMark } from '../extensions/tag-mark';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
 import type { VerseResult } from '../extensions/bible-verse-utils';
 import { useNotepad } from '../context/useNotepad';
+import { JOURNAL_THEMES } from '../types';
+import type { JournalTheme } from '../types';
+import '../journal-themes.css';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,7 +67,7 @@ function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 export function NotepadEditor() {
-  const { notes, activeNote, updateNote, openNote } = useNotepad();
+  const { notes, activeNote, updateNote, openNote, journalTheme, setJournalTheme } = useNotepad();
 
   // Tooltip state for bible verse hover
   const [verseTooltip, setVerseTooltip] = useState<VerseTooltip | null>(null);
@@ -254,6 +259,11 @@ export function NotepadEditor() {
   // Heading dropdown
   const [headingOpen, setHeadingOpen] = useState(false);
 
+  // Theme picker dropdown
+  const [themeOpen, setThemeOpen] = useState(false);
+
+  const isJournalThemed = journalTheme !== 'default';
+
   const currentHeading = editor
     ? editor.isActive('heading', { level: 1 }) ? 'H1'
     : editor.isActive('heading', { level: 2 }) ? 'H2'
@@ -321,7 +331,7 @@ export function NotepadEditor() {
           {/* Heading dropdown */}
           <div className="relative">
             <ToolbarButton
-              onClick={() => setHeadingOpen(!headingOpen)}
+              onClick={() => { setHeadingOpen(!headingOpen); setThemeOpen(false); }}
               active={currentHeading !== 'H'}
               title="Heading"
             >
@@ -420,89 +430,159 @@ export function NotepadEditor() {
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
+
+          <ToolbarDivider />
+
+          {/* Theme picker */}
+          <div className="relative">
+            <ToolbarButton
+              onClick={() => { setThemeOpen(!themeOpen); setHeadingOpen(false); }}
+              active={isJournalThemed}
+              title="Journal Theme"
+            >
+              <Palette size={15} />
+              <ChevronDown size={10} className="ml-0.5 opacity-50" />
+            </ToolbarButton>
+            {themeOpen && (
+              <div
+                className="absolute top-full right-0 mt-1 rounded-md shadow-lg z-50 py-1"
+                style={{
+                  background: 'rgba(240, 236, 232, 0.97)',
+                  border: '1px solid var(--pale-stone)',
+                  minWidth: 200,
+                }}
+              >
+                {JOURNAL_THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setJournalTheme(t.id as JournalTheme);
+                      setThemeOpen(false);
+                    }}
+                    className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors gap-2"
+                    style={{
+                      color: journalTheme === t.id ? 'var(--charred)' : 'var(--deep-umber)',
+                      fontWeight: journalTheme === t.id ? 600 : 400,
+                      fontFamily: 'Outfit, sans-serif',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: t.swatch,
+                        border: t.id === 'default' ? '1px solid var(--pale-stone)' : 'none',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span className="flex-1 text-left">{t.label}</span>
+                    {journalTheme === t.id && (
+                      <Check size={12} style={{ color: 'var(--charred)' }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* Scrollable content area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 2.5rem', position: 'relative' }}>
-        {/* Title */}
-        <input
-          type="text"
-          value={activeNote.title}
-          onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
-          placeholder="Untitled"
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: '2rem',
-            fontWeight: 300,
-            color: 'var(--charred)',
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            width: '100%',
-            marginBottom: '0.35rem',
-            padding: 0,
-          }}
-        />
-
-        {/* Date */}
-        <div
-          style={{
-            fontFamily: "'Outfit', sans-serif",
-            fontSize: '0.8rem',
-            color: 'var(--silica)',
-            marginBottom: '0.75rem',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {formatDate(activeNote.createdAt)}
-        </div>
-
-        {/* Tags */}
-        {activeNote.tags.length > 0 && (
-          <div
+      <div
+        data-journal-theme={journalTheme}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: isJournalThemed ? '32px' : '2rem 2.5rem',
+          position: 'relative',
+          background: isJournalThemed ? '#f5f0e8' : undefined,
+        }}
+      >
+        <div className={isJournalThemed ? 'journal-page' : ''}>
+          {/* Title */}
+          <input
+            type="text"
+            value={activeNote.title}
+            onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
+            placeholder="Untitled"
+            className={isJournalThemed ? 'journal-title' : ''}
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.4rem',
+              fontFamily: isJournalThemed ? undefined : "'Cormorant Garamond', serif",
+              fontSize: isJournalThemed ? undefined : '2rem',
+              fontWeight: isJournalThemed ? undefined : 300,
+              color: isJournalThemed ? undefined : 'var(--charred)',
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              width: '100%',
+              marginBottom: '0.35rem',
+              padding: 0,
+            }}
+          />
+
+          {/* Date */}
+          <div
+            className={isJournalThemed ? 'journal-date' : ''}
+            style={{
+              fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
+              fontSize: isJournalThemed ? undefined : '0.8rem',
+              color: isJournalThemed ? undefined : 'var(--silica)',
               marginBottom: '0.75rem',
+              letterSpacing: '0.03em',
             }}
           >
-            {activeNote.tags.map((tag) => (
-              <span
-                key={tag}
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '0.78rem',
-                  background: 'rgba(188, 179, 163, 0.2)',
-                  color: 'var(--deep-umber)',
-                  borderRadius: '4px',
-                  padding: '2px 8px',
-                }}
-              >
-                {tag}
-              </span>
-            ))}
+            {formatDate(activeNote.createdAt)}
           </div>
-        )}
 
-        {/* Divider */}
-        <hr
-          style={{
-            border: 'none',
-            borderTop: '1px solid var(--pale-stone)',
-            marginBottom: '1.5rem',
-          }}
-        />
+          {/* Tags */}
+          {activeNote.tags.length > 0 && (
+            <div
+              className={isJournalThemed ? 'journal-tags' : ''}
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.4rem',
+                marginBottom: '0.75rem',
+              }}
+            >
+              {activeNote.tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
+                    fontSize: isJournalThemed ? undefined : '0.78rem',
+                    background: isJournalThemed ? undefined : 'rgba(188, 179, 163, 0.2)',
+                    color: isJournalThemed ? undefined : 'var(--deep-umber)',
+                    borderRadius: '4px',
+                    padding: '2px 8px',
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
-        {/* Editor content */}
-        <div
-          onMouseOver={handleMouseOver}
-          onMouseOut={handleMouseOut}
-          onClick={handleClick}
-          style={{ flex: 1 }}
-        >
-          <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
+          {/* Divider */}
+          <hr
+            className={isJournalThemed ? 'journal-divider' : ''}
+            style={isJournalThemed ? {} : {
+              border: 'none',
+              borderTop: '1px solid var(--pale-stone)',
+              marginBottom: '1.5rem',
+            }}
+          />
+
+          {/* Editor content */}
+          <div
+            onMouseOver={handleMouseOver}
+            onMouseOut={handleMouseOut}
+            onClick={handleClick}
+            style={{ flex: 1 }}
+          >
+            <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
+          </div>
         </div>
       </div>
 
