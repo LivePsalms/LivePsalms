@@ -47,7 +47,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useNotepad } from '../context/useNotepad';
+import { useNoteCollection } from '../context/useNoteCollection';
+import { useFolderHierarchy } from '../context/useFolderHierarchy';
+import { useNotepadActions } from '../context/useNotepadActions';
 import { NewFolderDialog, FOLDER_ICONS } from './NewFolderDialog';
 import type { Note, Folder, NoteType } from '../types';
 
@@ -630,20 +632,19 @@ function FolderItem({
 // ---------------------------------------------------------------------------
 
 export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectionHeader?: boolean } = {}) {
-  const {
-    notes,
-    folders,
-    activeNoteId,
-    openNote,
-    createNote,
-    moveNote,
-    renameNote,
-    deleteNote,
-    duplicateNote,
-    createFolder,
-    renameFolder,
-    deleteFolder,
-  } = useNotepad();
+  const { notes, activeNoteId, collection } = useNoteCollection();
+  const { folders, hierarchy } = useFolderHierarchy();
+  const actions = useNotepadActions();
+
+  const openNote = collection.openNote;
+  const createNote = collection.createNote.bind(collection);
+  const moveNote = collection.moveNote.bind(collection);
+  const renameNote = collection.renameNote.bind(collection);
+  const deleteNote = collection.deleteNote.bind(collection);
+  const duplicateNote = collection.duplicateNote.bind(collection);
+  const createFolder = hierarchy.createFolder.bind(hierarchy);
+  const renameFolder = hierarchy.renameFolder.bind(hierarchy);
+  const deleteFolder = actions.deleteFolder.bind(actions);
 
   const [filterText, setFilterText] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
