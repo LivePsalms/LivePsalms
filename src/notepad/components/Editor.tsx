@@ -25,7 +25,7 @@ import { TagMark } from '../extensions/tag-mark';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
 import type { VerseResult } from '../extensions/bible-verse-utils';
 import { useNoteCollection } from '../context/useNoteCollection';
-import { useNotepad } from '../context/useNotepad';
+import { useJournalTheme } from '../hooks/use-journal-theme';
 import { JOURNAL_THEMES } from '../types';
 import type { JournalTheme } from '../types';
 import '../journal-themes.css';
@@ -71,7 +71,7 @@ export function NotepadEditor() {
   const { notes, activeNote, collection } = useNoteCollection();
   const updateNote = collection.updateNote.bind(collection);
   const openNote = collection.openNote;
-  const { journalTheme, setJournalTheme } = useNotepad();
+  const [journalTheme, setJournalTheme] = useJournalTheme();
 
   // Tooltip state for bible verse hover
   const [verseTooltip, setVerseTooltip] = useState<VerseTooltip | null>(null);

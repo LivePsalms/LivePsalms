@@ -1,6 +1,6 @@
-import { createContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { createContext, useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import type { Note, Folder, NoteType, FolderIcon, JournalTheme } from '../types';
+import type { Note, Folder, NoteType, FolderIcon } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
 import type { GraphNode, GraphEdge } from '../graph/types';
@@ -27,8 +27,6 @@ export interface NotepadContextValue {
   deleteFolder: (id: string) => Promise<void>;
   importNotes: (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
   refresh: () => Promise<void>;
-  journalTheme: JournalTheme;
-  setJournalTheme: (theme: JournalTheme) => void;
   graphNodes: GraphNode[];
   graphEdges: GraphEdge[];
   graphActiveNodeId: string | null;
@@ -69,19 +67,6 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
   const notesState = useSyncExternalStore(notes.subscribe, notes.getSnapshot);
   const foldersState = useSyncExternalStore(folders.subscribe, folders.getSnapshot);
 
-  // Journal theme — temporary; evicted in Task 16.
-  const [journalTheme, setJournalThemeState] = useState<JournalTheme>(() => {
-    try {
-      return (localStorage.getItem('psalms-journal-theme') as JournalTheme) || 'default';
-    } catch {
-      return 'default';
-    }
-  });
-  const setJournalTheme = (theme: JournalTheme) => {
-    setJournalThemeState(theme);
-    try { localStorage.setItem('psalms-journal-theme', theme); } catch { /* noop */ }
-  };
-
   const graph = useGraph(notesState.notes, notesState.activeNoteId);
 
   const value: NotepadContextValue = {
@@ -101,8 +86,6 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     deleteFolder: actions.deleteFolder.bind(actions),
     importNotes: actions.importNotes.bind(actions),
     refresh: () => actions.init(),
-    journalTheme,
-    setJournalTheme,
     graphNodes: graph.nodes,
     graphEdges: graph.edges,
     graphActiveNodeId: graph.activeNodeId,
