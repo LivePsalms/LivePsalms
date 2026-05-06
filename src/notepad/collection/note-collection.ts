@@ -31,6 +31,41 @@ export class NoteCollection extends Observable<NoteCollectionState> {
     this.update((prev) => ({ ...prev, activeNoteId: id }));
   };
 
+  async createNote(folderId: string, type: import('../types').NoteType): Promise<Note> {
+    const created = await this.adapter.createNote({
+      title: 'Untitled',
+      content: '',
+      folderId,
+      type,
+      tags: [],
+      wordCount: 0,
+    });
+    this.update((prev) => ({
+      ...prev,
+      notes: [...prev.notes, created],
+      activeNoteId: created.id,
+    }));
+    return created;
+  }
+
+  async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
+    const updated = await this.adapter.updateNote(id, updates);
+    this.update((prev) => ({
+      ...prev,
+      notes: prev.notes.map((n) => (n.id === id ? updated : n)),
+    }));
+    return updated;
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    await this.adapter.deleteNote(id);
+    this.update((prev) => ({
+      ...prev,
+      notes: prev.notes.filter((n) => n.id !== id),
+      activeNoteId: prev.activeNoteId === id ? null : prev.activeNoteId,
+    }));
+  }
+
   private update(updater: (prev: NoteCollectionState) => NoteCollectionState): void {
     this.setState((prev) => {
       const next = updater(prev);
