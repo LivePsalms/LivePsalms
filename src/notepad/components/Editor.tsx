@@ -24,6 +24,7 @@ import { NoteLink } from '../extensions/note-link';
 import { TagMark } from '../extensions/tag-mark';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
 import type { VerseResult } from '../extensions/bible-verse-utils';
+import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepad } from '../context/useNotepad';
 import { JOURNAL_THEMES } from '../types';
 import type { JournalTheme } from '../types';
@@ -67,7 +68,10 @@ function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 export function NotepadEditor() {
-  const { notes, activeNote, updateNote, openNote, journalTheme, setJournalTheme } = useNotepad();
+  const { notes, activeNote, collection } = useNoteCollection();
+  const updateNote = collection.updateNote.bind(collection);
+  const openNote = collection.openNote;
+  const { journalTheme, setJournalTheme } = useNotepad();
 
   // Tooltip state for bible verse hover
   const [verseTooltip, setVerseTooltip] = useState<VerseTooltip | null>(null);
