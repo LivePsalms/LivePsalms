@@ -134,3 +134,83 @@ describe('NoteCollection — single mutations', () => {
     expect(collection.getSnapshot().activeNote?.title).toBe('A-renamed');
   });
 });
+
+describe('NoteCollection — sugar & bulk', () => {
+  let adapter: FakeStorageAdapter;
+  let collection: NoteCollection;
+
+  beforeEach(() => {
+    resetFakeAdapterIds();
+    adapter = new FakeStorageAdapter();
+    collection = new NoteCollection(adapter);
+  });
+
+  it('renameNote updates the title', async () => {
+    seedNote(adapter, { id: 'a', title: 'Old' });
+    await collection.init();
+    const renamed = await collection.renameNote('a', 'New');
+    expect(renamed.title).toBe('New');
+    expect(collection.getSnapshot().notes[0].title).toBe('New');
+  });
+
+  it('moveNote updates the folderId', async () => {
+    seedNote(adapter, { id: 'a', folderId: 'root' });
+    await collection.init();
+    await collection.moveNote('a', 'folder-1');
+    expect(collection.getSnapshot().notes[0].folderId).toBe('folder-1');
+  });
+
+  it('duplicateNote appends the duplicate', async () => {
+    seedNote(adapter, { id: 'a', title: 'Original' });
+    await collection.init();
+    const dup = await collection.duplicateNote('a');
+    const state = collection.getSnapshot();
+    expect(state.notes).toHaveLength(2);
+    expect(state.notes[1].id).toBe(dup.id);
+    expect(state.notes[1].title).toBe('Original (copy)');
+  });
+
+  it('applyReparenting patches folderId for the named ids only', async () => {
+    seedNote(adapter, { id: 'a', folderId: 'F1' });
+    seedNote(adapter, { id: 'b', folderId: 'F1' });
+    seedNote(adapter, { id: 'c', folderId: 'F2' });
+    await collection.init();
+
+    collection.applyReparenting(['a', 'b'], 'root');
+
+    const state = collection.getSnapshot();
+    expect(state.notes.find((n) => n.id === 'a')?.folderId).toBe('root');
+    expect(state.notes.find((n) => n.id === 'b')?.folderId).toBe('root');
+    expect(state.notes.find((n) => n.id === 'c')?.folderId).toBe('F2');
+  });
+
+  it('refetchAll re-reads notes from the adapter', async () => {
+    await collection.init();
+    seedNote(adapter, { id: 'late', title: 'Late' });
+    await collection.refetchAll();
+    expect(collection.getSnapshot().notes.map((n) => n.id)).toEqual(['late']);
+  });
+
+  it('rebindAdapter swaps the adapter and clears state until the next init', async () => {
+    seedNote(adapter, { id: 'a' });
+    await collection.init();
+    expect(collection.getSnapshot().notes).toHaveLength(1);
+
+    const next = new FakeStorageAdapter();
+    collection.rebindAdapter(next);
+    expect(collection.getSnapshot().notes).toEqual([]);
+    expect(collection.getSnapshot().activeNoteId).toBeNull();
+  });
+
+  it('after rebindAdapter, init reads from the new adapter', async () => {
+    await collection.init();
+    const next = new FakeStorageAdapter();
+    next.notes.push({
+      id: 'fresh', title: 'Fresh', content: '', folderId: 'root', type: 'note', tags: [], wordCount: 0,
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    });
+    collection.rebindAdapter(next);
+    await collection.init();
+    expect(collection.getSnapshot().notes.map((n) => n.id)).toEqual(['fresh']);
+  });
+});

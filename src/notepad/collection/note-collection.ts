@@ -66,6 +66,40 @@ export class NoteCollection extends Observable<NoteCollectionState> {
     }));
   }
 
+  renameNote(id: string, title: string): Promise<Note> {
+    return this.updateNote(id, { title });
+  }
+
+  moveNote(id: string, folderId: string): Promise<Note> {
+    return this.updateNote(id, { folderId });
+  }
+
+  async duplicateNote(id: string): Promise<Note> {
+    const dup = await this.adapter.duplicateNote(id);
+    this.update((prev) => ({ ...prev, notes: [...prev.notes, dup] }));
+    return dup;
+  }
+
+  applyReparenting(noteIds: string[], newFolderId: string): void {
+    const idSet = new Set(noteIds);
+    this.update((prev) => ({
+      ...prev,
+      notes: prev.notes.map((n) =>
+        idSet.has(n.id) ? { ...n, folderId: newFolderId } : n,
+      ),
+    }));
+  }
+
+  async refetchAll(): Promise<void> {
+    const notes = await this.adapter.getNotes();
+    this.update((prev) => ({ ...prev, notes }));
+  }
+
+  rebindAdapter(next: StorageAdapter): void {
+    this.adapter = next;
+    this.update(() => EMPTY_STATE);
+  }
+
   private update(updater: (prev: NoteCollectionState) => NoteCollectionState): void {
     this.setState((prev) => {
       const next = updater(prev);
