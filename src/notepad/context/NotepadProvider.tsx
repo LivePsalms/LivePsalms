@@ -1,21 +1,20 @@
-import { createContext, useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import { toast } from 'sonner';
 import type { Note, Folder, NoteType, FolderIcon, JournalTheme } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
-import { repairNoteLinks } from '../storage/repair-note-links';
 import type { GraphNode, GraphEdge } from '../graph/types';
 import { useGraph } from '../graph/use-graph';
+import { NoteCollection, FolderHierarchy, NotepadActions } from '../collection';
+import { NoteCollectionContext } from './useNoteCollection';
+import { FolderHierarchyContext } from './useFolderHierarchy';
+import { NotepadActionsContext } from './useNotepadActions';
 
 export interface NotepadContextValue {
-  // State
   notes: Note[];
   folders: Folder[];
   activeNoteId: string | null;
   activeNote: Note | null;
-
-  // Note actions
   openNote: (id: string | null) => void;
   createNote: (folderId: string, type: NoteType) => Promise<Note>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<Note>;
@@ -23,22 +22,13 @@ export interface NotepadContextValue {
   duplicateNote: (id: string) => Promise<Note>;
   moveNote: (id: string, folderId: string) => Promise<Note>;
   renameNote: (id: string, title: string) => Promise<Note>;
-
-  // Folder actions
   createFolder: (name: string, parentId: string | null, icon?: FolderIcon, color?: string) => Promise<Folder>;
   renameFolder: (id: string, name: string) => Promise<Folder>;
   deleteFolder: (id: string) => Promise<void>;
-
-  // Bulk
   importNotes: (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
-
   refresh: () => Promise<void>;
-
-  // Journal theme
   journalTheme: JournalTheme;
   setJournalTheme: (theme: JournalTheme) => void;
-
-  // Graph
   graphNodes: GraphNode[];
   graphEdges: GraphEdge[];
   graphActiveNodeId: string | null;
@@ -55,20 +45,31 @@ interface NotepadProviderProps {
 }
 
 export function NotepadProvider({ children, adapter: adapterProp }: NotepadProviderProps) {
-  const [adapterVersion, setAdapterVersion] = useState(0);
-  const adapterRef = useRef<StorageAdapter>(adapterProp ?? new LocalStorageAdapter());
+  const initialAdapter = useMemo(() => adapterProp ?? new LocalStorageAdapter(), []);
 
-  // Update adapter when prop changes (user logs in/out)
+  const { notes, folders, actions } = useMemo(() => {
+    const notesModule = new NoteCollection(initialAdapter);
+    const foldersModule = new FolderHierarchy(initialAdapter);
+    const actionsModule = new NotepadActions(initialAdapter, notesModule, foldersModule);
+    return { notes: notesModule, folders: foldersModule, actions: actionsModule };
+  }, [initialAdapter]);
+
+  // Initial load + adapter rebinds.
   useEffect(() => {
-    if (adapterProp && adapterProp !== adapterRef.current) {
-      adapterRef.current = adapterProp;
-      setAdapterVersion((v) => v + 1);
-    }
-  }, [adapterProp]);
+    const run = async () => {
+      if (adapterProp && adapterProp !== initialAdapter) {
+        await actions.rebindAdapter(adapterProp);
+      } else {
+        await actions.init();
+      }
+    };
+    run().catch((err) => console.error('[NotepadProvider] init failed:', err));
+  }, [adapterProp, actions, initialAdapter]);
 
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const notesState = useSyncExternalStore(notes.subscribe, notes.getSnapshot);
+  const foldersState = useSyncExternalStore(folders.subscribe, folders.getSnapshot);
+
+  // Journal theme — temporary; evicted in Task 16.
   const [journalTheme, setJournalThemeState] = useState<JournalTheme>(() => {
     try {
       return (localStorage.getItem('psalms-journal-theme') as JournalTheme) || 'default';
@@ -76,184 +77,30 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
       return 'default';
     }
   });
-
-  const setJournalTheme = useCallback((theme: JournalTheme) => {
+  const setJournalTheme = (theme: JournalTheme) => {
     setJournalThemeState(theme);
     try { localStorage.setItem('psalms-journal-theme', theme); } catch { /* noop */ }
-  }, []);
+  };
 
-  const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
-
-  const graph = useGraph(notes, activeNoteId);
-
-  // Tracks whether we've already attempted a repair pass for the current
-  // adapter. Prevents the auto-heal from running every refresh — it only
-  // fires once per adapter lifetime (i.e. once after sign-in or sign-out).
-  const repairAttemptedRef = useRef(false);
-
-  const refresh = useCallback(async () => {
-    const [fetchedNotes, fetchedFolders] = await Promise.all([
-      adapterRef.current.getNotes(),
-      adapterRef.current.getFolders(),
-    ]);
-
-    // One-shot auto-heal for legacy data: notes imported under the old
-    // migration code have `noteLink` marks pointing at dead localStorage
-    // ids. Match by `noteTitle` and rewrite to the current id so cross-note
-    // graph edges resolve again.
-    if (!repairAttemptedRef.current && fetchedNotes.length > 0) {
-      repairAttemptedRef.current = true;
-      try {
-        const result = await repairNoteLinks(fetchedNotes, adapterRef.current);
-        if (result.repairedNotes > 0) {
-          toast.success(
-            `Repaired ${result.rewiredLinks} broken cross-reference${result.rewiredLinks === 1 ? '' : 's'}.`
-          );
-          const refreshed = await adapterRef.current.getNotes();
-          setNotes(refreshed);
-          setFolders(fetchedFolders);
-          return;
-        }
-      } catch (err) {
-        console.warn('[NotepadProvider] note-link repair pass failed:', err);
-      }
-    }
-
-    setNotes(fetchedNotes);
-    setFolders(fetchedFolders);
-  }, []);
-
-  // Reset the repair guard when the adapter swaps (sign-in / sign-out) so
-  // that the next sign-in re-evaluates whether a repair is needed.
-  useEffect(() => {
-    repairAttemptedRef.current = false;
-  }, [adapterVersion]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh, adapterVersion]);
-
-  const openNote = useCallback((id: string | null) => {
-    setActiveNoteId(id);
-  }, []);
-
-  const createNote = useCallback(
-    async (folderId: string, type: NoteType): Promise<Note> => {
-      const note = await adapterRef.current.createNote({
-        title: 'Untitled',
-        content: '',
-        folderId,
-        type,
-        tags: [],
-        wordCount: 0,
-      });
-      await refresh();
-      setActiveNoteId(note.id);
-      return note;
-    },
-    [refresh],
-  );
-
-  const updateNote = useCallback(
-    async (id: string, updates: Partial<Note>): Promise<Note> => {
-      const updated = await adapterRef.current.updateNote(id, updates);
-      await refresh();
-      return updated;
-    },
-    [refresh],
-  );
-
-  const deleteNote = useCallback(
-    async (id: string): Promise<void> => {
-      await adapterRef.current.deleteNote(id);
-      setActiveNoteId((prev) => (prev === id ? null : prev));
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const duplicateNote = useCallback(
-    async (id: string): Promise<Note> => {
-      const dup = await adapterRef.current.duplicateNote(id);
-      await refresh();
-      return dup;
-    },
-    [refresh],
-  );
-
-  const moveNote = useCallback(
-    async (id: string, folderId: string): Promise<Note> => {
-      const updated = await adapterRef.current.updateNote(id, { folderId });
-      await refresh();
-      return updated;
-    },
-    [refresh],
-  );
-
-  const renameNote = useCallback(
-    async (id: string, title: string): Promise<Note> => {
-      const updated = await adapterRef.current.updateNote(id, { title });
-      await refresh();
-      return updated;
-    },
-    [refresh],
-  );
-
-  const createFolder = useCallback(
-    async (name: string, parentId: string | null, icon?: FolderIcon, color?: string): Promise<Folder> => {
-      const siblings = folders.filter((f) => f.parentId === parentId);
-      const order = siblings.length;
-      const folder = await adapterRef.current.createFolder({ name, parentId, order, icon, color });
-      await refresh();
-      return folder;
-    },
-    [folders, refresh],
-  );
-
-  const renameFolder = useCallback(
-    async (id: string, name: string): Promise<Folder> => {
-      const updated = await adapterRef.current.updateFolder(id, { name });
-      await refresh();
-      return updated;
-    },
-    [refresh],
-  );
-
-  const deleteFolder = useCallback(
-    async (id: string): Promise<void> => {
-      await adapterRef.current.deleteFolder(id);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const importNotes = useCallback(
-    async (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> => {
-      for (const item of items) {
-        await adapterRef.current.createNote(item);
-      }
-      await refresh();
-    },
-    [refresh],
-  );
+  const graph = useGraph(notesState.notes, notesState.activeNoteId);
 
   const value: NotepadContextValue = {
-    notes,
-    folders,
-    activeNoteId,
-    activeNote,
-    openNote,
-    createNote,
-    updateNote,
-    deleteNote,
-    duplicateNote,
-    moveNote,
-    renameNote,
-    createFolder,
-    renameFolder,
-    deleteFolder,
-    importNotes,
-    refresh,
+    notes: notesState.notes,
+    folders: foldersState.folders,
+    activeNoteId: notesState.activeNoteId,
+    activeNote: notesState.activeNote,
+    openNote: notes.openNote,
+    createNote: notes.createNote.bind(notes),
+    updateNote: notes.updateNote.bind(notes),
+    deleteNote: notes.deleteNote.bind(notes),
+    duplicateNote: notes.duplicateNote.bind(notes),
+    moveNote: notes.moveNote.bind(notes),
+    renameNote: notes.renameNote.bind(notes),
+    createFolder: folders.createFolder.bind(folders),
+    renameFolder: folders.renameFolder.bind(folders),
+    deleteFolder: actions.deleteFolder.bind(actions),
+    importNotes: actions.importNotes.bind(actions),
+    refresh: () => actions.init(),
     journalTheme,
     setJournalTheme,
     graphNodes: graph.nodes,
@@ -264,5 +111,13 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     getNeighborhood: graph.getNeighborhood,
   };
 
-  return <NotepadContext.Provider value={value}>{children}</NotepadContext.Provider>;
+  return (
+    <NoteCollectionContext.Provider value={notes}>
+      <FolderHierarchyContext.Provider value={folders}>
+        <NotepadActionsContext.Provider value={actions}>
+          <NotepadContext.Provider value={value}>{children}</NotepadContext.Provider>
+        </NotepadActionsContext.Provider>
+      </FolderHierarchyContext.Provider>
+    </NoteCollectionContext.Provider>
+  );
 }
