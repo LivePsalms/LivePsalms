@@ -10,7 +10,7 @@ function seedNote(adapter: FakeStorageAdapter, overrides: Partial<{ id: string; 
     title: overrides.title ?? 'Seeded',
     content: '',
     folderId: overrides.folderId ?? 'root',
-    type: 'note',
+    type: 'devotion',
     tags: [],
     wordCount: 0,
     createdAt: '2026-01-01T00:00:00Z',
@@ -81,7 +81,7 @@ describe('NoteCollection — single mutations', () => {
 
   it('createNote appends and selects the new note', async () => {
     await collection.init();
-    const created = await collection.createNote('root', 'note');
+    const created = await collection.createNote('root', 'devotion');
     const state = collection.getSnapshot();
     expect(state.notes.map((n) => n.id)).toEqual([created.id]);
     expect(state.activeNoteId).toBe(created.id);
@@ -207,7 +207,7 @@ describe('NoteCollection — sugar & bulk', () => {
     await collection.init();
     const next = new FakeStorageAdapter();
     next.notes.push({
-      id: 'fresh', title: 'Fresh', content: '', folderId: 'root', type: 'note', tags: [], wordCount: 0,
+      id: 'fresh', title: 'Fresh', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0,
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     });
     collection.rebindAdapter(next);

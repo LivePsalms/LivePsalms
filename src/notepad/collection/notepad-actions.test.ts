@@ -6,7 +6,7 @@ import { FakeStorageAdapter, resetFakeAdapterIds } from './fake-storage-adapter'
 
 function seedNote(adapter: FakeStorageAdapter, id: string, folderId: string) {
   adapter.notes.push({
-    id, title: id, content: '', folderId, type: 'note', tags: [], wordCount: 0,
+    id, title: id, content: '', folderId, type: 'devotion', tags: [], wordCount: 0,
     createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
   });
 }
@@ -66,8 +66,8 @@ describe('NotepadActions', () => {
   it('importNotes creates notes via the adapter and refetches', async () => {
     await actions.init();
     await actions.importNotes([
-      { title: 'X', content: '', folderId: 'root', type: 'note', tags: [], wordCount: 0 },
-      { title: 'Y', content: '', folderId: 'root', type: 'note', tags: [], wordCount: 0 },
+      { title: 'X', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
+      { title: 'Y', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
     ]);
     expect(notes.getSnapshot().notes.map((n) => n.title)).toEqual(['X', 'Y']);
   });

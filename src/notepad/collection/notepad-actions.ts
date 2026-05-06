@@ -4,11 +4,15 @@ import { NoteCollection } from './note-collection';
 import { FolderHierarchy } from './folder-hierarchy';
 
 export class NotepadActions {
-  constructor(
-    private adapter: StorageAdapter,
-    private notes: NoteCollection,
-    private folders: FolderHierarchy,
-  ) {}
+  private adapter: StorageAdapter;
+  private notes: NoteCollection;
+  private folders: FolderHierarchy;
+
+  constructor(adapter: StorageAdapter, notes: NoteCollection, folders: FolderHierarchy) {
+    this.adapter = adapter;
+    this.notes = notes;
+    this.folders = folders;
+  }
 
   async init(): Promise<void> {
     await Promise.all([this.notes.init(), this.folders.init()]);
