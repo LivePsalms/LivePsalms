@@ -8,7 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { useNotepad } from '../context/useNotepad';
+import { useNoteCollection } from '../context/useNoteCollection';
 import { extractVerseRefs } from '../extensions/bible-verse-utils';
 
 // Recursively extracts plain text from a TipTap JSON node
@@ -23,7 +23,8 @@ function extractText(node: Record<string, unknown>): string {
 }
 
 export function SearchDialog() {
-  const { notes, openNote } = useNotepad();
+  const { notes, collection } = useNoteCollection();
+  const openNote = collection.openNote;
   const [open, setOpen] = useState(false);
 
   // Cmd+K / Ctrl+K toggles the dialog

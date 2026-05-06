@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PenLine, Mic, Sparkles, type LucideIcon } from 'lucide-react';
-import { useNotepad } from '../context/useNotepad';
+import { useNoteCollection } from '../context/useNoteCollection';
 import type { NoteType, Note } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -61,7 +61,8 @@ function buildSnippet(text: string, title: string): string {
 // ---------------------------------------------------------------------------
 
 export function BacklinksPanel() {
-  const { notes, activeNote, openNote } = useNotepad();
+  const { notes, activeNote, collection } = useNoteCollection();
+  const openNote = collection.openNote;
 
   const groupedBacklinks = useMemo<Partial<Record<NoteType, BacklinkCard[]>>>(() => {
     if (!activeNote) return {};

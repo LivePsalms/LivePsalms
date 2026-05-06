@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useNotepad } from '../context/useNotepad';
+import { useNoteCollection } from '../context/useNoteCollection';
+import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { VERSE_REGEX } from '../extensions/bible-verse-utils';
 
 // ---------------------------------------------------------------------------
@@ -46,7 +47,8 @@ function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 export function InfoPanel() {
-  const { notes, folders, activeNote } = useNotepad();
+  const { notes, activeNote } = useNoteCollection();
+  const { folders } = useFolderHierarchy();
 
   const stats = useMemo(() => {
     if (!activeNote) return null;
