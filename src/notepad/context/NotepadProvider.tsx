@@ -3,8 +3,6 @@ import type { ReactNode } from 'react';
 import type { Note, Folder, NoteType, FolderIcon } from '../types';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
-import type { GraphNode, GraphEdge } from '../graph/types';
-import { useGraph } from '../graph/use-graph';
 import { NoteCollection, FolderHierarchy, NotepadActions } from '../collection';
 import { NoteCollectionContext } from './useNoteCollection';
 import { FolderHierarchyContext } from './useFolderHierarchy';
@@ -27,12 +25,6 @@ export interface NotepadContextValue {
   deleteFolder: (id: string) => Promise<void>;
   importNotes: (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
   refresh: () => Promise<void>;
-  graphNodes: GraphNode[];
-  graphEdges: GraphEdge[];
-  graphActiveNodeId: string | null;
-  graphLoading: boolean;
-  rebuildGraph: () => void;
-  getNeighborhood: (nodeId: string, depth: number) => Set<string>;
 }
 
 export const NotepadContext = createContext<NotepadContextValue | null>(null);
@@ -67,8 +59,6 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
   const notesState = useSyncExternalStore(notes.subscribe, notes.getSnapshot);
   const foldersState = useSyncExternalStore(folders.subscribe, folders.getSnapshot);
 
-  const graph = useGraph(notesState.notes, notesState.activeNoteId);
-
   const value: NotepadContextValue = {
     notes: notesState.notes,
     folders: foldersState.folders,
@@ -86,12 +76,6 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
     deleteFolder: actions.deleteFolder.bind(actions),
     importNotes: actions.importNotes.bind(actions),
     refresh: () => actions.init(),
-    graphNodes: graph.nodes,
-    graphEdges: graph.edges,
-    graphActiveNodeId: graph.activeNodeId,
-    graphLoading: graph.isLoading,
-    rebuildGraph: graph.rebuildGraph,
-    getNeighborhood: graph.getNeighborhood,
   };
 
   return (

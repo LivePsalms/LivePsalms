@@ -10,7 +10,8 @@ import {
 } from 'd3-force';
 import { forceSharedTags } from '@/notepad/graph/force-shared-tags';
 import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2, Settings2 } from 'lucide-react';
-import { useNotepad } from '@/notepad/context/useNotepad';
+import { useNoteCollection } from '@/notepad/context/useNoteCollection';
+import { useGraph } from '@/notepad/graph/use-graph';
 
 interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -54,7 +55,9 @@ interface GraphPaneProps {
 }
 
 export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: GraphPaneProps) {
-  const { graphNodes, graphEdges, graphActiveNodeId, graphLoading, openNote, getNeighborhood } = useNotepad();
+  const { notes, activeNoteId, collection } = useNoteCollection();
+  const { nodes: graphNodes, edges: graphEdges, activeNodeId: graphActiveNodeId, isLoading: graphLoading, getNeighborhood } = useGraph(notes, activeNoteId);
+  const openNote = collection.openNote;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -230,7 +233,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
 
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      let alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
+      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
 
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
