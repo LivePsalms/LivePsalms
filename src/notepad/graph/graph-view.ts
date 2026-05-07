@@ -186,6 +186,11 @@ export class GraphView extends Observable<GraphViewState> {
     return this.simNodes;
   }
 
+  /** Test affordance — read sim links. */
+  getSimLinks(): SimLink[] {
+    return this.simLinks;
+  }
+
   // Stubs filled in by later tasks.
   handleWheel(_e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void {
     // Task 8.

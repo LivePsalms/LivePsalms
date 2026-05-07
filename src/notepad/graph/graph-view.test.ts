@@ -246,3 +246,50 @@ describe('GraphView — setMode', () => {
     expect(calls).toContain(3);
   });
 });
+
+describe('GraphView — setFilters', () => {
+  it('drops nodes whose type is filtered off', () => {
+    const { view } = attached();
+    view.setData(
+      [
+        node({ id: 'a', type: 'devotion' }),
+        node({ id: 'b', type: 'sermon' }),
+        node({ id: 'c', type: 'theme' }),
+      ],
+      [],
+      null,
+    );
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    const ids = view.getSimNodes().map((n) => n.id).sort();
+    expect(ids).toEqual(['a', 'c']);
+  });
+
+  it('drops edges whose endpoints have been filtered out', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [edge({ id: 'r1', source: 'a', target: 'b' })],
+      null,
+    );
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    expect(view.getSimLinks()).toEqual([]);
+  });
+
+  it('preserves positions of surviving nodes when a filter toggles', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [],
+      null,
+    );
+    const before = view.getSimNodes();
+    before.find((n) => n.id === 'a')!.x = 50;
+    before.find((n) => n.id === 'a')!.y = 60;
+
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    const after = view.getSimNodes();
+    const a = after.find((n) => n.id === 'a')!;
+    expect(a.x).toBe(50);
+    expect(a.y).toBe(60);
+  });
+});
