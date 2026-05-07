@@ -7,12 +7,12 @@
  *   cacheStorage — a Pick<Storage, 'getItem'|'setItem'> impl so the class is
  *                  testable without a DOM.  Pass `localStorage` in production;
  *                  pass `createInMemoryStorage()` in tests.
- *
- * Sync / fetchVerse logic is deferred to Task 5.
  */
 import { Observable } from '../collection/observable';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Reference, ScriptureNode } from './types';
+import { parseReferencesFromContent, parseVerseRef } from './reference-parser';
+import type { Note } from '../types';
 
 export type VerseFetcher = (ref: string) => Promise<{ text: string; translation: string } | null>;
 
@@ -26,6 +26,29 @@ const REFERENCES_KEY = 'notepad_graph_references';
 const SCRIPTURE_NODES_KEY = 'notepad_scripture_nodes';
 
 const EMPTY_STATE: ReferenceGraphState = { references: [], scriptureNodes: [] };
+
+// Module-level TSK cache (survives for the lifetime of the module).
+let tskCache: Record<string, string[]> | null = null;
+
+async function loadTskData(): Promise<Record<string, string[]>> {
+  if (tskCache) return tskCache;
+  const module = await import('./tsk-data.json');
+  tskCache = module.default as Record<string, string[]>;
+  return tskCache;
+}
+
+function stripScripturePrefix(id: string): string {
+  return id.startsWith('scripture:') ? id.slice('scripture:'.length) : id;
+}
+
+// Map ParsedEdge underscore type to Reference hyphen type.
+type ParsedEdgeType = 'explicit' | 'scripture_reference' | 'cross_reference';
+
+function mapParsedType(t: ParsedEdgeType): Reference['type'] {
+  if (t === 'scripture_reference') return 'scripture-reference';
+  if (t === 'cross_reference') return 'cross-reference';
+  return 'explicit';
+}
 
 export class ReferenceGraph extends Observable<ReferenceGraphState> {
   private adapter: StorageAdapter;
@@ -73,6 +96,102 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
     this.update(() => EMPTY_STATE);
   }
 
+  // --- Public sync methods ---
+
+  /**
+   * Syncs a single note into the graph.
+   * Parses references from the note content, creates any missing ScriptureNodes
+   * (best-effort verse fetch), expands TSK cross-references for newly-created nodes,
+   * and inserts all parsed references with deterministic ids.
+   * Single emit at the end.
+   */
+  async syncNote(note: Note): Promise<void> {
+    const prev = this.getSnapshot();
+    const next = await this.computeSyncForNote(note, prev.references, prev.scriptureNodes);
+    this.update(() => next);
+  }
+
+  /**
+   * Syncs all notes into the graph. Iterates computeSyncForNote for each note,
+   * accumulating state changes, and emits once at the end.
+   */
+  async syncAll(notes: Note[]): Promise<void> {
+    let refs = this.getSnapshot().references;
+    let nodes = this.getSnapshot().scriptureNodes;
+    for (const note of notes) {
+      const next = await this.computeSyncForNote(note, refs, nodes);
+      refs = next.references;
+      nodes = next.scriptureNodes;
+    }
+    this.update(() => ({ references: refs, scriptureNodes: nodes }));
+  }
+
+  /**
+   * Drops every reference whose source or target is nodeId.
+   * Does NOT remove scripture nodes — orphaned nodes are fine as cache.
+   * Synchronous; emits once.
+   */
+  deleteReferencesFor = (nodeId: string): void => {
+    this.update((prev) => ({
+      ...prev,
+      references: prev.references.filter(
+        (r) => r.source !== nodeId && r.target !== nodeId,
+      ),
+    }));
+  };
+
+  /**
+   * Post-construction trigger: if the graph is empty AND notes were provided,
+   * runs syncAll to populate from scratch. Otherwise no-op (cache is trusted).
+   */
+  async init(notes: Note[]): Promise<void> {
+    const state = this.getSnapshot();
+    if (
+      state.references.length === 0 &&
+      state.scriptureNodes.length === 0 &&
+      notes.length > 0
+    ) {
+      await this.syncAll(notes);
+    }
+  }
+
+  /**
+   * Re-fetches verse text for an existing ScriptureNode and patches it in place.
+   * Best-effort: on failure, keeps existing text. Emits once on success.
+   */
+  refreshVerseText = async (scriptureId: string): Promise<void> => {
+    const node = this.getScriptureNode(scriptureId);
+    if (!node) return;
+    // Reconstruct the human-readable ref to query the API.
+    const ref = `${node.book} ${node.chapter}:${node.verseStart}${node.verseEnd ? `-${node.verseEnd}` : ''}`;
+    let text = node.text;
+    let translation = node.translation;
+    try {
+      const result = await this.fetchVerse(ref);
+      if (result) {
+        text = result.text;
+        translation = result.translation;
+      }
+    } catch {
+      return; // Best-effort, keep existing.
+    }
+    this.update((prev) => ({
+      ...prev,
+      scriptureNodes: prev.scriptureNodes.map((n) =>
+        n.id === scriptureId ? { ...n, text, translation } : n,
+      ),
+    }));
+  };
+
+  /**
+   * Returns the set of node ids reachable from nodeId within the given BFS depth.
+   * Includes nodeId itself.
+   */
+  getNeighborhood = (nodeId: string, depth: number): Set<string> => {
+    const adj = this.buildAdjacencyList(this.getSnapshot().references);
+    return this.bfsNeighborhood(nodeId, depth, adj);
+  };
+
   // --- Private helpers ---
 
   private hydrateFromCache(): void {
@@ -104,5 +223,201 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
       if (next !== prev) this.writeCache(next);
       return next;
     });
+  }
+
+  /**
+   * Core sync logic for a single note. Operates on passed-in base arrays and
+   * returns the resulting arrays without emitting. Used by syncNote and syncAll.
+   */
+  private async computeSyncForNote(
+    note: Note,
+    baseRefs: Reference[],
+    baseNodes: ScriptureNode[],
+  ): Promise<{ references: Reference[]; scriptureNodes: ScriptureNode[] }> {
+    const { edges: parsedEdges, scriptureRefs } = parseReferencesFromContent(
+      note.id,
+      note.content,
+    );
+
+    // 1. Drop all existing refs from this note.
+    let nextRefs = baseRefs.filter((r) => r.source !== note.id);
+    const nextNodes = baseNodes.slice();
+    const knownIds = new Set(nextNodes.map((n) => n.id));
+    const newlyCreatedScriptureIds: string[] = [];
+
+    // 2. For each new scripture ref, create a ScriptureNode if missing (best-effort fetch).
+    for (const sref of scriptureRefs) {
+      if (knownIds.has(sref.id)) continue;
+      const parsed = parseVerseRef(sref.ref);
+      if (!parsed) continue;
+      let text = '';
+      let translation = 'WEB';
+      try {
+        const result = await this.fetchVerse(sref.ref);
+        if (result) {
+          text = result.text;
+          translation = result.translation;
+        }
+      } catch {
+        // Bible API failed — node created with empty text; refreshVerseText() can fix later.
+      }
+      const newNode: ScriptureNode = {
+        id: sref.id,
+        book: parsed.book,
+        chapter: parsed.chapter,
+        verseStart: parsed.verseStart,
+        verseEnd: parsed.verseEnd,
+        translation,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+      nextNodes.push(newNode);
+      knownIds.add(newNode.id);
+      newlyCreatedScriptureIds.push(newNode.id);
+    }
+
+    // 3. For each newly-created scripture node, expand TSK cross-references.
+    if (newlyCreatedScriptureIds.length > 0) {
+      const tskEdges = await this.expandTskForNewNodes(
+        newlyCreatedScriptureIds,
+        nextRefs,
+        nextNodes,
+      );
+      nextRefs = nextRefs.concat(tskEdges);
+    }
+
+    // 4. Insert parsed references for this note (preserve createdAt for stable ids).
+    const existingById = new Map(baseRefs.map((r) => [r.id, r] as const));
+    for (const pe of parsedEdges) {
+      const id = `${note.id}|${pe.target}|${mapParsedType(pe.type)}`;
+      const existing = existingById.get(id);
+      nextRefs.push({
+        id,
+        source: note.id,
+        target: pe.target,
+        type: mapParsedType(pe.type),
+        weight: pe.weight,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+      });
+    }
+
+    return { references: nextRefs, scriptureNodes: nextNodes };
+  }
+
+  /**
+   * Expand TSK cross-references for a batch of newly-created scripture node ids.
+   * Returns Reference[] of 'cross-reference' edges to add (with deterministic ids).
+   * Does not add duplicates relative to the provided currentRefs.
+   */
+  private async expandTskForNewNodes(
+    newIds: string[],
+    currentRefs: Reference[],
+    currentNodes: ScriptureNode[],
+  ): Promise<Reference[]> {
+    const tsk = await loadTskData();
+    const allNodeIds = new Set(currentNodes.map((n) => n.id));
+    const existingRefIds = new Set(currentRefs.map((r) => r.id));
+    const toAdd: Reference[] = [];
+    const addedIds = new Set<string>();
+
+    const tryAdd = (source: string, target: string) => {
+      const id = `${source}|${target}|cross-reference`;
+      if (existingRefIds.has(id) || addedIds.has(id)) return;
+      addedIds.add(id);
+      toAdd.push({
+        id,
+        source,
+        target,
+        type: 'cross-reference',
+        weight: 0.5,
+        createdAt: new Date().toISOString(),
+      });
+    };
+
+    for (const newId of newIds) {
+      const newKey = stripScripturePrefix(newId);
+
+      // New verse's TSK cross-refs → existing scripture nodes.
+      const newCrossRefs = tsk[newKey] ?? [];
+      for (const crossRef of newCrossRefs) {
+        const targetId = `scripture:${crossRef}`;
+        if (allNodeIds.has(targetId) && targetId !== newId) {
+          tryAdd(newId, targetId);
+        }
+      }
+
+      // Existing nodes' TSK cross-refs → new verse.
+      for (const existingNode of currentNodes) {
+        if (existingNode.id === newId) continue;
+        const existingKey = stripScripturePrefix(existingNode.id);
+        const existingCrossRefs = tsk[existingKey] ?? [];
+        if (existingCrossRefs.includes(newKey)) {
+          tryAdd(existingNode.id, newId);
+        }
+      }
+    }
+
+    return toAdd;
+  }
+
+  /**
+   * Builds an adjacency list from a Reference array.
+   * Adapted from adjacency-list.ts, operating on Reference instead of GraphEdge.
+   */
+  private buildAdjacencyList(
+    refs: Reference[],
+  ): Map<string, { outgoing: Reference[]; incoming: Reference[] }> {
+    const list = new Map<string, { outgoing: Reference[]; incoming: Reference[] }>();
+
+    const ensureNode = (id: string) => {
+      if (!list.has(id)) {
+        list.set(id, { outgoing: [], incoming: [] });
+      }
+    };
+
+    for (const ref of refs) {
+      ensureNode(ref.source);
+      ensureNode(ref.target);
+      list.get(ref.source)!.outgoing.push(ref);
+      list.get(ref.target)!.incoming.push(ref);
+    }
+
+    return list;
+  }
+
+  /**
+   * BFS from start node up to depth hops. Returns the set of all visited node ids
+   * (including the start node). Adapted from local-graph.ts.
+   */
+  private bfsNeighborhood(
+    start: string,
+    depth: number,
+    adj: Map<string, { outgoing: Reference[]; incoming: Reference[] }>,
+  ): Set<string> {
+    const visited = new Set<string>([start]);
+    let frontier = [start];
+
+    for (let d = 0; d < depth; d++) {
+      const nextFrontier: string[] = [];
+      for (const nodeId of frontier) {
+        const entry = adj.get(nodeId);
+        if (!entry) continue;
+        for (const ref of entry.outgoing) {
+          if (!visited.has(ref.target)) {
+            visited.add(ref.target);
+            nextFrontier.push(ref.target);
+          }
+        }
+        for (const ref of entry.incoming) {
+          if (!visited.has(ref.source)) {
+            visited.add(ref.source);
+            nextFrontier.push(ref.source);
+          }
+        }
+      }
+      frontier = nextFrontier;
+    }
+
+    return visited;
   }
 }
