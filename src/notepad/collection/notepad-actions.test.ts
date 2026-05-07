@@ -72,13 +72,15 @@ describe('NotepadActions', () => {
     expect(notes.getSnapshot().notes.find((n) => n.id === 'a')?.folderId).toBe('root');
   });
 
-  it('importNotes creates notes via the adapter and refetches', async () => {
+  it('importNotes preserves ids via adapter.importNote and refetches', async () => {
     await actions.init();
     await actions.importNotes([
-      { title: 'X', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
-      { title: 'Y', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
+      { id: 'imp-x', title: 'X', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+      { id: 'imp-y', title: 'Y', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
     ]);
-    expect(notes.getSnapshot().notes.map((n) => n.title)).toEqual(['X', 'Y']);
+    const result = notes.getSnapshot().notes;
+    expect(result.map((n) => n.title)).toEqual(['X', 'Y']);
+    expect(result.map((n) => n.id)).toEqual(['imp-x', 'imp-y']);
   });
 
   it('rebindAdapter rebinds both modules and re-inits', async () => {
@@ -294,8 +296,8 @@ describe('NotepadActions', () => {
       const syncAllSpy = vi.spyOn(referenceGraph, 'syncAll').mockResolvedValue(undefined);
 
       await actions.importNotes([
-        { title: 'A', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
-        { title: 'B', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
+        { id: 'a', title: 'A', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', title: 'B', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
       ]);
 
       expect(syncAllSpy).toHaveBeenCalledTimes(1);
@@ -307,7 +309,7 @@ describe('NotepadActions', () => {
       const syncAllSpy = vi.spyOn(referenceGraph, 'syncAll').mockResolvedValue(undefined);
 
       await actions.importNotes([
-        { title: 'A', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0 },
+        { id: 'a', title: 'A', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
       ]);
 
       const passedNotes = syncAllSpy.mock.calls[0][0];

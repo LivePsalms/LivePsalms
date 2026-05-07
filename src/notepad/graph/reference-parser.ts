@@ -102,11 +102,17 @@ export interface VerseResult {
 /**
  * Fetches verse text from bible-api.com.
  * Returns { text, reference, translation } or null on error.
+ * Optional `signal` lets callers cancel a stale request (e.g. on hover changes).
  */
-export async function fetchVerseText(ref: string): Promise<VerseResult | null> {
+export async function fetchVerseText(
+  ref: string,
+  options?: { signal?: AbortSignal },
+): Promise<VerseResult | null> {
   try {
     const normalized = normalizeVerseRef(ref);
-    const response = await fetch(`https://bible-api.com/${normalized}`);
+    const response = await fetch(`https://bible-api.com/${normalized}`, {
+      signal: options?.signal,
+    });
     if (!response.ok) return null;
     const data = await response.json() as {
       text?: string;
@@ -213,6 +219,81 @@ export function walkMarks(doc: unknown, markType: string): Array<Record<string, 
   }
   walk(doc);
   return found;
+}
+
+/**
+ * Builds a snippet around the first `noteLink` mark in `content` that targets
+ * `noteId`. Returns the marked text wrapped in [brackets] inside up to
+ * `windowChars` characters of surrounding plain text from the same top-level
+ * block, with leading/trailing ellipses where truncated. Returns null if the
+ * content is not parseable JSON or no matching mark is found.
+ */
+export function findNoteLinkSnippet(
+  content: string,
+  noteId: string,
+  windowChars = 60,
+): string | null {
+  if (!content) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+
+  function blockText(node: unknown): string {
+    if (!node || typeof node !== 'object') return '';
+    const n = node as Record<string, unknown>;
+    if (n.type === 'text' && typeof n.text === 'string') return n.text;
+    if (Array.isArray(n.content)) return n.content.map(blockText).join('');
+    return '';
+  }
+
+  function findMarkText(node: unknown): string | null {
+    if (!node || typeof node !== 'object') return null;
+    const n = node as Record<string, unknown>;
+    if (n.type === 'text' && Array.isArray(n.marks)) {
+      for (const mark of n.marks) {
+        const m = mark as Record<string, unknown>;
+        const attrs = m.attrs as Record<string, unknown> | undefined;
+        if (m.type === 'noteLink' && attrs?.noteId === noteId) {
+          return typeof n.text === 'string' ? n.text : '';
+        }
+      }
+    }
+    if (Array.isArray(n.content)) {
+      for (const child of n.content) {
+        const found = findMarkText(child);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  }
+
+  const root = parsed as Record<string, unknown>;
+  const blocks = Array.isArray(root.content) ? root.content : [];
+
+  for (const block of blocks) {
+    const markedText = findMarkText(block);
+    if (markedText === null) continue;
+    const text = blockText(block);
+    if (!markedText) {
+      const trimmed = text.slice(0, windowChars * 2);
+      return trimmed + (text.length > trimmed.length ? '…' : '');
+    }
+    const idx = text.indexOf(markedText);
+    if (idx === -1) {
+      const trimmed = text.slice(0, windowChars * 2);
+      return trimmed + (text.length > trimmed.length ? '…' : '');
+    }
+    const start = Math.max(0, idx - windowChars);
+    const end = Math.min(text.length, idx + markedText.length + windowChars);
+    const before = (start > 0 ? '…' : '') + text.slice(start, idx);
+    const after = text.slice(idx + markedText.length, end) + (end < text.length ? '…' : '');
+    return `${before}[${markedText}]${after}`;
+  }
+
+  return null;
 }
 
 export interface ParsedEdge {

@@ -18,7 +18,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, FileText, X } from 'lucide-react';
 import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { useNotepadActions } from '../context/useNotepadActions';
-import { extractVerseRefs } from '../extensions/bible-verse-utils';
+import {
+  parseFile,
+  buildNoteFromText,
+  linkNotesByVerses,
+} from '../import/document-importer';
 import type { Note } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -28,124 +32,6 @@ import type { Note } from '../types';
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-// A note draft before it gets an id/createdAt/updatedAt
-type NoteDraft = Omit<Note, 'id' | 'createdAt' | 'updatedAt'>;
-
-// ---------------------------------------------------------------------------
-// File parser
-// ---------------------------------------------------------------------------
-
-async function parseFile(file: File): Promise<string> {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-
-  if (ext === 'md' || ext === 'txt') {
-    return file.text();
-  }
-
-  if (ext === 'pdf') {
-    const pdfjs = await import('pdfjs-dist');
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
-    const buffer = await file.arrayBuffer();
-    const doc = await pdfjs.getDocument({ data: buffer }).promise;
-    const pages: string[] = [];
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item) => ('str' in item ? item.str : ''))
-        .join(' ');
-      pages.push(pageText);
-    }
-    return pages.join('\n\n');
-  }
-
-  if (ext === 'docx') {
-    const mammoth = await import('mammoth');
-    const buffer = await file.arrayBuffer();
-    // mammoth dropped convertToMarkdown — extractRawText feeds the plain-text
-    // paragraph builder downstream, which splits on double newlines.
-    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return result.value;
-  }
-
-  return '';
-}
-
-// ---------------------------------------------------------------------------
-// Helper: build TipTap JSON content from plain text
-// ---------------------------------------------------------------------------
-
-function buildTipTapContent(text: string): string {
-  const paragraphs = text
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  const doc = {
-    type: 'doc',
-    content: paragraphs.map((p) => ({
-      type: 'paragraph',
-      content: [{ type: 'text', text: p }],
-    })),
-  };
-
-  return JSON.stringify(doc);
-}
-
-// ---------------------------------------------------------------------------
-// Helper: extract plain text from a TipTap JSON draft
-// ---------------------------------------------------------------------------
-
-function extractTextRecursive(node: Record<string, unknown>): string {
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return node.text;
-  }
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractTextRecursive).join(' ');
-  }
-  return '';
-}
-
-function extractTextFromDraft(draft: NoteDraft): string {
-  try {
-    const doc = JSON.parse(draft.content) as Record<string, unknown>;
-    return extractTextRecursive(doc);
-  } catch {
-    return draft.content;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Helper: append a "Related Notes" section to a draft's TipTap JSON
-// ---------------------------------------------------------------------------
-
-function appendRelatedLink(draft: NoteDraft, relatedTitles: string[]): NoteDraft {
-  if (relatedTitles.length === 0) return draft;
-
-  try {
-    const doc = JSON.parse(draft.content) as { type: string; content: unknown[] };
-
-    const headingNode = {
-      type: 'paragraph',
-      content: [{ type: 'text', text: 'Related Notes', marks: [{ type: 'bold' }] }],
-    };
-
-    const linkNodes = relatedTitles.map((title) => ({
-      type: 'paragraph',
-      content: [{ type: 'text', text: `[[${title}]]` }],
-    }));
-
-    const updatedDoc = {
-      ...doc,
-      content: [...(doc.content ?? []), headingNode, ...linkNodes],
-    };
-
-    return { ...draft, content: JSON.stringify(updatedDoc) };
-  } catch {
-    return draft;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +87,6 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     setUploading(true);
 
     try {
-      // Parse all files to text
       const parsed = await Promise.all(
         files.map(async (file) => {
           const text = await parseFile(file);
@@ -210,38 +95,16 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
         }),
       );
 
-      // Build drafts
-      let drafts: NoteDraft[] = parsed.map(({ title, text }) => ({
-        title,
-        content: buildTipTapContent(text),
-        folderId,
-        type: 'devotion' as const,
-        tags: autoDetectVerses
-          ? extractVerseRefs(text).slice(0, 10)
-          : [],
-        wordCount: 0,
-      }));
+      let notes: Note[] = parsed.map(({ title, text }) =>
+        buildNoteFromText({ title, text, folderId, autoDetectVerses }),
+      );
 
-      // Auto-create cross-links between drafts that share verse refs
-      if (autoCreateLinks && drafts.length > 1) {
-        const draftRefs = drafts.map((d) =>
-          new Set(extractVerseRefs(extractTextFromDraft(d))),
-        );
-
-        drafts = drafts.map((draft, i) => {
-          const relatedTitles: string[] = [];
-          draftRefs.forEach((refs, j) => {
-            if (j === i) return;
-            const shared = [...draftRefs[i]].some((r) => refs.has(r));
-            if (shared) relatedTitles.push(drafts[j].title);
-          });
-          return appendRelatedLink(draft, relatedTitles);
-        });
+      if (autoCreateLinks) {
+        notes = linkNotesByVerses(notes);
       }
 
-      await importNotes(drafts);
+      await importNotes(notes);
 
-      // Reset and close
       setFiles([]);
       onOpenChange(false);
     } finally {

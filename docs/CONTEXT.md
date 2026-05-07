@@ -55,13 +55,86 @@ Responsibilities:
 
 `NoteCollection`, `FolderHierarchy`, and `ReferenceGraph` do not know each other; cross-module knowledge concentrates here.
 
+## NoteEditor
+
+The deepened module that bridges a TipTap editor instance to `NotepadActions.updateNote` for the active Note. Surfaced as the `useNoteEditor({ activeNote, updateNote })` hook returning `{ editor }`.
+
+Responsibilities:
+- TipTap editor instantiation with the `StarterKit`, `Placeholder`, `Underline`, `BibleVerse`, `NoteLink`, and `TagMark` extensions
+- Debounced save on every doc change (writes `content` + `tags` via `updateNote`)
+- Active-Note swap: load content, focus start, do not emit update
+- Cleanup of pending debounce on unmount
+
+Sibling controllers in the same module live next to it:
+- `useNoteLinkPopup({ editor, notes, activeNoteId })` — `[[` keydown trigger, popup anchor, search state, filtered candidates, insertion (delegates to `insertNoteLinkAt` exported from `extensions/note-link.ts`).
+- `useVerseTooltip({ graph })` — hover detection over `[data-bible-verse]`, race-fenced verse resolution that **reads** from `ReferenceGraph.getScriptureNode` first and falls back to the network. Does not write the cache on miss; that path is reserved for `ReferenceGraph.syncNote`.
+
+Does **not** own: toolbar, note-link click-through, or the journal-theme picker. Those are view concerns and stay in the consuming component. The `<input>` Enter/Escape handling on the popup also stays inline with the input element.
+
+Tag extraction currently uses the `#\w+` regex on plain text (preserved from the prior inline implementation). Aligning this with the `tagMark` extension is intentionally out of scope for the deepening; it is filed as a future candidate.
+
+## FolderTreeView
+
+The deepened module that prepares `(Notes, Folders, filterText, tagFilter)` into the indexed shape the sidebar renders. Surfaced as `buildFolderTreeView(notes, folders, filterText, tagFilter)` returning `{ rootFolders, rootNotesByType, notesByFolder, childFoldersByParent, allTags }`.
+
+Load-bearing invariants pinned in tests:
+
+- **Orphan rule.** A Note whose `folderId` is `'root'` OR points at a folder that does not exist is treated as a root Note. This is preserved verbatim from the prior inline implementation; it lets the sidebar continue to render Notes whose folder was deleted out from under them without dropping them on the floor.
+- Folders sort by `order` ascending, both at the root and within each parent bucket.
+- Tag counts (`allTags`) are computed from ALL Notes, not the filtered subset, so the active tag pivot stays visible and clickable when applied.
+- Empty `NoteType` buckets are dropped from `rootNotesByType`. Iteration order is `NOTE_TYPE_ORDER` (`devotion`, `sermon`, `theme`).
+
+Sibling sub-components live next to it under `src/notepad/sidebar/`: `InlineEdit`, `MoveToFolderDialog`, `NewNoteDialog`, `NoteItem`, `FolderItem`, plus the small `NOTE_TYPE_CONFIG` lookup. `src/notepad/components/Sidebar.tsx` is now the shell that consumes `buildFolderTreeView` and mounts these.
+
+Does **not** own: drag-and-drop reordering (none today; Move-to-Folder is dialog-driven) or selection invariants (those live in `NoteCollection`). Tree expand/collapse state is owned by `TreeViewState`, scoped to the sidebar tree.
+
+## TreeViewState
+
+The deepened module that holds expand/collapse state for the sidebar tree, replacing three previously-scattered state holders (top-level `tagsExpanded`, top-level `typeGroupsExpanded` record, and per-`FolderItem` local `useState`). Surfaced as `<TreeViewStateProvider>` mounted by `NotepadSidebar`, with `useTreeViewState()` returning `{ isExpanded(key, default), toggle(key, default) }`.
+
+Underlying state is a sparse `Record<string, boolean>` of OVERRIDES only — keys absent from the record fall back to the per-call default. Folders never explicitly toggled don't appear in state, and a folder mounting/unmounting during search-filter changes doesn't clear its open state.
+
+Key conventions:
+
+- `folder:${folderId}` — each Folder row, default `true`.
+- `type:${noteType}` — each NoteType group at root, default `true`.
+- `tags` — the tags section at the bottom, default `false`.
+
+Overrides are persisted to `localStorage` under `notepad_tree_view_overrides`, so expanded folders, type groups, and the tags section survive a page refresh. Defensive: malformed JSON, non-boolean values, missing storage, and quota errors all degrade to "ignore and continue." Storage helpers accept a `Pick<Storage, 'getItem' | 'setItem'>` so they're testable without a DOM (mirrors the `ReferenceGraph` cache pattern).
+
+Does **not** own: filter text, tag filter pivot, or any data; only the boolean tree-view state. The state lives at the `NotepadSidebar` level — it is not pushed up into `NotepadProvider` because no other surface consumes it.
+
 ## StorageAdapter
 
 The seam between persistence and the domain modules. Two real adapters today: `LocalStorageAdapter` (offline) and `SupabaseStorageAdapter` (cloud). The seam is real because two adapters exist; do not collapse it.
 
+## AdapterMigration
+
+The deepened module that copies every Folder and Note from one `StorageAdapter` to another, preserving ids and timestamps so embedded `noteLink` marks and `folderId` references keep resolving after the move. Surfaced as `migrateAdapter(source, target, { onEvent? })` returning `{ folders, notes }`.
+
+Pure copy — does **not** mutate the source. Source-side cleanup (e.g., `LocalStorageAdapter.clearAll()` after migrating to Supabase) is the caller's concern; per-adapter cleanup methods encapsulate the storage keys.
+
+Folders are imported before Notes so each Note's `folderId` reference resolves at the destination at write time. Note ids are preserved so embedded `noteLink` marks keep resolving — otherwise every cross-Note edge in the graph would break after migration.
+
+## DocumentImporter
+
+The module that turns uploaded files into full `Note` records, ready for `adapter.importNote` (id-preserving). Three exports:
+
+- `parseFile(file)` — async, format-aware (`.md`, `.txt`, `.pdf`, `.docx`). DOM-coupled; `pdfjs-dist` and `mammoth` are dynamically imported. Not unit-tested.
+- `buildNoteFromText({ title, text, folderId, type?, autoDetectVerses? })` — sync, pure. Generates a client-side `id` (`uuidv4`), `createdAt`/`updatedAt`, `wordCount`. Splits paragraphs on `\n\n+`, wraps each in a TipTap `paragraph` node. Optionally seeds tags from verse references (capped at 10).
+- `linkNotesByVerses(notes)` — sync, pure. Optional cross-link pass that appends a "Related Notes" section pointing at each peer that shares at least one verse reference, using real `noteLink` marks. Because the ids exist before this pass runs, the inserted marks become genuine Reference edges in `ReferenceGraph` after `syncAll` — i.e. proper Backlinks.
+
+The upload path uses `NotepadActions.importNotes(notes: Note[])`, which preserves ids via `adapter.importNote`. The id-preserving contract is what makes `linkNotesByVerses` work: the cross-link marks reference peers by their final ids, so `ReferenceGraph.syncNote` recognizes them as `explicit` References and they appear as Backlinks per §Backlink.
+
 ## Reference
 
 A directed link from one Note to another (`explicit`, authored as a `noteLink` TipTap mark), from a Note to a scripture passage (`scripture-reference`, detected via verse regex in the Note's plain text), or from one scripture passage to another (`cross-reference`, derived from a bundled TSK dataset). The umbrella term is **Reference**; **cross-reference** is reserved for the scripture↔scripture kind.
+
+## Backlink
+
+A Note that has an inbound `explicit` Reference to the active Note — i.e. it contains an authored `noteLink` mark targeting the active Note's id. Served by `ReferenceGraph.getReferencesBy({ target: activeNoteId })` filtered to `type === 'explicit'`.
+
+Title-substring mentions (a Note whose plain text happens to contain the active Note's title) are **not** Backlinks. They were considered and rejected: false positives are easy (any Note about "forgiveness" matches a Note titled "Forgiveness"), the heuristic doesn't survive title renames, and treating them as Backlinks creates a silent disagreement with the graph view where the same Notes are not connected. If a "soft mention" feature is ever wanted, it is a separate concept with separate UI.
 
 ## ScriptureNode
 

@@ -3,6 +3,7 @@ import {
   parseReferencesFromContent,
   toCanonicalScriptureId,
   parseVerseRef,
+  findNoteLinkSnippet,
 } from './reference-parser';
 
 // ---------------------------------------------------------------------------
@@ -302,5 +303,99 @@ describe('parseReferencesFromContent — combined noteLink and scripture in one 
     expect(scriptureEdges[0].weight).toBe(0.9);
 
     expect(scriptureRefs).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findNoteLinkSnippet
+// ---------------------------------------------------------------------------
+
+describe('findNoteLinkSnippet — empty / malformed input', () => {
+  it('returns null for empty content', () => {
+    expect(findNoteLinkSnippet('', 'any-id')).toBeNull();
+  });
+
+  it('returns null for non-JSON content', () => {
+    expect(findNoteLinkSnippet('plain text only', 'any-id')).toBeNull();
+  });
+
+  it('returns null when no noteLink mark targets the requested id', () => {
+    const content = makeDoc(
+      paragraph(textNode('linked elsewhere', [noteLinkMark('other-note')])),
+    );
+    expect(findNoteLinkSnippet(content, 'wanted-note')).toBeNull();
+  });
+
+  it('returns null for a doc with no marks at all', () => {
+    const content = makeDoc(paragraph(textNode('just plain text')));
+    expect(findNoteLinkSnippet(content, 'wanted-note')).toBeNull();
+  });
+});
+
+describe('findNoteLinkSnippet — match cases', () => {
+  it('wraps a short marked text in [brackets] inside surrounding block text', () => {
+    const content = makeDoc(
+      paragraph(
+        textNode('See also '),
+        textNode('that piece', [noteLinkMark('target')]),
+        textNode(' for context.'),
+      ),
+    );
+    const snippet = findNoteLinkSnippet(content, 'target');
+    expect(snippet).toBe('See also [that piece] for context.');
+  });
+
+  it('truncates with ellipses when surrounding text exceeds the window', () => {
+    const lead = 'a'.repeat(120);
+    const tail = 'b'.repeat(120);
+    const content = makeDoc(
+      paragraph(
+        textNode(lead),
+        textNode('LINK', [noteLinkMark('target')]),
+        textNode(tail),
+      ),
+    );
+    const snippet = findNoteLinkSnippet(content, 'target', 30);
+    expect(snippet).toMatch(/^…a{30}\[LINK\]b{30}…$/);
+  });
+
+  it('returns the snippet from the FIRST block containing a matching mark', () => {
+    const content = makeDoc(
+      paragraph(textNode('first paragraph, no link')),
+      paragraph(
+        textNode('here is '),
+        textNode('the link', [noteLinkMark('target')]),
+      ),
+      paragraph(
+        textNode('and another '),
+        textNode('link', [noteLinkMark('target')]),
+      ),
+    );
+    const snippet = findNoteLinkSnippet(content, 'target');
+    expect(snippet).toBe('here is [the link]');
+  });
+
+  it('finds a noteLink mark nested deep inside content arrays', () => {
+    const inner = paragraph(
+      textNode('deep '),
+      textNode('linked', [noteLinkMark('target')]),
+    );
+    const content = makeDoc(paragraph(inner));
+    const snippet = findNoteLinkSnippet(content, 'target');
+    expect(snippet).toBe('deep [linked]');
+  });
+
+  it('ignores noteLink marks that target a different noteId', () => {
+    const content = makeDoc(
+      paragraph(
+        textNode('wrong target', [noteLinkMark('not-this-one')]),
+      ),
+      paragraph(
+        textNode('right '),
+        textNode('target text', [noteLinkMark('target')]),
+      ),
+    );
+    const snippet = findNoteLinkSnippet(content, 'target');
+    expect(snippet).toBe('right [target text]');
   });
 });

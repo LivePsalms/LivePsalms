@@ -60,9 +60,11 @@ export class NotepadActions {
     this.referenceGraph.deleteReferencesFor(id);
   };
 
-  importNotes = async (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> => {
-    for (const item of items) {
-      await this.adapter.createNote(item);
+  importNotes = async (notes: Note[]): Promise<void> => {
+    // Uses `importNote` (id-preserving) so client-generated ids in cross-link
+    // marks resolve once the notes are synced into ReferenceGraph.
+    for (const note of notes) {
+      await this.adapter.importNote(note);
     }
     await this.notes.refetchAll();
     await this.referenceGraph.syncAll(this.notes.getSnapshot().notes);

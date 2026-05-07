@@ -1,4 +1,25 @@
 import { Mark } from '@tiptap/core';
+import type { Editor } from '@tiptap/core';
+
+/**
+ * Inserts a `noteLink` mark at the editor's current selection.
+ * Colocated with the mark definition so the attr shape lives in one file.
+ */
+export function insertNoteLinkAt(
+  editor: Editor,
+  noteId: string,
+  noteTitle: string,
+): void {
+  editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'text',
+      text: noteTitle,
+      marks: [{ type: 'noteLink', attrs: { noteId, noteTitle } }],
+    })
+    .run();
+}
 
 export const NoteLink = Mark.create({
   name: 'noteLink',

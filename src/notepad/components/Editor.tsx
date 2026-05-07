@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
+import { useCallback, useState } from 'react';
+import { EditorContent } from '@tiptap/react';
 import {
   Undo2,
   Redo2,
@@ -19,41 +16,21 @@ import {
   Palette,
   Check,
 } from 'lucide-react';
-import { BibleVerse } from '../extensions/bible-verse';
-import { NoteLink } from '../extensions/note-link';
-import { TagMark } from '../extensions/tag-mark';
-import { fetchVerseText } from '../extensions/bible-verse-utils';
-import type { VerseResult } from '../extensions/bible-verse-utils';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
+import { useReferenceGraph } from '../context/useReferenceGraph';
+import { useNoteEditor } from '../editor/use-note-editor';
+import { useNoteLinkPopup } from '../editor/use-note-link-popup';
+import { useVerseTooltip } from '../editor/use-verse-tooltip';
 import { useJournalTheme } from '../hooks/use-journal-theme';
+import { formatTag } from '../utils/tags';
 import { JOURNAL_THEMES } from '../types';
 import type { JournalTheme } from '../types';
 import '../journal-themes.css';
 
 // ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface VerseTooltip {
-  x: number;
-  y: number;
-  verse: VerseResult;
-}
-
-interface NoteLinkPopup {
-  x: number;
-  y: number;
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function extractTags(text: string): string[] {
-  const matches = text.match(/#\w+/g);
-  return matches ? [...new Set(matches)] : [];
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -71,152 +48,30 @@ function formatDate(iso: string): string {
 export function NotepadEditor() {
   const { notes, activeNote, collection } = useNoteCollection();
   const actions = useNotepadActions();
+  const { graph } = useReferenceGraph();
   const updateNote = actions.updateNote;
   const openNote = collection.openNote;
   const [journalTheme, setJournalTheme] = useJournalTheme();
 
-  // Tooltip state for bible verse hover
-  const [verseTooltip, setVerseTooltip] = useState<VerseTooltip | null>(null);
+  // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
+  const { editor } = useNoteEditor({ activeNote, updateNote });
 
-  // Note-link [[ popup state
-  const [noteLinkPopup, setNoteLinkPopup] = useState<NoteLinkPopup | null>(null);
-  const [noteLinkSearch, setNoteLinkSearch] = useState('');
+  // `[[` popup controller — owns trigger detection, anchor, search, insertion.
+  const {
+    popup: noteLinkPopup,
+    search: noteLinkSearch,
+    setSearch: setNoteLinkSearch,
+    filteredNotes,
+    dismiss: dismissNoteLinkPopup,
+    insert: insertNoteLink,
+  } = useNoteLinkPopup({ editor, notes, activeNoteId: activeNote?.id ?? null });
 
-  // Debounce timer ref
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // -------------------------------------------------------------------------
-  // TipTap editor
-  // -------------------------------------------------------------------------
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: 'Start writing...' }),
-      Underline,
-      BibleVerse,
-      NoteLink,
-      TagMark,
-    ],
-    content: '',
-    onUpdate({ editor: ed }) {
-      if (!activeNote) return;
-      const text = ed.getText();
-      const tags = extractTags(text);
-      const json = JSON.stringify(ed.getJSON());
-
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        updateNote(activeNote.id, { content: json, tags });
-      }, 500);
-    },
-  });
-
-  // -------------------------------------------------------------------------
-  // Load note content when active note changes
-  // -------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (!editor) return;
-
-    if (!activeNote) {
-      editor.commands.setContent('');
-      return;
-    }
-
-    if (activeNote.content) {
-      try {
-        const json = JSON.parse(activeNote.content);
-        editor.commands.setContent(json, { emitUpdate: false });
-      } catch {
-        editor.commands.setContent('');
-      }
-    } else {
-      editor.commands.setContent('');
-    }
-
-    // Move cursor to start without emitting update
-    editor.commands.focus('start');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNote?.id, editor]);
-
-  // -------------------------------------------------------------------------
-  // [[ trigger — show note link popup
-  // -------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const dom = editor.view.dom as HTMLElement;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== '[') return;
-
-      // Check if the character immediately before the cursor is also '['
-      const { state } = editor;
-      const { from } = state.selection;
-      if (from < 2) return;
-
-      const prevChar = state.doc.textBetween(from - 1, from);
-      if (prevChar !== '[') return;
-
-      // Prevent the second '[' from being inserted
-      e.preventDefault();
-
-      // Delete the first '[' that was already inserted
-      editor.chain().deleteRange({ from: from - 1, to: from }).run();
-
-      // Get approximate cursor position from the DOM selection
-      const sel = window.getSelection();
-      let x = 200;
-      let y = 200;
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        x = rect.left;
-        y = rect.bottom + 8;
-      }
-
-      setNoteLinkSearch('');
-      setNoteLinkPopup({ x, y });
-    };
-
-    dom.addEventListener('keydown', handleKeyDown);
-    return () => dom.removeEventListener('keydown', handleKeyDown);
-  }, [editor]);
-
-  // -------------------------------------------------------------------------
-  // Verse hover tooltip
-  // -------------------------------------------------------------------------
-
-  const handleMouseOver = useCallback(
-    async (e: React.MouseEvent<HTMLDivElement>) => {
-      const target = e.target as HTMLElement;
-      const verseEl = target.closest('[data-bible-verse]') as HTMLElement | null;
-
-      if (!verseEl) {
-        setVerseTooltip(null);
-        return;
-      }
-
-      const reference = verseEl.getAttribute('data-reference');
-      if (!reference) return;
-
-      const rect = verseEl.getBoundingClientRect();
-      const result = await fetchVerseText(reference);
-      if (result) {
-        setVerseTooltip({ x: rect.left, y: rect.bottom + 8, verse: result });
-      }
-    },
-    [],
-  );
-
-  const handleMouseOut = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.relatedTarget as HTMLElement | null;
-    if (!target?.closest?.('[data-bible-verse]')) {
-      setVerseTooltip(null);
-    }
-  }, []);
+  // Verse-hover tooltip — cache-read from ReferenceGraph, network fallback, race-fenced.
+  const {
+    tooltip: verseTooltip,
+    onMouseOver: handleMouseOver,
+    onMouseOut: handleMouseOut,
+  } = useVerseTooltip({ graph });
 
   // -------------------------------------------------------------------------
   // Note link click
@@ -231,35 +86,6 @@ export function NotepadEditor() {
       if (noteId) openNote(noteId);
     },
     [openNote],
-  );
-
-  // -------------------------------------------------------------------------
-  // Insert note link from popup
-  // -------------------------------------------------------------------------
-
-  const insertNoteLink = useCallback(
-    (noteId: string, noteTitle: string) => {
-      if (!editor) return;
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'text',
-          text: noteTitle,
-          marks: [{ type: 'noteLink', attrs: { noteId, noteTitle } }],
-        })
-        .run();
-      setNoteLinkPopup(null);
-      setNoteLinkSearch('');
-    },
-    [editor],
-  );
-
-  // Filtered notes for the popup
-  const filteredNotes = notes.filter(
-    (n) =>
-      n.id !== activeNote?.id &&
-      n.title.toLowerCase().includes(noteLinkSearch.toLowerCase()),
   );
 
   // Heading dropdown
@@ -564,7 +390,7 @@ export function NotepadEditor() {
                     padding: '2px 8px',
                   }}
                 >
-                  {tag}
+                  {formatTag(tag)}
                 </span>
               ))}
             </div>
@@ -671,8 +497,7 @@ export function NotepadEditor() {
                 insertNoteLink(filteredNotes[0].id, filteredNotes[0].title);
               }
               if (e.key === 'Escape') {
-                setNoteLinkPopup(null);
-                setNoteLinkSearch('');
+                dismissNoteLinkPopup();
               }
             }}
             placeholder="Search notes..."

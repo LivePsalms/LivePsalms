@@ -1,60 +1,20 @@
 import { useMemo } from 'react';
-import { PenLine, Mic, Sparkles, type LucideIcon } from 'lucide-react';
 import { useNoteCollection } from '../context/useNoteCollection';
-import type { NoteType, Note } from '../types';
+import { useReferenceGraph } from '../context/useReferenceGraph';
+import { NOTE_TYPE_CONFIG } from '../note-type-config';
+import type { NoteType } from '../types';
+import { buildBacklinks } from './backlinks';
 
 // ---------------------------------------------------------------------------
-// Types
+// Section copy — local because the prose ("DEVOTION NOTES" / "THEMES") is
+// specific to this panel. Icon and color come from the shared NOTE_TYPE_CONFIG.
 // ---------------------------------------------------------------------------
 
-interface TypeConfig {
-  icon: LucideIcon;
-  color: string;
-  label: string;
-}
-
-interface BacklinkCard {
-  note: Note;
-  snippet: string;
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const typeConfig: Record<NoteType, TypeConfig> = {
-  devotion: { icon: PenLine, color: '#6B8B7A', label: 'DEVOTION NOTES' },
-  sermon:   { icon: Mic,      color: '#7A9BAE', label: 'SERMON NOTES' },
-  theme:    { icon: Sparkles, color: '#D4A0A0', label: 'THEMES' },
+const SECTION_LABELS: Record<NoteType, string> = {
+  devotion: 'DEVOTION NOTES',
+  sermon: 'SERMON NOTES',
+  theme: 'THEMES',
 };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-interface TipTapNode {
-  text?: string;
-  content?: TipTapNode[];
-  [key: string]: unknown;
-}
-
-function extractText(node: TipTapNode): string {
-  if (node.text) return node.text;
-  if (node.content && Array.isArray(node.content)) {
-    return node.content.map(extractText).join('');
-  }
-  return '';
-}
-
-function buildSnippet(text: string, title: string): string {
-  const idx = text.indexOf(title);
-  if (idx === -1) return '';
-  const start = Math.max(0, idx - 40);
-  const end = Math.min(text.length, idx + title.length + 40);
-  const before = (start > 0 ? '…' : '') + text.slice(start, idx);
-  const after = text.slice(idx + title.length, end) + (end < text.length ? '…' : '');
-  return `${before}[${title}]${after}`;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -62,45 +22,13 @@ function buildSnippet(text: string, title: string): string {
 
 export function BacklinksPanel() {
   const { notes, activeNote, collection } = useNoteCollection();
+  const { references } = useReferenceGraph();
   const openNote = collection.openNote;
 
-  const groupedBacklinks = useMemo<Partial<Record<NoteType, BacklinkCard[]>>>(() => {
-    if (!activeNote) return {};
-
-    const result: Partial<Record<NoteType, BacklinkCard[]>> = {};
-
-    for (const note of notes) {
-      if (note.id === activeNote.id) continue;
-      if (!note.content) continue;
-
-      // Check by noteId in raw JSON (covers [[links]] inserted via the link picker)
-      const linkedById = note.content.includes(`"noteId":"${activeNote.id}"`);
-
-      let plainText = '';
-      try {
-        const json = JSON.parse(note.content) as TipTapNode;
-        plainText = extractText(json);
-      } catch {
-        plainText = note.content;
-      }
-
-      // Also check plain text title match (covers manual mentions)
-      const linkedByTitle = activeNote.title.trim().length > 0 &&
-        plainText.toLowerCase().includes(activeNote.title.toLowerCase());
-
-      if (!linkedById && !linkedByTitle) continue;
-
-      // Build snippet: prefer title-based location, fall back to start of text
-      const snippet = buildSnippet(plainText, activeNote.title) ||
-        plainText.slice(0, 80) + (plainText.length > 80 ? '…' : '');
-      const type = note.type;
-
-      if (!result[type]) result[type] = [];
-      result[type]!.push({ note, snippet });
-    }
-
-    return result;
-  }, [notes, activeNote]);
+  const groupedBacklinks = useMemo(
+    () => (activeNote ? buildBacklinks(activeNote.id, notes, references) : {}),
+    [notes, activeNote, references],
+  );
 
   const totalCount = Object.values(groupedBacklinks).reduce(
     (sum, arr) => sum + (arr?.length ?? 0),
@@ -120,10 +48,11 @@ export function BacklinksPanel() {
       {totalCount === 0 ? (
         <p style={styles.emptyText}>No other notes link to this one yet.</p>
       ) : (
-        (Object.entries(typeConfig) as [NoteType, TypeConfig][]).map(([type, cfg]) => {
+        (Object.entries(SECTION_LABELS) as [NoteType, string][]).map(([type, label]) => {
           const cards = groupedBacklinks[type];
           if (!cards || cards.length === 0) return null;
 
+          const cfg = NOTE_TYPE_CONFIG[type];
           const Icon = cfg.icon;
 
           return (
@@ -132,7 +61,7 @@ export function BacklinksPanel() {
               <div style={styles.sectionHeader}>
                 <Icon size={12} color={cfg.color} />
                 <span style={{ ...styles.sectionLabel, color: cfg.color }}>
-                  {cfg.label}
+                  {label}
                 </span>
               </div>
 

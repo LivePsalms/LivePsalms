@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { LocalStorageAdapter } from '../storage/local-storage';
+import { migrateAdapter } from '../storage/migration';
 import type { StorageAdapter } from '../storage/adapter';
 
 interface MigrationDialogProps {
@@ -49,11 +50,16 @@ export function MigrationDialog({
   onMigrationComplete,
 }: MigrationDialogProps) {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
-  const localAdapter = new LocalStorageAdapter();
+  const [noteCount, setNoteCount] = useState(0);
 
-  const localNotesRaw = localStorage.getItem('notepad_notes');
-  const localNotes = localNotesRaw ? JSON.parse(localNotesRaw) : [];
-  const noteCount = localNotes.length;
+  // Read the current local note count when the dialog opens. Source-side
+  // ownership stays inside LocalStorageAdapter — the dialog no longer knows
+  // the storage keys.
+  useEffect(() => {
+    if (!open) return;
+    const adapter = new LocalStorageAdapter();
+    adapter.getNotes().then((notes) => setNoteCount(notes.length));
+  }, [open]);
 
   const inProgress =
     phase.kind === 'loading' ||
@@ -64,35 +70,22 @@ export function MigrationDialog({
   const handleImport = async () => {
     setPhase({ kind: 'loading' });
     try {
-      const notes = await localAdapter.getNotes();
-      const folders = await localAdapter.getFolders();
-
-      // Preserve folder IDs so each note's folderId reference stays valid.
-      for (let i = 0; i < folders.length; i++) {
-        setPhase({ kind: 'folders', current: i + 1, total: folders.length });
-        await targetAdapter.importFolder(folders[i]);
-      }
-
-      // Preserve note IDs so noteLink marks embedded inside content keep
-      // resolving — otherwise every cross-note edge in the graph breaks.
-      for (let i = 0; i < notes.length; i++) {
-        setPhase({ kind: 'notes', current: i + 1, total: notes.length });
-        await targetAdapter.importNote(notes[i]);
-      }
+      const localAdapter = new LocalStorageAdapter();
+      const result = await migrateAdapter(localAdapter, targetAdapter, {
+        onEvent: (e) => setPhase(e),
+      });
 
       setPhase({ kind: 'cleanup' });
-      localStorage.removeItem('notepad_notes');
-      localStorage.removeItem('notepad_folders');
+      localAdapter.clearAll();
       // Refresh the active adapter's view so the imported notes appear
       // under the user's account immediately.
       onMigrationComplete();
 
       setPhase({ kind: 'done' });
-      const importedCount = notes.length;
       toast.success(
-        importedCount === 1
+        result.notes === 1
           ? '1 note imported to your account.'
-          : `${importedCount} notes imported to your account.`
+          : `${result.notes} notes imported to your account.`
       );
       // Brief celebratory pause so the success state is perceptible.
       window.setTimeout(() => {

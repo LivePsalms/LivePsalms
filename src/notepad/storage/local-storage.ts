@@ -120,4 +120,15 @@ export class LocalStorageAdapter implements StorageAdapter {
     const notes = this.readNotes().map((n) => (n.folderId === id ? { ...n, folderId: 'root' } : n));
     this.writeNotes(notes);
   }
+
+  /**
+   * Removes every Note and Folder this adapter owns from `localStorage`.
+   * Used by the migration flow to drop the local copy after a successful
+   * push to a remote adapter. Encapsulates the storage keys so callers
+   * don't have to know them.
+   */
+  clearAll(): void {
+    localStorage.removeItem(NOTES_KEY);
+    localStorage.removeItem(FOLDERS_KEY);
+  }
 }
