@@ -1,7 +1,8 @@
 import { Mark, markPasteRule } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { VERSE_REGEX, VERSE_PASTE_REGEX } from './bible-verse-utils';
+import { VERSE_REGEX } from '../graph/reference-parser';
+import { VERSE_PASTE_REGEX } from './bible-verse-utils';
 
 const bibleVersePluginKey = new PluginKey('bibleVerseHighlight');
 

@@ -5,7 +5,7 @@ import { parseEdgesFromContent, parseVerseRef } from './edge-parser';
 import { getAllEdges, createEdge, deleteEdgesBySource, deleteEdgesForNode } from './edge-store';
 import { getAllScriptureNodes, createScriptureNode, scriptureNodeExists } from './scripture-store';
 import { buildAdjacencyList, computeNodeWeights } from './adjacency-list';
-import { fetchVerseText } from '../extensions/bible-verse-utils';
+import { fetchVerseText } from './reference-parser';
 import { createCrossReferenceEdges } from './cross-reference';
 import { getNeighborhoodNodeIds } from './local-graph';
 
