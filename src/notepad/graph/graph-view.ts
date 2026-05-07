@@ -109,6 +109,8 @@ export class GraphView extends Observable<GraphViewState> {
   private sim: Simulation<SimNode, SimLink> | null = null;
   private simNodes: SimNode[] = [];
   private simLinks: SimLink[] = [];
+  private tickCount = 0;
+  private rafHandle: number | null = null;
 
   private currentNodes: GraphNode[] = [];
   private currentEdges: GraphEdge[] = [];
@@ -129,6 +131,7 @@ export class GraphView extends Observable<GraphViewState> {
     this.container = container;
     this.ctx = canvas.getContext('2d');
     this.resize();
+    this.startAutoTick();
 
     this.wheelListener = (e: WheelEvent) => this.handleWheel(e);
     canvas.addEventListener('wheel', this.wheelListener, { passive: false });
@@ -140,6 +143,9 @@ export class GraphView extends Observable<GraphViewState> {
   }
 
   detach(): void {
+    this.stopAutoTick();
+    this.sim?.stop();
+    this.sim = null;
     if (this.canvas && this.wheelListener) {
       this.canvas.removeEventListener('wheel', this.wheelListener);
     }
@@ -152,6 +158,43 @@ export class GraphView extends Observable<GraphViewState> {
     // by behavioral methods (filled in by Task 7).
     void this.ctx;
     this.ctx = null;
+  }
+
+  tickFor(n: number): void {
+    if (!this.sim) return;
+    for (let i = 0; i < n; i++) {
+      this.sim.tick();
+      this.onTick();
+    }
+  }
+
+  private startAutoTick(): void {
+    if (typeof requestAnimationFrame === 'undefined') return;
+    this.stopAutoTick();
+    const loop = () => {
+      if (this.sim) {
+        this.sim.tick();
+        this.onTick();
+      }
+      this.rafHandle = requestAnimationFrame(loop);
+    };
+    this.rafHandle = requestAnimationFrame(loop);
+  }
+
+  private stopAutoTick(): void {
+    if (this.rafHandle != null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.rafHandle);
+    }
+    this.rafHandle = null;
+  }
+
+  private onTick(): void {
+    this.tickCount++;
+    this.draw();
+  }
+
+  private draw(): void {
+    // Filled in by Task 7.
   }
 
   setData(nodes: GraphNode[], edges: GraphEdge[], activeNodeId: string | null): void {
@@ -252,6 +295,7 @@ export class GraphView extends Observable<GraphViewState> {
 
     // Stop d3's auto-runner — we drive ticks via rAF in production / tickFor in tests.
     this.sim.stop();
+    this.tickCount = 0;
   }
 
   private filterNodes(nodes: GraphNode[]): GraphNode[] {

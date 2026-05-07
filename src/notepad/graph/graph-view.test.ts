@@ -293,3 +293,31 @@ describe('GraphView — setFilters', () => {
     expect(a.y).toBe(60);
   });
 });
+
+describe('GraphView — tickFor', () => {
+  it('advances the sim, moving nodes from their seed positions', () => {
+    const { view } = attached();
+    view.setData(
+      [
+        node({ id: 'a', type: 'devotion' }),
+        node({ id: 'b', type: 'sermon' }),
+        node({ id: 'c', type: 'theme' }),
+      ],
+      [edge({ id: 'r1', source: 'a', target: 'b' }), edge({ id: 'r2', source: 'b', target: 'c' })],
+      null,
+    );
+    view.tickFor(120);
+    const sim = view.getSimNodes();
+    for (const n of sim) {
+      expect(Number.isFinite(n.x)).toBe(true);
+      expect(Number.isFinite(n.y)).toBe(true);
+    }
+    const distinctX = new Set(sim.map((n) => Math.round(n.x ?? 0))).size;
+    expect(distinctX).toBeGreaterThan(1);
+  });
+
+  it('is a no-op when no sim is built yet', () => {
+    const { view } = attached();
+    expect(() => view.tickFor(10)).not.toThrow();
+  });
+});
