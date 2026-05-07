@@ -360,6 +360,64 @@ function makeNoteLinkContent(targetNoteId: string): string {
 
 /**
  * Builds a TipTap doc (JSON-stringified) containing a single paragraph whose
+ * text node carries a `noteLink` mark with explicit noteId AND noteTitle attrs.
+ * Used for repair tests — simulates the orphan scenario.
+ */
+function makeOrphanNoteLinkContent(noteId: string, noteTitle: string): string {
+  return JSON.stringify({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: 'See also',
+            marks: [
+              {
+                type: 'noteLink',
+                attrs: { noteId, noteTitle },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+/**
+ * Builds a TipTap doc (JSON-stringified) containing a single paragraph whose
+ * text node carries two `noteLink` marks — one with a resolvable title, one not.
+ */
+function makeTwoNoteLinkContent(
+  link1: { noteId: string; noteTitle: string },
+  link2: { noteId: string; noteTitle: string },
+): string {
+  return JSON.stringify({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: 'First link',
+            marks: [{ type: 'noteLink', attrs: { noteId: link1.noteId, noteTitle: link1.noteTitle } }],
+          },
+          {
+            type: 'text',
+            text: 'Second link',
+            marks: [{ type: 'noteLink', attrs: { noteId: link2.noteId, noteTitle: link2.noteTitle } }],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+/**
+ * Builds a TipTap doc (JSON-stringified) containing a single paragraph whose
  * text contains the given plain string (e.g. a verse reference).
  */
 function makePlainTextContent(text: string): string {
@@ -887,5 +945,126 @@ describe('ReferenceGraph — sync behavior', () => {
       const result = chainGraph.getNeighborhood('A', 0);
       expect(result).toEqual(new Set(['A']));
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// repairNoteLinks tests
+// ---------------------------------------------------------------------------
+
+describe('ReferenceGraph — repairNoteLinks', () => {
+  let adapter: FakeStorageAdapter;
+  let storage: ReturnType<typeof createInMemoryStorage>;
+  let graph: ReferenceGraph;
+
+  beforeEach(() => {
+    adapter = new FakeStorageAdapter();
+    storage = createInMemoryStorage();
+    graph = new ReferenceGraph(adapter, createInMemoryVerseFetcher({}), storage);
+  });
+
+  // -------------------------------------------------------------------------
+  it('1. repairs an orphan-with-matching-title: rewrites noteId, returns correct counts', async () => {
+    const noteA = makeNote({
+      id: 'note-A',
+      title: 'Original',
+      content: makeOrphanNoteLinkContent('old-deleted-id', 'Linked Target'),
+    });
+    const noteB = makeNote({
+      id: 'note-B',
+      title: 'Linked Target',
+      content: '',
+    });
+
+    await adapter.importNote(noteA);
+    await adapter.importNote(noteB);
+
+    const result = await graph.repairNoteLinks([noteA, noteB], adapter);
+
+    expect(result).toEqual({ repairedNotes: 1, rewiredLinks: 1, orphans: 0 });
+
+    // Re-fetch note-A from adapter and check that the noteLink now points at note-B.
+    const fetched = await adapter.getNote('note-A');
+    expect(fetched).not.toBeNull();
+    const doc = JSON.parse(fetched!.content) as { type: string; content: Array<{ type: string; content: Array<{ marks: Array<{ type: string; attrs: { noteId: string } }> }> }> };
+    const mark = doc.content[0].content[0].marks.find((m) => m.type === 'noteLink');
+    expect(mark?.attrs.noteId).toBe('note-B');
+  });
+
+  // -------------------------------------------------------------------------
+  it('2. leaves orphan-without-matching-title alone and counts it as orphan', async () => {
+    const noteA = makeNote({
+      id: 'note-A',
+      title: 'Original',
+      content: makeOrphanNoteLinkContent('old-deleted-id', 'No Such Note Title'),
+    });
+
+    await adapter.importNote(noteA);
+    const originalContent = noteA.content;
+
+    const result = await graph.repairNoteLinks([noteA], adapter);
+
+    expect(result).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 1 });
+
+    // Re-fetch note-A — content must be unchanged.
+    const fetched = await adapter.getNote('note-A');
+    expect(fetched!.content).toBe(originalContent);
+  });
+
+  // -------------------------------------------------------------------------
+  it('3. is idempotent on already-healed data: both passes return zero counts', async () => {
+    // All noteLink marks already point at valid note ids.
+    const noteA = makeNote({
+      id: 'note-A',
+      title: 'Note A',
+      content: makeNoteLinkContent('note-B'),
+    });
+    const noteB = makeNote({
+      id: 'note-B',
+      title: 'Note B',
+      content: '',
+    });
+
+    await adapter.importNote(noteA);
+    await adapter.importNote(noteB);
+
+    const first = await graph.repairNoteLinks([noteA, noteB], adapter);
+    expect(first).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
+
+    const second = await graph.repairNoteLinks([noteA, noteB], adapter);
+    expect(second).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
+  });
+
+  // -------------------------------------------------------------------------
+  it('4. counts multiple repairs and orphans correctly for a single note with two noteLink marks', async () => {
+    // note-A has two noteLink marks:
+    //   mark1: noteId='bad-id-1', noteTitle='Note B' (resolvable)
+    //   mark2: noteId='bad-id-2', noteTitle='Ghost Note' (unresolvable orphan)
+    const noteA = makeNote({
+      id: 'note-A',
+      title: 'Note A',
+      content: makeTwoNoteLinkContent(
+        { noteId: 'bad-id-1', noteTitle: 'Note B' },
+        { noteId: 'bad-id-2', noteTitle: 'Ghost Note' },
+      ),
+    });
+    const noteB = makeNote({
+      id: 'note-B',
+      title: 'Note B',
+      content: '',
+    });
+
+    await adapter.importNote(noteA);
+    await adapter.importNote(noteB);
+
+    const result = await graph.repairNoteLinks([noteA, noteB], adapter);
+
+    expect(result).toEqual({ repairedNotes: 1, rewiredLinks: 1, orphans: 1 });
+  });
+
+  // -------------------------------------------------------------------------
+  it('5. empty notes array returns zeros and does not throw', async () => {
+    const result = await graph.repairNoteLinks([], adapter);
+    expect(result).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
   });
 });

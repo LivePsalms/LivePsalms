@@ -11,7 +11,7 @@
 import { Observable } from '../collection/observable';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Reference, ScriptureNode } from './types';
-import { parseReferencesFromContent, parseVerseRef } from './reference-parser';
+import { parseReferencesFromContent, parseVerseRef, walkMarks } from './reference-parser';
 import type { ParsedEdge } from './reference-parser';
 import type { Note } from '../types';
 
@@ -177,6 +177,83 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
         n.id === scriptureId ? { ...n, text, translation } : n,
       ),
     }));
+  };
+
+  /**
+   * Scans all notes for `noteLink` marks whose `noteId` no longer points at an
+   * existing note. When such a mark also carries a `noteTitle` that matches a
+   * current note's title (case-insensitive, trimmed), rewrites `noteId` to the
+   * matching note's id and persists via `adapter.updateNote`.
+   *
+   * Returns counts of repaired notes, rewired links, and unresolvable orphans.
+   * Idempotent: a second run over already-healed data does nothing.
+   *
+   * Note: mutates note content via the adapter; the caller is expected to
+   * refetch notes after this completes. Does NOT mutate ReferenceGraph state.
+   */
+  repairNoteLinks = async (
+    notes: Note[],
+    adapter: StorageAdapter,
+  ): Promise<{ repairedNotes: number; rewiredLinks: number; orphans: number }> => {
+    if (notes.length === 0) return { repairedNotes: 0, rewiredLinks: 0, orphans: 0 };
+
+    const idSet = new Set(notes.map((n) => n.id));
+    const titleToId = new Map<string, string>();
+    for (const n of notes) {
+      const key = n.title.trim().toLowerCase();
+      // First note with a given title wins; collisions are unusual but possible.
+      if (!titleToId.has(key)) titleToId.set(key, n.id);
+    }
+
+    let repairedNotes = 0;
+    let rewiredLinks = 0;
+    let orphans = 0;
+
+    for (const note of notes) {
+      let doc: unknown;
+      try {
+        doc = JSON.parse(note.content);
+      } catch {
+        continue;
+      }
+
+      const marks = walkMarks(doc, 'noteLink');
+      if (marks.length === 0) continue;
+
+      let changedThisNote = 0;
+      for (const m of marks) {
+        const attrs = m.attrs as { noteId?: string | null; noteTitle?: string | null } | undefined;
+        const targetId = attrs?.noteId;
+        if (typeof targetId === 'string' && idSet.has(targetId)) continue;
+
+        const title = attrs?.noteTitle;
+        if (typeof title !== 'string' || title.trim().length === 0) {
+          orphans++;
+          continue;
+        }
+        const newId = titleToId.get(title.trim().toLowerCase());
+        if (!newId || newId === note.id) {
+          orphans++;
+          continue;
+        }
+        if (!m.attrs) m.attrs = {};
+        (m.attrs as Record<string, unknown>).noteId = newId;
+        changedThisNote++;
+      }
+
+      if (changedThisNote > 0) {
+        const newContent = JSON.stringify(doc);
+        try {
+          await adapter.updateNote(note.id, { content: newContent });
+          repairedNotes++;
+          rewiredLinks += changedThisNote;
+        } catch (err) {
+          console.warn('[repairNoteLinks] failed to persist repair for', note.id, err);
+        }
+      }
+    }
+
+    return { repairedNotes, rewiredLinks, orphans };
   };
 
   /**

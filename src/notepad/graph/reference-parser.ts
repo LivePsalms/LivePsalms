@@ -196,7 +196,7 @@ function extractPlainText(doc: unknown): string {
   return parts.join(' ');
 }
 
-function walkMarks(doc: unknown, markType: string): Array<Record<string, unknown>> {
+export function walkMarks(doc: unknown, markType: string): Array<Record<string, unknown>> {
   const found: Array<Record<string, unknown>> = [];
   function walk(node: unknown): void {
     if (!node || typeof node !== 'object') return;
