@@ -3,6 +3,9 @@ import { NoteCollection } from './note-collection';
 import { FolderHierarchy } from './folder-hierarchy';
 import { NotepadActions } from './notepad-actions';
 import { FakeStorageAdapter, resetFakeAdapterIds } from './fake-storage-adapter';
+import { ReferenceGraph } from '../graph/reference-graph';
+import { createInMemoryStorage } from '../graph/in-memory-storage';
+import { createInMemoryVerseFetcher } from '../graph/in-memory-verse-fetcher';
 
 function seedNote(adapter: FakeStorageAdapter, id: string, folderId: string) {
   adapter.notes.push({
@@ -19,6 +22,7 @@ describe('NotepadActions', () => {
   let adapter: FakeStorageAdapter;
   let notes: NoteCollection;
   let folders: FolderHierarchy;
+  let referenceGraph: ReferenceGraph;
   let actions: NotepadActions;
 
   beforeEach(() => {
@@ -26,7 +30,8 @@ describe('NotepadActions', () => {
     adapter = new FakeStorageAdapter();
     notes = new NoteCollection(adapter);
     folders = new FolderHierarchy(adapter);
-    actions = new NotepadActions(adapter, notes, folders);
+    referenceGraph = new ReferenceGraph(adapter, createInMemoryVerseFetcher({}), createInMemoryStorage());
+    actions = new NotepadActions(adapter, notes, folders, referenceGraph);
   });
 
   it('init cascades to both modules', async () => {

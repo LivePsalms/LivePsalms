@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { StorageAdapter } from '../storage/adapter';
 import { LocalStorageAdapter } from '../storage/local-storage';
 import { NoteCollection, FolderHierarchy, NotepadActions } from '../collection';
+import { ReferenceGraph } from '../graph/reference-graph';
+import { fetchVerseText } from '../graph/reference-parser';
 import { NoteCollectionContext } from './useNoteCollection';
 import { FolderHierarchyContext } from './useFolderHierarchy';
 import { NotepadActionsContext } from './useNotepadActions';
@@ -15,12 +17,17 @@ interface NotepadProviderProps {
 export function NotepadProvider({ children, adapter: adapterProp }: NotepadProviderProps) {
   const initialAdapter = useMemo(() => adapterProp ?? new LocalStorageAdapter(), []);
 
+  const referenceGraph = useMemo(
+    () => new ReferenceGraph(initialAdapter, fetchVerseText, localStorage),
+    [initialAdapter],
+  );
+
   const { notes, folders, actions } = useMemo(() => {
     const notesModule = new NoteCollection(initialAdapter);
     const foldersModule = new FolderHierarchy(initialAdapter);
-    const actionsModule = new NotepadActions(initialAdapter, notesModule, foldersModule);
+    const actionsModule = new NotepadActions(initialAdapter, notesModule, foldersModule, referenceGraph);
     return { notes: notesModule, folders: foldersModule, actions: actionsModule };
-  }, [initialAdapter]);
+  }, [initialAdapter, referenceGraph]);
 
   useEffect(() => {
     const run = async () => {
