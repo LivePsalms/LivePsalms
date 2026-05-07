@@ -361,3 +361,93 @@ describe('GraphView — canvas drawing', () => {
     expect(canvas.ctx.calls[0].method).toBe('clearRect');
   });
 });
+
+describe('GraphView — pointer interaction', () => {
+  function placeNode(view: GraphView, id: string, x: number, y: number) {
+    const sim = view.getSimNodes();
+    const n = sim.find((s) => s.id === id);
+    if (n) { n.x = x; n.y = y; n.fx = x; n.fy = y; }
+  }
+
+  it('mouse-up on a non-scripture node fires onNodeOpen with its id', () => {
+    const { view, opens } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(opens).toEqual(['a']);
+  });
+
+  it('mouse-up on empty space does NOT fire onNodeOpen', () => {
+    const { view, opens } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseDown({ clientX: 300, clientY: 300 });
+    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    expect(opens).toEqual([]);
+  });
+
+  it('mouse-up on a scripture node sets popover state', () => {
+    const { view } = attached();
+    view.setData(
+      [
+        node({
+          id: 'scripture:gen-1-1', type: 'scripture',
+          title: 'Genesis 1:1', scriptureText: 'In the beginning...', scriptureTranslation: 'WEB',
+        }),
+      ],
+      [],
+      null,
+    );
+    placeNode(view, 'scripture:gen-1-1', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    const snap = view.getSnapshot();
+    expect(snap.popover).toMatchObject({
+      nodeId: 'scripture:gen-1-1',
+      title: 'Genesis 1:1',
+      text: 'In the beginning...',
+      translation: 'WEB',
+    });
+  });
+
+  it('second click on the same scripture node clears popover', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
+      [], null,
+    );
+    placeNode(view, 's', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(view.getSnapshot().popover).not.toBeNull();
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(view.getSnapshot().popover).toBeNull();
+  });
+
+  it('mouse-up on empty space clears an open popover', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
+      [], null,
+    );
+    placeNode(view, 's', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(view.getSnapshot().popover).not.toBeNull();
+    view.handleMouseDown({ clientX: 300, clientY: 300 });
+    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    expect(view.getSnapshot().popover).toBeNull();
+  });
+
+  it('handleMouseMove sets hoveredNodeId when over a node', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    expect(view.getHoveredNodeId()).toBe('a');
+    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    expect(view.getHoveredNodeId()).toBeNull();
+  });
+});

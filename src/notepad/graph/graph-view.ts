@@ -131,6 +131,10 @@ export class GraphView extends Observable<GraphViewState> {
   private hoveredNodeId: string | null = null;
   private transform = { x: 0, y: 0, scale: 1 };
 
+  private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
+    active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
+  };
+
   constructor(deps: GraphViewDeps) {
     super({ popover: null });
     this.deps = deps;
@@ -321,9 +325,97 @@ export class GraphView extends Observable<GraphViewState> {
     return this.simLinks;
   }
 
+  /** Test affordance — read hovered id without subscribing to draws. */
+  getHoveredNodeId(): string | null {
+    return this.hoveredNodeId;
+  }
+
+  handleMouseMove = (e: { clientX: number; clientY: number }): void => {
+    if (this.dragState.active) {
+      this.dragState.moved = true;
+      this.transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
+      this.transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
+      this.draw();
+      return;
+    }
+    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
+    const id = this.findNodeAt(x, y)?.id ?? null;
+    if (id !== this.hoveredNodeId) {
+      this.hoveredNodeId = id;
+      this.draw();
+    }
+  };
+
+  handleMouseDown = (e: { clientX: number; clientY: number }): void => {
+    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
+    if (!this.findNodeAt(x, y)) {
+      this.dragState = {
+        active: true,
+        moved: false,
+        startX: e.clientX,
+        startY: e.clientY,
+        origTx: this.transform.x,
+        origTy: this.transform.y,
+      };
+    }
+  };
+
+  handleMouseUp = (e: { clientX: number; clientY: number }): void => {
+    if (this.dragState.active && this.dragState.moved) {
+      this.dragState.active = false;
+      this.dragState.moved = false;
+      return;
+    }
+    this.dragState.active = false;
+    this.dragState.moved = false;
+    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
+    const node = this.findNodeAt(x, y);
+    if (!node) {
+      this.setState((prev) => prev.popover === null ? prev : { ...prev, popover: null });
+      return;
+    }
+    if (node.type === 'scripture') {
+      const current = this.getSnapshot().popover;
+      if (current && current.nodeId === node.id) {
+        this.setState((prev) => ({ ...prev, popover: null }));
+      } else {
+        this.setState(() => ({
+          popover: {
+            nodeId: node.id,
+            anchorX: node.x ?? 0,
+            anchorY: node.y ?? 0,
+            title: node.title,
+            text: node.scriptureText || 'Verse text unavailable.',
+            translation: node.scriptureTranslation || 'WEB',
+          },
+        }));
+      }
+    } else {
+      this.setState((prev) => prev.popover === null ? prev : { ...prev, popover: null });
+      this.deps.onNodeOpen(node.id);
+    }
+  };
+
+  private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
+    if (!this.canvas) return { x: 0, y: 0 };
+    const rect = this.canvas.getBoundingClientRect();
+    const { x: tx, y: ty, scale } = this.transform;
+    return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+  }
+
+  private findNodeAt(wx: number, wy: number): SimNode | null {
+    for (let i = this.simNodes.length - 1; i >= 0; i--) {
+      const n = this.simNodes[i];
+      if (n.x == null || n.y == null) continue;
+      const dx = wx - n.x, dy = wy - n.y;
+      if (dx * dx + dy * dy <= (n.radius + 4) ** 2) return n;
+    }
+    return null;
+  }
+
   // Stubs filled in by later tasks.
   handleWheel(_e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void {
-    // Task 8.
+    // Task 9.
   }
 
   private rebuild(): void {
