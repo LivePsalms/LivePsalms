@@ -19,7 +19,7 @@ export const BOOK_PATTERNS: string[] = [
   'Nehemiah|Neh',
   'Esther|Esth|Est',
   'Job',
-  'Psalms?|Ps',
+  'Psalms|Psalm|Ps',
   'Proverbs|Prov|Pr',
   'Ecclesiastes|Eccles|Eccl|Ecc',
   'Song of Solomon|Song of Songs|Song|SOS|SS',

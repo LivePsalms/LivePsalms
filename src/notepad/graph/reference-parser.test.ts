@@ -200,6 +200,14 @@ describe('toCanonicalScriptureId — id stability', () => {
     expect(abbrev).toBe(shortest);
   });
 
+  it('produces the same id for "Psalms 23:1", "Psalm 23:1", and "Ps 23:1"', () => {
+    const plural = toCanonicalScriptureId('Psalms 23:1');
+    const singular = toCanonicalScriptureId('Psalm 23:1');
+    const abbrev = toCanonicalScriptureId('Ps 23:1');
+    expect(plural).toBe(singular);
+    expect(singular).toBe(abbrev);
+  });
+
   it('produces a deterministic id for range form "Ps 23:1-6" (stable, not scripture:unknown)', () => {
     const id = toCanonicalScriptureId('Ps 23:1-6');
     expect(id).not.toBe('scripture:unknown');
@@ -228,11 +236,10 @@ describe('toCanonicalScriptureId — id stability', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseVerseRef', () => {
-  it('parses a verse range "Ps 23:1-6" with verseEnd set', () => {
+  it('parses a verse range "Ps 23:1-6" with book "Psalms" and verseEnd set', () => {
     const result = parseVerseRef('Ps 23:1-6');
     expect(result).not.toBeNull();
-    // book name is intentionally not asserted — see spawned task to fix the
-    // regex-metachar leak in BOOK_PATTERNS ('Psalms?|Ps' → literal '?' in book).
+    expect(result!.book).toBe('Psalms');
     expect(result!.chapter).toBe(23);
     expect(result!.verseStart).toBe(1);
     expect(result!.verseEnd).toBe(6);
