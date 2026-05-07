@@ -156,6 +156,7 @@ export class GraphView extends Observable<GraphViewState> {
     this.ctx = canvas.getContext('2d');
     this.resize();
     this.startAutoTick();
+    this.updateCursor();
 
     this.wheelListener = (e: WheelEvent) => this.handleWheel(e);
     canvas.addEventListener('wheel', this.wheelListener, { passive: false });
@@ -375,6 +376,7 @@ export class GraphView extends Observable<GraphViewState> {
       this.transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
       this.transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
       this.syncPopoverScreen();
+      this.updateCursor();
       this.draw();
       return;
     }
@@ -382,6 +384,7 @@ export class GraphView extends Observable<GraphViewState> {
     const id = this.findNodeAt(x, y)?.id ?? null;
     if (id !== this.hoveredNodeId) {
       this.hoveredNodeId = id;
+      this.updateCursor();
       this.draw();
     }
   };
@@ -404,6 +407,7 @@ export class GraphView extends Observable<GraphViewState> {
     if (this.dragState.active && this.dragState.moved) {
       this.dragState.active = false;
       this.dragState.moved = false;
+      this.updateCursor();
       return;
     }
     this.dragState.active = false;
@@ -438,6 +442,21 @@ export class GraphView extends Observable<GraphViewState> {
       this.deps.onNodeOpen(node.id);
     }
   };
+
+  private updateCursor(): void {
+    if (!this.canvas) return;
+    let next: string;
+    if (this.dragState.active && this.dragState.moved) {
+      next = 'grabbing';
+    } else if (this.hoveredNodeId !== null) {
+      next = 'pointer';
+    } else {
+      next = 'grab';
+    }
+    if (this.canvas.style.cursor !== next) {
+      this.canvas.style.cursor = next;
+    }
+  }
 
   private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
     if (!this.canvas) return { x: 0, y: 0 };

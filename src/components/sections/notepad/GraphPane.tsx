@@ -165,7 +165,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          style={{ cursor: 'grab' }}
           onMouseMove={(e) => view.handleMouseMove(e)}
           onMouseDown={(e) => view.handleMouseDown(e)}
           onMouseUp={(e) => view.handleMouseUp(e)}

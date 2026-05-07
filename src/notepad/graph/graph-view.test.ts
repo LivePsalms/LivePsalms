@@ -586,3 +586,56 @@ describe('GraphView — auto-fit camera', () => {
     expect(view.getTransform()).not.toEqual(t1);
   });
 });
+
+describe('GraphView — cursor management', () => {
+  function placeNode(view: GraphView, id: string, x: number, y: number) {
+    const sim = view.getSimNodes();
+    const n = sim.find((s) => s.id === id);
+    if (n) { n.x = x; n.y = y; n.fx = x; n.fy = y; }
+  }
+
+  it('attach sets the initial cursor to grab', () => {
+    const { deps } = makeDeps();
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    expect(canvas.style.cursor).toBe('grab');
+  });
+
+  it('handleMouseMove over a node sets cursor to pointer', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    expect(canvas.style.cursor).toBe('pointer');
+  });
+
+  it('handleMouseMove off any node reverts cursor to grab', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    expect(canvas.style.cursor).toBe('pointer');
+    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    expect(canvas.style.cursor).toBe('grab');
+  });
+
+  it('cursor becomes grabbing while panning', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.handleMouseDown({ clientX: 200, clientY: 200 });
+    expect(canvas.style.cursor).toBe('grab');
+    view.handleMouseMove({ clientX: 250, clientY: 230 });
+    expect(canvas.style.cursor).toBe('grabbing');
+  });
+
+  it('cursor reverts to grab after a pan ends', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.handleMouseDown({ clientX: 200, clientY: 200 });
+    view.handleMouseMove({ clientX: 250, clientY: 230 });
+    view.handleMouseUp({ clientX: 250, clientY: 230 });
+    expect(canvas.style.cursor).toBe('grab');
+  });
+});
