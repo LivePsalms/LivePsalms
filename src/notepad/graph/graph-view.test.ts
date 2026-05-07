@@ -200,3 +200,49 @@ describe('GraphView — setData', () => {
     expect(view.getSimNodes()[0].radius).toBeGreaterThan(baseRadius);
   });
 });
+
+describe('GraphView — setMode', () => {
+  it('global mode renders all nodes', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' }), node({ id: 'c', type: 'theme' })],
+      [],
+      'a',
+    );
+    view.setMode('global');
+    expect(view.getSimNodes().map((n) => n.id).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('local mode without an active node renders nothing', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [],
+      null,
+    );
+    view.setMode('local');
+    expect(view.getSimNodes()).toEqual([]);
+  });
+
+  it('local mode filters to getNeighborhood(active, depth)', () => {
+    const { view } = attached();
+    view.setNeighborhoodFn((id, _depth) => new Set([id, 'b']));
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' }), node({ id: 'c', type: 'theme' })],
+      [],
+      'a',
+    );
+    view.setMode('local');
+    expect(view.getSimNodes().map((n) => n.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('local mode passes settings.depth to getNeighborhood', () => {
+    const calls: number[] = [];
+    const { view } = attached();
+    view.setNeighborhoodFn((id, depth) => { calls.push(depth); return new Set([id]); });
+    view.setSettings({ ...DEFAULT_SETTINGS, depth: 3 });
+    view.setData([node({ id: 'a', type: 'devotion' })], [], 'a');
+    view.setMode('local');
+    expect(calls).toContain(3);
+  });
+});
