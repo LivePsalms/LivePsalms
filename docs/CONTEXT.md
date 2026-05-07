@@ -159,6 +159,36 @@ Does **not** own: visualization shape (`GraphNode`/`GraphEdge` for `GraphPane` b
 
 The localStorage keys (`notepad_graph_references`, `notepad_scripture_nodes`) are a **derivation cache**, not a source of truth. Source of truth is Note content + the bundled TSK dataset + the Bible API. Deleting the cache and re-running sync rebuilds the same state. Cross-device sync is intentionally out of scope.
 
+## projectGraph
+
+The pure function that turns `(Note[], Reference[], ScriptureNode[])` into `{ nodes: GraphNode[], edges: GraphEdge[] }` for `GraphView`. Owns three load-bearing rules:
+
+- Edge weights are summed per node id (both endpoints accumulate).
+- A `ScriptureNode` is emitted only if it participates in at least one edge — verses fetched lazily during `ReferenceGraph.syncNote` but never actually referenced from a Note are omitted from the view.
+- Reference type strings (`'scripture-reference'`, `'cross-reference'`, `'explicit'`) are mapped to view-side edge types (`'scripture_reference'`, `'cross_reference'`, `'explicit'`).
+
+Lives next to `reference-graph.ts` because the rules are about References, not layout. The previous `useGraph` hook collapses to a thin `useMemo` around this function, or is dropped entirely if the shell prefers to project inline.
+
+## GraphView
+
+The deepened module that owns the d3-force simulation, canvas rendering, and pointer interaction for the knowledge graph. Surfaced as a `GraphView` class extending `Observable<GraphViewState>`, instantiated by `GraphPane` and attached to a canvas element. `GraphPane` becomes the view shell: controls panel, canvas + popover-overlay markup, and `useEffect`-bound forwarders to `view.setData`, `view.setMode`, `view.setFilters`, `view.setSettings`.
+
+Responsibilities:
+
+- d3-force simulation lifecycle (rebuild on data / mode / filter changes, preserve `(x, y)` of surviving node ids across rebuilds)
+- Canvas drawing of edges, nodes, labels, and the active-node glow ring
+- Pan/zoom transform — internal, mutated by pointer/wheel handlers without React rerenders
+- Pointer handling: hover detection, drag-vs-click discrimination, wheel zoom anchored at cursor
+- Scripture popover state on the observable snapshot. Rendered by the shell as a positioned DOM element over the canvas, not via `ctx.fillText` — the previous in-canvas `drawPopover` is removed
+- Auto-fit camera once at tick 80
+- `ResizeObserver` coupling (canvas DPR sizing + sim recenter)
+
+Construction takes `GraphViewDeps`: `onNodeOpen(noteId)` is the sole outbound callback (what to do on a non-scripture node click is the shell's concern). Optional `now()` and `devicePixelRatio()` deps make tick counting and DPR injectable for tests.
+
+Pure of React, persistence, and `NoteCollection` knowledge. Consumes `GraphNode[] / GraphEdge[]` produced by `projectGraph`; knows nothing about `Reference` shapes. Tested in node with a `MockCanvasContext` (recorder of draw calls) and a `MockResizeObserver`, mirroring the `RouteTransition` testing pattern.
+
+`GraphPane` (the view shell) keeps mode/filter/settings React state because those are bound to form inputs; on every change it forwards the new value to the matching `setX` method. Position preservation is `GraphView`'s concern, not the shell's — the shell can rerender without losing dragged positions.
+
 ## AuthSession
 
 The deepened module that owns user identity for the active session. Surfaced as the `useAuthSession()` hook returning `{ user, loading, adapter, session }` — methods (`signUp`, `signIn`, `signInWithGoogle`, `signInWithApple`, `signOut`) are called on `session`, mirroring the `useNoteCollection().collection` pattern. Mounted by `<AuthProvider>`, which wires `AuthSession`, `AccountProfile`, and `AccountActions` together (mirroring how `<NotepadProvider>` wires the notepad-domain classes).
