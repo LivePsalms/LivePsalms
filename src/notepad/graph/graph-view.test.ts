@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GraphView } from './graph-view';
+import { GraphView, DEFAULT_SETTINGS } from './graph-view';
 import type { GraphViewDeps } from './graph-view';
+import type { GraphEdge, GraphNode } from './types';
 
 // ---------------------------------------------------------------------------
 // DOM fakes — small enough to paste; reused by all GraphView tests.
@@ -133,5 +134,69 @@ describe('GraphView — initial state', () => {
     expect(canvas.height).toBe(400);
     expect(canvas.style.width).toBe('300px');
     expect(canvas.style.height).toBe('200px');
+  });
+});
+
+const node = (over: Partial<GraphNode> & { id: string; type: GraphNode['type'] }): GraphNode => ({
+  id: over.id, type: over.type, title: over.title ?? over.id,
+  weight: over.weight ?? 0, tags: over.tags ?? [],
+  scriptureText: over.scriptureText ?? '', scriptureTranslation: over.scriptureTranslation ?? '',
+});
+
+const edge = (over: Partial<GraphEdge> & { id: string; source: string; target: string }): GraphEdge => ({
+  id: over.id, source: over.source, target: over.target,
+  type: over.type ?? 'explicit', weight: over.weight ?? 1,
+  createdAt: over.createdAt ?? '2026-01-01T00:00:00.000Z',
+});
+
+function attached(): { view: GraphView; canvas: MockCanvas; container: MockContainer; opens: string[] } {
+  const { deps, opens } = makeDeps();
+  const view = new GraphView(deps);
+  const canvas = new MockCanvas();
+  const container = new MockContainer(400, 400);
+  view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+  return { view, canvas, container, opens };
+}
+
+describe('GraphView — setData', () => {
+  it('builds a simulation with the given nodes and edges', () => {
+    const { view } = attached();
+    const nodes = [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })];
+    const edges = [edge({ id: 'r1', source: 'a', target: 'b' })];
+    view.setData(nodes, edges, null);
+    const sim = view.getSimNodes();
+    expect(sim.map((n) => n.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('preserves (x, y) of surviving nodes across rebuild', () => {
+    const { view } = attached();
+    const initial = [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })];
+    view.setData(initial, [], null);
+    const before = view.getSimNodes();
+    const a = before.find((n) => n.id === 'a')!; a.x = 100; a.y = 200;
+    const b = before.find((n) => n.id === 'b')!; b.x = 300; b.y = 400;
+
+    view.setData(initial, [edge({ id: 'r1', source: 'a', target: 'b' })], null);
+    const after = view.getSimNodes();
+    expect(after.find((n) => n.id === 'a')?.x).toBe(100);
+    expect(after.find((n) => n.id === 'a')?.y).toBe(200);
+    expect(after.find((n) => n.id === 'b')?.x).toBe(300);
+    expect(after.find((n) => n.id === 'b')?.y).toBe(400);
+  });
+
+  it('drops nodes that are no longer present', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    expect(view.getSimNodes().map((n) => n.id)).toEqual(['a']);
+  });
+
+  it('preserves node radius scaling from settings.nodeSize', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion', weight: 0 })], [], null);
+    const baseRadius = view.getSimNodes()[0].radius;
+    view.setSettings({ ...DEFAULT_SETTINGS, nodeSize: 2 });
+    view.setData([node({ id: 'a', type: 'devotion', weight: 0 })], [], null);
+    expect(view.getSimNodes()[0].radius).toBeGreaterThan(baseRadius);
   });
 });

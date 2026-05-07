@@ -1,10 +1,16 @@
 import { Observable } from '../collection/observable';
 import type { GraphEdge, GraphNode } from './types';
-
-// Re-export so downstream tasks can pull these types alongside the GraphView
-// public surface, and so `verbatimModuleSyntax` + `noUnusedLocals` stay happy
-// while we have not yet wired them into class internals (Task 3+).
-export type { GraphEdge, GraphNode };
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+  type Simulation,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
+} from 'd3-force';
+import { forceSharedTags } from './force-shared-tags';
 
 export interface PopoverState {
   nodeId: string;
@@ -55,6 +61,28 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   edgeThickness: 1,
 };
 
+export interface SimNode extends SimulationNodeDatum {
+  id: string;
+  type: GraphNode['type'];
+  title: string;
+  weight: number;
+  radius: number;
+  tags: string[];
+  scriptureText: string;
+  scriptureTranslation: string;
+}
+
+export interface SimLink extends SimulationLinkDatum<SimNode> {
+  id: string;
+  edgeType: GraphEdge['type'];
+  weight: number;
+}
+
+function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
+  const base = type === 'scripture' ? 22 : 18;
+  return Math.min(70, Math.max(12, (base + weight * 5) * sizeMultiplier));
+}
+
 /**
  * Owns the d3-force simulation, canvas rendering, and pointer interaction
  * for the knowledge graph. Pure of React, persistence, and NoteCollection.
@@ -77,6 +105,19 @@ export class GraphView extends Observable<GraphViewState> {
   private ctx: CanvasRenderingContext2D | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private wheelListener: ((e: WheelEvent) => void) | null = null;
+
+  private sim: Simulation<SimNode, SimLink> | null = null;
+  private simNodes: SimNode[] = [];
+  private simLinks: SimLink[] = [];
+
+  private currentNodes: GraphNode[] = [];
+  private currentEdges: GraphEdge[] = [];
+  private activeNodeId: string | null = null;
+
+  private settings: GraphSettings = { ...DEFAULT_SETTINGS };
+  private filters: NodeTypeFilters = { ...DEFAULT_FILTERS };
+  private mode: 'global' | 'local' = 'global';
+  private getNeighborhoodFn: ((id: string, depth: number) => Set<string>) | null = null;
 
   constructor(deps: GraphViewDeps) {
     super({ popover: null });
@@ -108,14 +149,116 @@ export class GraphView extends Observable<GraphViewState> {
     this.canvas = null;
     this.container = null;
     // Read once so `noUnusedLocals` is satisfied while ctx is still unused
-    // by behavioral methods (filled in by Task 3+).
+    // by behavioral methods (filled in by Task 7).
     void this.ctx;
     this.ctx = null;
+  }
+
+  setData(nodes: GraphNode[], edges: GraphEdge[], activeNodeId: string | null): void {
+    this.currentNodes = nodes;
+    this.currentEdges = edges;
+    this.activeNodeId = activeNodeId;
+    this.rebuild();
+  }
+
+  setSettings(settings: GraphSettings): void {
+    this.settings = settings;
+    this.rebuild();
+  }
+
+  setFilters(filters: NodeTypeFilters): void {
+    this.filters = filters;
+    this.rebuild();
+  }
+
+  setMode(mode: 'global' | 'local'): void {
+    this.mode = mode;
+    this.rebuild();
+  }
+
+  setNeighborhoodFn(fn: (id: string, depth: number) => Set<string>): void {
+    this.getNeighborhoodFn = fn;
+  }
+
+  /** Test affordance — read sim nodes (positions, radius) without subscribing. */
+  getSimNodes(): SimNode[] {
+    return this.simNodes;
   }
 
   // Stubs filled in by later tasks.
   handleWheel(_e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void {
     // Task 8.
+  }
+
+  private rebuild(): void {
+    const filtered = this.filterNodes(this.currentNodes);
+    const filteredIds = new Set(filtered.map((n) => n.id));
+
+    // Preserve positions of surviving nodes.
+    const prevPos = new Map<string, { x: number; y: number; vx?: number; vy?: number }>();
+    for (const n of this.simNodes) {
+      if (n.x != null && n.y != null) prevPos.set(n.id, { x: n.x, y: n.y, vx: n.vx, vy: n.vy });
+    }
+
+    this.simNodes = filtered.map((n) => {
+      const prev = prevPos.get(n.id);
+      return {
+        id: n.id, type: n.type, title: n.title, weight: n.weight,
+        radius: computeRadius(n.type, n.weight, this.settings.nodeSize),
+        tags: n.tags,
+        scriptureText: n.scriptureText,
+        scriptureTranslation: n.scriptureTranslation,
+        x: prev?.x, y: prev?.y, vx: prev?.vx, vy: prev?.vy,
+      };
+    });
+
+    const nodeMap = new Map(this.simNodes.map((n) => [n.id, n]));
+    this.simLinks = this.currentEdges
+      .filter((e) => filteredIds.has(e.source) && filteredIds.has(e.target))
+      .map((e) => ({
+        id: e.id,
+        source: nodeMap.get(e.source)!,
+        target: nodeMap.get(e.target)!,
+        edgeType: e.type,
+        weight: e.weight,
+      }));
+
+    if (this.sim) this.sim.stop();
+
+    const width = this.canvas?.width
+      ? this.canvas.width / (this.deps.devicePixelRatio?.() ?? 1)
+      : 400;
+    const height = this.canvas?.height
+      ? this.canvas.height / (this.deps.devicePixelRatio?.() ?? 1)
+      : 400;
+
+    this.sim = forceSimulation<SimNode>(this.simNodes)
+      .force('link', forceLink<SimNode, SimLink>(this.simLinks)
+        .id((d) => d.id)
+        .distance((d) => this.settings.linkDistance / d.weight)
+        .strength((d) => this.settings.linkForce * d.weight))
+      .force('charge', forceManyBody<SimNode>().strength(-this.settings.repelForce))
+      .force('center', forceCenter(width / 2, height / 2).strength(this.settings.centerForce))
+      .force('collide', forceCollide<SimNode>().radius((d) => d.radius * 0.8))
+      .force('tags', forceSharedTags<SimNode>(0.0003))
+      .alphaDecay(0.015)
+      .velocityDecay(0.15);
+
+    // Stop d3's auto-runner — we drive ticks via rAF in production / tickFor in tests.
+    this.sim.stop();
+  }
+
+  private filterNodes(nodes: GraphNode[]): GraphNode[] {
+    let filtered = nodes;
+    if (this.mode === 'local') {
+      if (this.activeNodeId && this.getNeighborhoodFn) {
+        const neighborhood = this.getNeighborhoodFn(this.activeNodeId, this.settings.depth);
+        filtered = filtered.filter((n) => neighborhood.has(n.id));
+      } else {
+        filtered = [];
+      }
+    }
+    return filtered.filter((n) => this.filters[n.type]);
   }
 
   private resize(): void {
