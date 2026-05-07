@@ -13,7 +13,8 @@
 import { Observable } from '../collection/observable';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Reference, ScriptureNode } from './types';
-import type { VerseFetcher } from './in-memory-verse-fetcher';
+
+export type VerseFetcher = (ref: string) => Promise<{ text: string; translation: string } | null>;
 
 export interface ReferenceGraphState {
   references: Reference[];
@@ -21,6 +22,7 @@ export interface ReferenceGraphState {
 }
 
 const REFERENCES_KEY = 'notepad_graph_references';
+// Key value matches the existing scripture-store cache (do not rename — would orphan cached data).
 const SCRIPTURE_NODES_KEY = 'notepad_scripture_nodes';
 
 const EMPTY_STATE: ReferenceGraphState = { references: [], scriptureNodes: [] };
@@ -40,8 +42,6 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
     this.fetchVerse = fetchVerse;
     this.cache = cacheStorage;
     this.hydrateFromCache();
-    // fetchVerse is stored for Task 5 sync; suppress unused-variable lint.
-    void this.fetchVerse;
   }
 
   // --- Read-only accessors (arrow form for stable React subscriber refs) ---
@@ -89,8 +89,8 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
       if (references.length === 0 && scriptureNodes.length === 0) return;
 
       this.update(() => ({ references, scriptureNodes }));
-    } catch {
-      // Malformed cache — stay with EMPTY_STATE.
+    } catch (err) {
+      console.warn('[ReferenceGraph] malformed cache — starting from EMPTY_STATE', err);
     }
   }
 
