@@ -61,6 +61,13 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   edgeThickness: 1,
 };
 
+const NODE_COLORS: Record<string, string> = {
+  scripture: '#C49A78',
+  sermon: '#7A9BAE',
+  devotion: '#6B8B7A',
+  theme: '#D4A0A0',
+};
+
 export interface SimNode extends SimulationNodeDatum {
   id: string;
   type: GraphNode['type'];
@@ -121,6 +128,9 @@ export class GraphView extends Observable<GraphViewState> {
   private mode: 'global' | 'local' = 'global';
   private getNeighborhoodFn: ((id: string, depth: number) => Set<string>) | null = null;
 
+  private hoveredNodeId: string | null = null;
+  private transform = { x: 0, y: 0, scale: 1 };
+
   constructor(deps: GraphViewDeps) {
     super({ popover: null });
     this.deps = deps;
@@ -154,9 +164,6 @@ export class GraphView extends Observable<GraphViewState> {
     this.wheelListener = null;
     this.canvas = null;
     this.container = null;
-    // Read once so `noUnusedLocals` is satisfied while ctx is still unused
-    // by behavioral methods (filled in by Task 7).
-    void this.ctx;
     this.ctx = null;
   }
 
@@ -194,7 +201,87 @@ export class GraphView extends Observable<GraphViewState> {
   }
 
   private draw(): void {
-    // Filled in by Task 7.
+    const ctx = this.ctx;
+    const canvas = this.canvas;
+    if (!ctx || !canvas) return;
+
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const { x: tx, y: ty, scale } = this.transform;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
+
+    const hovered = this.hoveredNodeId;
+    const connectedIds = new Set<string>();
+    if (hovered) {
+      connectedIds.add(hovered);
+      for (const link of this.simLinks) {
+        const src = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
+        const tgt = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
+        if (src === hovered) connectedIds.add(tgt);
+        if (tgt === hovered) connectedIds.add(src);
+      }
+    }
+
+    // Edges
+    for (const link of this.simLinks) {
+      const src = link.source as SimNode;
+      const tgt = link.target as SimNode;
+      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
+      const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
+      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
+      ctx.beginPath();
+      ctx.moveTo(src.x, src.y);
+      ctx.lineTo(tgt.x, tgt.y);
+      ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
+      ctx.lineWidth = (2 + link.weight * 2) * this.settings.edgeThickness;
+      ctx.stroke();
+    }
+
+    // Nodes
+    for (const n of this.simNodes) {
+      if (n.x == null || n.y == null) continue;
+      const isConnected = !hovered || connectedIds.has(n.id);
+      const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
+      const color = NODE_COLORS[n.type] ?? '#999';
+
+      if (n.id === this.activeNodeId) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius + 10, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}30`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}20`;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.font = `${n.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
+      ctx.fillText(n.title, n.x, n.y + n.radius + 14);
+    }
+
+    if (hovered) {
+      const n = this.simNodes.find((x) => x.id === hovered);
+      if (n && n.x != null && n.y != null) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 
   setData(nodes: GraphNode[], edges: GraphEdge[], activeNodeId: string | null): void {

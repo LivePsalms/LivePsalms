@@ -321,3 +321,43 @@ describe('GraphView — tickFor', () => {
     expect(() => view.tickFor(10)).not.toThrow();
   });
 });
+
+describe('GraphView — canvas drawing', () => {
+  it('draws an arc for each node and a line per edge each tick', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [edge({ id: 'r1', source: 'a', target: 'b' })],
+      null,
+    );
+    canvas.ctx.calls.length = 0;
+    view.tickFor(1);
+    const arcs = canvas.ctx.calls.filter((c) => c.method === 'arc').length;
+    const moves = canvas.ctx.calls.filter((c) => c.method === 'moveTo').length;
+    expect(arcs).toBeGreaterThanOrEqual(2);
+    expect(moves).toBeGreaterThanOrEqual(1);
+  });
+
+  it('draws an additional glow ring around the active node', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [],
+      'a',
+    );
+    canvas.ctx.calls.length = 0;
+    view.tickFor(1);
+    // Active glow draws two extra arcs around 'a' (outer + inner halo) plus the node body.
+    // Inactive 'b' draws one arc. So total >= 4 arcs for 2 nodes.
+    const arcs = canvas.ctx.calls.filter((c) => c.method === 'arc').length;
+    expect(arcs).toBeGreaterThanOrEqual(4);
+  });
+
+  it('clears the canvas before each tick', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    canvas.ctx.calls.length = 0;
+    view.tickFor(1);
+    expect(canvas.ctx.calls[0].method).toBe('clearRect');
+  });
+});
