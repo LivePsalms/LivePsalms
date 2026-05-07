@@ -231,9 +231,8 @@ describe('parseVerseRef', () => {
   it('parses a verse range "Ps 23:1-6" with verseEnd set', () => {
     const result = parseVerseRef('Ps 23:1-6');
     expect(result).not.toBeNull();
-    // The canonical book name for "Ps" is names[0] from 'Psalms?|Ps', which is 'Psalms?'
-    // (current behavior — ? is part of the literal string stored in BOOK_PATTERNS)
-    expect(result!.book).toBe('Psalms?');
+    // book name is intentionally not asserted — see spawned task to fix the
+    // regex-metachar leak in BOOK_PATTERNS ('Psalms?|Ps' → literal '?' in book).
     expect(result!.chapter).toBe(23);
     expect(result!.verseStart).toBe(1);
     expect(result!.verseEnd).toBe(6);
