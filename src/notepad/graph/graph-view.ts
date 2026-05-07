@@ -72,6 +72,10 @@ const ZOOM_IN_FACTOR = 1.08;
 const ZOOM_OUT_FACTOR = 0.92;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
+const AUTO_FIT_TICK = 80;
+const AUTO_FIT_NODE_MARGIN = 20;
+const AUTO_FIT_VIEWPORT_PADDING = 30;
+const AUTO_FIT_MAX_SCALE = 1.5;
 
 export interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -207,7 +211,7 @@ export class GraphView extends Observable<GraphViewState> {
 
   private onTick(): void {
     this.tickCount++;
-    if (!this.hasFit && this.tickCount === 80) {
+    if (!this.hasFit && this.tickCount === AUTO_FIT_TICK) {
       this.runAutoFit();
       this.hasFit = true;
     }
@@ -226,16 +230,15 @@ export class GraphView extends Observable<GraphViewState> {
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of placed) {
-      minX = Math.min(minX, n.x! - n.radius - 20);
-      minY = Math.min(minY, n.y! - n.radius - 20);
-      maxX = Math.max(maxX, n.x! + n.radius + 20);
-      maxY = Math.max(maxY, n.y! + n.radius + 20);
+      minX = Math.min(minX, n.x! - n.radius - AUTO_FIT_NODE_MARGIN);
+      minY = Math.min(minY, n.y! - n.radius - AUTO_FIT_NODE_MARGIN);
+      maxX = Math.max(maxX, n.x! + n.radius + AUTO_FIT_NODE_MARGIN);
+      maxY = Math.max(maxY, n.y! + n.radius + AUTO_FIT_NODE_MARGIN);
     }
     const w = maxX - minX, h = maxY - minY;
     if (w <= 0 || h <= 0) return;
 
-    const padding = 30;
-    const fitScale = Math.min((width - padding * 2) / w, (height - padding * 2) / h, 1.5);
+    const fitScale = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h, AUTO_FIT_MAX_SCALE);
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     this.transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
   }
