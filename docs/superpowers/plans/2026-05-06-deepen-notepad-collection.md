@@ -2055,18 +2055,11 @@ Run: `npm run dev` and verify:
 
 Append to this plan file:
 
-```markdown
 ---
 
 ## Implementation log
 
-- [DATE] Implementation complete. All 41+ module tests pass; manual smoke checks for local + cloud + graph all pass.
-```
-
-```bash
-git add docs/superpowers/plans/2026-05-06-deepen-notepad-collection.md
-git commit -m "docs(notepad): mark deepen-notepad-collection plan complete"
-```
+- 2026-05-06 — Implementation complete. All 40 module tests pass; legacy `useNotepad` removed; no new TypeScript errors introduced (pre-existing errors in TipTap-related files remain out of scope). NotepadProvider reduced from ~270 lines to ~45 lines.
 
 ---
 
