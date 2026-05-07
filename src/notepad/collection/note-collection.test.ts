@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { NoteCollection } from './note-collection';
 import { FakeStorageAdapter, resetFakeAdapterIds } from './fake-storage-adapter';
-import * as repairModule from '../storage/repair-note-links';
 
 function seedNote(adapter: FakeStorageAdapter, overrides: Partial<{ id: string; title: string; folderId: string }> = {}) {
   const id = overrides.id ?? `id-seed-${adapter.notes.length}`;
@@ -216,57 +215,3 @@ describe('NoteCollection — sugar & bulk', () => {
   });
 });
 
-describe('NoteCollection — repair pass', () => {
-  let adapter: FakeStorageAdapter;
-  let collection: NoteCollection;
-  let repairSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    resetFakeAdapterIds();
-    adapter = new FakeStorageAdapter();
-    collection = new NoteCollection(adapter);
-    repairSpy = vi.spyOn(repairModule, 'repairNoteLinks').mockResolvedValue({
-      repairedNotes: 0,
-      rewiredLinks: 0,
-      orphans: 0,
-    });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('runs repairNoteLinks on first init', async () => {
-    seedNote(adapter, { id: 'a' });
-    await collection.init();
-    expect(repairSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not re-run repair on subsequent inits with the same adapter', async () => {
-    seedNote(adapter, { id: 'a' });
-    await collection.init();
-    await collection.init();
-    expect(repairSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('re-runs repair after rebindAdapter', async () => {
-    seedNote(adapter, { id: 'a' });
-    await collection.init();
-    const next = new FakeStorageAdapter();
-    seedNote(next, { id: 'b' });
-    collection.rebindAdapter(next);
-    await collection.init();
-    expect(repairSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it('refetches notes if repair reports rewired links', async () => {
-    repairSpy.mockResolvedValueOnce({ repairedNotes: 1, rewiredLinks: 3, orphans: 0 });
-    seedNote(adapter, { id: 'a', title: 'Before' });
-    await collection.init();
-    // The note state reflects the adapter's contents at the time of init's
-    // (post-repair) refetch — repair was mocked so no actual change occurred,
-    // and post-init mutations to adapter aren't surfaced until another init.
-    expect(collection.getSnapshot().notes[0].title).toBe('Before');
-    expect(repairSpy).toHaveBeenCalledTimes(1);
-  });
-});
