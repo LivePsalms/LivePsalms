@@ -68,6 +68,11 @@ const NODE_COLORS: Record<string, string> = {
   theme: '#D4A0A0',
 };
 
+const ZOOM_IN_FACTOR = 1.08;
+const ZOOM_OUT_FACTOR = 0.92;
+const MIN_SCALE = 0.1;
+const MAX_SCALE = 5;
+
 export interface SimNode extends SimulationNodeDatum {
   id: string;
   type: GraphNode['type'];
@@ -419,11 +424,13 @@ export class GraphView extends Observable<GraphViewState> {
     const rect = this.canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    const factor = e.deltaY > 0 ? ZOOM_OUT_FACTOR : ZOOM_IN_FACTOR;
     const t = this.transform;
-    const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
-    t.x = mx - (mx - t.x) * (newScale / t.scale);
-    t.y = my - (my - t.y) * (newScale / t.scale);
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale * factor));
+    // Anchor world-point under cursor: compute offset ratio with OLD scale before mutating it.
+    const ratio = newScale / t.scale;
+    t.x = mx - (mx - t.x) * ratio;
+    t.y = my - (my - t.y) * ratio;
     t.scale = newScale;
     this.draw();
   };
