@@ -1,9 +1,9 @@
 /**
  * ReferenceGraph — owns the reference edge list and scripture-node cache.
  *
- * Constructor takes three required parameters:
+ * Constructor parameters:
  *   adapter      — storage back-end (swappable via rebindAdapter)
- *   fetchVerse   — async verse resolver (used in Task 5 sync; unused here)
+ *   fetchVerse   — async verse resolver; called by syncNote and refreshVerseText
  *   cacheStorage — a Pick<Storage, 'getItem'|'setItem'> impl so the class is
  *                  testable without a DOM.  Pass `localStorage` in production;
  *                  pass `createInMemoryStorage()` in tests.
@@ -12,6 +12,7 @@ import { Observable } from '../collection/observable';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Reference, ScriptureNode } from './types';
 import { parseReferencesFromContent, parseVerseRef } from './reference-parser';
+import type { ParsedEdge } from './reference-parser';
 import type { Note } from '../types';
 
 export type VerseFetcher = (ref: string) => Promise<{ text: string; translation: string } | null>;
@@ -42,9 +43,7 @@ function stripScripturePrefix(id: string): string {
 }
 
 // Map ParsedEdge underscore type to Reference hyphen type.
-type ParsedEdgeType = 'explicit' | 'scripture_reference' | 'cross_reference';
-
-function mapParsedType(t: ParsedEdgeType): Reference['type'] {
+function mapParsedType(t: ParsedEdge['type']): Reference['type'] {
   if (t === 'scripture_reference') return 'scripture-reference';
   if (t === 'cross_reference') return 'cross-reference';
   return 'explicit';
@@ -105,17 +104,17 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
    * and inserts all parsed references with deterministic ids.
    * Single emit at the end.
    */
-  async syncNote(note: Note): Promise<void> {
+  syncNote = async (note: Note): Promise<void> => {
     const prev = this.getSnapshot();
     const next = await this.computeSyncForNote(note, prev.references, prev.scriptureNodes);
     this.update(() => next);
-  }
+  };
 
   /**
    * Syncs all notes into the graph. Iterates computeSyncForNote for each note,
    * accumulating state changes, and emits once at the end.
    */
-  async syncAll(notes: Note[]): Promise<void> {
+  syncAll = async (notes: Note[]): Promise<void> => {
     let refs = this.getSnapshot().references;
     let nodes = this.getSnapshot().scriptureNodes;
     for (const note of notes) {
@@ -124,7 +123,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
       nodes = next.scriptureNodes;
     }
     this.update(() => ({ references: refs, scriptureNodes: nodes }));
-  }
+  };
 
   /**
    * Drops every reference whose source or target is nodeId.
@@ -144,7 +143,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
    * Post-construction trigger: if the graph is empty AND notes were provided,
    * runs syncAll to populate from scratch. Otherwise no-op (cache is trusted).
    */
-  async init(notes: Note[]): Promise<void> {
+  init = async (notes: Note[]): Promise<void> => {
     const state = this.getSnapshot();
     if (
       state.references.length === 0 &&
@@ -153,7 +152,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
     ) {
       await this.syncAll(notes);
     }
-  }
+  };
 
   /**
    * Re-fetches verse text for an existing ScriptureNode and patches it in place.
@@ -164,17 +163,14 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
     if (!node) return;
     // Reconstruct the human-readable ref to query the API.
     const ref = `${node.book} ${node.chapter}:${node.verseStart}${node.verseEnd ? `-${node.verseEnd}` : ''}`;
-    let text = node.text;
-    let translation = node.translation;
+    let result: { text: string; translation: string } | null = null;
     try {
-      const result = await this.fetchVerse(ref);
-      if (result) {
-        text = result.text;
-        translation = result.translation;
-      }
+      result = await this.fetchVerse(ref);
     } catch {
       return; // Best-effort, keep existing.
     }
+    if (!result) return; // null = API unavailable; keep existing, no emit.
+    const { text, translation } = result;
     this.update((prev) => ({
       ...prev,
       scriptureNodes: prev.scriptureNodes.map((n) =>
@@ -287,6 +283,8 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
     }
 
     // 4. Insert parsed references for this note (preserve createdAt for stable ids).
+    // existingById is keyed from baseRefs (before step 1 dropped this note's old refs),
+    // so a re-synced reference with the same id reuses its original createdAt.
     const existingById = new Map(baseRefs.map((r) => [r.id, r] as const));
     for (const pe of parsedEdges) {
       const id = `${note.id}|${pe.target}|${mapParsedType(pe.type)}`;

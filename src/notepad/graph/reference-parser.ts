@@ -215,7 +215,7 @@ function walkMarks(doc: unknown, markType: string): Array<Record<string, unknown
   return found;
 }
 
-interface ParsedEdge {
+export interface ParsedEdge {
   target: string;
   type: 'explicit' | 'scripture_reference' | 'cross_reference';
   weight: number;
