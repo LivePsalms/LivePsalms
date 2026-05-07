@@ -636,9 +636,9 @@ export function NotepadSidebar({ hideCollectionHeader = false }: { hideCollectio
   const { folders, hierarchy } = useFolderHierarchy();
   const actions = useNotepadActions();
 
-  const { openNote, createNote, moveNote, renameNote, deleteNote, duplicateNote } = collection;
+  const { openNote, createNote, moveNote, renameNote, duplicateNote } = collection;
   const { createFolder, renameFolder } = hierarchy;
-  const deleteFolder = actions.deleteFolder;
+  const { deleteNote, deleteFolder } = actions;
 
   const [filterText, setFilterText] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);

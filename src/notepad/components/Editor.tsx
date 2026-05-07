@@ -25,6 +25,7 @@ import { TagMark } from '../extensions/tag-mark';
 import { fetchVerseText } from '../extensions/bible-verse-utils';
 import type { VerseResult } from '../extensions/bible-verse-utils';
 import { useNoteCollection } from '../context/useNoteCollection';
+import { useNotepadActions } from '../context/useNotepadActions';
 import { useJournalTheme } from '../hooks/use-journal-theme';
 import { JOURNAL_THEMES } from '../types';
 import type { JournalTheme } from '../types';
@@ -69,7 +70,8 @@ function formatDate(iso: string): string {
 
 export function NotepadEditor() {
   const { notes, activeNote, collection } = useNoteCollection();
-  const updateNote = collection.updateNote;
+  const actions = useNotepadActions();
+  const updateNote = actions.updateNote;
   const openNote = collection.openNote;
   const [journalTheme, setJournalTheme] = useJournalTheme();
 
