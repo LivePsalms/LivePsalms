@@ -142,7 +142,7 @@ describe('ReferenceGraph — skeleton', () => {
       storage.setItem(REFERENCES_KEY, '{not json');
       storage.setItem(SCRIPTURE_NODES_KEY, JSON.stringify([makeNode()]));
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       expect(() => new ReferenceGraph(adapter, fetchVerse, storage)).not.toThrow();
     });

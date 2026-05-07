@@ -71,7 +71,6 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
   rebindAdapter(next: StorageAdapter): void {
     this.adapter = next;
     this.update(() => EMPTY_STATE);
-    // Note: cache is NOT rewritten here — Task 5's init() handles freshening.
   }
 
   // --- Private helpers ---
