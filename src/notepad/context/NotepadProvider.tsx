@@ -8,6 +8,7 @@ import { fetchVerseText } from '../graph/reference-parser';
 import { NoteCollectionContext } from './useNoteCollection';
 import { FolderHierarchyContext } from './useFolderHierarchy';
 import { NotepadActionsContext } from './useNotepadActions';
+import { ReferenceGraphContext } from './useReferenceGraph';
 
 interface NotepadProviderProps {
   children: ReactNode;
@@ -41,12 +42,14 @@ export function NotepadProvider({ children, adapter: adapterProp }: NotepadProvi
   }, [adapterProp, actions, initialAdapter]);
 
   return (
-    <NoteCollectionContext.Provider value={notes}>
-      <FolderHierarchyContext.Provider value={folders}>
-        <NotepadActionsContext.Provider value={actions}>
-          {children}
-        </NotepadActionsContext.Provider>
-      </FolderHierarchyContext.Provider>
-    </NoteCollectionContext.Provider>
+    <ReferenceGraphContext.Provider value={referenceGraph}>
+      <NoteCollectionContext.Provider value={notes}>
+        <FolderHierarchyContext.Provider value={folders}>
+          <NotepadActionsContext.Provider value={actions}>
+            {children}
+          </NotepadActionsContext.Provider>
+        </FolderHierarchyContext.Provider>
+      </NoteCollectionContext.Provider>
+    </ReferenceGraphContext.Provider>
   );
 }
