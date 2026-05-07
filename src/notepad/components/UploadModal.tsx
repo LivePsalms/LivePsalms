@@ -64,7 +64,9 @@ async function parseFile(file: File): Promise<string> {
   if (ext === 'docx') {
     const mammoth = await import('mammoth');
     const buffer = await file.arrayBuffer();
-    const result = await mammoth.convertToMarkdown({ arrayBuffer: buffer });
+    // mammoth dropped convertToMarkdown — extractRawText feeds the plain-text
+    // paragraph builder downstream, which splits on double newlines.
+    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
     return result.value;
   }
 

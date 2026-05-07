@@ -127,7 +127,7 @@ export function NotepadEditor() {
     if (activeNote.content) {
       try {
         const json = JSON.parse(activeNote.content);
-        editor.commands.setContent(json, false);
+        editor.commands.setContent(json, { emitUpdate: false });
       } catch {
         editor.commands.setContent('');
       }

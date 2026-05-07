@@ -1,6 +1,7 @@
 import { Mark, markPasteRule } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
 const TAG_REGEX = /#\w+/g;
 const TAG_PASTE_REGEX = /(#\w+)/g;
@@ -72,7 +73,7 @@ export const TagMark = Mark.create({
   },
 });
 
-function findTagDecorations(doc: Parameters<typeof Decoration.inline>[0]): DecorationSet {
+function findTagDecorations(doc: ProseMirrorNode): DecorationSet {
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {

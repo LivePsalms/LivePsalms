@@ -1,6 +1,7 @@
 import { Mark, markPasteRule } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { VERSE_REGEX } from '../graph/reference-parser';
 import { VERSE_PASTE_REGEX } from './bible-verse-utils';
 
@@ -71,7 +72,7 @@ export const BibleVerse = Mark.create({
   },
 });
 
-function findVerseDecorations(doc: Parameters<typeof Decoration.inline>[0]): DecorationSet {
+function findVerseDecorations(doc: ProseMirrorNode): DecorationSet {
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {
