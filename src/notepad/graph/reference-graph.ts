@@ -437,7 +437,6 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
 
   /**
    * Builds an adjacency list from a Reference array.
-   * Adapted from adjacency-list.ts, operating on Reference instead of GraphEdge.
    */
   private buildAdjacencyList(
     refs: Reference[],
@@ -462,7 +461,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
 
   /**
    * BFS from start node up to depth hops. Returns the set of all visited node ids
-   * (including the start node). Adapted from local-graph.ts.
+   * (including the start node).
    */
   private bfsNeighborhood(
     start: string,
