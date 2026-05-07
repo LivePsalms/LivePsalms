@@ -1,3 +1,12 @@
+export interface Reference {
+  id: string;
+  source: string;      // note id or scripture id
+  target: string;
+  type: 'explicit' | 'scripture-reference' | 'cross-reference';
+  weight: number;
+  createdAt: string;
+}
+
 export interface ScriptureNode {
   id: string;
   book: string;
