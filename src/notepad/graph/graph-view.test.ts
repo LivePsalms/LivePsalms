@@ -639,3 +639,54 @@ describe('GraphView — cursor management', () => {
     expect(canvas.style.cursor).toBe('grab');
   });
 });
+
+describe('GraphView — setSettings (in-place updates)', () => {
+  it('nodeSize change does not rebuild the sim and updates radii in place', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [], null,
+    );
+    const beforeA = view.getSimNodes().find((n) => n.id === 'a')!;
+    const beforeRadius = beforeA.radius;
+    view.setSettings({ ...DEFAULT_SETTINGS, nodeSize: 2 });
+    const afterA = view.getSimNodes().find((n) => n.id === 'a')!;
+    expect(afterA).toBe(beforeA);
+    expect(afterA.radius).toBeGreaterThan(beforeRadius);
+  });
+
+  it('force-related changes (linkDistance, repelForce, etc.) do not rebuild the sim', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const before = view.getSimNodes()[0];
+    view.setSettings({
+      ...DEFAULT_SETTINGS,
+      linkDistance: 100,
+      linkForce: 0.005,
+      repelForce: 500,
+      centerForce: 0.05,
+      edgeThickness: 2,
+    });
+    expect(view.getSimNodes()[0]).toBe(before);
+  });
+
+  it('depth change in global mode does not rebuild', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.setMode('global');
+    const before = view.getSimNodes()[0];
+    view.setSettings({ ...DEFAULT_SETTINGS, depth: 3 });
+    expect(view.getSimNodes()[0]).toBe(before);
+  });
+
+  it('depth change in local mode rebuilds the sim', () => {
+    const { view } = attached();
+    view.setNeighborhoodFn((id, _depth) => new Set([id]));
+    view.setData([node({ id: 'a', type: 'devotion' })], [], 'a');
+    view.setMode('local');
+    const before = view.getSimNodes()[0];
+    view.setSettings({ ...DEFAULT_SETTINGS, depth: 3 });
+    const after = view.getSimNodes()[0];
+    expect(after).not.toBe(before);
+  });
+});

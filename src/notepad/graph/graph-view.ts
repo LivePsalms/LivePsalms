@@ -9,6 +9,9 @@ import {
   type Simulation,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
+  type ForceLink,
+  type ForceManyBody,
+  type ForceCenter,
 } from 'd3-force';
 import { forceSharedTags } from './force-shared-tags';
 
@@ -336,8 +339,40 @@ export class GraphView extends Observable<GraphViewState> {
   }
 
   setSettings(settings: GraphSettings): void {
+    const prev = this.settings;
     this.settings = settings;
-    this.rebuild();
+
+    // Depth only matters in local mode (changes the active node set).
+    if (this.mode === 'local' && prev.depth !== settings.depth) {
+      this.rebuild();
+      return;
+    }
+
+    if (!this.sim) return;
+
+    if (prev.nodeSize !== settings.nodeSize) {
+      for (const n of this.simNodes) {
+        n.radius = computeRadius(n.type, n.weight, settings.nodeSize);
+      }
+    }
+
+    const link = this.sim.force<ForceLink<SimNode, SimLink>>('link');
+    if (link) {
+      link.distance((d) => settings.linkDistance / d.weight);
+      link.strength((d) => settings.linkForce * d.weight);
+    }
+
+    const charge = this.sim.force<ForceManyBody<SimNode>>('charge');
+    if (charge) charge.strength(-settings.repelForce);
+
+    const center = this.sim.force<ForceCenter<SimNode>>('center');
+    if (center) center.strength(settings.centerForce);
+
+    // Re-warm alpha so the next external tick applies the new forces.
+    // Do NOT call .restart() — d3's internal timer is intentionally stopped;
+    // the rAF auto-runner (and tickFor in tests) drive ticks.
+    this.sim.alpha(0.3);
+    this.draw();
   }
 
   setFilters(filters: NodeTypeFilters): void {
