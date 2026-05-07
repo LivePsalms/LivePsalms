@@ -450,6 +450,43 @@ describe('GraphView — pointer interaction', () => {
     view.handleMouseMove({ clientX: 300, clientY: 300 });
     expect(view.getHoveredNodeId()).toBeNull();
   });
+
+  it('popover screenX/screenY follows pan', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
+      [], null,
+    );
+    // place node at world (100, 100)
+    const sim = view.getSimNodes();
+    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
+    // open popover at identity transform → screen = (100, 100)
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(view.getSnapshot().popover).toMatchObject({ screenX: 100, screenY: 100 });
+    // pan: drag empty space, moves transform.x to 50
+    view.handleMouseDown({ clientX: 300, clientY: 300 });
+    view.handleMouseMove({ clientX: 350, clientY: 320 });
+    // popover screen should now be (100 + 50, 100 + 20) = (150, 120)
+    expect(view.getSnapshot().popover).toMatchObject({ screenX: 150, screenY: 120 });
+  });
+
+  it('popover screenX/screenY follows zoom', () => {
+    const { view } = attached();
+    view.setData(
+      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
+      [], null,
+    );
+    const sim = view.getSimNodes();
+    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    const before = view.getSnapshot().popover!.screenX;
+    view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 }); // zoom in
+    // After zoom in (factor 1.08, anchor at cursor 0,0), the world point (100, 100)
+    // maps to a different screen position. Just verify it changed.
+    expect(view.getSnapshot().popover!.screenX).not.toBe(before);
+  });
 });
 
 describe('GraphView — pan and wheel zoom', () => {

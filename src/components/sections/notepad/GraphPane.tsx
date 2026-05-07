@@ -189,7 +189,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
             className="absolute z-10 max-w-[250px] p-3 rounded-md shadow-lg pointer-events-none"
             style={{
               left: 0, top: 0,
-              transform: `translate(calc(${popover.anchorX}px - 50%), calc(${popover.anchorY}px - 100% - 14px))`,
+              transform: `translate(calc(${popover.screenX}px - 50%), calc(${popover.screenY}px - 100% - 14px))`,
               background: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid rgba(188, 179, 163, 0.5)',
               fontFamily: 'Outfit, sans-serif',

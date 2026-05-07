@@ -14,8 +14,8 @@ import { forceSharedTags } from './force-shared-tags';
 
 export interface PopoverState {
   nodeId: string;
-  anchorX: number;
-  anchorY: number;
+  screenX: number;
+  screenY: number;
   title: string;
   text: string;
   translation: string;
@@ -374,6 +374,7 @@ export class GraphView extends Observable<GraphViewState> {
       this.dragState.moved = true;
       this.transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
       this.transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
+      this.syncPopoverScreen();
       this.draw();
       return;
     }
@@ -418,11 +419,14 @@ export class GraphView extends Observable<GraphViewState> {
       if (current && current.nodeId === node.id) {
         this.setState((prev) => ({ ...prev, popover: null }));
       } else {
+        const t = this.transform;
+        const screenX = (node.x ?? 0) * t.scale + t.x;
+        const screenY = (node.y ?? 0) * t.scale + t.y;
         this.setState(() => ({
           popover: {
             nodeId: node.id,
-            anchorX: node.x ?? 0,
-            anchorY: node.y ?? 0,
+            screenX,
+            screenY,
             title: node.title,
             text: node.scriptureText || 'Verse text unavailable.',
             translation: node.scriptureTranslation || 'WEB',
@@ -466,8 +470,21 @@ export class GraphView extends Observable<GraphViewState> {
     t.x = mx - (mx - t.x) * ratio;
     t.y = my - (my - t.y) * ratio;
     t.scale = newScale;
+    this.syncPopoverScreen();
     this.draw();
   };
+
+  private syncPopoverScreen(): void {
+    const current = this.getSnapshot().popover;
+    if (!current) return;
+    const node = this.simNodes.find((n) => n.id === current.nodeId);
+    if (!node || node.x == null || node.y == null) return;
+    const t = this.transform;
+    const screenX = node.x * t.scale + t.x;
+    const screenY = node.y * t.scale + t.y;
+    if (screenX === current.screenX && screenY === current.screenY) return;
+    this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX, screenY } } : prev);
+  }
 
   /** Test affordance — read transform without subscribing. */
   getTransform(): { x: number; y: number; scale: number } {
