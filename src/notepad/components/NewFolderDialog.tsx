@@ -62,7 +62,7 @@ interface NewFolderDialogProps {
 
 export function NewFolderDialog({ open, onOpenChange }: NewFolderDialogProps) {
   const { folders, hierarchy } = useFolderHierarchy();
-  const createFolder = hierarchy.createFolder.bind(hierarchy);
+  const createFolder = hierarchy.createFolder;
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string>('root');
   const [selectedIcon, setSelectedIcon] = useState<FolderIcon>('book');

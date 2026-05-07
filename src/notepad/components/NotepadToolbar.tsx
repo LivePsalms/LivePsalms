@@ -45,7 +45,7 @@ export function NotepadToolbar({
 }: NotepadToolbarProps) {
   const navigate = useNavigate();
   const { collection } = useNoteCollection();
-  const createNote = collection.createNote.bind(collection);
+  const createNote = collection.createNote;
   const [uploadOpen, setUploadOpen] = useState(false);
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const { currentTier, showLevelUp, levelUpTier, dismissLevelUp } = useUserTier(

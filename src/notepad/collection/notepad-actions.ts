@@ -18,7 +18,7 @@ export class NotepadActions {
     await Promise.all([this.notes.init(), this.folders.init()]);
   }
 
-  async deleteFolder(id: string): Promise<void> {
+  deleteFolder = async (id: string): Promise<void> => {
     const affectedIds = this.notes
       .getSnapshot()
       .notes.filter((n) => n.folderId === id)
@@ -26,14 +26,14 @@ export class NotepadActions {
 
     await this.folders.deleteFolder(id);
     this.notes.applyReparenting(affectedIds, 'root');
-  }
+  };
 
-  async importNotes(items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> {
+  importNotes = async (items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> => {
     for (const item of items) {
       await this.adapter.createNote(item);
     }
     await this.notes.refetchAll();
-  }
+  };
 
   async rebindAdapter(next: StorageAdapter): Promise<void> {
     this.adapter = next;

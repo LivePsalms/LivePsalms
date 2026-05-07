@@ -1,6 +1,6 @@
 import { Observable } from './observable';
 import type { StorageAdapter } from '../storage/adapter';
-import type { Note } from '../types';
+import type { Note, NoteType } from '../types';
 import { repairNoteLinks } from '../storage/repair-note-links';
 
 export interface NoteCollectionState {
@@ -46,7 +46,7 @@ export class NoteCollection extends Observable<NoteCollectionState> {
     this.update((prev) => ({ ...prev, activeNoteId: id }));
   };
 
-  async createNote(folderId: string, type: import('../types').NoteType): Promise<Note> {
+  createNote = async (folderId: string, type: NoteType): Promise<Note> => {
     const created = await this.adapter.createNote({
       title: 'Untitled',
       content: '',
@@ -61,41 +61,37 @@ export class NoteCollection extends Observable<NoteCollectionState> {
       activeNoteId: created.id,
     }));
     return created;
-  }
+  };
 
-  async updateNote(id: string, updates: Partial<Note>): Promise<Note> {
+  updateNote = async (id: string, updates: Partial<Note>): Promise<Note> => {
     const updated = await this.adapter.updateNote(id, updates);
     this.update((prev) => ({
       ...prev,
       notes: prev.notes.map((n) => (n.id === id ? updated : n)),
     }));
     return updated;
-  }
+  };
 
-  async deleteNote(id: string): Promise<void> {
+  deleteNote = async (id: string): Promise<void> => {
     await this.adapter.deleteNote(id);
     this.update((prev) => ({
       ...prev,
       notes: prev.notes.filter((n) => n.id !== id),
       activeNoteId: prev.activeNoteId === id ? null : prev.activeNoteId,
     }));
-  }
+  };
 
-  renameNote(id: string, title: string): Promise<Note> {
-    return this.updateNote(id, { title });
-  }
+  renameNote = (id: string, title: string): Promise<Note> => this.updateNote(id, { title });
 
-  moveNote(id: string, folderId: string): Promise<Note> {
-    return this.updateNote(id, { folderId });
-  }
+  moveNote = (id: string, folderId: string): Promise<Note> => this.updateNote(id, { folderId });
 
-  async duplicateNote(id: string): Promise<Note> {
+  duplicateNote = async (id: string): Promise<Note> => {
     const dup = await this.adapter.duplicateNote(id);
     this.update((prev) => ({ ...prev, notes: [...prev.notes, dup] }));
     return dup;
-  }
+  };
 
-  applyReparenting(noteIds: string[], newFolderId: string): void {
+  applyReparenting = (noteIds: string[], newFolderId: string): void => {
     const idSet = new Set(noteIds);
     this.update((prev) => ({
       ...prev,
@@ -103,12 +99,12 @@ export class NoteCollection extends Observable<NoteCollectionState> {
         idSet.has(n.id) ? { ...n, folderId: newFolderId } : n,
       ),
     }));
-  }
+  };
 
-  async refetchAll(): Promise<void> {
+  refetchAll = async (): Promise<void> => {
     const notes = await this.adapter.getNotes();
     this.update((prev) => ({ ...prev, notes }));
-  }
+  };
 
   rebindAdapter(next: StorageAdapter): void {
     this.adapter = next;

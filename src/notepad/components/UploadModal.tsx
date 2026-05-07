@@ -163,7 +163,7 @@ function formatBytes(bytes: number): string {
 export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const { folders } = useFolderHierarchy();
   const actions = useNotepadActions();
-  const importNotes = actions.importNotes.bind(actions);
+  const importNotes = actions.importNotes;
 
   const [files, setFiles] = useState<File[]>([]);
   const [folderId, setFolderId] = useState<string>('root');

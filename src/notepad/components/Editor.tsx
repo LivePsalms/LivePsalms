@@ -69,7 +69,7 @@ function formatDate(iso: string): string {
 
 export function NotepadEditor() {
   const { notes, activeNote, collection } = useNoteCollection();
-  const updateNote = collection.updateNote.bind(collection);
+  const updateNote = collection.updateNote;
   const openNote = collection.openNote;
   const [journalTheme, setJournalTheme] = useJournalTheme();
 

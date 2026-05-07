@@ -24,7 +24,7 @@ function NotepadWorkspace() {
   const navigate = useNavigate();
   const { user, adapter, loading: authLoading } = useAuth();
   const actions = useNotepadActions();
-  const refresh = () => actions.init();
+  const refresh = useCallback(() => actions.init(), [actions]);
   const [showMigration, setShowMigration] = useState(false);
 
   const isOnline = useOnlineStatus();
