@@ -178,6 +178,7 @@ export class GraphView extends Observable<GraphViewState> {
 
   setNeighborhoodFn(fn: (id: string, depth: number) => Set<string>): void {
     this.getNeighborhoodFn = fn;
+    this.rebuild();
   }
 
   /** Test affordance — read sim nodes (positions, radius) without subscribing. */
