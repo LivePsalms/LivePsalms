@@ -135,6 +135,7 @@ export class GraphView extends Observable<GraphViewState> {
 
   private hoveredNodeId: string | null = null;
   private transform = { x: 0, y: 0, scale: 1 };
+  private hasFit = false;
 
   private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
     active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
@@ -206,7 +207,37 @@ export class GraphView extends Observable<GraphViewState> {
 
   private onTick(): void {
     this.tickCount++;
+    if (!this.hasFit && this.tickCount === 80) {
+      this.runAutoFit();
+      this.hasFit = true;
+    }
     this.draw();
+  }
+
+  private runAutoFit(): void {
+    const canvas = this.canvas;
+    if (!canvas) return;
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+
+    const placed = this.simNodes.filter((n) => n.x != null && n.y != null);
+    if (placed.length === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of placed) {
+      minX = Math.min(minX, n.x! - n.radius - 20);
+      minY = Math.min(minY, n.y! - n.radius - 20);
+      maxX = Math.max(maxX, n.x! + n.radius + 20);
+      maxY = Math.max(maxY, n.y! + n.radius + 20);
+    }
+    const w = maxX - minX, h = maxY - minY;
+    if (w <= 0 || h <= 0) return;
+
+    const padding = 30;
+    const fitScale = Math.min((width - padding * 2) / w, (height - padding * 2) / h, 1.5);
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    this.transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
   }
 
   private draw(): void {
@@ -497,6 +528,7 @@ export class GraphView extends Observable<GraphViewState> {
     // Stop d3's auto-runner — we drive ticks via rAF in production / tickFor in tests.
     this.sim.stop();
     this.tickCount = 0;
+    this.hasFit = false;
   }
 
   private filterNodes(nodes: GraphNode[]): GraphNode[] {

@@ -498,3 +498,54 @@ describe('GraphView — pan and wheel zoom', () => {
     expect(view.getTransform().scale).toBeGreaterThanOrEqual(0.1);
   });
 });
+
+describe('GraphView — auto-fit camera', () => {
+  it('changes the transform after tick 80 when nodes are spread out', () => {
+    const { view } = attached();
+    view.setData(
+      [
+        node({ id: 'a', type: 'devotion' }),
+        node({ id: 'b', type: 'sermon' }),
+        node({ id: 'c', type: 'theme' }),
+      ],
+      [edge({ id: 'r1', source: 'a', target: 'b' }), edge({ id: 'r2', source: 'b', target: 'c' })],
+      null,
+    );
+    view.tickFor(79);
+    const before = view.getTransform();
+    view.tickFor(1); // hits tick 80
+    const after = view.getTransform();
+    expect(after).not.toEqual(before);
+  });
+
+  it('only fires once — subsequent ticks do not change the transform from auto-fit', () => {
+    const { view } = attached();
+    view.setData(
+      [
+        node({ id: 'a', type: 'devotion' }),
+        node({ id: 'b', type: 'sermon' }),
+        node({ id: 'c', type: 'theme' }),
+      ],
+      [edge({ id: 'r1', source: 'a', target: 'b' })],
+      null,
+    );
+    view.tickFor(80);
+    const afterFit = { ...view.getTransform() };
+    view.tickFor(50);
+    expect(view.getTransform()).toEqual(afterFit);
+  });
+
+  it('resets the auto-fit gate when setData is called again', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    view.tickFor(80);
+    const t1 = { ...view.getTransform() };
+    view.setData(
+      [node({ id: 'x', type: 'theme' }), node({ id: 'y', type: 'devotion' }), node({ id: 'z', type: 'sermon' })],
+      [edge({ id: 'r1', source: 'x', target: 'y' })],
+      null,
+    );
+    view.tickFor(80);
+    expect(view.getTransform()).not.toEqual(t1);
+  });
+});
