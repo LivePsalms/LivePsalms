@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
-import { useAuth } from '@/auth/useAuth';
+import { useAuthSession } from '@/auth/context/useAuthSession';
 import { useNotepadActions } from '@/notepad/context/useNotepadActions';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
@@ -22,7 +22,7 @@ function NotepadWorkspace() {
   const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
 
   const navigate = useNavigate();
-  const { user, adapter, loading: authLoading } = useAuth();
+  const { user, adapter, loading: authLoading } = useAuthSession();
   const actions = useNotepadActions();
   const refresh = useCallback(() => actions.init(), [actions]);
   const [showMigration, setShowMigration] = useState(false);
@@ -192,7 +192,7 @@ function NotepadWorkspace() {
 }
 
 export function Notepad() {
-  const { adapter } = useAuth();
+  const { adapter } = useAuthSession();
   return (
     <NotepadProvider adapter={adapter}>
       <NotepadWorkspace />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './useAuth';
+import { useAuthSession } from './context/useAuthSession';
 
 function mapAuthError(message: string, mode: 'login' | 'signup'): string {
   const m = message.toLowerCase();
@@ -32,7 +32,7 @@ type Mode = 'login' | 'signup';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, signInWithGoogle, signInWithApple, user } = useAuth();
+  const { user, session } = useAuthSession();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,10 +60,10 @@ export function LoginPage() {
           setLoading(false);
           return;
         }
-        await signUp(email, password, fullName);
+        await session.signUp(email, password, fullName);
         setSuccess('Check your email to verify your account.');
       } else {
-        await signIn(email, password);
+        await session.signIn(email, password);
         navigate('/notepad');
       }
     } catch (err: unknown) {
@@ -77,7 +77,7 @@ export function LoginPage() {
   const handleGoogle = async () => {
     setError(null);
     try {
-      await signInWithGoogle();
+      await session.signInWithGoogle();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -86,7 +86,7 @@ export function LoginPage() {
   const handleApple = async () => {
     setError(null);
     try {
-      await signInWithApple();
+      await session.signInWithApple();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }

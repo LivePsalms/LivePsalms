@@ -8,3 +8,5 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ProfileStatus = 'loading' | 'loaded' | 'missing' | 'error';

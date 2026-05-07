@@ -2,7 +2,9 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, LogOut, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from './useAuth';
+import { useAuthSession } from './context/useAuthSession';
+import { useAccountProfile } from './context/useAccountProfile';
+import { useAccountActions } from './context/useAccountActions';
 import { getTierForCount } from '@/notepad/gamification/tiers';
 import {
   AlertDialog,
@@ -18,16 +20,9 @@ import {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const {
-    user,
-    profile,
-    loading,
-    updateProfile,
-    uploadAvatar,
-    signOut,
-    deleteAccount,
-    exportData,
-  } = useAuth();
+  const { user, loading, session } = useAuthSession();
+  const { profile, account } = useAccountProfile();
+  const accountActions = useAccountActions();
 
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(profile?.dateOfBirth ?? '');
@@ -58,7 +53,7 @@ export function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({
+      await account.updateProfile({
         fullName,
         dateOfBirth: dateOfBirth || null,
       });
@@ -74,14 +69,14 @@ export function ProfilePage() {
     if (!file) return;
     setAvatarUploading(true);
     try {
-      await uploadAvatar(file);
+      await account.uploadAvatar(file);
     } finally {
       setAvatarUploading(false);
     }
   };
 
   const handleExport = async () => {
-    const data = await exportData();
+    const data = await accountActions.exportData();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -92,12 +87,12 @@ export function ProfilePage() {
   };
 
   const handleDeleteAccount = async () => {
-    await deleteAccount();
+    await accountActions.deleteAccount();
     navigate('/');
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    await session.signOut();
     navigate('/notepad');
   };
 

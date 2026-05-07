@@ -51,7 +51,7 @@ Responsibilities:
 - `deleteFolder(id)` — read affected Note ids from `NoteCollection`, call `FolderHierarchy.deleteFolder`, then `NoteCollection.applyReparenting`
 - `importNotes(items)` — bulk create through the adapter, `NoteCollection.refetchAll()`, then `ReferenceGraph.syncAll(currentNotes)`
 - `rebindAdapter(newAdapter)` — cascade re-init to all three modules; init runs the repair pass and full sync
-- First-load orchestration: `init()` runs `NoteCollection.init` and `FolderHierarchy.init` in parallel, then `ReferenceGraph.repairNoteLinks` against the loaded notes (re-fetching notes if anything was rewired), then `ReferenceGraph.init`
+- First-load orchestration: `init()` runs `NoteCollection.init` and `FolderHierarchy.init` in parallel, then `ReferenceGraph.repairNoteLinks` against the loaded notes — applying each returned rewire through `NoteCollection.updateNote` so canonical in-memory state stays in sync — then `ReferenceGraph.init`
 
 `NoteCollection`, `FolderHierarchy`, and `ReferenceGraph` do not know each other; cross-module knowledge concentrates here.
 
@@ -149,11 +149,86 @@ Responsibilities:
 - The ScriptureNode cache (verse text fetched lazily, best-effort)
 - Per-Note sync: parse a Note's TipTap content, write its outgoing References, create any missing ScriptureNodes, expand TSK cross-references for new scripture nodes
 - TSK dataset loading and scripture↔scripture expansion
-- The legacy `repairNoteLinks` pass (orphan-by-title rewiring of `noteLink` marks)
+- The legacy `repairNoteLinks` pass (orphan-by-title rewiring of `noteLink` marks). Returns `{ rewires, rewiredLinks, orphans }` — pure, no I/O. Caller (`NotepadActions`) persists each rewire through `NoteCollection`.
 - Neighborhood queries (`getNeighborhood(nodeId, depth)`)
 - Targeted patching from sync — no full rebuild on per-Note sync
+- `reset()` — clears state to empty; called from `NotepadActions.rebindAdapter` cascade. Does not take an adapter; `ReferenceGraph` has no adapter coupling.
 - Exporting the verse regex, book patterns, canonical-id helpers, and parser for TipTap marks to import
 
-Does **not** own: visualization shape (`GraphNode`/`GraphEdge` for `GraphPane` belong to the view layer), TipTap mark rendering (marks stay in `src/notepad/extensions/` and import from this module), or any awareness of `NoteCollection` or `FolderHierarchy`.
+Does **not** own: visualization shape (`GraphNode`/`GraphEdge` for `GraphPane` belong to the view layer), TipTap mark rendering (marks stay in `src/notepad/extensions/` and import from this module), the `StorageAdapter` (graph is pure of persistence — note mutations from `repairNoteLinks` flow back through `NoteCollection`), or any awareness of `NoteCollection` or `FolderHierarchy`.
 
 The localStorage keys (`notepad_graph_references`, `notepad_scripture_nodes`) are a **derivation cache**, not a source of truth. Source of truth is Note content + the bundled TSK dataset + the Bible API. Deleting the cache and re-running sync rebuilds the same state. Cross-device sync is intentionally out of scope.
+
+## AuthSession
+
+The deepened module that owns user identity for the active session. Surfaced as the `useAuthSession()` hook returning `{ user, loading, adapter, session }` — methods (`signUp`, `signIn`, `signInWithGoogle`, `signInWithApple`, `signOut`) are called on `session`, mirroring the `useNoteCollection().collection` pattern. Mounted by `<AuthProvider>`, which wires `AuthSession`, `AccountProfile`, and `AccountActions` together (mirroring how `<NotepadProvider>` wires the notepad-domain classes).
+
+Responsibilities:
+- The Supabase `User` (or `null`) and the auth subscription lifecycle
+- `loading`: session-level loading only — `false` once `getSession()` resolves, regardless of profile state
+- The active `StorageAdapter`: the `localAdapter` singleton from `local-storage.ts` when no user, a `SupabaseStorageAdapter` memoized on `user.id` when signed in
+- Sign-up, password sign-in, Google/Apple OAuth, and sign-out
+- OAuth callback URL stripping (the once-on-first-mount `window.history.replaceState`)
+
+Does **not** own: profile data, account-deletion sequencing, or online/offline detection.
+
+The `adapter` field is derived state, not separately managed: a fresh `SupabaseStorageAdapter` is constructed when `user.id` changes, and `signOut` resets it to `localAdapter`. `NotepadProvider` consumes it as a prop and calls `NotepadActions.rebindAdapter` when it changes; that pipe is unchanged from before the deepening.
+
+## ProfileStatus
+
+A four-state value indicating the lifecycle of `AccountProfile`'s fetch for the current user:
+- `'loading'` — fetch in flight (initial or after `refreshProfile`)
+- `'loaded'` — profile row was returned and is non-null
+- `'missing'` — fetch resolved with no row (e.g. signed-in user without a profile row yet)
+- `'error'` — fetch threw; `profile` is `null` and the error was swallowed
+
+Distinguished from `AuthSession.loading`: that flag covers session resolution; `profileStatus` covers profile resolution. They move independently. Consumers that need the distinction read `profileStatus`; consumers that just need "is there a profile?" can keep checking `profile !== null`.
+
+## AccountProfile
+
+The deepened module that owns the active user's profile. Surfaced as the `useAccountProfile()` hook returning `{ profile, profileStatus, account }` — methods (`updateProfile`, `refreshProfile`, `uploadAvatar`) are called on `account`. Mounted via `<AuthProvider>`.
+
+Responsibilities:
+- The `UserProfile` (or `null`) for the current user
+- `profileStatus: ProfileStatus` — explicit state machine for the profile fetch
+- The snake_case ↔ camelCase mapping for the `profiles` table — concentrated here, not duplicated at callsites
+- Profile field updates (`fullName`, `dateOfBirth`, `avatarUrl`) and `refreshProfile`
+- Avatar upload to Supabase Storage and write-back to the profile row
+
+Does **not** own: identity, sign-in/out, or account-level multi-step operations like deletion.
+
+Fetch fires when `AuthSession.user` changes and intentionally does **not** gate `AuthSession.loading`. A slow or failed profile fetch leaves the rest of the UI usable.
+
+## AccountActions
+
+The coordinator module that owns multi-module sequencing for account-level operations. Stateless. Surfaced as `useAccountActions()` returning `{ deleteAccount }`, composing `useAuthSession()` and `useAccountProfile()` internally.
+
+Responsibilities:
+- `deleteAccount()` — remove avatar files from Supabase Storage, delete the profile row (cascades to notes/folders via FK), then `signOut`. The adapter resets to `localAdapter` automatically because `AuthSession` derives it from `user`.
+- `exportData()` — read all Notes and Folders from the active `StorageAdapter` for download as JSON. Adapter-level rather than in-memory because the only consumer is `ProfilePage`, which lives outside `<NotepadProvider>` and therefore has no in-memory `NoteCollection` to read from.
+
+`AuthSession` and `AccountProfile` do not know each other; cross-module knowledge concentrates here.
+
+## RouteTransition
+
+The deepened module that owns the state machine and side-effect orchestration for cross-route page transitions (the `SplitTransition` overlay flow). Surfaced as the `useRouteTransition(projects)` hook returning `{ status, color, transition }`. The hook also internally mounts the popstate-driven back-button interception on `/purpose/:id` detail pages and the belt-and-suspenders scroll restore in a `useLayoutEffect` on pathname change.
+
+Status is a four-state machine:
+
+```
+idle ──(beginNavigation)──> expanding ──(completePhase)──> revealing ──(completePhase)──> idle
+idle ──(beginExit)─────────> exiting ──(completeExit)────> expanding (then as above)
+```
+
+`exiting` exists only on the back-from-detail flow: `PurposeDetail` plays its text-fade animation while the overlay is still hidden, then calls `completeExit('/')` to start the overlay.
+
+Class responsibilities:
+
+- The four-state status, current `color`, and (private) `pendingTarget`, `isBackNav`, `savedScrollY`
+- Phase transitions including double-click defense (`beginNavigation` / `beginExit` no-op when not idle) and double-popstate defense
+- Side-effect orchestration via injected `RouteTransitionDeps`: `navigate`, `killScrollTriggers`, `setBodyOverflow`, `scrollWindow`, `getScrollY`. The class is pure-state-and-deps, testable in node — fakes substitute for DOM, GSAP, and react-router at test time.
+- Scroll restoration on back nav (restore saved Y) versus forward nav (scroll to 0), both inside the `expanding → revealing` boundary and as a backstop in `handleLocationChanged()`.
+
+Does **not** own: the popstate listener itself, `history.pushState` for the back-button trap, or knowledge of which paths are detail pages. Those live in `useRouteTransition` because they are window-event coupling.
+
+The status value is a four-state superset of `SplitTransition`'s three-state `phase` prop. App-level rendering maps `'exiting' → SplitTransition is hidden` and the other three pass through directly.

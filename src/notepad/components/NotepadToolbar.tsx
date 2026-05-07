@@ -10,7 +10,8 @@ import {
   LogIn,
   User,
 } from 'lucide-react';
-import { useAuth } from '@/auth/useAuth';
+import { useAuthSession } from '@/auth/context/useAuthSession';
+import { useAccountProfile } from '@/auth/context/useAccountProfile';
 import { useUserTier } from '../hooks/useUserTier';
 import { TierBadge } from './TierBadge';
 import { LevelUpModal } from './LevelUpModal';
@@ -47,7 +48,8 @@ export function NotepadToolbar({
   const { collection } = useNoteCollection();
   const createNote = collection.createNote;
   const [uploadOpen, setUploadOpen] = useState(false);
-  const { user, profile, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, session } = useAuthSession();
+  const { profile } = useAccountProfile();
   const { currentTier, showLevelUp, levelUpTier, dismissLevelUp } = useUserTier(
     profile?.highestNoteCount ?? 0
   );
@@ -237,7 +239,7 @@ export function NotepadToolbar({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={async () => {
-                      await signOut();
+                      await session.signOut();
                       navigate('/notepad');
                     }}
                     style={{ fontSize: 12 }}

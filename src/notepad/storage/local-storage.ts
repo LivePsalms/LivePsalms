@@ -132,3 +132,8 @@ export class LocalStorageAdapter implements StorageAdapter {
     localStorage.removeItem(FOLDERS_KEY);
   }
 }
+
+// Process-wide singleton. Use this everywhere instead of `new LocalStorageAdapter()`
+// so that "the local adapter" is one named thing rather than an instance summoned
+// at multiple callsites.
+export const localAdapter = new LocalStorageAdapter();

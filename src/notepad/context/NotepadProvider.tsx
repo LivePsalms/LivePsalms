@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { StorageAdapter } from '../storage/adapter';
-import { LocalStorageAdapter } from '../storage/local-storage';
+import { localAdapter } from '../storage/local-storage';
 import { NoteCollection, FolderHierarchy, NotepadActions } from '../collection';
 import { ReferenceGraph } from '../graph/reference-graph';
 import { fetchVerseText } from '../graph/reference-parser';
@@ -16,11 +16,11 @@ interface NotepadProviderProps {
 }
 
 export function NotepadProvider({ children, adapter: adapterProp }: NotepadProviderProps) {
-  const initialAdapter = useMemo(() => adapterProp ?? new LocalStorageAdapter(), []);
+  const initialAdapter = useMemo(() => adapterProp ?? localAdapter, []);
 
   const referenceGraph = useMemo(
-    () => new ReferenceGraph(initialAdapter, fetchVerseText, localStorage),
-    [initialAdapter],
+    () => new ReferenceGraph(fetchVerseText, localStorage),
+    [],
   );
 
   const { notes, folders, actions } = useMemo(() => {

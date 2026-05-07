@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { LocalStorageAdapter } from '../storage/local-storage';
+import { localAdapter } from '../storage/local-storage';
 import { migrateAdapter } from '../storage/migration';
 import type { StorageAdapter } from '../storage/adapter';
 
@@ -57,8 +57,7 @@ export function MigrationDialog({
   // the storage keys.
   useEffect(() => {
     if (!open) return;
-    const adapter = new LocalStorageAdapter();
-    adapter.getNotes().then((notes) => setNoteCount(notes.length));
+    localAdapter.getNotes().then((notes) => setNoteCount(notes.length));
   }, [open]);
 
   const inProgress =
@@ -70,7 +69,6 @@ export function MigrationDialog({
   const handleImport = async () => {
     setPhase({ kind: 'loading' });
     try {
-      const localAdapter = new LocalStorageAdapter();
       const result = await migrateAdapter(localAdapter, targetAdapter, {
         onEvent: (e) => setPhase(e),
       });

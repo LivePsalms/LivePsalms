@@ -27,8 +27,12 @@ export class NotepadActions {
     const noteList = this.notes.getSnapshot().notes;
     if (noteList.length > 0) {
       try {
-        const result = await this.referenceGraph.repairNoteLinks(noteList, this.adapter);
-        if (result.rewiredLinks > 0) await this.notes.refetchAll();
+        const { rewires } = this.referenceGraph.repairNoteLinks(noteList);
+        // Persist each rewire through NoteCollection so canonical in-memory
+        // state stays in sync — no refetchAll needed.
+        for (const rewire of rewires) {
+          await this.notes.updateNote(rewire.noteId, { content: rewire.content });
+        }
       } catch (err) {
         console.warn('[NotepadActions] repair pass failed:', err);
       }
@@ -74,7 +78,7 @@ export class NotepadActions {
     this.adapter = next;
     this.notes.rebindAdapter(next);
     this.folders.rebindAdapter(next);
-    this.referenceGraph.rebindAdapter(next);
+    this.referenceGraph.reset();
     await this.init();
   }
 }

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from './useAuth';
+import { useAuthSession } from './context/useAuthSession';
+import { useAccountProfile } from './context/useAccountProfile';
 
 export function WelcomePage() {
   const navigate = useNavigate();
-  const { user, profile, loading, updateProfile } = useAuth();
+  const { user, loading } = useAuthSession();
+  const { profile, account } = useAccountProfile();
 
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -42,7 +44,7 @@ export function WelcomePage() {
     }
     setSaving(true);
     try {
-      await updateProfile({
+      await account.updateProfile({
         fullName: fullName.trim(),
         dateOfBirth: dateOfBirth || null,
       });

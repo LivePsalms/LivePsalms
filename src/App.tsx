@@ -1,6 +1,5 @@
-import { useState, useCallback, useLayoutEffect, useEffect, useRef } from 'react';
-import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ScrollTrigger } from 'gsap/all';
+import { useCallback } from 'react';
+import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
@@ -13,12 +12,12 @@ import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useProjectColors } from '@/hooks/useProjectColors';
-import { FALLBACK_OVERLAY_COLOR } from '@/data/projects';
 import type { Project } from '@/types';
-import { AuthProvider } from '@/auth/AuthProvider';
+import { AuthProvider } from '@/auth/context/AuthProvider';
 import { LoginPage } from '@/auth/LoginPage';
 import { ProfilePage } from '@/auth/ProfilePage';
 import { WelcomePage } from '@/auth/WelcomePage';
+import { useRouteTransition } from '@/transitions/useRouteTransition';
 import './App.css';
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -26,18 +25,10 @@ if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
 }
 
 function App() {
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
-  const [transitionColor, setTransitionColor] = useState(FALLBACK_OVERLAY_COLOR);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
-  const [isExiting, setIsExiting] = useState(false);
-  const exitingRef = useRef(false);
-  const savedScrollY = useRef<number | null>(null);
-  const isBackNav = useRef(false);
   const projects = useProjectColors();
+  const { status, color, transition } = useRouteTransition(projects);
+
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
   const isNotepadPage = location.pathname === '/notepad';
@@ -46,102 +37,17 @@ function App() {
   const isWelcomePage = location.pathname === '/welcome';
   const hideFooter = isDetailPage || isPurposePage || isNotepadPage || isLoginPage || isProfilePage || isWelcomePage;
 
-  // Belt-and-suspenders scroll reset for direct URL loads / back-forward nav
-  // where handlePhaseComplete didn't run. We do NOT kill ScrollTriggers here:
-  // by the time this parent update effect fires, the new route's children
-  // have already mounted and registered their own pins (MoodBoard) — killing
-  // them would leave the page in a broken state.
-  useLayoutEffect(() => {
-    if (isBackNav.current) {
-      // Restore saved scroll position after back navigation
-      const y = savedScrollY.current ?? 0;
-      document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo(0, y);
-      requestAnimationFrame(() => {
-        document.documentElement.style.scrollBehavior = '';
-      });
-      savedScrollY.current = null;
-      isBackNav.current = false;
-    } else {
-      document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo(0, 0);
-      requestAnimationFrame(() => {
-        document.documentElement.style.scrollBehavior = '';
-      });
-    }
-  }, [location.pathname]);
+  const handleProjectClick = useCallback(
+    (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
+    [transition],
+  );
 
-  // Intercept browser back button on detail pages to play exit animation
-  useEffect(() => {
-    if (!isDetailPage || isExiting) return;
+  const handleExitComplete = useCallback(() => transition.completeExit('/'), [transition]);
 
-    // Push a duplicate entry so popstate fires without leaving the page
-    window.history.pushState(null, '', location.pathname);
-
-    const handlePopState = () => {
-      if (exitingRef.current) return;
-      exitingRef.current = true;
-      isBackNav.current = true;
-      setIsExiting(true);
-
-      // Find the current project's overlay color for the transition
-      const projectId = location.pathname.split('/purpose/')[1];
-      const project = projects.find((p) => p.id === projectId);
-      setTransitionColor(project?.overlayColor || FALLBACK_OVERLAY_COLOR);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [isDetailPage, isExiting, location.pathname, projects]);
-
-  // When text exit completes, start SplitTransition and navigate back
-  const handleExitComplete = useCallback(() => {
-    setIsTransitioning(true);
-    setTransitionPhase('expanding');
-    setPendingNavigation('/');
-    document.body.style.overflow = 'hidden';
-    setIsExiting(false);
-    exitingRef.current = false;
-  }, []);
-
-  const handleProjectClick = (project: Project) => {
-    savedScrollY.current = window.scrollY;
-    setTransitionColor(project.overlayColor);
-    setIsTransitioning(true);
-    setTransitionPhase('expanding');
-    setPendingNavigation(`/purpose/${project.id}`);
-    document.body.style.overflow = 'hidden';
-  };
-
-  const handlePhaseComplete = useCallback(() => {
-    if (transitionPhase === 'expanding') {
-      if (pendingNavigation) {
-        // Reset scroll BEFORE the new route mounts so child layout effects
-        // (e.g. MoodBoard's pinned ScrollTrigger) compute spacer positions
-        // against scroll = 0 instead of the previous page's scroll position.
-        ScrollTrigger.getAll().forEach((st) => st.kill());
-        document.body.style.overflow = '';
-        document.documentElement.style.overflow = '';
-        // CSS `scroll-behavior: smooth` in index.css would otherwise animate
-        // this scrollTo, leaving the next route mounted mid-scroll. Force
-        // instant jump for the route-change reset.
-        const restoreY = isBackNav.current ? (savedScrollY.current ?? 0) : 0;
-        const prevBehavior = document.documentElement.style.scrollBehavior;
-        document.documentElement.style.scrollBehavior = 'auto';
-        window.scrollTo(0, restoreY);
-        document.documentElement.scrollTop = restoreY;
-        document.body.scrollTop = restoreY;
-        document.documentElement.style.scrollBehavior = prevBehavior;
-        navigate(pendingNavigation);
-        setPendingNavigation(null);
-      }
-      setTransitionPhase('revealing');
-    } else if (transitionPhase === 'revealing') {
-      setIsTransitioning(false);
-      setTransitionPhase('idle');
-      document.body.style.overflow = 'auto';
-    }
-  }, [transitionPhase, pendingNavigation, navigate]);
+  // Map the four-state status onto SplitTransition's three-state phase prop.
+  // `exiting` is the text-fade pre-overlay phase, during which the overlay is hidden.
+  const splitActive = status === 'expanding' || status === 'revealing';
+  const splitPhase: TransitionPhase = splitActive ? status : 'idle';
 
   return (
     <AuthProvider>
@@ -182,7 +88,7 @@ function App() {
               element={
                 <PurposeDetailRoute
                   projects={projects}
-                  exiting={isExiting}
+                  exiting={status === 'exiting'}
                   onExitComplete={handleExitComplete}
                 />
               }
@@ -198,10 +104,10 @@ function App() {
       {!hideFooter && <Footer />}
 
       <SplitTransition
-        isActive={isTransitioning}
-        overlayColor={transitionColor}
-        phase={transitionPhase}
-        onPhaseComplete={handlePhaseComplete}
+        isActive={splitActive}
+        overlayColor={color}
+        phase={splitPhase}
+        onPhaseComplete={transition.completePhase}
       />
 
       <div className="grain-bg" aria-hidden="true" />

@@ -30,7 +30,7 @@ describe('NotepadActions', () => {
     adapter = new FakeStorageAdapter();
     notes = new NoteCollection(adapter);
     folders = new FolderHierarchy(adapter);
-    referenceGraph = new ReferenceGraph(adapter, createInMemoryVerseFetcher({}), createInMemoryStorage());
+    referenceGraph = new ReferenceGraph(createInMemoryVerseFetcher({}), createInMemoryStorage());
     actions = new NotepadActions(adapter, notes, folders, referenceGraph);
   });
 
@@ -210,8 +210,8 @@ describe('NotepadActions', () => {
   describe('init', () => {
     it('does NOT call repairNoteLinks when the notes array is empty', async () => {
       // No notes seeded — notes list will be empty after notes.init()
-      const repairSpy = vi.spyOn(referenceGraph, 'repairNoteLinks').mockResolvedValue({
-        repairedNotes: 0, rewiredLinks: 0, orphans: 0,
+      const repairSpy = vi.spyOn(referenceGraph, 'repairNoteLinks').mockReturnValue({
+        rewires: [], rewiredLinks: 0, orphans: 0,
       });
 
       await actions.init();
@@ -219,14 +219,14 @@ describe('NotepadActions', () => {
       expect(repairSpy).not.toHaveBeenCalled();
     });
 
-    it('calls repairNoteLinks before referenceGraph.init when notes exist (rewiredLinks === 0)', async () => {
+    it('calls repairNoteLinks before referenceGraph.init when notes exist (no rewires)', async () => {
       seedNote(adapter, 'n1', 'root');
 
       const callOrder: string[] = [];
 
-      const repairSpy = vi.spyOn(referenceGraph, 'repairNoteLinks').mockImplementation(async () => {
+      const repairSpy = vi.spyOn(referenceGraph, 'repairNoteLinks').mockImplementation(() => {
         callOrder.push('repair');
-        return { repairedNotes: 0, rewiredLinks: 0, orphans: 0 };
+        return { rewires: [], rewiredLinks: 0, orphans: 0 };
       });
 
       const graphInitSpy = vi.spyOn(referenceGraph, 'init').mockImplementation(async () => {
@@ -240,42 +240,50 @@ describe('NotepadActions', () => {
       expect(callOrder).toEqual(['repair', 'graphInit']);
     });
 
-    it('does NOT call notes.refetchAll when repairNoteLinks returns rewiredLinks === 0', async () => {
+    it('does NOT call notes.updateNote when repairNoteLinks returns no rewires', async () => {
       seedNote(adapter, 'n1', 'root');
 
-      vi.spyOn(referenceGraph, 'repairNoteLinks').mockResolvedValue({
-        repairedNotes: 0, rewiredLinks: 0, orphans: 0,
+      vi.spyOn(referenceGraph, 'repairNoteLinks').mockReturnValue({
+        rewires: [], rewiredLinks: 0, orphans: 0,
       });
       vi.spyOn(referenceGraph, 'init').mockResolvedValue(undefined);
 
-      const refetchSpy = vi.spyOn(notes, 'refetchAll');
+      const updateSpy = vi.spyOn(notes, 'updateNote');
 
       await actions.init();
 
-      expect(refetchSpy).not.toHaveBeenCalled();
+      expect(updateSpy).not.toHaveBeenCalled();
     });
 
-    it('calls notes.refetchAll when repairNoteLinks returns rewiredLinks > 0', async () => {
+    it('persists each rewire through notes.updateNote when repairNoteLinks returns rewires', async () => {
       seedNote(adapter, 'n1', 'root');
+      seedNote(adapter, 'n2', 'root');
 
-      vi.spyOn(referenceGraph, 'repairNoteLinks').mockResolvedValue({
-        repairedNotes: 1, rewiredLinks: 3, orphans: 0,
+      vi.spyOn(referenceGraph, 'repairNoteLinks').mockReturnValue({
+        rewires: [
+          { noteId: 'n1', content: '{"new":"a"}' },
+          { noteId: 'n2', content: '{"new":"b"}' },
+        ],
+        rewiredLinks: 3,
+        orphans: 0,
       });
       vi.spyOn(referenceGraph, 'init').mockResolvedValue(undefined);
 
-      const refetchSpy = vi.spyOn(notes, 'refetchAll');
+      const updateSpy = vi.spyOn(notes, 'updateNote');
 
       await actions.init();
 
-      expect(refetchSpy).toHaveBeenCalledTimes(1);
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+      expect(updateSpy).toHaveBeenNthCalledWith(1, 'n1', { content: '{"new":"a"}' });
+      expect(updateSpy).toHaveBeenNthCalledWith(2, 'n2', { content: '{"new":"b"}' });
     });
 
     it('calls referenceGraph.init with the current note list', async () => {
       seedNote(adapter, 'n1', 'root');
       seedNote(adapter, 'n2', 'root');
 
-      vi.spyOn(referenceGraph, 'repairNoteLinks').mockResolvedValue({
-        repairedNotes: 0, rewiredLinks: 0, orphans: 0,
+      vi.spyOn(referenceGraph, 'repairNoteLinks').mockReturnValue({
+        rewires: [], rewiredLinks: 0, orphans: 0,
       });
 
       const graphInitSpy = vi.spyOn(referenceGraph, 'init').mockResolvedValue(undefined);
@@ -320,20 +328,20 @@ describe('NotepadActions', () => {
 
   // ---------------------------------------------------------------------------
   describe('rebindAdapter', () => {
-    it('cascades rebindAdapter to notes, folders, and referenceGraph', async () => {
+    it('cascades rebindAdapter to notes/folders and reset to referenceGraph', async () => {
       seedNote(adapter, 'old', 'root');
       await actions.init();
 
       const notesRebindSpy = vi.spyOn(notes, 'rebindAdapter');
       const foldersRebindSpy = vi.spyOn(folders, 'rebindAdapter');
-      const graphRebindSpy = vi.spyOn(referenceGraph, 'rebindAdapter');
+      const graphResetSpy = vi.spyOn(referenceGraph, 'reset');
 
       const next = new FakeStorageAdapter();
       await actions.rebindAdapter(next);
 
       expect(notesRebindSpy).toHaveBeenCalledWith(next);
       expect(foldersRebindSpy).toHaveBeenCalledWith(next);
-      expect(graphRebindSpy).toHaveBeenCalledWith(next);
+      expect(graphResetSpy).toHaveBeenCalledTimes(1);
     });
 
     it('re-runs init after rebinding (notes are refreshed from the new adapter)', async () => {
@@ -363,6 +371,121 @@ describe('NotepadActions', () => {
       await actions.rebindAdapter(next);
 
       expect(folders.getSnapshot().folders.map((f) => f.id)).toEqual(['new-folder']);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cross-module integration tests with REAL ReferenceGraph (no mocks).
+  // These verify that the orchestration in NotepadActions actually produces
+  // correct end-state — not just that the right methods are called. The spy
+  // tests above catch sequencing bugs; these catch wrong-shape and
+  // wrong-state-after-cascade bugs.
+  // ---------------------------------------------------------------------------
+  describe('cross-module integration', () => {
+    function noteLinkContent(targetNoteId: string): string {
+      return JSON.stringify({
+        type: 'doc',
+        content: [{
+          type: 'paragraph',
+          content: [{
+            type: 'text',
+            text: 'See also',
+            marks: [{ type: 'noteLink', attrs: { noteId: targetNoteId } }],
+          }],
+        }],
+      });
+    }
+
+    function orphanNoteLinkContent(noteId: string, noteTitle: string): string {
+      return JSON.stringify({
+        type: 'doc',
+        content: [{
+          type: 'paragraph',
+          content: [{
+            type: 'text',
+            text: 'See also',
+            marks: [{ type: 'noteLink', attrs: { noteId, noteTitle } }],
+          }],
+        }],
+      });
+    }
+
+    it('updateNote with noteLink content creates an explicit reference in the graph', async () => {
+      seedNote(adapter, 'src', 'root');
+      seedNote(adapter, 'dst', 'root');
+      await actions.init();
+
+      await actions.updateNote('src', { content: noteLinkContent('dst') });
+
+      const refs = referenceGraph.getReferencesBy({ source: 'src' });
+      expect(refs).toHaveLength(1);
+      expect(refs[0].target).toBe('dst');
+      expect(refs[0].type).toBe('explicit');
+    });
+
+    it('deleteNote removes the note\'s outbound references from the graph', async () => {
+      seedNote(adapter, 'src', 'root');
+      seedNote(adapter, 'dst', 'root');
+      await actions.init();
+      await actions.updateNote('src', { content: noteLinkContent('dst') });
+      expect(referenceGraph.getReferencesBy({ source: 'src' })).toHaveLength(1);
+
+      await actions.deleteNote('src');
+
+      expect(referenceGraph.getReferencesBy({ source: 'src' })).toEqual([]);
+      expect(referenceGraph.getReferencesBy({ target: 'src' })).toEqual([]);
+    });
+
+    it('importNotes syncs imported notes\' references into the graph', async () => {
+      seedNote(adapter, 'pre-existing', 'root');
+      await actions.init();
+      expect(referenceGraph.getReferences()).toHaveLength(0);
+
+      await actions.importNotes([
+        { id: 'imp-a', title: 'A', content: '', folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'imp-b', title: 'B', content: noteLinkContent('imp-a'), folderId: 'root', type: 'devotion', tags: [], wordCount: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+      ]);
+
+      const refs = referenceGraph.getReferencesBy({ source: 'imp-b' });
+      expect(refs).toHaveLength(1);
+      expect(refs[0].target).toBe('imp-a');
+      expect(refs[0].type).toBe('explicit');
+    });
+
+    it('init repair pass rewrites in-memory NoteCollection content for orphan noteLinks', async () => {
+      // noteA has an orphan noteLink whose noteTitle matches noteB's title.
+      adapter.notes.push({
+        id: 'note-A',
+        title: 'Note A',
+        content: orphanNoteLinkContent('deleted-id', 'Note B'),
+        folderId: 'root',
+        type: 'devotion',
+        tags: [],
+        wordCount: 0,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      });
+      seedNote(adapter, 'note-B', 'root');
+      // Rename note-B so its title matches the orphan's noteTitle.
+      adapter.notes[adapter.notes.length - 1].title = 'Note B';
+
+      await actions.init();
+
+      // The repair pass should have rewired noteA's content to point at note-B.
+      // Crucially: this assertion reads from NoteCollection (in-memory), not from
+      // the adapter. It verifies that the rewires flowed through NoteCollection.updateNote
+      // rather than around it via a direct adapter write.
+      const noteA = notes.getSnapshot().notes.find((n) => n.id === 'note-A');
+      expect(noteA).toBeDefined();
+      const doc = JSON.parse(noteA!.content) as {
+        content: Array<{ content: Array<{ marks: Array<{ type: string; attrs: { noteId: string } }> }> }>;
+      };
+      const mark = doc.content[0].content[0].marks.find((m) => m.type === 'noteLink');
+      expect(mark?.attrs.noteId).toBe('note-B');
+
+      // And the graph should have the explicit reference after init's syncAll.
+      const refs = referenceGraph.getReferencesBy({ source: 'note-A' });
+      expect(refs.find((r) => r.target === 'note-B' && r.type === 'explicit')).toBeDefined();
     });
   });
 });

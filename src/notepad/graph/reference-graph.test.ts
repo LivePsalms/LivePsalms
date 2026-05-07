@@ -3,7 +3,6 @@ import { ReferenceGraph } from './reference-graph';
 import type { ReferenceGraphState, VerseFetcher } from './reference-graph';
 import { createInMemoryStorage } from './in-memory-storage';
 import { createInMemoryVerseFetcher } from './in-memory-verse-fetcher';
-import { FakeStorageAdapter } from '../collection/fake-storage-adapter';
 import type { Reference, ScriptureNode } from './types';
 import type { Note } from '../types';
 
@@ -54,12 +53,10 @@ function seedCache(
 // --- Tests ---
 
 describe('ReferenceGraph — skeleton', () => {
-  let adapter: FakeStorageAdapter;
   let fetchVerse: ReturnType<typeof createInMemoryVerseFetcher>;
   let storage: ReturnType<typeof createInMemoryStorage>;
 
   beforeEach(() => {
-    adapter = new FakeStorageAdapter();
     fetchVerse = createInMemoryVerseFetcher({});
     storage = createInMemoryStorage();
   });
@@ -71,34 +68,34 @@ describe('ReferenceGraph — skeleton', () => {
   // ---------------------------------------------------------------------------
   describe('empty-state behavior on construction (no cached data)', () => {
     it('starts with empty references and scriptureNodes', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       const state = graph.getSnapshot();
       expect(state.references).toEqual([]);
       expect(state.scriptureNodes).toEqual([]);
     });
 
     it('getReferences() returns an empty array', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getReferences()).toEqual([]);
     });
 
     it('getScriptureNodes() returns an empty array', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getScriptureNodes()).toEqual([]);
     });
 
     it('getReferencesBy({}) returns an empty array', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getReferencesBy({})).toEqual([]);
     });
 
     it('getReferencesBy({ source: "x" }) returns an empty array', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getReferencesBy({ source: 'x' })).toEqual([]);
     });
 
     it('getScriptureNode("anything") returns null', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getScriptureNode('anything')).toBeNull();
     });
   });
@@ -110,7 +107,7 @@ describe('ReferenceGraph — skeleton', () => {
       const node = makeNode({ id: 'node-seeded' });
       seedCache(storage, { references: [ref], scriptureNodes: [node] });
 
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       expect(graph.getReferences()).toEqual([ref]);
       expect(graph.getScriptureNodes()).toEqual([node]);
@@ -120,7 +117,7 @@ describe('ReferenceGraph — skeleton', () => {
       const node = makeNode({ id: 'seeded-id' });
       seedCache(storage, { references: [], scriptureNodes: [node] });
 
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       expect(graph.getScriptureNode('seeded-id')).toEqual(node);
     });
@@ -129,7 +126,7 @@ describe('ReferenceGraph — skeleton', () => {
       const node = makeNode({ id: 'seeded-id' });
       seedCache(storage, { references: [], scriptureNodes: [node] });
 
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       expect(graph.getScriptureNode('missing-id')).toBeNull();
     });
@@ -145,14 +142,14 @@ describe('ReferenceGraph — skeleton', () => {
 
       vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      expect(() => new ReferenceGraph(adapter, fetchVerse, storage)).not.toThrow();
+      expect(() => new ReferenceGraph(fetchVerse, storage)).not.toThrow();
     });
 
     it('emits a console.warn on malformed cache', () => {
       storage.setItem(REFERENCES_KEY, '{not json');
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      new ReferenceGraph(adapter, fetchVerse, storage);
+      new ReferenceGraph(fetchVerse, storage);
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
@@ -165,7 +162,7 @@ describe('ReferenceGraph — skeleton', () => {
       storage.setItem(SCRIPTURE_NODES_KEY, JSON.stringify([makeNode()]));
 
       vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       expect(graph.getReferences()).toEqual([]);
       expect(graph.getScriptureNodes()).toEqual([]);
@@ -177,7 +174,7 @@ describe('ReferenceGraph — skeleton', () => {
       // so this does NOT throw.
       seedCache(storage, { scriptureNodes: [makeNode({ id: 'n1' })] });
 
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       expect(graph.getReferences()).toEqual([]);
       expect(graph.getScriptureNodes()).toHaveLength(1);
@@ -196,7 +193,7 @@ describe('ReferenceGraph — skeleton', () => {
         makeRef({ id: 'r4', source: 'x', target: 'c' }),
       ];
       seedCache(storage, { references: refs, scriptureNodes: [] });
-      graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      graph = new ReferenceGraph(fetchVerse, storage);
     });
 
     it('getReferencesBy({}) returns all references', () => {
@@ -235,34 +232,33 @@ describe('ReferenceGraph — skeleton', () => {
   // ---------------------------------------------------------------------------
   describe('subscribe / getSnapshot mechanics', () => {
     it('getSnapshot() returns the current state object', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       const snap = graph.getSnapshot();
       expect(snap).toHaveProperty('references');
       expect(snap).toHaveProperty('scriptureNodes');
     });
 
     it('subscribe does not crash on empty graph', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(() => graph.subscribe(() => {})).not.toThrow();
     });
 
     it('subscribe returns an unsubscribe function', () => {
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       const unsub = graph.subscribe(() => {});
       expect(typeof unsub).toBe('function');
       expect(() => unsub()).not.toThrow();
     });
 
-    it('rebindAdapter notifies subscribers when state was non-empty', () => {
+    it('reset notifies subscribers when state was non-empty', () => {
       const ref = makeRef({ id: 'r1' });
       seedCache(storage, { references: [ref], scriptureNodes: [] });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const listener = vi.fn();
       graph.subscribe(listener);
 
-      const nextAdapter = new FakeStorageAdapter();
-      graph.rebindAdapter(nextAdapter);
+      graph.reset();
 
       // State transitioned from non-empty → EMPTY_STATE, so listener fires once.
       expect(listener).toHaveBeenCalledTimes(1);
@@ -270,39 +266,39 @@ describe('ReferenceGraph — skeleton', () => {
   });
 
   // ---------------------------------------------------------------------------
-  describe('rebindAdapter resets state', () => {
-    it('transitions state to empty after rebindAdapter', () => {
+  describe('reset clears state', () => {
+    it('transitions state to empty after reset', () => {
       const ref = makeRef({ id: 'r1' });
       seedCache(storage, { references: [ref], scriptureNodes: [] });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       expect(graph.getReferences()).toHaveLength(1);
 
-      graph.rebindAdapter(new FakeStorageAdapter());
+      graph.reset();
 
       expect(graph.getReferences()).toEqual([]);
       expect(graph.getScriptureNodes()).toEqual([]);
     });
 
-    it('rewrites cache to empty arrays after rebindAdapter', () => {
+    it('rewrites cache to empty arrays after reset', () => {
       // update() → setState triggers writeCache(EMPTY_STATE) because
       // next (EMPTY_STATE) !== prev (hydrated state).
       const ref = makeRef({ id: 'r1' });
       seedCache(storage, { references: [ref], scriptureNodes: [] });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
-      graph.rebindAdapter(new FakeStorageAdapter());
+      graph.reset();
 
       expect(storage.getItem(REFERENCES_KEY)).toBe(JSON.stringify([]));
       expect(storage.getItem(SCRIPTURE_NODES_KEY)).toBe(JSON.stringify([]));
     });
 
-    it('rebindAdapter on an already-empty graph does not notify subscribers', () => {
+    it('reset on an already-empty graph does not notify subscribers', () => {
       // EMPTY_STATE === EMPTY_STATE (same object reference), so setState short-circuits.
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
       const listener = vi.fn();
       graph.subscribe(listener);
 
-      graph.rebindAdapter(new FakeStorageAdapter());
+      graph.reset();
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -437,11 +433,9 @@ function makePlainTextContent(text: string): string {
 // ---------------------------------------------------------------------------
 
 describe('ReferenceGraph — sync behavior', () => {
-  let adapter: FakeStorageAdapter;
   let storage: ReturnType<typeof createInMemoryStorage>;
 
   beforeEach(() => {
-    adapter = new FakeStorageAdapter();
     storage = createInMemoryStorage();
   });
 
@@ -453,7 +447,7 @@ describe('ReferenceGraph — sync behavior', () => {
   describe('a. syncNote idempotency', () => {
     it('calling syncNote twice with the same content produces identical references (same ids and createdAt)', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({
         id: 'note-1',
@@ -472,7 +466,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('syncNote twice does not duplicate references', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({
         id: 'note-1',
@@ -491,7 +485,7 @@ describe('ReferenceGraph — sync behavior', () => {
   describe('b. removing a noteLink from content removes the Reference on next sync', () => {
     it('after removing a noteLink the explicit reference is gone', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteV1 = makeNote({
         id: 'note-1',
@@ -517,7 +511,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('other notes\' references are unaffected when a noteLink is removed from one note', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
       const noteC = makeNote({ id: 'note-C', content: makeNoteLinkContent('note-B') });
@@ -540,7 +534,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know that all things work together for good', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({
         id: 'note-1',
@@ -559,7 +553,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know...', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({
         id: 'note-1',
@@ -597,7 +591,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know...', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({ id: 'note-1', content: makePlainTextContent('Romans 8:28') });
       await graph.syncNote(note);
@@ -631,7 +625,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know...', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({ id: 'note-1', content: makePlainTextContent('Romans 8:28') });
       await graph.syncNote(note);
@@ -661,7 +655,7 @@ describe('ReferenceGraph — sync behavior', () => {
   describe('d. fetchVerse failure produces empty-text ScriptureNode (no thrown error)', () => {
     it('an empty fetcher map produces a ScriptureNode with empty text', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({ id: 'note-1', content: makePlainTextContent('Romans 8:28') });
 
@@ -674,7 +668,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('a fetcher that throws creates an empty-text ScriptureNode and does not throw', async () => {
       const throwingFetcher: VerseFetcher = vi.fn().mockRejectedValue(new Error('Network error'));
-      const graph = new ReferenceGraph(adapter, throwingFetcher, storage);
+      const graph = new ReferenceGraph(throwingFetcher, storage);
 
       const note = makeNote({ id: 'note-1', content: makePlainTextContent('Romans 8:28') });
 
@@ -687,7 +681,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('sync still creates the scripture-reference edge even when fetch fails', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const note = makeNote({ id: 'note-1', content: makePlainTextContent('Romans 8:28') });
       await graph.syncNote(note);
@@ -716,7 +710,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know that all things work together for good', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       // Pre-check: text is empty.
       expect(graph.getScriptureNode('scripture:ro-8-28')!.text).toBe('');
@@ -732,7 +726,7 @@ describe('ReferenceGraph — sync behavior', () => {
       const fetchVerse = createInMemoryVerseFetcher({
         'Romans 8:28': { text: 'For we know...', translation: 'WEB' },
       });
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       // Should not throw.
       await expect(graph.refreshVerseText('scripture:ro-8-28')).resolves.toBeUndefined();
@@ -751,7 +745,7 @@ describe('ReferenceGraph — sync behavior', () => {
       seedCache(storage, { references: [], scriptureNodes: [existingNode] });
 
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       await graph.refreshVerseText('scripture:ro-8-28');
 
@@ -771,7 +765,7 @@ describe('ReferenceGraph — sync behavior', () => {
       seedCache(storage, { references: [], scriptureNodes: [existingNode] });
 
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const listener = vi.fn();
       graph.subscribe(listener);
@@ -786,7 +780,7 @@ describe('ReferenceGraph — sync behavior', () => {
   describe('f. deleteReferencesFor removes both incoming and outgoing references', () => {
     it('deleteReferencesFor removes outgoing references from the deleted node', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       // A → B and B → A so both directions exist.
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
@@ -807,7 +801,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('deleteReferencesFor removes incoming references targeting the deleted node', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
       const noteB = makeNote({ id: 'note-B', content: makeNoteLinkContent('note-A') });
@@ -823,7 +817,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('deleteReferencesFor leaves unrelated references intact', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
       const noteB = makeNote({ id: 'note-B', content: makeNoteLinkContent('note-A') });
@@ -841,7 +835,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('deleteReferencesFor is synchronous and emits once', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
       await graph.syncNote(noteA);
@@ -859,7 +853,7 @@ describe('ReferenceGraph — sync behavior', () => {
   describe('g. syncAll emits exactly once for the whole batch', () => {
     it('syncAll([noteA, noteB, noteC]) emits exactly once', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const listener = vi.fn();
       graph.subscribe(listener);
@@ -875,7 +869,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('syncAll processes all notes and accumulates references', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       const noteA = makeNote({ id: 'note-A', content: makeNoteLinkContent('note-B') });
       const noteB = makeNote({ id: 'note-B', content: makeNoteLinkContent('note-C') });
@@ -889,7 +883,7 @@ describe('ReferenceGraph — sync behavior', () => {
 
     it('syncAll with an empty array does not throw', async () => {
       const fetchVerse = createInMemoryVerseFetcher({});
-      const graph = new ReferenceGraph(adapter, fetchVerse, storage);
+      const graph = new ReferenceGraph(fetchVerse, storage);
 
       await expect(graph.syncAll([])).resolves.toBeUndefined();
     });
@@ -912,7 +906,7 @@ describe('ReferenceGraph — sync behavior', () => {
       ];
       const chainStorage = createInMemoryStorage();
       seedCache(chainStorage, { references: refs, scriptureNodes: [] });
-      chainGraph = new ReferenceGraph(adapter, createInMemoryVerseFetcher({}), chainStorage);
+      chainGraph = new ReferenceGraph(createInMemoryVerseFetcher({}), chainStorage);
     });
 
     it('getNeighborhood("A", 1) returns {A, B}', () => {
@@ -953,18 +947,16 @@ describe('ReferenceGraph — sync behavior', () => {
 // ---------------------------------------------------------------------------
 
 describe('ReferenceGraph — repairNoteLinks', () => {
-  let adapter: FakeStorageAdapter;
   let storage: ReturnType<typeof createInMemoryStorage>;
   let graph: ReferenceGraph;
 
   beforeEach(() => {
-    adapter = new FakeStorageAdapter();
     storage = createInMemoryStorage();
-    graph = new ReferenceGraph(adapter, createInMemoryVerseFetcher({}), storage);
+    graph = new ReferenceGraph(createInMemoryVerseFetcher({}), storage);
   });
 
   // -------------------------------------------------------------------------
-  it('1. repairs an orphan-with-matching-title: rewrites noteId, returns correct counts', async () => {
+  it('1. repairs an orphan-with-matching-title: returns rewire pointing at note-B', () => {
     const noteA = makeNote({
       id: 'note-A',
       title: 'Original',
@@ -976,43 +968,33 @@ describe('ReferenceGraph — repairNoteLinks', () => {
       content: '',
     });
 
-    await adapter.importNote(noteA);
-    await adapter.importNote(noteB);
+    const result = graph.repairNoteLinks([noteA, noteB]);
 
-    const result = await graph.repairNoteLinks([noteA, noteB], adapter);
+    expect(result.rewiredLinks).toBe(1);
+    expect(result.orphans).toBe(0);
+    expect(result.rewires).toHaveLength(1);
+    expect(result.rewires[0].noteId).toBe('note-A');
 
-    expect(result).toEqual({ repairedNotes: 1, rewiredLinks: 1, orphans: 0 });
-
-    // Re-fetch note-A from adapter and check that the noteLink now points at note-B.
-    const fetched = await adapter.getNote('note-A');
-    expect(fetched).not.toBeNull();
-    const doc = JSON.parse(fetched!.content) as { type: string; content: Array<{ type: string; content: Array<{ marks: Array<{ type: string; attrs: { noteId: string } }> }> }> };
+    const doc = JSON.parse(result.rewires[0].content) as { type: string; content: Array<{ type: string; content: Array<{ marks: Array<{ type: string; attrs: { noteId: string } }> }> }> };
     const mark = doc.content[0].content[0].marks.find((m) => m.type === 'noteLink');
     expect(mark?.attrs.noteId).toBe('note-B');
   });
 
   // -------------------------------------------------------------------------
-  it('2. leaves orphan-without-matching-title alone and counts it as orphan', async () => {
+  it('2. leaves orphan-without-matching-title alone and counts it as orphan', () => {
     const noteA = makeNote({
       id: 'note-A',
       title: 'Original',
       content: makeOrphanNoteLinkContent('old-deleted-id', 'No Such Note Title'),
     });
 
-    await adapter.importNote(noteA);
-    const originalContent = noteA.content;
+    const result = graph.repairNoteLinks([noteA]);
 
-    const result = await graph.repairNoteLinks([noteA], adapter);
-
-    expect(result).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 1 });
-
-    // Re-fetch note-A — content must be unchanged.
-    const fetched = await adapter.getNote('note-A');
-    expect(fetched!.content).toBe(originalContent);
+    expect(result).toEqual({ rewires: [], rewiredLinks: 0, orphans: 1 });
   });
 
   // -------------------------------------------------------------------------
-  it('3. is idempotent on already-healed data: both passes return zero counts', async () => {
+  it('3. is idempotent on already-healed data: both passes return empty rewires', () => {
     // All noteLink marks already point at valid note ids.
     const noteA = makeNote({
       id: 'note-A',
@@ -1025,18 +1007,15 @@ describe('ReferenceGraph — repairNoteLinks', () => {
       content: '',
     });
 
-    await adapter.importNote(noteA);
-    await adapter.importNote(noteB);
+    const first = graph.repairNoteLinks([noteA, noteB]);
+    expect(first).toEqual({ rewires: [], rewiredLinks: 0, orphans: 0 });
 
-    const first = await graph.repairNoteLinks([noteA, noteB], adapter);
-    expect(first).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
-
-    const second = await graph.repairNoteLinks([noteA, noteB], adapter);
-    expect(second).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
+    const second = graph.repairNoteLinks([noteA, noteB]);
+    expect(second).toEqual({ rewires: [], rewiredLinks: 0, orphans: 0 });
   });
 
   // -------------------------------------------------------------------------
-  it('4. counts multiple repairs and orphans correctly for a single note with two noteLink marks', async () => {
+  it('4. counts multiple repairs and orphans correctly for a single note with two noteLink marks', () => {
     // note-A has two noteLink marks:
     //   mark1: noteId='bad-id-1', noteTitle='Note B' (resolvable)
     //   mark2: noteId='bad-id-2', noteTitle='Ghost Note' (unresolvable orphan)
@@ -1054,17 +1033,17 @@ describe('ReferenceGraph — repairNoteLinks', () => {
       content: '',
     });
 
-    await adapter.importNote(noteA);
-    await adapter.importNote(noteB);
+    const result = graph.repairNoteLinks([noteA, noteB]);
 
-    const result = await graph.repairNoteLinks([noteA, noteB], adapter);
-
-    expect(result).toEqual({ repairedNotes: 1, rewiredLinks: 1, orphans: 1 });
+    expect(result.rewires).toHaveLength(1);
+    expect(result.rewires[0].noteId).toBe('note-A');
+    expect(result.rewiredLinks).toBe(1);
+    expect(result.orphans).toBe(1);
   });
 
   // -------------------------------------------------------------------------
-  it('5. empty notes array returns zeros and does not throw', async () => {
-    const result = await graph.repairNoteLinks([], adapter);
-    expect(result).toEqual({ repairedNotes: 0, rewiredLinks: 0, orphans: 0 });
+  it('5. empty notes array returns zeros and does not throw', () => {
+    const result = graph.repairNoteLinks([]);
+    expect(result).toEqual({ rewires: [], rewiredLinks: 0, orphans: 0 });
   });
 });

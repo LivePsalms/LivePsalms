@@ -1,15 +1,18 @@
 /**
  * ReferenceGraph — owns the reference edge list and scripture-node cache.
  *
+ * Pure of persistence concerns: it does not touch the StorageAdapter and does
+ * not mutate notes. `repairNoteLinks` returns the list of rewires it would
+ * apply; the caller (NotepadActions) persists them through NoteCollection so
+ * the canonical in-memory state stays in sync.
+ *
  * Constructor parameters:
- *   adapter      — storage back-end (swappable via rebindAdapter)
  *   fetchVerse   — async verse resolver; called by syncNote and refreshVerseText
  *   cacheStorage — a Pick<Storage, 'getItem'|'setItem'> impl so the class is
  *                  testable without a DOM.  Pass `localStorage` in production;
  *                  pass `createInMemoryStorage()` in tests.
  */
 import { Observable } from '../collection/observable';
-import type { StorageAdapter } from '../storage/adapter';
 import type { Reference, ScriptureNode } from './types';
 import { parseReferencesFromContent, parseVerseRef, walkMarks } from './reference-parser';
 import type { ParsedEdge } from './reference-parser';
@@ -53,11 +56,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
   private fetchVerse: VerseFetcher;
   private cache: Pick<Storage, 'getItem' | 'setItem'>;
 
-  // Constructor accepts an adapter for API symmetry with the other deep modules
-  // (NoteCollection, FolderHierarchy), but the graph does not retain it — reads
-  // flow through method parameters (e.g., repairNoteLinks(notes, adapter)).
   constructor(
-    _adapter: StorageAdapter,
     fetchVerse: VerseFetcher,
     cacheStorage: Pick<Storage, 'getItem' | 'setItem'>,
   ) {
@@ -89,9 +88,9 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
 
   getScriptureNodes = (): ScriptureNode[] => this.getSnapshot().scriptureNodes;
 
-  // --- Adapter rebinding (mirrors NoteCollection.rebindAdapter) ---
+  // --- State reset (called from NotepadActions.rebindAdapter cascade) ---
 
-  rebindAdapter(_next: StorageAdapter): void {
+  reset(): void {
     this.update(() => EMPTY_STATE);
   }
 
@@ -183,19 +182,20 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
    * Scans all notes for `noteLink` marks whose `noteId` no longer points at an
    * existing note. When such a mark also carries a `noteTitle` that matches a
    * current note's title (case-insensitive, trimmed), rewrites `noteId` to the
-   * matching note's id and persists via `adapter.updateNote`.
+   * matching note's id.
    *
-   * Returns counts of repaired notes, rewired links, and unresolvable orphans.
-   * Idempotent: a second run over already-healed data does nothing.
+   * Pure: returns the list of rewires (`noteId` + repaired `content`) plus
+   * summary counts. Persistence is the caller's concern — `NotepadActions`
+   * applies each rewire through `NoteCollection.updateNote` so the canonical
+   * in-memory state stays in sync.
    *
-   * Note: mutates note content via the adapter; the caller is expected to
-   * refetch notes after this completes. Does NOT mutate ReferenceGraph state.
+   * Idempotent: a second run over already-healed data returns an empty rewire
+   * list. Does NOT mutate ReferenceGraph state.
    */
-  repairNoteLinks = async (
+  repairNoteLinks = (
     notes: Note[],
-    adapter: StorageAdapter,
-  ): Promise<{ repairedNotes: number; rewiredLinks: number; orphans: number }> => {
-    if (notes.length === 0) return { repairedNotes: 0, rewiredLinks: 0, orphans: 0 };
+  ): { rewires: Array<{ noteId: string; content: string }>; rewiredLinks: number; orphans: number } => {
+    if (notes.length === 0) return { rewires: [], rewiredLinks: 0, orphans: 0 };
 
     const idSet = new Set(notes.map((n) => n.id));
     const titleToId = new Map<string, string>();
@@ -205,7 +205,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
       if (!titleToId.has(key)) titleToId.set(key, n.id);
     }
 
-    let repairedNotes = 0;
+    const rewires: Array<{ noteId: string; content: string }> = [];
     let rewiredLinks = 0;
     let orphans = 0;
 
@@ -242,18 +242,12 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
       }
 
       if (changedThisNote > 0) {
-        const newContent = JSON.stringify(doc);
-        try {
-          await adapter.updateNote(note.id, { content: newContent });
-          repairedNotes++;
-          rewiredLinks += changedThisNote;
-        } catch (err) {
-          console.warn('[repairNoteLinks] failed to persist repair for', note.id, err);
-        }
+        rewires.push({ noteId: note.id, content: JSON.stringify(doc) });
+        rewiredLinks += changedThisNote;
       }
     }
 
-    return { repairedNotes, rewiredLinks, orphans };
+    return { rewires, rewiredLinks, orphans };
   };
 
   /**
