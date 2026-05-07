@@ -413,9 +413,24 @@ export class GraphView extends Observable<GraphViewState> {
     return null;
   }
 
-  // Stubs filled in by later tasks.
-  handleWheel(_e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void {
-    // Task 9.
+  handleWheel = (e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void => {
+    e.preventDefault?.();
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    const t = this.transform;
+    const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
+    t.x = mx - (mx - t.x) * (newScale / t.scale);
+    t.y = my - (my - t.y) * (newScale / t.scale);
+    t.scale = newScale;
+    this.draw();
+  };
+
+  /** Test affordance — read transform without subscribing. */
+  getTransform(): { x: number; y: number; scale: number } {
+    return { ...this.transform };
   }
 
   private rebuild(): void {

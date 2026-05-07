@@ -451,3 +451,50 @@ describe('GraphView — pointer interaction', () => {
     expect(view.getHoveredNodeId()).toBeNull();
   });
 });
+
+describe('GraphView — pan and wheel zoom', () => {
+  it('drag on empty space pans the transform', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.handleMouseDown({ clientX: 200, clientY: 200 });
+    view.handleMouseMove({ clientX: 250, clientY: 230 });
+    expect(view.getTransform()).toMatchObject({ x: 50, y: 30 });
+    view.handleMouseUp({ clientX: 250, clientY: 230 });
+  });
+
+  it('drag does not start when mouse-down is on a node', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const sim = view.getSimNodes();
+    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseMove({ clientX: 200, clientY: 200 });
+    expect(view.getTransform()).toMatchObject({ x: 0, y: 0 });
+  });
+
+  it('wheel up zooms in, anchored at the cursor', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const before = view.getTransform();
+    view.handleWheel({ clientX: 100, clientY: 100, deltaY: -100 });
+    const after = view.getTransform();
+    expect(after.scale).toBeGreaterThan(before.scale);
+  });
+
+  it('wheel down zooms out', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const before = view.getTransform().scale;
+    view.handleWheel({ clientX: 100, clientY: 100, deltaY: 100 });
+    expect(view.getTransform().scale).toBeLessThan(before);
+  });
+
+  it('zoom is clamped between 0.1 and 5', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    for (let i = 0; i < 200; i++) view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 });
+    expect(view.getTransform().scale).toBeLessThanOrEqual(5);
+    for (let i = 0; i < 400; i++) view.handleWheel({ clientX: 0, clientY: 0, deltaY: 100 });
+    expect(view.getTransform().scale).toBeGreaterThanOrEqual(0.1);
+  });
+});
