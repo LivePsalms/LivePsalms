@@ -48,6 +48,7 @@ export class NotepadActions {
 
   updateNote = async (id: string, updates: Partial<Note>): Promise<Note> => {
     const updated = await this.notes.updateNote(id, updates);
+    // Only content changes affect references; skip sync for title/folder/tag updates.
     if (updates.content !== undefined) {
       await this.referenceGraph.syncNote(updated);
     }
