@@ -85,7 +85,7 @@ export function useGraph(notes: Note[], activeNoteId: string | null): UseGraphRe
   return {
     nodes: graphNodes,
     edges: graphEdges,
-    activeNodeId,
+    activeNodeId: activeNoteId,
     isLoading,
     getNeighborhood,
   };

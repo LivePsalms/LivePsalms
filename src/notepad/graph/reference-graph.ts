@@ -50,17 +50,18 @@ function mapParsedType(t: ParsedEdge['type']): Reference['type'] {
 }
 
 export class ReferenceGraph extends Observable<ReferenceGraphState> {
-  private adapter: StorageAdapter;
   private fetchVerse: VerseFetcher;
   private cache: Pick<Storage, 'getItem' | 'setItem'>;
 
+  // Constructor accepts an adapter for API symmetry with the other deep modules
+  // (NoteCollection, FolderHierarchy), but the graph does not retain it — reads
+  // flow through method parameters (e.g., repairNoteLinks(notes, adapter)).
   constructor(
-    adapter: StorageAdapter,
+    _adapter: StorageAdapter,
     fetchVerse: VerseFetcher,
     cacheStorage: Pick<Storage, 'getItem' | 'setItem'>,
   ) {
     super(EMPTY_STATE);
-    this.adapter = adapter;
     this.fetchVerse = fetchVerse;
     this.cache = cacheStorage;
     this.hydrateFromCache();
@@ -90,8 +91,7 @@ export class ReferenceGraph extends Observable<ReferenceGraphState> {
 
   // --- Adapter rebinding (mirrors NoteCollection.rebindAdapter) ---
 
-  rebindAdapter(next: StorageAdapter): void {
-    this.adapter = next;
+  rebindAdapter(_next: StorageAdapter): void {
     this.update(() => EMPTY_STATE);
   }
 
