@@ -1,9 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { Project } from '@/types';
 import { MoodBoard } from '@/components/sections/MoodBoard';
 import { LineMaskReveal } from '@/components/ui-custom/LineMaskReveal';
 import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import { ImageReveal } from '@/components/ui-custom/ImageReveal';
+import { useDetailReveal } from '@/transitions/useDetailReveal';
+import { DETAIL_REVEAL_TIMELINE } from '@/transitions/purpose-detail-reveal';
 
 interface PurposeDetailProps {
   project: Project;
@@ -15,13 +17,12 @@ interface PurposeDetailProps {
 export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetailProps) {
   const isRestoration1 = project.id === 'restoration1';
   const isRestoration3 = project.id === 'restoration3';
-  const [isVisible, setIsVisible] = useState(false);
-  const [textReady, setTextReady] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const heroContentRef = useRef<HTMLDivElement>(null);
-  const heroImageRef = useRef<HTMLDivElement>(null);
 
-  // Reset scroll before paint so the page always starts at the top
+  const { isVisible, textReady, contentRef: heroContentRef, imageRef: heroImageRef } =
+    useDetailReveal({ project, exiting: !!exiting, onExitComplete });
+
+  // Scroll reset before paint stays here — useLayoutEffect timing is the point.
   useLayoutEffect(() => {
     document.documentElement.style.scrollBehavior = 'auto';
     window.scrollTo(0, 0);
@@ -29,39 +30,6 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
       document.documentElement.style.scrollBehavior = '';
     });
   }, [project]);
-
-  useEffect(() => {
-    setIsVisible(true);
-    setTextReady(false);
-    const timer = setTimeout(() => setTextReady(true), 1400);
-    return () => clearTimeout(timer);
-  }, [project]);
-
-  // Exit animation: text slides down + fades, image fades, then notify parent
-  useEffect(() => {
-    if (!exiting) return;
-
-    const content = heroContentRef.current;
-    const image = heroImageRef.current;
-
-    if (content) {
-      content.style.transition = 'opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1), filter 0.6s cubic-bezier(0.22,1,0.36,1)';
-      content.style.opacity = '0';
-      content.style.transform = 'translateY(40px)';
-      content.style.filter = 'blur(8px)';
-    }
-
-    if (image) {
-      image.style.transition = 'opacity 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s';
-      image.style.opacity = '0';
-    }
-
-    const timer = setTimeout(() => {
-      onExitComplete?.();
-    }, 650);
-
-    return () => clearTimeout(timer);
-  }, [exiting, onExitComplete]);
 
   return (
     <section
@@ -96,7 +64,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                     fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)',
                     lineHeight: 0.95,
                     transform: textReady ? 'translateY(0)' : 'translateY(110%)',
-                    transition: 'transform 1.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                    transition: `transform 1.6s ${DETAIL_REVEAL_TIMELINE.easing}`,
                   }}
                 >
                   {isRestoration1 ? 'Beside Still Waters' : 'A Future You Cannot See Yet'}
@@ -131,7 +99,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   className="mt-3 not-italic text-xs tracking-[0.25em] uppercase text-white/40"
                   style={{
                     opacity: textReady ? 1 : 0,
-                    transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.6s',
+                    transition: `opacity 1.2s ${DETAIL_REVEAL_TIMELINE.easing} 0.6s`,
                   }}
                 >
                   {isRestoration1 ? <>Psalm 23:2&ndash;3</> : 'Jeremiah 29:11'}
@@ -143,7 +111,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                 className="self-end flex items-center gap-3 text-white/50 mt-auto"
                 style={{
                   opacity: textReady ? 1 : 0,
-                  transition: 'opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1s',
+                  transition: `opacity 1.4s ${DETAIL_REVEAL_TIMELINE.easing} 1s`,
                 }}
               >
                 <svg
