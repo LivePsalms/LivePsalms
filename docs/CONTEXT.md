@@ -116,6 +116,42 @@ Pure copy — does **not** mutate the source. Source-side cleanup (e.g., `LocalS
 
 Folders are imported before Notes so each Note's `folderId` reference resolves at the destination at write time. Note ids are preserved so embedded `noteLink` marks keep resolving — otherwise every cross-Note edge in the graph would break after migration.
 
+## MigrationWorkflow
+
+The deepened module that owns the multi-phase orchestration around `migrateAdapter` — the stateful coordinator that the pure `AdapterMigration` module's "caller's concern" is referring to. Surfaced as the `useMigrationWorkflow({ source, target, onMigrationComplete, onClose })` hook returning `{ state, start, dismissError }`. Mounted by `MigrationDialog`.
+
+Seven-state status machine:
+
+```
+idle ──(start)──> loading ──> folders(c,t) ──> notes(c,t) ──> cleanup ──> done(folders,notes)
+                                                                              │
+                                                                  (TIMELINE.celebratoryPause)
+                                                                              ▼
+                                                                            idle  (fires onClose)
+
+(any step) ──(throw)──> error(message)
+                            │
+                            ├──(start)──────────> loading (retry)
+                            └──(dismissError)───> idle  (fires onClose)
+```
+
+Class responsibilities:
+
+- The seven-state status (idle / loading / folders / notes / cleanup / done / error) and the per-status payload (progress counts on folders/notes, result counts on done, message on error)
+- `start()` — `idle | error → loading`; runs the migrate→clearSource→onMigrationComplete→done sequence; schedules the celebratory close timer
+- `dismissError()` — `error → idle`; fires `onClose`
+- `dispose()` — clears any pending celebratory timer (called on hook unmount); guards against the stale-fire race
+- Guarded transitions: `start` no-ops from any in-progress status; mid-migration progress events from `migrateAdapter` flow through a private `setPhaseFromEvent` translator
+- Side-effect orchestration via injected `MigrationWorkflowDeps`: `migrate`, `clearSource`, `toastSuccess`, `toastError`, `setTimer`, `clearTimer`, `onMigrationComplete`, `onClose`. Pure-state-and-deps, testable in node — fakes substitute for the storage adapters, toast, and timers at test time.
+
+Owns the timeline as `MIGRATION_TIMELINE`: `celebratoryPauseMs` (default 1400). Single source of truth for the dialog's pause-then-close timing.
+
+Composes with `AdapterMigration`: `start()` calls `deps.migrate(source, target, { onEvent })`, translating each `MigrationEvent` into a status mutation. The result `{ folders, notes }` flows into the `done` payload so the toast message ("1 note imported" vs "N notes imported") is computed inside the workflow, not the dialog.
+
+Does **not** own: the dialog's `open` prop, the source-side `noteCount` shown on the intro panel (one-shot fetch, lives in the dialog's `useEffect`), the JSX panels themselves (intro / in-progress / error), or the in-progress click-outside guard (`open && !inProgress` is a view concern reading `state.status` from the workflow).
+
+The fallback error message ("Something went wrong importing your notes. Your local copy was left untouched.") lives in the workflow, not the dialog — it is part of the lifecycle's contract that source data is preserved on failure.
+
 ## DocumentImporter
 
 The module that turns uploaded files into full `Note` records, ready for `adapter.importNote` (id-preserving). Three exports:
@@ -125,6 +161,55 @@ The module that turns uploaded files into full `Note` records, ready for `adapte
 - `linkNotesByVerses(notes)` — sync, pure. Optional cross-link pass that appends a "Related Notes" section pointing at each peer that shares at least one verse reference, using real `noteLink` marks. Because the ids exist before this pass runs, the inserted marks become genuine Reference edges in `ReferenceGraph` after `syncAll` — i.e. proper Backlinks.
 
 The upload path uses `NotepadActions.importNotes(notes: Note[])`, which preserves ids via `adapter.importNote`. The id-preserving contract is what makes `linkNotesByVerses` work: the cross-link marks reference peers by their final ids, so `ReferenceGraph.syncNote` recognizes them as `explicit` References and they appear as Backlinks per §Backlink.
+
+## tiptap-text
+
+The canonical TipTap-text-extraction utility, lifted out of five inline copies that had drifted across the codebase (`word-count.ts`, `reference-parser.ts`, `SearchDialog.tsx`, `InfoPanel.tsx`, `document-importer.ts`). Lives at `src/notepad/utils/tiptap-text.ts`.
+
+Three exports:
+
+- `extractPlainText(node)` — recursive walker over a parsed TipTap JSON tree. Defensive on `unknown` input: returns `''` for non-objects. Joins child text on a single space.
+- `extractTextFromNote(note)` — `extractPlainText(JSON.parse(note.content))` with a try/catch fallback to the raw `note.content` string for non-JSON. The shape `document-importer.ts` already exposed; promoted here so every caller goes through the same path.
+- `countWordsFromTipTapJSON(jsonString)` — preserved from the original `word-count.ts`. Implementation now reuses `extractPlainText`.
+
+The five previous copies had minor drift — `InfoPanel.tsx`'s version was missing the `type === 'text'` gate (theoretically buggy on TipTap docs with stray `text` fields on non-text nodes; in practice harmless on valid docs). The canonical version uses the gate; the migration is effectively a defensive bug fix.
+
+Does **not** own: verse extraction (that's `extractVerseRefs` in `bible-verse-utils`), tag parsing (that's `tags.ts`), or any TipTap *editor* coupling — these are pure utilities operating on parsed JSON.
+
+## SearchIndex
+
+The deepened module that builds the deduped verse-and-tag index `SearchDialog` renders. Surfaced as `buildSearchIndex(notes): { verses, tags }`, each entry shaped `{ <key>, noteId, noteTitle }`.
+
+Responsibilities:
+
+- For each Note: extract plain text via `extractTextFromNote` (§tiptap-text), then run `extractVerseRefs` over the result.
+- Dedup verses by ref string, **first-occurrence-wins**: the first Note in `notes` order containing a given verse owns the entry. Same dedup logic for tags, reading from `note.tags` directly (tags are pre-stored on the Note, not parsed from content).
+- Pure of React, DOM, and persistence; tested in node.
+
+Does **not** own: the cmdk command-palette UI (lives in `SearchDialog`), the keyboard shortcut binding (`useEffect` listener in the dialog), or full-text note search (the dialog leans on cmdk's substring-on-`value` matching for the Notes group).
+
+## dominant-color
+
+The deepened pure module that owns the dominant-color extraction algorithm previously buried inside `extractDominantColor`'s canvas `onload` handler. Lives at `src/utils/dominant-color.ts`.
+
+One public export:
+
+- `dominantColorFromPixels(pixels: Uint8ClampedArray): string` — takes an RGBA pixel buffer (any size; algorithm walks `pixels.length / 4` pixels), returns a muted overlay-friendly hex color.
+
+Algorithm steps (preserved from the original):
+
+1. Walk every pixel, skip transparent (alpha < 128), too-dark/too-bright (brightness < 25 or > 230), and near-grey (HSL saturation < 0.08).
+2. Quantise the survivors into 32-step RGB buckets; track count and running RGB sum per bucket.
+3. If the filtered pass produced no buckets, do a second pass over **every** opaque pixel (skipping only the alpha gate) — this is the "fully grey image" rescue.
+4. Pick the bucket with the highest count (initial `best` is the algorithm's neutral starting RGB, hardcoded to `(0x8B, 0x83, 0x78)` — not to be confused with `FALLBACK_OVERLAY_COLOR`, which is the project-data fallback used by the DOM wrapper for image-load failures).
+5. Average the real RGB values inside that bucket.
+6. Mute via HSL: saturation × 0.45, lightness blended toward 0.45 (`l × 0.55 + 0.45 × 0.45`).
+
+Internal helpers (`rgbToHsl`, `hslToRgb`, `toHex`) stay private to the module — they are algorithm support, not a public color-math API.
+
+`extractDominantColor` is now a thin DOM wrapper around this: load `Image`, draw to a 50×50 canvas, `getImageData`, hand the buffer to `dominantColorFromPixels`. Image-load failures and missing canvas context resolve to `FALLBACK_OVERLAY_COLOR` directly without calling the algorithm.
+
+Pure of DOM, canvas, and React. Tested in node by constructing synthetic `Uint8ClampedArray` pixel buffers — the previous embedded algorithm had zero test coverage despite four magic numbers and a two-pass fallback structure.
 
 ## Reference
 
@@ -262,3 +347,77 @@ Class responsibilities:
 Does **not** own: the popstate listener itself, `history.pushState` for the back-button trap, or knowledge of which paths are detail pages. Those live in `useRouteTransition` because they are window-event coupling.
 
 The status value is a four-state superset of `SplitTransition`'s three-state `phase` prop. App-level rendering maps `'exiting' → SplitTransition is hidden` and the other three pass through directly.
+
+## PurposeDetailReveal
+
+The deepened module that owns the entry + exit reveal lifecycle for the purpose detail page. Surfaced as the `useDetailReveal({ project, exiting, onExitComplete })` hook returning `{ isVisible, textReady, contentRef, imageRef }`. Mounted by `PurposeDetail`.
+
+Five-state status machine:
+
+```
+idle ──(start)──> entering ──(textReadyTimer @ TIMELINE.textReadyAt)──> revealed
+                     │                                                     │
+                     └──────────────(requestExit)─────────────────────────-┤
+                                                                           ▼
+                                                                        exiting
+                                                                           │
+                                                              (TIMELINE.exitCompleteAt)
+                                                                           ▼
+                                                                        exited  (fires onExitComplete)
+```
+
+Class responsibilities:
+
+- The five-state status and the derived `isVisible` / `textReady` booleans the JSX consumes
+- `start()` — `idle → entering`; schedules the text-ready timer
+- `reset()` — for project change; cancels any pending timer and re-enters
+- `requestExit()` — `entering | revealed → exiting`; calls `applyExitStyles` for `'content'` and `'image'` with the styles from `DETAIL_REVEAL_TIMELINE`; schedules the exit-complete timer that fires `onExitComplete` and transitions to `exited`
+- `dispose()` — clears any pending timers (called on hook unmount)
+- Guarded transitions: each method no-ops from the wrong status, mirroring `RouteTransition.beginNavigation` / `beginExit` defense
+- Side-effect orchestration via injected `DetailRevealDeps`: `applyExitStyles`, `setTimer`, `clearTimer`, `onExitComplete`. The class is pure-state-and-deps, testable in node — fakes substitute for DOM mutation and timers at test time.
+
+Owns the timeline as `DETAIL_REVEAL_TIMELINE` exported from the module: `textReadyAt`, `exitCompleteAt`, `easing`, and the `contentExit` / `imageExit` style objects. JSX imports the easing string for the inline `<h1>` / small-text transitions.
+
+Composes with `RouteTransition`: `RouteTransition.beginExit()` flows down as the `exiting` prop, the controller plays the fade, then `onExitComplete` (= `RouteTransition.completeExit`) hands back. The two halves of the back-from-detail handshake.
+
+Does **not** own: scroll reset on project change (stays a `useLayoutEffect` in `PurposeDetail` because it is layout-effect-coupled), per-reveal animation durations on `<LineMaskReveal>` / `<ImageReveal>` (those are aesthetic, not lifecycle), or the Restoration1/3-vs-standard layout branching (pure JSX).
+
+## NotepadFirstLoad
+
+The deepened module that owns the three first-load decisions fired when a signed-in user lands on `/notepad`: welcome redirect, daily greeting, and local-notes migration prompt. Surfaced as the `useNotepadFirstLoad()` hook returning `{ showMigration, dismissMigration }`. Mounted by `NotepadWorkspace`.
+
+Unlike the other deepened modules in this file, this one is **not a state machine** — there are no timers, no async sequencing, no observable status to react to. The shape is a pure decision module:
+
+```ts
+decideFirstLoadActions({
+  user, authLoading,
+  hasBeenWelcomed, hasBeenGreetedToday, localNoteCount
+}): FirstLoadAction[]
+
+// FirstLoadAction =
+//   | { kind: 'redirect-welcome' }
+//   | { kind: 'greet'; firstName: string }
+//   | { kind: 'offer-migration' }
+```
+
+The hook coordinates the storage reads (sync localStorage / sessionStorage; async `localAdapter.getNotes()`), invokes the decision, and dispatches each returned action to its side-effect target (`navigate`, `toast`, `setShowMigration`).
+
+Module responsibilities:
+
+- `decideFirstLoadActions(input)` — pure rule evaluation. Empty list when `authLoading || !user`. Returns `redirect-welcome` first when `!hasBeenWelcomed` (and short-circuits the greet decision); always evaluates the migration decision independently. `greet` carries the resolved `firstName` so the toast string is computed inside the decision, not at the call site.
+- `firstNameOf(user)` — pure name extraction with the canonical fallback chain: `user_metadata.full_name` first word → email local-part → `'friend'`.
+- `welcomedKey(userId)` and `greetedKey(userId, today)` — single source of truth for the storage key formats. Previously templated inline in two places (`WelcomePage` writer, `Notepad` reader); both now import from here.
+- `hasBeenWelcomed` / `markWelcomed` and `hasBeenGreetedToday` / `markGreetedToday` — sync read/write helpers taking `Pick<Storage, 'getItem' | 'setItem'>` so they're testable without a DOM (mirrors the `TreeViewState` and `ReferenceGraph` cache pattern).
+- `todayDateString(now)` — pure thin wrapper over `Date.toDateString()`, parameterized for fake-clock tests.
+
+Hook responsibilities:
+
+- Owns the `showMigration` boolean previously held in `NotepadWorkspace`
+- Reads the local note count via `localAdapter.getNotes()` (async). The previous direct `localStorage.getItem('notepad_notes')` read leaked the storage key past `LocalStorageAdapter`'s seam — that leak is closed.
+- Dispatches each `FirstLoadAction` in order:
+  - `redirect-welcome` → `navigate('/welcome')`
+  - `greet` → `markGreetedToday(...)` then `toast.success('Welcome back, {firstName}!')` (write-marker-then-toast order matches the original)
+  - `offer-migration` → `setShowMigration(true)`
+- Returns `{ showMigration, dismissMigration }` to the consumer; the migration dialog's `onClose` wires to `dismissMigration`.
+
+Does **not** own: identity (that's `AuthSession`), the migration workflow itself (that's `MigrationWorkflow`), or the WelcomePage UI flow (the page calls `markWelcomed` directly when the user submits the form).
