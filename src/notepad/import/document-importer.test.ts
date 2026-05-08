@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   buildNoteFromText,
   linkNotesByVerses,
-  extractTextFromNote,
 } from './document-importer';
+import { extractTextFromNote } from '../utils/tiptap-text';
 import type { Note } from '../types';
 
 // ---------------------------------------------------------------------------

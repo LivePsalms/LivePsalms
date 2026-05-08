@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Note, Folder } from '../types';
 import type { StorageAdapter } from './adapter';
-import { countWordsFromTipTapJSON } from '../utils/word-count';
+import { countWordsFromTipTapJSON } from '../utils/tiptap-text';
 
 /**
  * StorageAdapter backed by Supabase PostgreSQL.

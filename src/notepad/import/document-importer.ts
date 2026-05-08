@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { extractVerseRefs } from '../extensions/bible-verse-utils';
-import { countWordsFromTipTapJSON } from '../utils/word-count';
+import { countWordsFromTipTapJSON, extractTextFromNote } from '../utils/tiptap-text';
 import type { Note } from '../types';
 
 /**
@@ -134,27 +134,8 @@ export function linkNotesByVerses(notes: Note[]): Note[] {
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers (exported for tests)
+// Internal helpers
 // ---------------------------------------------------------------------------
-
-export function extractTextFromNote(note: Note): string {
-  try {
-    const doc = JSON.parse(note.content) as Record<string, unknown>;
-    return extractTextRecursive(doc);
-  } catch {
-    return note.content;
-  }
-}
-
-function extractTextRecursive(node: Record<string, unknown>): string {
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return node.text;
-  }
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractTextRecursive).join(' ');
-  }
-  return '';
-}
 
 function appendRelatedNoteLinks(note: Note, related: Note[]): Note {
   if (related.length === 0) return note;

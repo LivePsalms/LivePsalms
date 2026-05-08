@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Note, Folder } from '../types';
 import type { StorageAdapter } from './adapter';
-import { countWordsFromTipTapJSON } from '../utils/word-count';
+import { countWordsFromTipTapJSON } from '../utils/tiptap-text';
 
 const NOTES_KEY = 'notepad_notes';
 const FOLDERS_KEY = 'notepad_folders';

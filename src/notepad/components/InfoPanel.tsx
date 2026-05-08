@@ -2,24 +2,11 @@ import { useMemo } from 'react';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { VERSE_REGEX } from '../extensions/bible-verse-utils';
+import { extractTextFromNote } from '../utils/tiptap-text';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-interface TipTapNode {
-  text?: string;
-  content?: TipTapNode[];
-  [key: string]: unknown;
-}
-
-function extractText(node: TipTapNode): string {
-  if (node.text) return node.text;
-  if (node.content && Array.isArray(node.content)) {
-    return node.content.map(extractText).join(' ');
-  }
-  return '';
-}
 
 function countWords(text: string): number {
   const trimmed = text.trim();
@@ -53,13 +40,7 @@ export function InfoPanel() {
   const stats = useMemo(() => {
     if (!activeNote) return null;
 
-    let plainText = '';
-    try {
-      const json = JSON.parse(activeNote.content) as TipTapNode;
-      plainText = extractText(json);
-    } catch {
-      plainText = activeNote.content;
-    }
+    const plainText = extractTextFromNote(activeNote);
 
     const wordCount = countWords(plainText);
     const verseCount = countVerses(plainText);

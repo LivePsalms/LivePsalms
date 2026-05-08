@@ -1,3 +1,5 @@
+import { extractPlainText } from '../utils/tiptap-text';
+
 // Bible book patterns: each entry is a pipe-separated list of accepted names/abbreviations
 export const BOOK_PATTERNS: string[] = [
   // Old Testament
@@ -185,22 +187,6 @@ export function parseVerseRef(ref: string): {
 }
 
 // Private helpers
-
-function extractPlainText(doc: unknown): string {
-  const parts: string[] = [];
-  function walk(node: unknown): void {
-    if (!node || typeof node !== 'object') return;
-    const n = node as Record<string, unknown>;
-    if (n.type === 'text' && typeof n.text === 'string') {
-      parts.push(n.text);
-    }
-    if (Array.isArray(n.content)) {
-      for (const child of n.content) walk(child);
-    }
-  }
-  walk(doc);
-  return parts.join(' ');
-}
 
 export function walkMarks(doc: unknown, markType: string): Array<Record<string, unknown>> {
   const found: Array<Record<string, unknown>> = [];
