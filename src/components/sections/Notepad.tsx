@@ -1,6 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useState, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuthSession } from '@/auth/context/useAuthSession';
@@ -14,6 +12,7 @@ import { SearchDialog } from '@/notepad/components/SearchDialog';
 import { MigrationDialog } from '@/notepad/components/MigrationDialog';
 import { GraphPane } from './notepad/GraphPane';
 import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
+import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
 
 function NotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -21,46 +20,14 @@ function NotepadWorkspace() {
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
 
-  const navigate = useNavigate();
-  const { user, adapter, loading: authLoading } = useAuthSession();
+  const { user, adapter } = useAuthSession();
   const actions = useNotepadActions();
   const refresh = useCallback(() => actions.init(), [actions]);
-  const [showMigration, setShowMigration] = useState(false);
+  const { showMigration, dismissMigration } = useNotepadFirstLoad();
 
   const isOnline = useOnlineStatus();
   const isLoggedIn = !!user;
   const isOfflineAndLoggedIn = !isOnline && isLoggedIn;
-
-  // First-time user: redirect to welcome screen, then show signed-in toast
-  useEffect(() => {
-    if (authLoading || !user) return;
-    const welcomedKey = `welcomed_${user.id}`;
-    if (!localStorage.getItem(welcomedKey)) {
-      navigate('/welcome');
-      return;
-    }
-    const greetedKey = `greeted_${user.id}_${new Date().toDateString()}`;
-    if (!sessionStorage.getItem(greetedKey)) {
-      sessionStorage.setItem(greetedKey, 'true');
-      const firstName = user.user_metadata?.full_name?.split(' ')[0]
-        ?? user.email?.split('@')[0]
-        ?? 'friend';
-      toast.success(`Welcome back, ${firstName}!`);
-    }
-  }, [user, authLoading, navigate]);
-
-  // Check for local notes when user logs in
-  useEffect(() => {
-    if (user) {
-      const localNotes = localStorage.getItem('notepad_notes');
-      if (localNotes) {
-        const parsed = JSON.parse(localNotes);
-        if (parsed.length > 0) {
-          setShowMigration(true);
-        }
-      }
-    }
-  }, [user]);
 
   const handleOpenSearch = useCallback(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
@@ -183,7 +150,7 @@ function NotepadWorkspace() {
       <SearchDialog />
       <MigrationDialog
         open={showMigration}
-        onClose={() => setShowMigration(false)}
+        onClose={dismissMigration}
         targetAdapter={adapter}
         onMigrationComplete={refresh}
       />

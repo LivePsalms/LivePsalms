@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthSession } from './context/useAuthSession';
 import { useAccountProfile } from './context/useAccountProfile';
+import { markWelcomed } from '@/notepad/first-load/notepad-first-load';
 
 export function WelcomePage() {
   const navigate = useNavigate();
@@ -31,9 +32,9 @@ export function WelcomePage() {
     );
   }
 
-  const markWelcomed = () => {
+  const markUserWelcomed = () => {
     if (user) {
-      localStorage.setItem(`welcomed_${user.id}`, 'true');
+      markWelcomed(user.id, localStorage);
     }
   };
 
@@ -48,7 +49,7 @@ export function WelcomePage() {
         fullName: fullName.trim(),
         dateOfBirth: dateOfBirth || null,
       });
-      markWelcomed();
+      markUserWelcomed();
       toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
       navigate('/notepad');
     } catch (err) {
@@ -59,7 +60,7 @@ export function WelcomePage() {
   };
 
   const handleSkip = () => {
-    markWelcomed();
+    markUserWelcomed();
     navigate('/notepad');
   };
 
