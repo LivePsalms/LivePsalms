@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Routes, Route, useLocation, useParams } from 'react-router-dom';
+import { decideHeroIntro, persistIntroPlayed } from '@/components/sections/hero-intro-gate';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
@@ -27,6 +28,25 @@ if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
 function App() {
   const location = useLocation();
   const projects = useProjectColors();
+  const [introActive, setIntroActive] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const decision = decideHeroIntro({
+      storage: window.sessionStorage,
+      prefersReducedMotion,
+    });
+    if (decision.persistFlag) {
+      persistIntroPlayed(window.sessionStorage);
+    }
+    return decision.playIntro;
+  });
+
+  const handleIntroComplete = useCallback(() => {
+    setIntroActive(false);
+    if (typeof window !== 'undefined') {
+      persistIntroPlayed(window.sessionStorage);
+    }
+  }, []);
   const { status, color, transition } = useRouteTransition(projects);
 
   const isDetailPage = location.pathname.startsWith('/purpose/');
@@ -66,8 +86,9 @@ function App() {
                     rippleColor="rgba(40, 35, 30, 0.12)"
                     rippleDuration={1800}
                     maxRipples={6}
+                    disabled={introActive}
                   >
-                    <Hero />
+                    <Hero introActive={introActive} onIntroComplete={handleIntroComplete} />
                   </WaterRipple>
                   <PurposeGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>

@@ -1,15 +1,23 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface HeroProps {
-  showNav?: boolean;
+  introActive?: boolean;
+  onIntroComplete?: () => void;
 }
 
-export function Hero({ showNav = true }: HeroProps) {
+export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
+  const [showNav, setShowNav] = useState<boolean>(!introActive);
+  const svgRef = useRef<SVGSVGElement>(null);
+  // setShowNav and onIntroComplete are used by the intro timeline in Task 7;
+  // referenced here so TypeScript's noUnusedLocals does not flag them.
+  void setShowNav;
+  void onIntroComplete;
   const quoteRef = useRef<HTMLDivElement>(null);
   const quoteLine1Ref = useRef<HTMLParagraphElement>(null);
   const quoteLine2Ref = useRef<HTMLParagraphElement>(null);
@@ -134,13 +142,12 @@ export function Hero({ showNav = true }: HeroProps) {
       <div className="relative h-screen flex flex-col items-center justify-center">
         {/* Background PSALMS Logo - Large Outline Style */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4">
-          <img
-            src="/logo-hero.png"
-            alt="LivePsalms"
-            className="w-[95vw] md:w-[80vw] max-w-4xl object-contain"
+          <PsalmsWordmarkSvg
+            ref={svgRef}
+            className="w-[95vw] md:w-[80vw] max-w-4xl"
             style={{
-              opacity: 0.12,
-              filter: 'invert(1)',
+              opacity: introActive ? 1 : 0.12,
+              color: introActive ? '#f6f4f0' : 'var(--deep-umber)',
             }}
           />
         </div>

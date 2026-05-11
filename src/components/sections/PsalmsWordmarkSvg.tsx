@@ -28,7 +28,7 @@ export const PsalmsWordmarkSvg = forwardRef<SVGSVGElement, PsalmsWordmarkSvgProp
         role="img"
       >
         <g transform="translate(6, 558)">
-          <g fill="#f6f4f0">
+          <g fill="currentColor">
             {/* P */}
             <g className="letter-anchor" transform="translate(2.702454, 285.118424)">
               <g id="letter-P" className="letter">
