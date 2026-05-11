@@ -5,6 +5,11 @@ import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// The CSS var `--deep-umber` (#3A3426) is used in inline styles via var(),
+// but GSAP cannot tween a CSS variable cleanly. Keep this literal in sync
+// with `src/index.css:29` if the palette ever changes.
+const DEEP_UMBER_HEX = '#3A3426';
+
 interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
@@ -17,10 +22,6 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
   const darkCanvasRef = useRef<HTMLDivElement>(null);
   const glowAuraRef = useRef<HTMLDivElement>(null);
   const pulseRingRef = useRef<HTMLDivElement>(null);
-  // setShowNav and onIntroComplete are used by the intro timeline in Task 7;
-  // referenced here so TypeScript's noUnusedLocals does not flag them.
-  void setShowNav;
-  void onIntroComplete;
   const quoteRef = useRef<HTMLDivElement>(null);
   const quoteLine1Ref = useRef<HTMLParagraphElement>(null);
   const quoteLine2Ref = useRef<HTMLParagraphElement>(null);
@@ -157,6 +158,108 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
     ro.observe(svgEl);
     return () => ro.disconnect();
   }, []);
+
+  /* ── Intro timeline ── */
+  useEffect(() => {
+    if (!introActive) return;
+
+    const svgEl = svgRef.current;
+    const darkEl = darkCanvasRef.current;
+    const glowEl = glowAuraRef.current;
+    const ringEl = pulseRingRef.current;
+    const heroEl = heroRef.current;
+    if (!svgEl || !darkEl || !glowEl || !ringEl || !heroEl) return;
+
+    // Resolve letter elements once via the SVG ref. Direct references avoid
+    // global selector queries and let us drop gsap.context() (see note above).
+    const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
+    const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
+    const letterS1 = svgEl.querySelector<SVGGElement>('#letter-S1');
+    const letterL  = svgEl.querySelector<SVGGElement>('#letter-L');
+    const letterM  = svgEl.querySelector<SVGGElement>('#letter-M');
+    const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2');
+    if (!letterA || !letterP || !letterS1 || !letterL || !letterM || !letterS2) return;
+
+    // SVG-userspace collapse offsets (CSS px × 1500/1100 = × 1.3636 from original)
+    const COLLAPSE = {
+      P: 653.3,
+      S1: 339.8,
+      L: -313.9,
+      M: -690.5,
+      S2: -1076.4,
+    };
+
+    const tl = gsap.timeline({
+      paused: true,
+      onComplete: () => {
+        onIntroComplete?.();
+      },
+    });
+
+    // Initial states (t=0)
+    tl.set(letterA,  { opacity: 0, scale: 0.92, transformOrigin: '50% 50%' }, 0);
+    tl.set(letterP,  { x: COLLAPSE.P,  opacity: 0, filter: 'blur(6px)' }, 0);
+    tl.set(letterS1, { x: COLLAPSE.S1, opacity: 0, filter: 'blur(6px)' }, 0);
+    tl.set(letterL,  { x: COLLAPSE.L,  opacity: 0, filter: 'blur(6px)' }, 0);
+    tl.set(letterM,  { x: COLLAPSE.M,  opacity: 0, filter: 'blur(6px)' }, 0);
+    tl.set(letterS2, { x: COLLAPSE.S2, opacity: 0, filter: 'blur(6px)' }, 0);
+    tl.set(glowEl, { opacity: 0 }, 0);
+    tl.set(ringEl, { width: 'var(--ring-size, 260px)', height: 'var(--ring-size, 260px)', opacity: 0 }, 0);
+    tl.set(darkEl, { opacity: 1 }, 0);
+
+    // Act I.1 — A enters (0.3 → 1.7s)
+    tl.to(letterA, { opacity: 1, scale: 1, duration: 1.4, ease: 'power2.out', overwrite: 'auto' }, 0.3);
+    tl.to(glowEl,  { opacity: 0.18, duration: 1.4, ease: 'power1.out', overwrite: 'auto' }, 0.4);
+
+    // Act I.3 — Lub (2.10s)
+    const lub = 2.10;
+    tl.to(letterA, { scale: 1.022, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
+    tl.to(letterA, { scale: 1.0,   duration: 0.32, ease: 'power3.out', overwrite: 'auto' }, lub + 0.18);
+    tl.to(glowEl,  { opacity: 0.42, scale: 1.08, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
+    tl.to(glowEl,  { opacity: 0.18, scale: 1.0,  duration: 0.32, ease: 'power2.out', overwrite: 'auto' }, lub + 0.18);
+
+    // Act I.5 — Dub (2.85s)
+    const dub = 2.85;
+    tl.to(letterA, { scale: 1.042, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
+    tl.to(letterA, { scale: 1.0,   duration: 0.50, ease: 'power3.out', overwrite: 'auto' }, dub + 0.22);
+    tl.to(glowEl,  { opacity: 0.78, scale: 1.18, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
+    tl.to(glowEl,  { opacity: 0,    scale: 1.0,  duration: 1.30, ease: 'power2.in',  overwrite: 'auto' }, dub + 0.22);
+
+    // Act I.6 — Ring expands (2.97s)
+    const ring = dub + 0.12;
+    const ringFinalCss = getComputedStyle(heroEl).getPropertyValue('--ring-final-size').trim() || '2800px';
+    tl.to(ringEl, { opacity: 0.92, duration: 0.24, ease: 'power2.out', overwrite: 'auto' }, ring);
+    tl.to(ringEl, { width: ringFinalCss, height: ringFinalCss, duration: 1.8, ease: 'power2.out', overwrite: 'auto' }, ring);
+    tl.to(ringEl, { opacity: 0, duration: 1.5, ease: 'power2.in', overwrite: 'auto' }, ring + 0.35);
+
+    // Act II — Letter spread (4.20s, three waves)
+    const spread = (target: SVGGElement, t: number) => {
+      tl.to(target, { x: 0,                duration: 1.8, ease: 'power3.out' }, t);
+      tl.to(target, { opacity: 1,          duration: 1.4, ease: 'power1.out' }, t);
+      tl.to(target, { filter: 'blur(0px)', duration: 1.6, ease: 'power2.out' }, t);
+    };
+    const spreadAt = 4.20;
+    spread(letterS1, spreadAt);
+    spread(letterL,  spreadAt);
+    spread(letterP,  spreadAt + 0.45);
+    spread(letterM,  spreadAt + 0.45);
+    spread(letterS2, spreadAt + 0.90);
+
+    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.12, dark canvas fades
+    // tl.call fires once at the position; setShowNav(true) triggers the existing
+    // masked-image and quote entrance via their existing prop gating.
+    const handoff = 6.40;
+    tl.to(darkEl, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }, handoff);
+    tl.to(svgEl,  { color: DEEP_UMBER_HEX, duration: 1.2, ease: 'power2.inOut' }, handoff);
+    tl.to(svgEl,  { opacity: 0.12, duration: 1.2, ease: 'power2.inOut' }, handoff);
+    tl.call(() => setShowNav(true), [], handoff);
+
+    tl.play(0);
+
+    return () => {
+      tl.kill();
+    };
+  }, [introActive, onIntroComplete]);
 
   return (
     <section
