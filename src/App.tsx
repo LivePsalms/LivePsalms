@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { decideHeroIntro, persistIntroPlayed } from '@/components/sections/hero-intro-gate';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
+import { HeroLoadingOverlay } from '@/components/sections/HeroLoadingOverlay';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
@@ -12,6 +13,7 @@ import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
+import { useLoadingOverlay } from '@/hooks/useLoadingOverlay';
 import { useProjectColors } from '@/hooks/useProjectColors';
 import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/context/AuthProvider';
@@ -28,8 +30,16 @@ if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
 function App() {
   const location = useLocation();
   const projects = useProjectColors();
-  const [introActive, setIntroActive] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+  // Single-shot computation of all the intro-related decisions at first mount.
+  // useMemo with [] deps keeps it stable across re-renders and avoids
+  // re-reading window state on every render.
+  const initialDecision = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return {
+        homeIntroPlays: false,
+        prefersReducedMotion: false,
+      };
+    }
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const decision = decideHeroIntro({
       storage: window.sessionStorage,
@@ -38,12 +48,27 @@ function App() {
     if (decision.persistFlag) {
       persistIntroPlayed(window.sessionStorage);
     }
-    return decision.playIntro;
+    const isInitiallyOnHome = window.location.pathname === '/';
+    return {
+      homeIntroPlays: isInitiallyOnHome && decision.playIntro,
+      prefersReducedMotion,
+    };
+  }, []);
+
+  const [introActive, setIntroActive] = useState<boolean>(initialDecision.homeIntroPlays);
+  // Header is hidden during the home intro and fades in at the handoff beat
+  // via showNav. On any path where the home intro doesn't play (session-skip
+  // OR initial route is not /), the header starts visible — the loading
+  // overlay sits above it during navigation.
+  const [headerVisible, setHeaderVisible] = useState<boolean>(() => !initialDecision.homeIntroPlays);
+
+  // Loading overlay: active on initial mount unless the home intro is going
+  // to play (the home intro IS the brand moment on /). Also skipped if the
+  // user prefers reduced motion.
+  const overlay = useLoadingOverlay({
+    minMs: 1500,
+    initialActive: !initialDecision.homeIntroPlays && !initialDecision.prefersReducedMotion,
   });
-  // Header is hidden during the cinematic intro and fades in at the handoff
-  // beat (t=6.4s) via its existing showNav prop. On a session-skip path
-  // (introActive=false at mount) it starts visible.
-  const [headerVisible, setHeaderVisible] = useState<boolean>(() => !introActive);
 
   const handleIntroComplete = useCallback(() => {
     setIntroActive(false);
@@ -54,6 +79,26 @@ function App() {
   const handleIntroHandoff = useCallback(() => {
     setHeaderVisible(true);
   }, []);
+
+  // Trigger the overlay on every SPA location change after the initial mount.
+  // The initial mount's overlay state is handled by useLoadingOverlay's
+  // initialActive parameter. `overlay.trigger` is a fresh closure each render
+  // (it reads from a ref), so we intentionally omit it from the deps to avoid
+  // running this effect on every render — pathname is the only real signal.
+  const previousPathnameRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (initialDecision.prefersReducedMotion) return;
+    if (previousPathnameRef.current === null) {
+      previousPathnameRef.current = location.pathname;
+      return;
+    }
+    if (previousPathnameRef.current !== location.pathname) {
+      overlay.trigger();
+      previousPathnameRef.current = location.pathname;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, initialDecision.prefersReducedMotion]);
+
   const { status, color, transition } = useRouteTransition(projects);
 
   const isDetailPage = location.pathname.startsWith('/purpose/');
@@ -140,6 +185,7 @@ function App() {
 
       <div className="grain-bg" aria-hidden="true" />
 
+      <HeroLoadingOverlay active={overlay.active} />
     </>
     </AuthProvider>
   );
