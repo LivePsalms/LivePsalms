@@ -14,6 +14,9 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const [showNav, setShowNav] = useState<boolean>(!introActive);
   const svgRef = useRef<SVGSVGElement>(null);
+  const darkCanvasRef = useRef<HTMLDivElement>(null);
+  const glowAuraRef = useRef<HTMLDivElement>(null);
+  const pulseRingRef = useRef<HTMLDivElement>(null);
   // setShowNav and onIntroComplete are used by the intro timeline in Task 7;
   // referenced here so TypeScript's noUnusedLocals does not flag them.
   void setShowNav;
@@ -133,6 +136,28 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
     return () => ctx.revert();
   }, []);
 
+  /* ── Responsive sizing for glow-aura and pulse-ring ── */
+  useEffect(() => {
+    const svgEl = svgRef.current;
+    const heroEl = heroRef.current;
+    if (!svgEl || !heroEl) return;
+
+    const update = () => {
+      const wordmarkWidth = svgEl.getBoundingClientRect().width;
+      if (wordmarkWidth === 0) return;
+      // Ratios derived from the original 1100px wordmark:
+      // aura 720px → 0.6545, ring initial 260px → 0.2364, ring final 2800px → 2.5455
+      heroEl.style.setProperty('--aura-size', `${wordmarkWidth * 0.6545}px`);
+      heroEl.style.setProperty('--ring-size', `${wordmarkWidth * 0.2364}px`);
+      heroEl.style.setProperty('--ring-final-size', `${wordmarkWidth * 2.5455}px`);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(svgEl);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <section
       ref={heroRef}
@@ -140,8 +165,65 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
     >
       {/* First viewport: PSALMS logo */}
       <div className="relative h-screen flex flex-col items-center justify-center">
+        {/* Dark canvas — covers the first viewport during intro, fades at handoff */}
+        <div
+          ref={darkCanvasRef}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 90% 70% at 50% 50%, #0e0c10 0%, #08070a 60%, #050507 100%), #0a0a0c',
+            opacity: introActive ? 1 : 0,
+            zIndex: 2,
+          }}
+        />
+
+        {/* Glow aura — sits behind the A glyph, blooms on heartbeats */}
+        <div
+          ref={glowAuraRef}
+          className="absolute pointer-events-none"
+          style={{
+            top: '50%',
+            left: '50%',
+            width: 'var(--aura-size, 0px)',
+            height: 'var(--aura-size, 0px)',
+            transform: 'translate(-50%, -50%)',
+            background:
+              'radial-gradient(circle at center, rgba(246, 244, 240, 0.32) 0%, rgba(246, 244, 240, 0.12) 22%, rgba(246, 244, 240, 0.04) 45%, rgba(246, 244, 240, 0) 72%)',
+            borderRadius: '50%',
+            opacity: 0,
+            mixBlendMode: 'screen',
+            filter: 'blur(14px)',
+            willChange: 'opacity, transform',
+            zIndex: 3,
+          }}
+        />
+
+        {/* Pulse ring — emanates from A on the second heartbeat */}
+        <div
+          ref={pulseRingRef}
+          className="absolute pointer-events-none"
+          style={{
+            top: '50%',
+            left: '50%',
+            width: 'var(--ring-size, 0px)',
+            height: 'var(--ring-size, 0px)',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '50%',
+            border: '1.25px solid rgba(246, 244, 240, 0.85)',
+            boxShadow:
+              '0 0 38px rgba(246, 244, 240, 0.42), 0 0 90px rgba(246, 244, 240, 0.18), inset 0 0 22px rgba(246, 244, 240, 0.12)',
+            opacity: 0,
+            mixBlendMode: 'screen',
+            willChange: 'width, height, opacity',
+            zIndex: 3,
+          }}
+        />
+
         {/* Background PSALMS Logo - Large Outline Style */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4">
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4"
+          style={{ zIndex: 4 }}
+        >
           <PsalmsWordmarkSvg
             ref={svgRef}
             className="w-[95vw] md:w-[80vw] max-w-4xl"
