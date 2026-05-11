@@ -13,6 +13,7 @@ interface WaterRippleProps {
   maxRipples?: number;
   className?: string;
   children?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export function WaterRipple({
@@ -21,6 +22,7 @@ export function WaterRipple({
   maxRipples = 8,
   className = "",
   children,
+  disabled = false,
 }: WaterRippleProps) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,20 +69,23 @@ export function WaterRipple({
   // Hover effect - creates ripples as mouse moves (throttled)
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isTouchDevice.current) return;
-    
+    if (disabled) return;
+
     const now = Date.now();
     // Throttle hover ripples to every 200ms
     if (now - lastHoverTime.current < 200) return;
     lastHoverTime.current = now;
 
     createRipple(e.clientX, e.clientY);
-  }, [createRipple]);
+  }, [createRipple, disabled]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disabled) return;
     createRipple(e.clientX, e.clientY);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (disabled) return;
     const touch = e.touches[0];
     createRipple(touch.clientX, touch.clientY);
   };
