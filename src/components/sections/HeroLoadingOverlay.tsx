@@ -113,9 +113,13 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
         }}
       />
 
-      {/* A glyph SVG */}
+      {/* A glyph SVG — overflow:visible so the heartbeat scale doesn't clip the
+          glyph at its viewBox edges. The path fills the box edge-to-edge and
+          scales up by 1.042 at the dub peak, which extends ~6 units past each
+          edge; without overflow:visible those edges get cropped. */}
       <svg
         aria-hidden="true"
+        overflow="visible"
         style={{
           position: 'absolute',
           top: '50%',
@@ -125,6 +129,7 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
           transform: 'translate(-50%, -50%)',
           color: '#f6f4f0',
           pointerEvents: 'none',
+          overflow: 'visible',
         }}
         viewBox="0 0 251 282"
         xmlns="http://www.w3.org/2000/svg"
