@@ -70,4 +70,15 @@ describe('persistIntroPlayed', () => {
     persistIntroPlayed(storage);
     expect(storage.getItem(INTRO_FLAG_KEY)).toBe('1');
   });
+
+  it('silently swallows errors from storage.setItem (Safari private-mode safety)', () => {
+    const throwingStorage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+    // Should not throw.
+    expect(() => persistIntroPlayed(throwingStorage)).not.toThrow();
+  });
 });
