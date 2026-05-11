@@ -1,10 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 
 interface HeroLoadingOverlayProps {
   active: boolean;
   onCrossfadeComplete?: () => void;
 }
+
+/**
+ * Visual lifecycle. We need three states (not just `active`) so the overlay:
+ *   - stays out of the DOM entirely when there's nothing to show (so it never
+ *     covers the home hero intro on `/`),
+ *   - mounts cleanly when activation begins,
+ *   - keeps the dissolve playing after `active` flips back to false.
+ */
+type Phase = 'invisible' | 'active' | 'dissolving';
 
 interface Particle {
   cx: number;
@@ -87,14 +96,40 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
   const particleRefs = useRef<(SVGCircleElement | null)[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
 
+  // Phase state derived from the `active` prop. Initial value depends on the
+  // first-render prop: if active=true at mount, start in 'active'; if
+  // active=false at mount (e.g., user is on `/` for the home intro), start in
+  // 'invisible' so the overlay never renders.
+  const [phase, setPhase] = useState<Phase>(() => (active ? 'active' : 'invisible'));
+
+  // Drive phase transitions from prop changes:
+  //   invisible → active     (prop flips to true)
+  //   active    → dissolving (prop flips to false)
+  // The 'dissolving' → 'invisible' transition is fired by the dissolve
+  // animation's onComplete callback (handleDissolveComplete below), not here,
+  // so we don't unmount before the dissolve has actually played.
+  useEffect(() => {
+    if (active && phase === 'invisible') {
+      setPhase('active');
+    } else if (!active && phase === 'active') {
+      setPhase('dissolving');
+    }
+  }, [active, phase]);
+
+  const handleDissolveComplete = useCallback(() => {
+    setPhase('invisible');
+    onCrossfadeComplete?.();
+  }, [onCrossfadeComplete]);
+
   // Sample particle origins from inside the A's silhouette at mount.
   useLayoutEffect(() => {
+    if (phase === 'invisible') return;
     setParticles(generateParticles(pathRef.current));
-  }, []);
+  }, [phase]);
 
   // Heartbeat loop while active
   useLayoutEffect(() => {
-    if (!active) return;
+    if (phase !== 'active') return;
     const glyph = glyphRef.current;
     const aura = auraRef.current;
     if (!glyph || !aura) return;
@@ -124,7 +159,7 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
     return () => {
       tl.kill();
     };
-  }, [active]);
+  }, [phase]);
 
   // Particulate dissolve when active flips to false.
   //   Phase 1 (0   → 1.0):   A path fades + slight scale-up; aura starts fading.
@@ -135,16 +170,14 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
   //                          out of frame (otherwise cream specks would lose
   //                          contrast against the brightening plaster background).
   useEffect(() => {
-    if (active) return;
+    if (phase !== 'dissolving') return;
     const root = rootRef.current;
     const glyph = glyphRef.current;
     const aura = auraRef.current;
     if (!root || !glyph || !aura) return;
 
     const tl = gsap.timeline({
-      onComplete: () => {
-        onCrossfadeComplete?.();
-      },
+      onComplete: handleDissolveComplete,
     });
 
     // Phase 1 — A's body dematerializes underneath the rising specks.
@@ -207,20 +240,25 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
     return () => {
       tl.kill();
     };
-  }, [active, onCrossfadeComplete, particles]);
+  }, [phase, handleDissolveComplete, particles]);
+
+  // While 'invisible', stay completely out of the DOM so we never paint
+  // anything (no dark canvas, no flash) over whatever the active route is
+  // showing. This is the key to coexisting with the home hero intro.
+  if (phase === 'invisible') return null;
 
   return (
     <div
       ref={rootRef}
       role="status"
       aria-live="polite"
-      aria-busy={active}
+      aria-busy={phase === 'active'}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 100,
         opacity: 1,
-        pointerEvents: active ? 'auto' : 'none',
+        pointerEvents: phase === 'active' ? 'auto' : 'none',
         background:
           'radial-gradient(ellipse 90% 70% at 50% 50%, #0e0c10 0%, #08070a 60%, #050507 100%), #0a0a0c',
       }}
