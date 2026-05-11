@@ -41,13 +41,29 @@ const serenityImages = [
   'serenity7.png',
 ];
 
+// Devotional slugs override the default filename-derived id for projects that
+// have a written devotion attached. The URL becomes /purpose/<slug> instead of
+// /purpose/<filename>.
+const idOverrides: Record<string, string> = {
+  restoration5: 'strength',
+  restoration6: 'wholeness',
+  restoration7: 'purpose',
+  restoration8: 'connection',
+  restoration9: 'identity',
+  restoration10: 'joy',
+  serenity2: 'forgiveness',
+  serenity3: 'surrender',
+  serenity5: 'trust',
+};
+
 const toProject = (
   file: string,
   category: Project['category'],
   displayName: string,
   overlayColor: string
 ): Project => {
-  const id = file.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  const baseId = file.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  const id = idOverrides[baseId] ?? baseId;
   const src = `/mid_section/${file}`;
   return {
     id,
