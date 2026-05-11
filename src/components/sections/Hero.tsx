@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
@@ -13,9 +13,10 @@ const DEEP_UMBER_HEX = '#3A3426';
 interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
+  onHandoff?: () => void;
 }
 
-export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
+export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const [showNav, setShowNav] = useState<boolean>(!introActive);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -160,7 +161,11 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
   }, []);
 
   /* ── Intro timeline ── */
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the `tl.set(...)` initial-state calls
+  // run synchronously after DOM commit but BEFORE first paint. Otherwise the
+  // browser briefly paints the fully-composed wordmark before GSAP collapses
+  // the letters, causing a visible flash.
+  useLayoutEffect(() => {
     if (!introActive) return;
 
     const svgEl = svgRef.current;
@@ -245,21 +250,25 @@ export function Hero({ introActive = false, onIntroComplete }: HeroProps) {
     spread(letterM,  spreadAt + 0.45);
     spread(letterS2, spreadAt + 0.90);
 
-    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.12, dark canvas fades
+    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.12, dark canvas fades.
     // tl.call fires once at the position; setShowNav(true) triggers the existing
-    // masked-image and quote entrance via their existing prop gating.
+    // masked-image and quote entrance via their existing prop gating, and
+    // onHandoff?.() notifies App so the header can fade in via its showNav prop.
     const handoff = 6.40;
     tl.to(darkEl, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }, handoff);
     tl.to(svgEl,  { color: DEEP_UMBER_HEX, duration: 1.2, ease: 'power2.inOut' }, handoff);
     tl.to(svgEl,  { opacity: 0.12, duration: 1.2, ease: 'power2.inOut' }, handoff);
-    tl.call(() => setShowNav(true), [], handoff);
+    tl.call(() => {
+      setShowNav(true);
+      onHandoff?.();
+    }, [], handoff);
 
     tl.play(0);
 
     return () => {
       tl.kill();
     };
-  }, [introActive, onIntroComplete]);
+  }, [introActive, onIntroComplete, onHandoff]);
 
   return (
     <section

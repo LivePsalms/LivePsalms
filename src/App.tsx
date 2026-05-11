@@ -40,12 +40,19 @@ function App() {
     }
     return decision.playIntro;
   });
+  // Header is hidden during the cinematic intro and fades in at the handoff
+  // beat (t=6.4s) via its existing showNav prop. On a session-skip path
+  // (introActive=false at mount) it starts visible.
+  const [headerVisible, setHeaderVisible] = useState<boolean>(() => !introActive);
 
   const handleIntroComplete = useCallback(() => {
     setIntroActive(false);
     if (typeof window !== 'undefined') {
       persistIntroPlayed(window.sessionStorage);
     }
+  }, []);
+  const handleIntroHandoff = useCallback(() => {
+    setHeaderVisible(true);
   }, []);
   const { status, color, transition } = useRouteTransition(projects);
 
@@ -75,7 +82,7 @@ function App() {
         <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} />}
+          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} showNav={headerVisible} />}
 
           <Routes>
             <Route
@@ -88,7 +95,7 @@ function App() {
                     maxRipples={6}
                     disabled={introActive}
                   >
-                    <Hero introActive={introActive} onIntroComplete={handleIntroComplete} />
+                    <Hero introActive={introActive} onIntroComplete={handleIntroComplete} onHandoff={handleIntroHandoff} />
                   </WaterRipple>
                   <PurposeGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>
