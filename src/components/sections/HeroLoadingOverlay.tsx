@@ -53,23 +53,67 @@ export function HeroLoadingOverlay({ active, onCrossfadeComplete }: HeroLoadingO
     };
   }, [active]);
 
-  // Crossfade-out when active flips to false
+  // Dissolve-and-crossfade out when active flips to false.
+  // Two overlapping phases:
+  //   1. The A glyph ascends and dissolves (upward translate, slight scale-up,
+  //      blur, opacity → 0) — "into the sky". The aura fades alongside so no
+  //      ghost glow lingers.
+  //   2. The dark canvas (the overlay root) crossfades opacity → 0, starting
+  //      after the A is mostly dissolved.
   useEffect(() => {
     if (active) return;
     const root = rootRef.current;
-    if (!root) return;
+    const glyph = glyphRef.current;
+    const aura = auraRef.current;
+    if (!root || !glyph || !aura) return;
 
-    const tween = gsap.to(root, {
-      opacity: 0,
-      duration: 1.2,
-      ease: 'power2.inOut',
+    const tl = gsap.timeline({
       onComplete: () => {
         onCrossfadeComplete?.();
       },
     });
 
+    // Phase 1 — A dissolves into the sky. y is in SVG userspace units;
+    // -100 is ~35% of the viewBox height (282).
+    tl.to(
+      glyph,
+      {
+        y: -100,
+        scale: 1.15,
+        opacity: 0,
+        filter: 'blur(5px)',
+        duration: 1.2,
+        ease: 'power2.out',
+      },
+      0,
+    );
+
+    // Aura fades alongside the A so no ghost glow lingers in mid-air.
+    tl.to(
+      aura,
+      {
+        opacity: 0,
+        duration: 1.0,
+        ease: 'power2.out',
+      },
+      0,
+    );
+
+    // Phase 2 — dark canvas crossfade. Starts after the A is mostly gone
+    // so the upward motion reads against the dark background, not the
+    // brightening plaster underneath.
+    tl.to(
+      root,
+      {
+        opacity: 0,
+        duration: 0.9,
+        ease: 'power2.inOut',
+      },
+      0.6,
+    );
+
     return () => {
-      tween.kill();
+      tl.kill();
     };
   }, [active, onCrossfadeComplete]);
 
