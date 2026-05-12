@@ -385,6 +385,63 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     return () => ctx.revert();
   }, [introActive, prefersReducedMotion]);
 
+  /* ── Reduced-motion fallback: fade-only entrance on IntersectionObserver ── */
+  useEffect(() => {
+    if (introActive) return;
+    if (!prefersReducedMotion) return;
+
+    const scrollEl = collapseScrollRef.current;
+    const svgEl    = collapseSvgRef.current;
+    const haloEl   = collapseHaloRef.current;
+    if (!scrollEl || !svgEl || !haloEl) return;
+
+    const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
+    const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
+    const letterS1 = svgEl.querySelector<SVGGElement>('#letter-S1');
+    const letterL  = svgEl.querySelector<SVGGElement>('#letter-L');
+    const letterM  = svgEl.querySelector<SVGGElement>('#letter-M');
+    const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2');
+    if (!letterA || !letterP || !letterS1 || !letterL || !letterM || !letterS2) return;
+
+    // Establish starting state (the SVG wrapper is at opacity 0.12 from inline style;
+    // each letter inherits — but the A needs to bump to full opacity on intersection,
+    // and siblings need to fade to 0. Seed the wrapper to opacity 1.0 with each
+    // letter's individual opacity at 0.12 so the inheritance math works out).
+    gsap.set(svgEl, { opacity: 1.0 });
+    gsap.set([letterA, letterP, letterS1, letterL, letterM, letterS2], { opacity: 0.12 });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+
+        // Run the fade once, then disconnect.
+        gsap.to([letterP, letterS1, letterL, letterM, letterS2], {
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power1.out',
+        });
+        gsap.to(letterA, {
+          opacity: 1.0,
+          duration: 0.8,
+          ease: 'power2.out',
+        });
+        gsap.to(haloEl, {
+          opacity: 0.10,
+          scale: 1.0,
+          duration: 0.8,
+          ease: 'power2.out',
+        });
+
+        observer.disconnect();
+      },
+      { threshold: 0.3 },
+    );
+
+    observer.observe(scrollEl);
+    return () => observer.disconnect();
+  }, [introActive, prefersReducedMotion]);
+
   return (
     <section
       ref={heroRef}
