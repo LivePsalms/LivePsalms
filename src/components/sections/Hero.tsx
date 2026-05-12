@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
@@ -41,11 +41,23 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   const quoteLine2Ref = useRef<HTMLParagraphElement>(null);
   const quoteAttrRef = useRef<HTMLParagraphElement>(null);
 
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
   // Mask scroll-expand refs
   const maskScrollRef = useRef<HTMLDivElement>(null);
   const maskClipRef = useRef<HTMLDivElement>(null);
   const maskImgRef = useRef<HTMLImageElement>(null);
   const maskVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Scroll-collapse refs (new — see docs/superpowers/specs/2026-05-12-hero-scroll-collapse-design.md)
+  const collapseScrollRef = useRef<HTMLDivElement>(null);
+  const collapsePinRef = useRef<HTMLDivElement>(null);
+  const collapseSvgRef = useRef<SVGSVGElement>(null);
+  const collapseHaloRef = useRef<HTMLDivElement>(null);
+  const collapseRingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = quoteRef.current;
@@ -346,6 +358,74 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
             style={{
               opacity: introActive ? 1 : 0.12,
               color: introActive ? '#f6f4f0' : 'var(--deep-umber)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Scroll-collapse pin region — wordmark gathers back into A as user scrolls. */}
+      <div
+        ref={collapseScrollRef}
+        data-reduced-motion={prefersReducedMotion ? 'true' : undefined}
+        className="relative"
+        style={{
+          height: prefersReducedMotion ? '100vh' : '150vh',
+          overscrollBehaviorY: 'contain',
+        }}
+      >
+        <div
+          ref={collapsePinRef}
+          className="top-0 h-screen w-full flex items-center justify-center overflow-hidden"
+          style={{ position: prefersReducedMotion ? 'static' : 'sticky' }}
+        >
+          {/* Persistent umber halo — sits behind the wordmark. */}
+          <div
+            ref={collapseHaloRef}
+            aria-hidden="true"
+            className="absolute pointer-events-none"
+            style={{
+              top: '50%',
+              left: '50%',
+              width: '520px',
+              height: '520px',
+              transform: 'translate(-50%, -50%) scale(0.3)',
+              borderRadius: '50%',
+              background:
+                'radial-gradient(circle, rgba(58, 52, 38, 0.18) 0%, rgba(58, 52, 38, 0.10) 28%, rgba(58, 52, 38, 0.04) 55%, rgba(58, 52, 38, 0) 80%)',
+              filter: 'blur(18px)',
+              opacity: 0,
+              willChange: 'opacity, transform',
+              zIndex: 0,
+            }}
+          />
+
+          {/* Second wordmark instance — the one that animates the collapse. */}
+          <PsalmsWordmarkSvg
+            ref={collapseSvgRef}
+            className="w-[95vw] md:w-[80vw] max-w-4xl relative"
+            style={{
+              opacity: 0.12,
+              color: 'var(--deep-umber)',
+              zIndex: 1,
+            }}
+          />
+
+          {/* Expanding warm-sand ring — sits in front of the wordmark. */}
+          <div
+            ref={collapseRingRef}
+            aria-hidden="true"
+            className="absolute pointer-events-none"
+            style={{
+              top: '50%',
+              left: '50%',
+              width: '24px',
+              height: '24px',
+              transform: 'translate(-50%, -50%) scale(0.3)',
+              borderRadius: '50%',
+              border: '1.5px solid rgba(188, 179, 163, 0.85)',
+              opacity: 0,
+              willChange: 'opacity, transform',
+              zIndex: 2,
             }}
           />
         </div>
