@@ -50,7 +50,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   const maskScrollRef = useRef<HTMLDivElement>(null);
   const maskClipRef = useRef<HTMLDivElement>(null);
   const maskImgRef = useRef<HTMLImageElement>(null);
-  const maskVideoRef = useRef<HTMLVideoElement>(null);
 
   // Layer 2 (unclipped, object-contain) refs — see
   // docs/superpowers/specs/2026-05-12-hero-mask-fullscreen-reveal-design.md
@@ -125,46 +124,21 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         },
       });
 
-      // Expand the clipped mask container from centered/small → full viewport
+      // Layer 1: expand clipped container 75/45% → 100/100% over progress 0 → 0.55
       tl.fromTo(
         clipEl,
         { width: '75%', height: '45%' },
-        { width: '100%', height: '100%', ease: 'none', duration: 1 },
+        { width: '100%', height: '100%', ease: 'none', duration: 0.55 },
         0
       );
 
-      // Subtle image zoom-out as the mask expands
+      // Layer 1: subtle image zoom-out over same window
       tl.fromTo(
         imgEl,
         { scale: 1.15 },
-        { scale: 1, ease: 'none', duration: 1 },
+        { scale: 1, ease: 'none', duration: 0.55 },
         0
       );
-
-      // Crossfade image → video near the end of the scroll animation
-      const videoEl = maskVideoRef.current;
-      if (videoEl) {
-        gsap.set(videoEl, { opacity: 0 });
-
-        // Fade video in over 20% of the timeline, starting at 70%
-        tl.to(
-          videoEl,
-          { opacity: 1, ease: 'power1.inOut', duration: 0.2 },
-          0.7
-        );
-
-        // Start video playback slightly before the crossfade begins
-        ScrollTrigger.create({
-          trigger: scrollEl,
-          start: 'top top',
-          end: '60% top',
-          onUpdate: (self) => {
-            if (self.progress >= 0.65 && videoEl.paused) {
-              videoEl.play().catch(() => {});
-            }
-          },
-        });
-      }
     }, scrollEl);
 
     return () => ctx.revert();
@@ -631,16 +605,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               alt=""
               className="w-full h-full object-cover"
               style={{ transform: 'scale(1.15)' }}
-            />
-            <video
-              ref={maskVideoRef}
-              src="/hero_main_video.mp4"
-              muted
-              playsInline
-              loop
-              preload="auto"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ opacity: 0 }}
             />
           </div>
           {/* Layer 2 — unclipped, object-contain, opacity 0 → 1 mid-scroll.
