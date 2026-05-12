@@ -52,10 +52,11 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   const maskImgRef = useRef<HTMLImageElement>(null);
   const maskVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Scroll-collapse refs (new — see docs/superpowers/specs/2026-05-12-hero-scroll-collapse-design.md)
+  // Scroll-collapse refs (see docs/superpowers/specs/2026-05-12-hero-scroll-collapse-design.md).
+  // The wordmark itself lives on `svgRef` above — the same SVG instance the
+  // intro effect animates. The collapse effect tweens the parent SVG and its
+  // letter <g> children alongside the halo/ring overlay layers.
   const collapseScrollRef = useRef<HTMLDivElement>(null);
-  const collapsePinRef = useRef<HTMLDivElement>(null);
-  const collapseSvgRef = useRef<SVGSVGElement>(null);
   const collapseHaloRef = useRef<HTMLDivElement>(null);
   const collapseRingRef = useRef<HTMLDivElement>(null);
 
@@ -292,7 +293,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     if (prefersReducedMotion) return;
 
     const scrollEl = collapseScrollRef.current;
-    const svgEl    = collapseSvgRef.current;
+    const svgEl    = svgRef.current;
     const haloEl   = collapseHaloRef.current;
     const ringEl   = collapseRingRef.current;
     if (!scrollEl || !svgEl || !haloEl || !ringEl) return;
@@ -311,7 +312,10 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         scrollTrigger: {
           trigger: scrollEl,
           start: 'top top',
-          end: 'bottom top',
+          // 60% of the 250vh outer = 150vh of scrub. The remaining 100vh of
+          // the outer is the natural sticky-release exit, identical to the
+          // mask-expand pattern below.
+          end: '60% top',
           scrub: 1,
           invalidateOnRefresh: true,
         },
@@ -391,7 +395,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     if (!prefersReducedMotion) return;
 
     const scrollEl = collapseScrollRef.current;
-    const svgEl    = collapseSvgRef.current;
+    const svgEl    = svgRef.current;
     const haloEl   = collapseHaloRef.current;
     if (!scrollEl || !svgEl || !haloEl) return;
 
@@ -447,94 +451,38 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       ref={heroRef}
       className="relative overflow-visible"
     >
-      {/* First viewport: PSALMS logo */}
-      <div className="relative h-screen flex flex-col items-center justify-center">
-        {/* Dark canvas — covers the first viewport during intro, fades at handoff */}
-        <div
-          ref={darkCanvasRef}
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse 90% 70% at 50% 50%, #0e0c10 0%, #08070a 60%, #050507 100%), #0a0a0c',
-            opacity: introActive ? 1 : 0,
-            zIndex: 2,
-          }}
-        />
-
-        {/* Glow aura — sits behind the A glyph, blooms on heartbeats */}
-        <div
-          ref={glowAuraRef}
-          className="absolute pointer-events-none"
-          style={{
-            top: '50%',
-            left: '50%',
-            width: 'var(--aura-size, 0px)',
-            height: 'var(--aura-size, 0px)',
-            transform: 'translate(-50%, -50%)',
-            background:
-              'radial-gradient(circle at center, rgba(246, 244, 240, 0.32) 0%, rgba(246, 244, 240, 0.12) 22%, rgba(246, 244, 240, 0.04) 45%, rgba(246, 244, 240, 0) 72%)',
-            borderRadius: '50%',
-            opacity: 0,
-            mixBlendMode: 'screen',
-            filter: 'blur(14px)',
-            willChange: 'opacity, transform',
-            zIndex: 3,
-          }}
-        />
-
-        {/* Pulse ring — emanates from A on the second heartbeat */}
-        <div
-          ref={pulseRingRef}
-          className="absolute pointer-events-none"
-          style={{
-            top: '50%',
-            left: '50%',
-            width: 'var(--ring-size, 0px)',
-            height: 'var(--ring-size, 0px)',
-            transform: 'translate(-50%, -50%)',
-            borderRadius: '50%',
-            border: '1.25px solid rgba(246, 244, 240, 0.85)',
-            boxShadow:
-              '0 0 38px rgba(246, 244, 240, 0.42), 0 0 90px rgba(246, 244, 240, 0.18), inset 0 0 22px rgba(246, 244, 240, 0.12)',
-            opacity: 0,
-            mixBlendMode: 'screen',
-            willChange: 'width, height, opacity',
-            zIndex: 3,
-          }}
-        />
-
-        {/* Background PSALMS Logo - Large Outline Style */}
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4"
-          style={{ zIndex: 4 }}
-        >
-          <PsalmsWordmarkSvg
-            ref={svgRef}
-            className="w-[95vw] md:w-[80vw] max-w-4xl"
-            style={{
-              opacity: introActive ? 1 : 0.12,
-              color: introActive ? '#f6f4f0' : 'var(--deep-umber)',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Scroll-collapse pin region — wordmark gathers back into A as user scrolls. */}
+      {/* Hero region — first viewport + scroll-collapse pin combined.
+          Outer is 250vh; inner is `sticky top-0 h-screen`. With this geometry,
+          CSS sticky stays glued for (250vh − 100vh) = 150vh of scroll —
+          which is exactly the scrub range. After scroll progress 1.0 the
+          sticky disengages and the rest-state A drifts up off-screen,
+          handing off into the existing mask-expand below. */}
       <div
         ref={collapseScrollRef}
         data-reduced-motion={prefersReducedMotion ? 'true' : undefined}
         className="relative"
         style={{
-          height: prefersReducedMotion ? '100vh' : '150vh',
+          height: prefersReducedMotion ? '100vh' : '250vh',
           overscrollBehaviorY: 'contain',
         }}
       >
         <div
-          ref={collapsePinRef}
-          className="top-0 h-screen w-full flex items-center justify-center overflow-hidden"
+          className="top-0 h-screen w-full flex flex-col items-center justify-center overflow-hidden"
           style={{ position: prefersReducedMotion ? 'static' : 'sticky' }}
         >
-          {/* Persistent umber halo — sits behind the wordmark. */}
+          {/* Dark canvas — covers the first viewport during intro, fades at handoff */}
+          <div
+            ref={darkCanvasRef}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(ellipse 90% 70% at 50% 50%, #0e0c10 0%, #08070a 60%, #050507 100%), #0a0a0c',
+              opacity: introActive ? 1 : 0,
+              zIndex: 2,
+            }}
+          />
+
+          {/* Persistent umber halo — sits behind the wordmark during the collapse climax. */}
           <div
             ref={collapseHaloRef}
             aria-hidden="true"
@@ -551,23 +499,69 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               filter: 'blur(18px)',
               opacity: 0,
               willChange: 'opacity, transform',
-              zIndex: 0,
+              zIndex: 3,
             }}
           />
 
-          {/* Second wordmark instance — the one that animates the collapse. */}
-          <PsalmsWordmarkSvg
-            ref={collapseSvgRef}
-            decorative
-            className="w-[95vw] md:w-[80vw] max-w-4xl relative"
+          {/* Glow aura — sits behind the A glyph, blooms on intro heartbeats */}
+          <div
+            ref={glowAuraRef}
+            className="absolute pointer-events-none"
             style={{
-              opacity: 0.12,
-              color: 'var(--deep-umber)',
-              zIndex: 1,
+              top: '50%',
+              left: '50%',
+              width: 'var(--aura-size, 0px)',
+              height: 'var(--aura-size, 0px)',
+              transform: 'translate(-50%, -50%)',
+              background:
+                'radial-gradient(circle at center, rgba(246, 244, 240, 0.32) 0%, rgba(246, 244, 240, 0.12) 22%, rgba(246, 244, 240, 0.04) 45%, rgba(246, 244, 240, 0) 72%)',
+              borderRadius: '50%',
+              opacity: 0,
+              mixBlendMode: 'screen',
+              filter: 'blur(14px)',
+              willChange: 'opacity, transform',
+              zIndex: 3,
             }}
           />
 
-          {/* Expanding warm-sand ring — sits in front of the wordmark. */}
+          {/* Pulse ring — emanates from A on the intro's second heartbeat */}
+          <div
+            ref={pulseRingRef}
+            className="absolute pointer-events-none"
+            style={{
+              top: '50%',
+              left: '50%',
+              width: 'var(--ring-size, 0px)',
+              height: 'var(--ring-size, 0px)',
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              border: '1.25px solid rgba(246, 244, 240, 0.85)',
+              boxShadow:
+                '0 0 38px rgba(246, 244, 240, 0.42), 0 0 90px rgba(246, 244, 240, 0.18), inset 0 0 22px rgba(246, 244, 240, 0.12)',
+              opacity: 0,
+              mixBlendMode: 'screen',
+              willChange: 'width, height, opacity',
+              zIndex: 3,
+            }}
+          />
+
+          {/* PSALMS wordmark — the single instance, animated by both the intro
+              and the scroll-collapse effect. */}
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden px-4"
+            style={{ zIndex: 4 }}
+          >
+            <PsalmsWordmarkSvg
+              ref={svgRef}
+              className="w-[95vw] md:w-[80vw] max-w-4xl"
+              style={{
+                opacity: introActive ? 1 : 0.12,
+                color: introActive ? '#f6f4f0' : 'var(--deep-umber)',
+              }}
+            />
+          </div>
+
+          {/* Expanding warm-sand ring — sits in front of the wordmark during climax. */}
           <div
             ref={collapseRingRef}
             aria-hidden="true"
@@ -582,7 +576,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               border: '1.5px solid rgba(188, 179, 163, 0.85)',
               opacity: 0,
               willChange: 'opacity, transform',
-              zIndex: 2,
+              zIndex: 5,
             }}
           />
         </div>
