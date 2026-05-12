@@ -110,7 +110,8 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     const scrollEl = maskScrollRef.current;
     const clipEl = maskClipRef.current;
     const imgEl = maskImgRef.current;
-    if (!scrollEl || !clipEl || !imgEl) return;
+    const unclippedEl = maskUnclippedRef.current;
+    if (!scrollEl || !clipEl || !imgEl || !unclippedEl) return;
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -124,20 +125,32 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         },
       });
 
-      // Layer 1: expand clipped container 75/45% → 100/100% over progress 0 → 0.55
+      // Phase 1 — Expansion (progress 0.00 → 0.55)
+      // Layer 1 silhouette grows to fill the viewport. Image scales 1.15 → 1.
       tl.fromTo(
         clipEl,
         { width: '75%', height: '45%' },
         { width: '100%', height: '100%', ease: 'none', duration: 0.55 },
         0
       );
-
-      // Layer 1: subtle image zoom-out over same window
       tl.fromTo(
         imgEl,
         { scale: 1.15 },
         { scale: 1, ease: 'none', duration: 0.55 },
         0
+      );
+
+      // Phase 2 — Crossfade (progress 0.55 → 0.80)
+      // Layer 1 fades out; Layer 2 (unclipped, object-contain) fades in.
+      tl.to(
+        clipEl,
+        { opacity: 0, ease: 'power1.inOut', duration: 0.25 },
+        0.55
+      );
+      tl.to(
+        unclippedEl,
+        { opacity: 1, ease: 'power1.inOut', duration: 0.25 },
+        0.55
       );
     }, scrollEl);
 
