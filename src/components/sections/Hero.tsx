@@ -10,6 +10,19 @@ gsap.registerPlugin(ScrollTrigger);
 // with `src/index.css:29` if the palette ever changes.
 const DEEP_UMBER_HEX = '#3A3426';
 
+// SVG-userspace collapse offsets. Distance each letter travels from its
+// settled position to the A's center, in viewBox units (positive = moves
+// rightward toward A from the left side; negative = moves leftward toward
+// A from the right side). Used by both the intro spread (reverse direction)
+// and the scroll-collapse effect.
+const COLLAPSE = {
+  P:  653.3,
+  S1: 339.8,
+  L: -313.9,
+  M: -690.5,
+  S2: -1076.4,
+} as const;
+
 interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
@@ -184,15 +197,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     const letterM  = svgEl.querySelector<SVGGElement>('#letter-M');
     const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2');
     if (!letterA || !letterP || !letterS1 || !letterL || !letterM || !letterS2) return;
-
-    // SVG-userspace collapse offsets (CSS px × 1500/1100 = × 1.3636 from original)
-    const COLLAPSE = {
-      P: 653.3,
-      S1: 339.8,
-      L: -313.9,
-      M: -690.5,
-      S2: -1076.4,
-    };
 
     const tl = gsap.timeline({
       paused: true,
