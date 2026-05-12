@@ -107,6 +107,8 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
 
   /* ── Mask-expand scroll animation ── */
   useEffect(() => {
+    if (prefersReducedMotion) return;
+
     const scrollEl = maskScrollRef.current;
     const clipEl = maskClipRef.current;
     const imgEl = maskImgRef.current;
@@ -182,7 +184,26 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       ctx.revert();
       playbackTrigger?.kill();
     };
-  }, []);
+  }, [prefersReducedMotion]);
+
+  /* ── Reduced-motion fallback for the mask-expand:
+       no scroll animation; Layer 2 rendered statically at full opacity. ── */
+  useEffect(() => {
+    if (!prefersReducedMotion) return;
+
+    const clipEl = maskClipRef.current;
+    const unclippedEl = maskUnclippedRef.current;
+    const videoEl = maskUnclippedVideoRef.current;
+    if (!clipEl || !unclippedEl) return;
+
+    // Hide Layer 1, show Layer 2 (and its video) immediately.
+    gsap.set(clipEl, { opacity: 0 });
+    gsap.set(unclippedEl, { opacity: 1 });
+    if (videoEl) {
+      gsap.set(videoEl, { opacity: 1 });
+      videoEl.play().catch(() => {});
+    }
+  }, [prefersReducedMotion]);
 
   /* ── Responsive sizing for glow-aura and pulse-ring ── */
   useEffect(() => {
@@ -618,7 +639,10 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       <div
         ref={maskScrollRef}
         className="relative"
-        style={{ height: '250vh', marginTop: '-35vh' }}
+        style={{
+          height: prefersReducedMotion ? '100vh' : '250vh',
+          marginTop: '-35vh',
+        }}
       >
         <div
           className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center"
