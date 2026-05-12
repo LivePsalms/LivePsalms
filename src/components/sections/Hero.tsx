@@ -111,6 +111,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     const clipEl = maskClipRef.current;
     const imgEl = maskImgRef.current;
     const unclippedEl = maskUnclippedRef.current;
+    const videoEl = maskUnclippedVideoRef.current;
     if (!scrollEl || !clipEl || !imgEl || !unclippedEl) return;
 
     const ctx = gsap.context(() => {
@@ -126,7 +127,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       });
 
       // Phase 1 — Expansion (progress 0.00 → 0.55)
-      // Layer 1 silhouette grows to fill the viewport. Image scales 1.15 → 1.
       tl.fromTo(
         clipEl,
         { width: '75%', height: '45%' },
@@ -140,8 +140,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         0
       );
 
-      // Phase 2 — Crossfade (progress 0.55 → 0.80)
-      // Layer 1 fades out; Layer 2 (unclipped, object-contain) fades in.
+      // Phase 2 — Layer 1 → Layer 2 crossfade (progress 0.55 → 0.80)
       tl.to(
         clipEl,
         { opacity: 0, ease: 'power1.inOut', duration: 0.25 },
@@ -152,9 +151,37 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         { opacity: 1, ease: 'power1.inOut', duration: 0.25 },
         0.55
       );
+
+      // Phase 3 — Image → video crossfade on Layer 2 (progress 0.70 → 0.90)
+      if (videoEl) {
+        gsap.set(videoEl, { opacity: 0 });
+        tl.to(
+          videoEl,
+          { opacity: 1, ease: 'power1.inOut', duration: 0.2 },
+          0.7
+        );
+      }
     }, scrollEl);
 
-    return () => ctx.revert();
+    // Playback start: kick the video off slightly before its visual crossfade.
+    let playbackTrigger: ScrollTrigger | undefined;
+    if (videoEl) {
+      playbackTrigger = ScrollTrigger.create({
+        trigger: scrollEl,
+        start: 'top top',
+        end: '60% top',
+        onUpdate: (self) => {
+          if (self.progress >= 0.65 && videoEl.paused) {
+            videoEl.play().catch(() => {});
+          }
+        },
+      });
+    }
+
+    return () => {
+      ctx.revert();
+      playbackTrigger?.kill();
+    };
   }, []);
 
   /* ── Responsive sizing for glow-aura and pulse-ring ── */
