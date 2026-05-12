@@ -347,6 +347,39 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       tl.to(letterL, { x: COLLAPSE.L,         duration: 0.226, ease: 'power3.out' }, 0.292);
       tl.to(letterL, { opacity: 0,            duration: 0.226, ease: 'power1.out' }, 0.292);
       tl.to(letterL, { filter: 'blur(6px)',   duration: 0.226, ease: 'power2.out' }, 0.292);
+
+      // Phase 5 — A pulse (progress 0.504 → 0.639)
+      // Single subtle pulse marks the moment of full contact. Peak 1.06.
+      tl.to(letterA, { scale: 1.06, transformOrigin: '50% 50%', duration: 0.071, ease: 'power2.out' }, 0.504);
+      tl.to(letterA, { scale: 1.00, transformOrigin: '50% 50%', duration: 0.064, ease: 'power3.out' }, 0.575);
+
+      // Phase 6.1 — Halo swell + settle
+      tl.fromTo(haloEl,
+        { opacity: 0,    scale: 0.30 },
+        { opacity: 0.85, scale: 1.0, duration: 0.075, ease: 'power2.out' },
+        0.568);
+      tl.to(haloEl,
+        { opacity: 0.10, duration: 0.137, ease: 'power2.out' },
+        0.643);
+
+      // Phase 6.2 — Ring bloom + expand
+      tl.fromTo(ringEl,
+        { opacity: 0,    scale: 0.30 },
+        { opacity: 0.85, scale: 1.0,  duration: 0.020, ease: 'power1.out' },
+        0.568);
+      tl.to(ringEl,
+        { opacity: 0,    scale: 45,   duration: 0.192, ease: 'power2.out' },
+        0.588);
+
+      // Phase 6.3 — A fill warming (tonal "flash" — additive light would not read on cream)
+      // Letters inherit fill via `currentColor`; tween the SVG's `color` and the
+      // already-invisible siblings are harmlessly warmed too.
+      tl.to(svgEl,
+        { color: '#5A4520', duration: 0.036, ease: 'power2.out' },
+        0.568);
+      tl.to(svgEl,
+        { color: 'var(--deep-umber)', duration: 0.156, ease: 'power2.out' },
+        0.604);
     }, scrollEl);
 
     return () => ctx.revert();
