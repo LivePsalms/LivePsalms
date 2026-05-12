@@ -286,6 +286,72 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     };
   }, [introActive, onIntroComplete, onHandoff]);
 
+  /* ── Scroll-collapse: bloom + three-wave collapse + A pulse + climax + rest ── */
+  useLayoutEffect(() => {
+    if (introActive) return;
+    if (prefersReducedMotion) return;
+
+    const scrollEl = collapseScrollRef.current;
+    const svgEl    = collapseSvgRef.current;
+    const haloEl   = collapseHaloRef.current;
+    const ringEl   = collapseRingRef.current;
+    if (!scrollEl || !svgEl || !haloEl || !ringEl) return;
+
+    const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
+    const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
+    const letterS1 = svgEl.querySelector<SVGGElement>('#letter-S1');
+    const letterL  = svgEl.querySelector<SVGGElement>('#letter-L');
+    const letterM  = svgEl.querySelector<SVGGElement>('#letter-M');
+    const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2');
+    if (!letterA || !letterP || !letterS1 || !letterL || !letterM || !letterS2) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        defaults: { force3D: true },
+        scrollTrigger: {
+          trigger: scrollEl,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      // Phase 1 — Bloom (progress 0.000 → 0.150)
+      // Wordmark wakes up: opacity 0.12 → 1.0 + faint scale 0.98 → 1.0.
+      tl.fromTo(svgEl,
+        { opacity: 0.12, scale: 0.98, transformOrigin: '50% 50%' },
+        { opacity: 1.0, scale: 1.0, duration: 0.150, ease: 'power2.out' },
+        0);
+
+      // Phase 2 — Wave 1: S₂ (progress 0.150 → 0.377)
+      // Three independent eases per letter, matching the standalone composition.
+      tl.to(letterS2, { x: COLLAPSE.S2,       duration: 0.227, ease: 'power3.out' }, 0.150);
+      tl.to(letterS2, { opacity: 0,           duration: 0.227, ease: 'power1.out' }, 0.150);
+      tl.to(letterS2, { filter: 'blur(6px)',  duration: 0.227, ease: 'power2.out' }, 0.150);
+
+      // Phase 3 — Wave 2: P + M (progress 0.221 → 0.448)
+      tl.to(letterP, { x: COLLAPSE.P,         duration: 0.227, ease: 'power3.out' }, 0.221);
+      tl.to(letterP, { opacity: 0,            duration: 0.227, ease: 'power1.out' }, 0.221);
+      tl.to(letterP, { filter: 'blur(6px)',   duration: 0.227, ease: 'power2.out' }, 0.221);
+
+      tl.to(letterM, { x: COLLAPSE.M,         duration: 0.227, ease: 'power3.out' }, 0.221);
+      tl.to(letterM, { opacity: 0,            duration: 0.227, ease: 'power1.out' }, 0.221);
+      tl.to(letterM, { filter: 'blur(6px)',   duration: 0.227, ease: 'power2.out' }, 0.221);
+
+      // Phase 4 — Wave 3: S₁ + L (progress 0.292 → 0.518)
+      tl.to(letterS1, { x: COLLAPSE.S1,       duration: 0.226, ease: 'power3.out' }, 0.292);
+      tl.to(letterS1, { opacity: 0,           duration: 0.226, ease: 'power1.out' }, 0.292);
+      tl.to(letterS1, { filter: 'blur(6px)',  duration: 0.226, ease: 'power2.out' }, 0.292);
+
+      tl.to(letterL, { x: COLLAPSE.L,         duration: 0.226, ease: 'power3.out' }, 0.292);
+      tl.to(letterL, { opacity: 0,            duration: 0.226, ease: 'power1.out' }, 0.292);
+      tl.to(letterL, { filter: 'blur(6px)',   duration: 0.226, ease: 'power2.out' }, 0.292);
+    }, scrollEl);
+
+    return () => ctx.revert();
+  }, [introActive, prefersReducedMotion]);
+
   return (
     <section
       ref={heroRef}
