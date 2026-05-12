@@ -52,6 +52,12 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   const maskImgRef = useRef<HTMLImageElement>(null);
   const maskVideoRef = useRef<HTMLVideoElement>(null);
 
+  // Layer 2 (unclipped, object-contain) refs — see
+  // docs/superpowers/specs/2026-05-12-hero-mask-fullscreen-reveal-design.md
+  const maskUnclippedRef = useRef<HTMLDivElement>(null);
+  const maskUnclippedImgRef = useRef<HTMLImageElement>(null);
+  const maskUnclippedVideoRef = useRef<HTMLVideoElement>(null);
+
   // Scroll-collapse refs (see docs/superpowers/specs/2026-05-12-hero-scroll-collapse-design.md).
   // The wordmark itself lives on `svgRef` above — the same SVG instance the
   // intro effect animates. The collapse effect tweens the parent SVG and its
@@ -634,6 +640,37 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               loop
               preload="auto"
               className="absolute inset-0 w-full h-full object-cover"
+              style={{ opacity: 0 }}
+            />
+          </div>
+          {/* Layer 2 — unclipped, object-contain, opacity 0 → 1 mid-scroll.
+              Owns the final fullscreen frame and the video. Cream surround
+              fills any aspect-ratio gap (16:9 source on portrait viewports).
+              Will be the only owner of <video> after Task 2 removes Layer 1's video. */}
+          <div
+            ref={maskUnclippedRef}
+            className="absolute inset-0 w-full h-full flex items-center justify-center"
+            style={{
+              backgroundColor: 'hsl(var(--mersi-cream))',
+              opacity: 0,
+              zIndex: 2,
+              willChange: 'opacity',
+            }}
+          >
+            <img
+              ref={maskUnclippedImgRef}
+              src="/tropical_jungle.png"
+              alt=""
+              className="w-full h-full object-contain"
+            />
+            <video
+              ref={maskUnclippedVideoRef}
+              src="/hero_main_video.mp4"
+              muted
+              playsInline
+              loop
+              preload="auto"
+              className="absolute inset-0 w-full h-full object-contain"
               style={{ opacity: 0 }}
             />
           </div>
