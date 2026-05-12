@@ -3,6 +3,8 @@ import { forwardRef } from 'react';
 interface PsalmsWordmarkSvgProps {
   className?: string;
   style?: React.CSSProperties;
+  /** When true, marks the SVG aria-hidden (use for decorative second instances). */
+  decorative?: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ interface PsalmsWordmarkSvgProps {
  * preserved so the path data stays unchanged from the source composition.
  */
 export const PsalmsWordmarkSvg = forwardRef<SVGSVGElement, PsalmsWordmarkSvgProps>(
-  function PsalmsWordmarkSvg({ className, style }, ref) {
+  function PsalmsWordmarkSvg({ className, style, decorative = false }, ref) {
     return (
       <svg
         ref={ref}
@@ -24,8 +26,9 @@ export const PsalmsWordmarkSvg = forwardRef<SVGSVGElement, PsalmsWordmarkSvgProp
         style={style}
         viewBox="0 540 1500 320"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="PSALMS"
-        role="img"
+        {...(decorative
+          ? { 'aria-hidden': true }
+          : { 'aria-label': 'PSALMS', role: 'img' })}
       >
         <g transform="translate(6, 558)">
           <g fill="currentColor">

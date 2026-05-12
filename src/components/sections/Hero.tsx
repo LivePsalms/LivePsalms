@@ -378,7 +378,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         { color: '#5A4520', duration: 0.036, ease: 'power2.out' },
         0.568);
       tl.to(svgEl,
-        { color: 'var(--deep-umber)', duration: 0.156, ease: 'power2.out' },
+        { color: DEEP_UMBER_HEX, duration: 0.156, ease: 'power2.out' },
         0.604);
     }, scrollEl);
 
@@ -558,6 +558,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
           {/* Second wordmark instance — the one that animates the collapse. */}
           <PsalmsWordmarkSvg
             ref={collapseSvgRef}
+            decorative
             className="w-[95vw] md:w-[80vw] max-w-4xl relative"
             style={{
               opacity: 0.12,
