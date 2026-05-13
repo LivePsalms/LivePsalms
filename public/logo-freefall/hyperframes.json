@@ -1,0 +1,9 @@
+{
+  "name": "logo-freefall",
+  "description": "PSALMS wordmark collapses back into the A, releases a glow ring, lays flat, free-falls through the atmosphere, then dissolves.",
+  "compositions": {
+    "logo-freefall": {
+      "entry": "index.html"
+    }
+  }
+}
