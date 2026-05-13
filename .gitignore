@@ -8,3 +8,11 @@ dist
 .env
 .env.local
 .vscode
+
+# Local scratch / reference images (not shipped)
+/forgiveness-*.png
+/surrender-*.png
+/trust-*.png
+
+# HyperFrames render snapshots
+public/Logo-motion/my-video/snapshots/
