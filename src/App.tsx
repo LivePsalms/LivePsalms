@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { decideHeroIntro, persistIntroPlayed } from '@/components/sections/hero-intro-gate';
 import { Header } from '@/components/layout/Header';
@@ -67,8 +67,13 @@ function App() {
   // user prefers reduced motion.
   const overlay = useLoadingOverlay({
     minMs: 1500,
-    initialActive: !initialDecision.homeIntroPlays && !initialDecision.prefersReducedMotion,
+    initialActive: false,
   });
+
+  const handleNavTrigger = useCallback(() => {
+    if (initialDecision.prefersReducedMotion) return;
+    overlay.trigger();
+  }, [overlay, initialDecision.prefersReducedMotion]);
 
   const handleIntroComplete = useCallback(() => {
     setIntroActive(false);
@@ -79,25 +84,6 @@ function App() {
   const handleIntroHandoff = useCallback(() => {
     setHeaderVisible(true);
   }, []);
-
-  // Trigger the overlay on every SPA location change after the initial mount.
-  // The initial mount's overlay state is handled by useLoadingOverlay's
-  // initialActive parameter. `overlay.trigger` is a fresh closure each render
-  // (it reads from a ref), so we intentionally omit it from the deps to avoid
-  // running this effect on every render — pathname is the only real signal.
-  const previousPathnameRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (initialDecision.prefersReducedMotion) return;
-    if (previousPathnameRef.current === null) {
-      previousPathnameRef.current = location.pathname;
-      return;
-    }
-    if (previousPathnameRef.current !== location.pathname) {
-      overlay.trigger();
-      previousPathnameRef.current = location.pathname;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, initialDecision.prefersReducedMotion]);
 
   const { status, color, transition } = useRouteTransition(projects);
 
@@ -127,7 +113,7 @@ function App() {
         <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
         <OrganicBackdrop />
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} showNav={headerVisible} />}
+          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
 
           <Routes>
             <Route
