@@ -62,9 +62,9 @@ function App() {
   // overlay sits above it during navigation.
   const [headerVisible, setHeaderVisible] = useState<boolean>(() => !initialDecision.homeIntroPlays);
 
-  // Loading overlay: active on initial mount unless the home intro is going
-  // to play (the home intro IS the brand moment on /). Also skipped if the
-  // user prefers reduced motion.
+  // Loading overlay starts inactive. Activation is driven exclusively by
+  // handleNavTrigger from Header click sources (see below). Reduced-motion
+  // suppression lives inside that wrapper.
   const overlay = useLoadingOverlay({
     minMs: 1500,
     initialActive: false,
