@@ -3,6 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 
+// Labels that fire the loading overlay when clicked. Contact and Social
+// are intentionally excluded.
+const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
+
 function WaterText({ children, className, style, as: Tag = 'a', ...props }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties; as?: React.ElementType; [key: string]: unknown }) {
   const [isHovered, setIsHovered] = useState(false);
   const text = typeof children === 'string' ? children : '';
@@ -46,9 +50,6 @@ interface HeaderProps {
 export function Header({ showNav = true, darkText = false, onNavTrigger }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  // Labels that fire the loading overlay when clicked. Contact and Social
-  // are intentionally excluded.
-  const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const textColor = darkText
