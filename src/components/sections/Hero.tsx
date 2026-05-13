@@ -46,16 +46,11 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
 
-  // Mask scroll-expand refs
+  // Mask scroll-expand refs — silhouette clip-path owns image + video together.
   const maskScrollRef = useRef<HTMLDivElement>(null);
   const maskClipRef = useRef<HTMLDivElement>(null);
   const maskImgRef = useRef<HTMLImageElement>(null);
-
-  // Layer 2 (unclipped, object-contain) refs — see
-  // docs/superpowers/specs/2026-05-12-hero-mask-fullscreen-reveal-design.md
-  const maskUnclippedRef = useRef<HTMLDivElement>(null);
-  const maskUnclippedImgRef = useRef<HTMLImageElement>(null);
-  const maskUnclippedVideoRef = useRef<HTMLVideoElement>(null);
+  const maskVideoRef = useRef<HTMLVideoElement>(null);
 
   // Scroll-collapse refs (see docs/superpowers/specs/2026-05-12-hero-scroll-collapse-design.md).
   // The wordmark itself lives on `svgRef` above — the same SVG instance the
@@ -112,9 +107,8 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     const scrollEl = maskScrollRef.current;
     const clipEl = maskClipRef.current;
     const imgEl = maskImgRef.current;
-    const unclippedEl = maskUnclippedRef.current;
-    const videoEl = maskUnclippedVideoRef.current;
-    if (!scrollEl || !clipEl || !imgEl || !unclippedEl) return;
+    const videoEl = maskVideoRef.current;
+    if (!scrollEl || !clipEl || !imgEl) return;
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -129,6 +123,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       });
 
       // Phase 1 — Expansion (progress 0.00 → 0.55)
+      // Silhouette grows from 75/45% → 100/100% of the viewport; image scale 1.15 → 1.
       tl.fromTo(
         clipEl,
         { width: '75%', height: '45%' },
@@ -142,19 +137,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         0
       );
 
-      // Phase 2 — Layer 1 → Layer 2 crossfade (progress 0.55 → 0.80)
-      tl.to(
-        clipEl,
-        { opacity: 0, ease: 'power1.inOut', duration: 0.25 },
-        0.55
-      );
-      tl.to(
-        unclippedEl,
-        { opacity: 1, ease: 'power1.inOut', duration: 0.25 },
-        0.55
-      );
-
-      // Phase 3 — Image → video crossfade on Layer 2 (progress 0.70 → 0.90)
+      // Phase 2 — Image → video crossfade inside the silhouette (progress 0.70 → 0.90).
       if (videoEl) {
         gsap.set(videoEl, { opacity: 0 });
         tl.to(
@@ -187,18 +170,18 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   }, [prefersReducedMotion]);
 
   /* ── Reduced-motion fallback for the mask-expand:
-       no scroll animation; Layer 2 rendered statically at full opacity. ── */
+       no scroll animation; silhouette rendered statically at full size with video playing. ── */
   useEffect(() => {
     if (!prefersReducedMotion) return;
 
     const clipEl = maskClipRef.current;
-    const unclippedEl = maskUnclippedRef.current;
-    const videoEl = maskUnclippedVideoRef.current;
-    if (!clipEl || !unclippedEl) return;
+    const imgEl = maskImgRef.current;
+    const videoEl = maskVideoRef.current;
+    if (!clipEl || !imgEl) return;
 
-    // Hide Layer 1, show Layer 2 (and its video) immediately.
-    gsap.set(clipEl, { opacity: 0 });
-    gsap.set(unclippedEl, { opacity: 1 });
+    // Hold the silhouette at its end-state and autoplay the video.
+    gsap.set(clipEl, { width: '100%', height: '100%' });
+    gsap.set(imgEl, { scale: 1 });
     if (videoEl) {
       gsap.set(videoEl, { opacity: 1 });
       videoEl.play().catch(() => {});
@@ -670,35 +653,14 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               className="w-full h-full object-cover"
               style={{ transform: 'scale(1.15)' }}
             />
-          </div>
-          {/* Layer 2 — unclipped, object-contain, opacity 0 → 1 mid-scroll.
-              Owns the final fullscreen frame and the video. Cream surround
-              fills any aspect-ratio gap (16:9 source on portrait viewports).
-              Will be the only owner of <video> after Task 2 removes Layer 1's video. */}
-          <div
-            ref={maskUnclippedRef}
-            className="absolute inset-0 w-full h-full flex items-center justify-center"
-            style={{
-              backgroundColor: 'hsl(var(--mersi-cream))',
-              opacity: 0,
-              zIndex: 2,
-              willChange: 'opacity',
-            }}
-          >
-            <img
-              ref={maskUnclippedImgRef}
-              src="/tropical_jungle.png"
-              alt=""
-              className="w-full h-full object-contain"
-            />
             <video
-              ref={maskUnclippedVideoRef}
+              ref={maskVideoRef}
               src="/hero_main_video.mp4"
               muted
               playsInline
               loop
               preload="auto"
-              className="absolute inset-0 w-full h-full object-contain"
+              className="absolute inset-0 w-full h-full object-cover"
               style={{ opacity: 0 }}
             />
           </div>
