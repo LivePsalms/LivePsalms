@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 
@@ -34,13 +34,27 @@ function WaterText({ children, className, style, as: Tag = 'a', ...props }: { ch
 interface HeaderProps {
   showNav?: boolean;
   darkText?: boolean;
+  /**
+   * Called when the user clicks one of the trigger nav entries
+   * (Logo, Purpose, Notepad, Devotion — and their mobile equivalents).
+   * The logo suppresses this on same-path clicks; other entries fire
+   * unconditionally. Optional so the component remains usable without it.
+   */
+  onNavTrigger?: () => void;
 }
 
-export function Header({ showNav = true, darkText = false }: HeaderProps) {
+export function Header({ showNav = true, darkText = false, onNavTrigger }: HeaderProps) {
   const navigate = useNavigate();
-  const textColor = darkText ? 'rgba(255, 255, 255, 0.75)' : 'var(--deep-umber)';
+  const location = useLocation();
+  // Labels that fire the loading overlay when clicked. Contact and Social
+  // are intentionally excluded.
+  const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const textColor = darkText
+    ? (isScrolled ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)')
+    : (isScrolled ? '#000000' : 'rgba(0, 0, 0, 0.7)');
+  const hoverColor = darkText ? '#FFFFFF' : '#000000';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,17 +79,10 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled
-          ? 'backdrop-blur-md py-3'
-          : 'bg-transparent py-4 md:py-6'
+      className={`fixed top-0 left-0 right-0 z-50 bg-transparent transition-all duration-500 ${
+        isScrolled ? 'py-3' : 'py-4 md:py-6'
       }`}
-      style={{
-        perspective: '1000px',
-        background: isScrolled
-          ? (darkText ? 'rgba(0, 0, 0, 0.15)' : 'rgba(240, 236, 232, 0.95)')
-          : 'transparent',
-      }}
+      style={{ perspective: '1000px' }}
     >
       <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between">
         {/* Logo - 3D emergence effect */}
@@ -83,6 +90,9 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
           href="/"
           onClick={(e) => {
             e.preventDefault();
+            if (location.pathname !== '/') {
+              onNavTrigger?.();
+            }
             navigate('/');
           }}
           className="flex items-center z-50 cursor-pointer"
@@ -123,17 +133,21 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
               key={item.label}
               href={item.href}
               as="a"
-              className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300"
+              className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide"
               style={{
-                color: textColor,
+                fontFamily: "'The Softly Serif', serif",
                 opacity: showNav ? 1 : 0,
                 transform: showNav
                   ? 'translateY(0)'
                   : 'translateY(20px)',
-                transition: `all 2.5s cubic-bezier(0.16, 1, 0.3, 1)`,
-                transitionDelay: `${800 + index * 150}ms`,
-              }}
+                transition: `opacity 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, transform 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, color 300ms ease, text-decoration-color 300ms ease`,
+                ['--c-rest' as string]: textColor,
+                ['--c-hover' as string]: hoverColor,
+              } as React.CSSProperties}
               onClick={(e: React.MouseEvent) => {
+                if (NAV_TRIGGER_LABELS.has(item.label)) {
+                  onNavTrigger?.();
+                }
                 if (item.href.startsWith('/')) {
                   e.preventDefault();
                   navigate(item.href);
@@ -165,27 +179,41 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             <WaterText
               as="button"
               type="button"
-              className="text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 cursor-pointer"
-              style={{ color: textColor }}
+              className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide cursor-pointer"
+              style={{
+                fontFamily: "'The Softly Serif', serif",
+                transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
+                ['--c-rest' as string]: textColor,
+                ['--c-hover' as string]: hoverColor,
+              } as React.CSSProperties}
             >
-              SOCIAL
+              Social
             </WaterText>
             <div
               className="absolute left-1/2 -translate-x-1/2 top-full pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300"
             >
               <div
-                className="px-5 py-3 backdrop-blur-md rounded-sm shadow-sm"
-                style={{ background: 'rgba(240, 236, 232, 0.95)' }}
+                className="px-5 py-3 backdrop-blur-xl backdrop-saturate-150 rounded-sm shadow-sm"
+                style={{
+                  background: 'rgba(152, 143, 128, 0.55)',
+                  border: '1px solid rgba(58, 52, 38, 0.08)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+                }}
               >
                 <WaterText
                   as="a"
                   href="https://instagram.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-[10px] lg:text-[11px] font-medium tracking-widest transition-opacity duration-300 whitespace-nowrap"
-                  style={{ color: textColor }}
+                  className="psalms-nav-link block text-base lg:text-lg font-bold tracking-wide whitespace-nowrap"
+                  style={{
+                    fontFamily: "'The Softly Serif', serif",
+                    transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
+                    ['--c-rest' as string]: textColor,
+                    ['--c-hover' as string]: hoverColor,
+                  } as React.CSSProperties}
                 >
-                  INSTAGRAM
+                  Instagram
                 </WaterText>
               </div>
             </div>
@@ -209,9 +237,9 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
           aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? (
-            <X className="w-6 h-6" style={{ color: textColor }} />
+            <X className="w-6 h-6" style={{ color: textColor, transition: 'color 300ms ease' }} />
           ) : (
-            <Menu className="w-6 h-6" style={{ color: textColor }} />
+            <Menu className="w-6 h-6" style={{ color: textColor, transition: 'color 300ms ease' }} />
           )}
         </button>
       </div>
@@ -223,7 +251,7 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
             ? 'opacity-100 pointer-events-auto' 
             : 'opacity-0 pointer-events-none'
         }`}
-        style={{ background: 'var(--plaster)' }}
+        style={{ background: 'var(--app-bg)' }}
       >
         <nav className="flex flex-col items-center gap-8">
           {navItems.map((item) => (
@@ -231,29 +259,42 @@ export function Header({ showNav = true, darkText = false }: HeaderProps) {
               key={item.label}
               href={item.href}
               onClick={(e) => {
+                if (NAV_TRIGGER_LABELS.has(item.label)) {
+                  onNavTrigger?.();
+                }
                 if (item.href.startsWith('/')) {
                   e.preventDefault();
                   navigate(item.href);
                 }
                 setIsMobileMenuOpen(false);
               }}
-              className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
-              style={{ color: textColor }}
+              className="psalms-nav-link text-2xl font-bold tracking-wide"
+              style={{
+                fontFamily: "'The Softly Serif', serif",
+                transition: 'color 300ms ease, text-decoration-color 300ms ease',
+                ['--c-rest' as string]: textColor,
+                ['--c-hover' as string]: hoverColor,
+              } as React.CSSProperties}
             >
               {item.label}
             </a>
           ))}
-          <div 
-            className="w-8 h-px my-2" 
-            style={{ background: 'var(--deep-umber)', opacity: 0.2 }}
+          <div
+            className="w-8 h-px my-2"
+            style={{ background: '#000000', opacity: 0.2 }}
           />
           <a
             href="#social"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="text-lg font-medium tracking-widest hover:opacity-60 transition-opacity duration-300"
-            style={{ color: textColor }}
+            className="psalms-nav-link text-2xl font-bold tracking-wide"
+            style={{
+              fontFamily: "'The Softly Serif', serif",
+              transition: 'color 300ms ease, text-decoration-color 300ms ease',
+              ['--c-rest' as string]: textColor,
+              ['--c-hover' as string]: hoverColor,
+            } as React.CSSProperties}
           >
-            SOCIAL
+            Social
           </a>
         </nav>
       </div>
