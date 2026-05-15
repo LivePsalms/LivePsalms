@@ -215,25 +215,30 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               </WaterText>
             </span>
           ))}
-          <span 
-            style={{
-              color: textColor,
-              opacity: showNav ? 0.3 : 0,
-              transition: 'opacity 2s ease',
-              transitionDelay: '1400ms',
-            }}
-          >—</span>
           <div
-            className="relative group"
-            style={{
-              opacity: showNav ? 1 : 0,
-              transform: showNav
-                ? 'translateY(0)'
-                : 'translateY(20px)',
-              transition: 'all 2.5s cubic-bezier(0.16, 1, 0.3, 1)',
-              transitionDelay: '1500ms',
-            }}
+            ref={(el) => { itemRefs.current[4] = el; }}
+            className="flex items-center gap-6 lg:gap-8"
+            style={{ willChange: 'transform, opacity, filter' }}
           >
+            <span
+              style={{
+                color: textColor,
+                opacity: showNav ? 0.3 : 0,
+                transition: 'opacity 2s ease',
+                transitionDelay: '1400ms',
+              }}
+            >—</span>
+            <div
+              className="relative group"
+              style={{
+                opacity: showNav ? 1 : 0,
+                transform: showNav
+                  ? 'translateY(0)'
+                  : 'translateY(20px)',
+                transition: 'all 2.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                transitionDelay: '1500ms',
+              }}
+            >
             <WaterText
               as="button"
               type="button"
@@ -277,6 +282,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
                 </WaterText>
               </div>
             </div>
+          </div>
           </div>
         </nav>
 
