@@ -1,7 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';  
 import { useNavigate, useLocation } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { navItems } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
+import {
+  subscribeNavCollapseProgress,
+  setNavCollapseProgress,
+  getNavCollapseProgress,
+} from '@/lib/nav-collapse-progress';
+
+gsap.registerPlugin(ScrollTrigger);
 
 // Labels that fire the loading overlay when clicked. Contact and Social
 // are intentionally excluded.
@@ -53,6 +62,27 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Nav-collapse refs. The DOM applier writes directly to these on every
+  // scroll/scrub frame; no React state is involved.
+  const navRef = useRef<HTMLElement | null>(null);
+  const itemRefs = useRef<Array<HTMLElement | null>>([]);
+  const burgerRef = useRef<HTMLButtonElement | null>(null);
+  // State machine: 'scrub' (default), 'click-expanded' (user clicked burger),
+  // 'resyncing' (first scroll input after click-expanded — tweening back).
+  const stateRef = useRef<'scrub' | 'click-expanded' | 'resyncing'>('scrub');
+  // Last progress value applyDom wrote. Used as the starting point for the
+  // click-expand tween so it doesn't pop.
+  const currentProgressRef = useRef<number>(0);
+  // Active click-expand or resync tween, so we can kill it on re-entry.
+  const activeTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  const isHome = location.pathname === '/';
+
   // Soft-translucent text — paired with the glass text-shadow in
   // .psalms-nav-link (index.css). Constant across scroll; only flips to
   // the light variant when the page itself declares a dark theme via the
@@ -80,6 +110,24 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
       document.body.style.overflow = 'auto';
     };
   }, [isMobileMenuOpen]);
+
+  // TEMP scaffolding: consumes the new bindings introduced in Task 3 so that
+  // tsconfig's `noUnusedLocals: true` does not error. Each entry is removed
+  // as a subsequent task in the nav-collapse plan consumes the identifier
+  // for real. The whole expression is deleted once Task 11 lands.
+  void [
+    navRef,
+    itemRefs,
+    burgerRef,
+    stateRef,
+    currentProgressRef,
+    activeTweenRef,
+    prefersReducedMotion,
+    isHome,
+    subscribeNavCollapseProgress,
+    setNavCollapseProgress,
+    getNavCollapseProgress,
+  ];
 
   return (
     <header
