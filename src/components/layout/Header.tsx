@@ -144,6 +144,40 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     }
   };
 
+  // Tween between current progress and a target, using applyDom as the
+  // per-frame setter. Kills any in-flight tween first so re-entry is safe.
+  const tweenProgressTo = (target: number, duration: number, onComplete?: () => void): void => {
+    activeTweenRef.current?.kill();
+    const box = { progress: currentProgressRef.current };
+    activeTweenRef.current = gsap.to(box, {
+      progress: target,
+      duration,
+      ease: 'power2.out',
+      onUpdate: () => applyDom(box.progress),
+      onComplete: () => {
+        activeTweenRef.current = null;
+        onComplete?.();
+      },
+    });
+  };
+
+  // Burger click handler — entry point for click-expanded and the toggle
+  // back. The first-scroll-input listener (attached in Effect 2 below) owns
+  // the resync transition.
+  const handleBurgerClick = (): void => {
+    if (stateRef.current === 'click-expanded') {
+      // Toggle back to collapsed without waiting for scroll.
+      stateRef.current = 'resyncing';
+      tweenProgressTo(getNavCollapseProgress(), 0.5, () => {
+        stateRef.current = 'scrub';
+      });
+      return;
+    }
+    if (currentProgressRef.current < 0.5) return; // shouldn't happen — pointer-events gating
+    stateRef.current = 'click-expanded';
+    tweenProgressTo(0, 0.5);
+  };
+
   // Soft-translucent text — paired with the glass text-shadow in
   // .psalms-nav-link (index.css). Constant across scroll; only flips to
   // the light variant when the page itself declares a dark theme via the
@@ -201,16 +235,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
       document.body.style.overflow = 'auto';
     };
   }, [isMobileMenuOpen]);
-
-  // TEMP scaffolding: consumes bindings introduced across Tasks 3 and 7 that
-  // aren't yet read by component code. `tsconfig`'s `noUnusedLocals: true`
-  // requires every declared local to be read somewhere; this `void`
-  // expression satisfies that until the remaining bindings are consumed by
-  // Tasks 9-11. The whole expression is deleted once Task 11 lands.
-  void [
-    activeTweenRef,
-    getNavCollapseProgress,
-  ];
 
   return (
     <header
@@ -376,7 +400,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
           <button
             ref={burgerRef}
             type="button"
-            onClick={() => {}}
+            onClick={handleBurgerClick}
             aria-label="Toggle navigation"
             aria-controls="primary-nav"
             aria-expanded={false}
