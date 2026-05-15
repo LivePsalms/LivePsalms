@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
+import { setNavCollapseProgress } from '@/lib/nav-collapse-progress';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -343,6 +344,10 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
           // racing through the collapse.
           scrub: 2,
           invalidateOnRefresh: true,
+          // Publishes the wordmark-collapse progress to the singleton so the
+          // Header's nav-collapse subscriber can drive the per-item fade in
+          // lockstep with the letter waves.
+          onUpdate: (self) => setNavCollapseProgress(self.progress),
         },
       });
 
