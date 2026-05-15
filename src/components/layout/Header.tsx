@@ -116,11 +116,9 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
   // as a subsequent task in the nav-collapse plan consumes the identifier
   // for real. The whole expression is deleted once Task 11 lands.
   void [
-    burgerRef,
     stateRef,
     currentProgressRef,
     activeTweenRef,
-    prefersReducedMotion,
     isHome,
     subscribeNavCollapseProgress,
     setNavCollapseProgress,
@@ -285,6 +283,30 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
           </div>
           </div>
         </nav>
+
+        {/* Desktop hamburger — appears as the nav items collapse on scroll. */}
+        {!prefersReducedMotion && (
+          <button
+            ref={burgerRef}
+            type="button"
+            onClick={() => {}}
+            aria-label="Toggle navigation"
+            aria-controls="primary-nav"
+            aria-expanded={false}
+            className="hidden md:flex items-center justify-center w-10 h-10 absolute right-4 md:right-6 lg:right-10 top-1/2"
+            style={{
+              opacity: 0,
+              transform: 'translateY(-50%) scale(0.7)',
+              transformOrigin: 'center center',
+              pointerEvents: 'none',
+              color: textColor,
+              transition: 'color 300ms ease',
+              willChange: 'opacity, transform',
+            }}
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        )}
 
         {/* Mobile Menu Button - 3D emergence effect */}
         <button
