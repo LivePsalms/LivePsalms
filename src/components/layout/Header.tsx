@@ -224,6 +224,44 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
      
   }, [isHome, prefersReducedMotion]);
 
+  // Nav-collapse: while click-expanded, the first scroll input from the user
+  // triggers a smooth resync to the publisher's current value, then yields
+  // back to scrub. Listeners are attached once at mount and use the state
+  // ref to gate their behavior, avoiding per-state listener add/remove churn.
+  useLayoutEffect(() => {
+    if (prefersReducedMotion) return;
+
+    const RESYNC_KEYS = new Set([
+      'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ',
+    ]);
+
+    const handleResyncTrigger = (): void => {
+      if (stateRef.current !== 'click-expanded') return;
+      stateRef.current = 'resyncing';
+      const target = getNavCollapseProgress();
+      tweenProgressTo(target, 0.4, () => {
+        stateRef.current = 'scrub';
+      });
+    };
+
+    const onWheel = () => handleResyncTrigger();
+    const onTouchMove = () => handleResyncTrigger();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (RESYNC_KEYS.has(e.key)) handleResyncTrigger();
+    };
+
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefersReducedMotion]);
+
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
