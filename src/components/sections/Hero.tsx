@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
+import { BRIDGE_COPY, BRIDGE_CASCADE_TIMING } from './hero-bridge-content';
 import { setNavCollapseProgress } from '@/lib/nav-collapse-progress';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -41,6 +42,10 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   const quoteLine1Ref = useRef<HTMLParagraphElement>(null);
   const quoteLine2Ref = useRef<HTMLParagraphElement>(null);
   const quoteAttrRef = useRef<HTMLParagraphElement>(null);
+  const bridgeRef = useRef<HTMLDivElement>(null);
+  const bridgeInviteRef = useRef<HTMLParagraphElement>(null);
+  const bridgeThesisRef = useRef<HTMLParagraphElement>(null);
+  const bridgeAssureRef = useRef<HTMLParagraphElement>(null);
 
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -100,6 +105,53 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         attr,
         { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
         0.7
+      );
+    }, container);
+
+    return () => ctx.revert();
+  }, [prefersReducedMotion]);
+
+  /* ── Bridge cascade: three-beat manifesto fades in as you scroll into the section ── */
+  useEffect(() => {
+    const container = bridgeRef.current;
+    const l1 = bridgeInviteRef.current;
+    const l2 = bridgeThesisRef.current;
+    const l3 = bridgeAssureRef.current;
+    if (!container || !l1 || !l2 || !l3) return;
+
+    if (prefersReducedMotion) {
+      // Reduced motion: hold all three beats at their settled state, no scroll fade.
+      gsap.set([l1, l2, l3], { opacity: 1, y: 0, filter: 'blur(0px)' });
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      gsap.set([l1, l2, l3], { opacity: 0, y: 40, filter: 'blur(10px)' });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: container,
+          start: 'top 95%',
+          end: 'top 10%',
+          scrub: 3,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      tl.to(
+        l1,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
+        BRIDGE_CASCADE_TIMING.invitation,
+      );
+      tl.to(
+        l2,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
+        BRIDGE_CASCADE_TIMING.thesis,
+      );
+      tl.to(
+        l3,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
+        BRIDGE_CASCADE_TIMING.assurance,
       );
     }, container);
 
@@ -593,6 +645,28 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
           />
         </div>
       </div>
+
+      {/* Bridge — three-beat manifesto. Cream canvas, italic Cormorant cascade.
+          Sits between the wordmark distillation and the silhouette mask;
+          mirrors the Psalm 23 cascade below the mask in shape and voice. */}
+      <section
+        ref={bridgeRef}
+        aria-label="Site introduction"
+        className="relative flex flex-col items-center justify-center px-6 text-center"
+        style={{ minHeight: '80vh', backgroundColor: 'var(--paper-cream)' }}
+      >
+        <div className="flex flex-col items-center" style={{ maxWidth: '720px' }}>
+          <p ref={bridgeInviteRef} className="bridge-line">
+            {BRIDGE_COPY.invitation}
+          </p>
+          <p ref={bridgeThesisRef} className="bridge-thesis mt-8 md:mt-12">
+            {BRIDGE_COPY.thesis}
+          </p>
+          <p ref={bridgeAssureRef} className="bridge-line mt-8 md:mt-12">
+            {BRIDGE_COPY.assurance}
+          </p>
+        </div>
+      </section>
 
       {/* Hidden SVG defs for the mask clip-path */}
       <svg
