@@ -424,7 +424,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
       ref={sectionRef}
       id="projects"
       className="pt-44 md:pt-64 pb-16 md:pb-24 px-0"
-      style={{ background: 'var(--plaster)' }}
+      style={{ background: 'var(--app-bg)' }}
     >
       {/* Filter Tabs */}
       <div ref={filterWrapRef} className="px-4 md:px-8 mb-4 md:mb-6">
@@ -437,7 +437,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
         ref={gridRef}
         data-layout="strip"
         className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible"
-        style={{ background: 'var(--plaster)' }}
+        style={{ background: 'var(--app-bg)' }}
       >
         {filteredProjects.map((project, index) => {
           // Slightly varied strip heights so the top edge breathes like the

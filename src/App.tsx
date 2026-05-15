@@ -10,7 +10,6 @@ import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
-import { OrganicBackdrop } from '@/components/ui-custom/OrganicBackdrop';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useLoadingOverlay } from '@/hooks/useLoadingOverlay';
@@ -110,8 +109,7 @@ function App() {
   return (
     <AuthProvider>
       <>
-        <div className="relative min-h-screen" style={{ background: 'var(--plaster)', zIndex: 1 }}>
-        <OrganicBackdrop />
+        <div className="relative min-h-screen" style={{ background: 'var(--app-bg)', zIndex: 1 }}>
         <div className="relative" style={{ zIndex: 1 }}>
           {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
 
@@ -155,7 +153,7 @@ function App() {
           </Routes>
 
           {!hideFooter && (
-            <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--plaster)' }} />
+            <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--app-bg)' }} />
           )}
         </div>
       </div>

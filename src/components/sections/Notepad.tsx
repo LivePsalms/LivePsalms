@@ -34,7 +34,7 @@ function NotepadWorkspace() {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ top: 0 }}>
+    <div className="fixed inset-0 flex flex-col" style={{ top: 0, background: 'var(--plaster)' }}>
       <NotepadToolbar
         graphOpen={graphOpen}
         onToggleGraph={() => setGraphOpen(!graphOpen)}

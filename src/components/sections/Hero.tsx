@@ -57,7 +57,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   // intro effect animates. The collapse effect tweens the parent SVG and its
   // letter <g> children alongside the halo/ring overlay layers.
   const collapseScrollRef = useRef<HTMLDivElement>(null);
-  const collapseHaloRef = useRef<HTMLDivElement>(null);
   const collapseRingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -291,14 +290,14 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     spread(letterM,  spreadAt + 0.45);
     spread(letterS2, spreadAt + 0.90);
 
-    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.12, dark canvas fades.
+    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.45, dark canvas fades.
     // tl.call fires once at the position; setShowNav(true) triggers the existing
     // masked-image and quote entrance via their existing prop gating, and
     // onHandoff?.() notifies App so the header can fade in via its showNav prop.
     const handoff = 6.40;
     tl.to(darkEl, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }, handoff);
     tl.to(svgEl,  { color: DEEP_UMBER_HEX, duration: 1.2, ease: 'power2.inOut' }, handoff);
-    tl.to(svgEl,  { opacity: 0.12, duration: 1.2, ease: 'power2.inOut' }, handoff);
+    tl.to(svgEl,  { opacity: 0.45, duration: 1.2, ease: 'power2.inOut' }, handoff);
     tl.call(() => {
       setShowNav(true);
       onHandoff?.();
@@ -318,9 +317,8 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
 
     const scrollEl = collapseScrollRef.current;
     const svgEl    = svgRef.current;
-    const haloEl   = collapseHaloRef.current;
     const ringEl   = collapseRingRef.current;
-    if (!scrollEl || !svgEl || !haloEl || !ringEl) return;
+    if (!scrollEl || !svgEl || !ringEl) return;
 
     const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
     const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
@@ -336,19 +334,22 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         scrollTrigger: {
           trigger: scrollEl,
           start: 'top top',
-          // 60% of the 250vh outer = 150vh of scrub. The remaining 100vh of
-          // the outer is the natural sticky-release exit, identical to the
-          // mask-expand pattern below.
+          // 60% of the 380vh outer = 228vh of scrub. The remaining 152vh of
+          // the outer is the natural sticky-release exit. Each collapse wave
+          // gets ~84vh of scroll to read at a deliberate pace.
           end: '60% top',
-          scrub: 1,
+          // scrub: 2 lerps the timeline ~2s behind the scroll position, so
+          // fast trackpad flicks decompress into a smooth settle instead of
+          // racing through the collapse.
+          scrub: 2,
           invalidateOnRefresh: true,
         },
       });
 
       // Phase 1 — Bloom (progress 0.000 → 0.150)
-      // Wordmark wakes up: opacity 0.12 → 1.0 + faint scale 0.98 → 1.0.
+      // Wordmark wakes up: opacity 0.45 → 1.0 + faint scale 0.98 → 1.0.
       tl.fromTo(svgEl,
-        { opacity: 0.12, scale: 0.98, transformOrigin: '50% 50%' },
+        { opacity: 0.45, scale: 0.98, transformOrigin: '50% 50%' },
         { opacity: 1.0, scale: 1.0, duration: 0.150, ease: 'power2.out' },
         0);
 
@@ -381,23 +382,24 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       tl.to(letterA, { scale: 1.06, transformOrigin: '50% 50%', duration: 0.071, ease: 'power2.out' }, 0.504);
       tl.to(letterA, { scale: 1.00, transformOrigin: '50% 50%', duration: 0.064, ease: 'power3.out' }, 0.575);
 
-      // Phase 6.1 — Halo swell + settle
-      tl.fromTo(haloEl,
-        { opacity: 0,    scale: 0.30 },
-        { opacity: 0.85, scale: 1.0, duration: 0.075, ease: 'power2.out' },
-        0.568);
-      tl.to(haloEl,
-        { opacity: 0.10, duration: 0.137, ease: 'power2.out' },
-        0.643);
-
       // Phase 6.2 — Ring bloom + expand
+      // Width/height (not scale) is animated so the 1px stroke stays a true
+      // hairline at every diameter — the browser re-rasterises the circle each
+      // frame instead of bilinearly up-scaling a 24px raster (which produced
+      // a chunky, blurred edge). Opacity is decoupled so the wave breathes
+      // through its full journey: holds at peak for the first ~0.090 of expand,
+      // then fades over 0.290. power2.out on size matches shock-wave physics
+      // (fast bloom, gentle settle).
       tl.fromTo(ringEl,
-        { opacity: 0,    scale: 0.30 },
-        { opacity: 0.85, scale: 1.0,  duration: 0.020, ease: 'power1.out' },
+        { opacity: 0,    width: 8,  height: 8 },
+        { opacity: 0.85, width: 24, height: 24, duration: 0.020, ease: 'power1.out' },
         0.568);
       tl.to(ringEl,
-        { opacity: 0,    scale: 45,   duration: 0.192, ease: 'power2.out' },
+        { width: 940, height: 940, duration: 0.380, ease: 'power2.out' },
         0.588);
+      tl.to(ringEl,
+        { opacity: 0, duration: 0.290, ease: 'power1.inOut' },
+        0.678);
 
       // Phase 6.3 — A fill warming (tonal "flash" — additive light would not read on cream)
       // Letters inherit fill via `currentColor`; tween the SVG's `color` and the
@@ -420,8 +422,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
 
     const scrollEl = collapseScrollRef.current;
     const svgEl    = svgRef.current;
-    const haloEl   = collapseHaloRef.current;
-    if (!scrollEl || !svgEl || !haloEl) return;
+    if (!scrollEl || !svgEl) return;
 
     const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
     const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
@@ -454,12 +455,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
           duration: 0.8,
           ease: 'power2.out',
         });
-        gsap.to(haloEl, {
-          opacity: 0.10,
-          scale: 1.0,
-          duration: 0.8,
-          ease: 'power2.out',
-        });
 
         observer.disconnect();
       },
@@ -476,17 +471,18 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       className="relative overflow-visible"
     >
       {/* Hero region — first viewport + scroll-collapse pin combined.
-          Outer is 250vh; inner is `sticky top-0 h-screen`. With this geometry,
-          CSS sticky stays glued for (250vh − 100vh) = 150vh of scroll —
-          which is exactly the scrub range. After scroll progress 1.0 the
-          sticky disengages and the rest-state A drifts up off-screen,
-          handing off into the existing mask-expand below. */}
+          Outer is 380vh; inner is `sticky top-0 h-screen`. With this geometry,
+          CSS sticky stays glued for (380vh − 100vh) = 280vh of scroll, and
+          the scrub range covers the first 228vh (60% of the outer). The
+          extra height vs the original 250vh gives each collapse wave ~84vh
+          of scroll to read at a deliberate pace — a fast flick still settles
+          smoothly thanks to the bumped scrub lerp. */}
       <div
         ref={collapseScrollRef}
         data-reduced-motion={prefersReducedMotion ? 'true' : undefined}
         className="relative"
         style={{
-          height: prefersReducedMotion ? '100vh' : '250vh',
+          height: prefersReducedMotion ? '100vh' : '380vh',
           overscrollBehaviorY: 'contain',
         }}
       >
@@ -503,27 +499,6 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
                 'radial-gradient(ellipse 90% 70% at 50% 50%, #0e0c10 0%, #08070a 60%, #050507 100%), #0a0a0c',
               opacity: introActive ? 1 : 0,
               zIndex: 2,
-            }}
-          />
-
-          {/* Persistent umber halo — sits behind the wordmark during the collapse climax. */}
-          <div
-            ref={collapseHaloRef}
-            aria-hidden="true"
-            className="absolute pointer-events-none"
-            style={{
-              top: '50%',
-              left: '50%',
-              width: '520px',
-              height: '520px',
-              transform: 'translate(-50%, -50%) scale(0.3)',
-              borderRadius: '50%',
-              background:
-                'radial-gradient(circle, rgba(58, 52, 38, 0.18) 0%, rgba(58, 52, 38, 0.10) 28%, rgba(58, 52, 38, 0.04) 55%, rgba(58, 52, 38, 0) 80%)',
-              filter: 'blur(18px)',
-              opacity: 0,
-              willChange: 'opacity, transform',
-              zIndex: 3,
             }}
           />
 
@@ -579,13 +554,15 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               ref={svgRef}
               className="w-[95vw] md:w-[80vw] max-w-4xl"
               style={{
-                opacity: introActive ? 1 : 0.12,
+                opacity: introActive ? 1 : 0.45,
                 color: introActive ? '#f6f4f0' : 'var(--deep-umber)',
               }}
             />
           </div>
 
-          {/* Expanding warm-sand ring — sits in front of the wordmark during climax. */}
+          {/* Expanding warm-sand ring — sits in front of the wordmark during climax.
+              Width/height are GSAP-tweened (not scale), so the 1px stroke stays a
+              true hairline at every diameter through the climax. */}
           <div
             ref={collapseRingRef}
             aria-hidden="true"
@@ -595,11 +572,11 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
               left: '50%',
               width: '24px',
               height: '24px',
-              transform: 'translate(-50%, -50%) scale(0.3)',
+              transform: 'translate(-50%, -50%)',
               borderRadius: '50%',
-              border: '1.5px solid rgba(188, 179, 163, 0.85)',
+              border: '1px solid rgba(188, 179, 163, 0.85)',
               opacity: 0,
-              willChange: 'opacity, transform',
+              willChange: 'opacity, width, height',
               zIndex: 5,
             }}
           />

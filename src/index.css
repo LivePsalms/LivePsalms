@@ -1,6 +1,54 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Shadows+Into+Light&family=Permanent+Marker&family=Sacramento&family=Homemade+Apple&family=Patrick+Hand&family=Indie+Flower&family=Just+Another+Hand&family=Architects+Daughter&family=Dancing+Script:wght@400;700&family=Pacifico&family=Amatic+SC:wght@400;700&family=Marck+Script&family=Cookie&display=swap');
 
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Slant.ttf') format('truetype');
+  font-weight: 400;
+  font-style: oblique;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Condensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-ItalicCondensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-SlantCondensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: oblique;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,8 +72,10 @@
   :root {
     /* PSALMS Brand Colors */
     --plaster: #F0ECE8;
+    --app-bg: #988F80;
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
+    --text-muted: #E8E1D3;
     --deep-umber: #3A3426;
     --charred: #19130C;
     --silica: #8A8B90;
@@ -73,11 +123,23 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--plaster);
+    background: var(--app-bg);
     color: var(--deep-umber);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
+}
+
+.psalms-nav-link {
+  color: var(--c-rest, currentColor);
+  text-decoration: underline transparent;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1.5px;
+}
+
+.psalms-nav-link:hover {
+  color: var(--c-hover, currentColor);
+  text-decoration-color: currentColor;
 }
 
 @layer utilities {
@@ -189,7 +251,7 @@ img {
   font-size: 11px;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--warm-sand);
+  color: var(--text-muted);
   position: relative;
   z-index: 1;
 }

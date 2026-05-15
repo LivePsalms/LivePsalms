@@ -95,7 +95,7 @@ export function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: 'var(--plaster)' }}
+      style={{ background: 'var(--app-bg)' }}
     >
       <div
         className="w-full max-w-sm rounded-xl p-8"

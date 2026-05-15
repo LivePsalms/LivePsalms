@@ -481,7 +481,7 @@ function DefaultZones({ project }: { project: Project }) {
       </div>
 
       {/* Zone 2: Data */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '180vw', backgroundColor: `color-mix(in srgb, ${project.overlayColor} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '180vw', backgroundColor: `color-mix(in srgb, ${project.overlayColor} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[10%] left-[5%] bg-white p-4 shadow-lg"
           data-speed="0.8"
@@ -698,7 +698,7 @@ function PeaceZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Reflection ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -789,7 +789,7 @@ function PeaceZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Still Waters + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         {/* Image 1 — full-height, matching Zone 3 size */}
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
@@ -1018,7 +1018,7 @@ function PeaceZones({ project }: { project: Project }) {
 
 function PeaceMobile() {
   const bg = '#8B8378';
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -1157,7 +1157,7 @@ function HopeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -1248,7 +1248,7 @@ function HopeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: God's Promise + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -1464,7 +1464,7 @@ function HopeZones({ project }: { project: Project }) {
 
 function HopeMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -1603,7 +1603,7 @@ function StrengthZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -1694,7 +1694,7 @@ function StrengthZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: The Condition + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -1910,7 +1910,7 @@ function StrengthZones({ project }: { project: Project }) {
 
 function StrengthMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -2049,7 +2049,7 @@ function WholenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -2140,7 +2140,7 @@ function WholenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Redemption + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -2356,7 +2356,7 @@ function WholenessZones({ project }: { project: Project }) {
 
 function WholenessMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -2495,7 +2495,7 @@ function PurposeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -2586,7 +2586,7 @@ function PurposeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Conformed + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -2802,7 +2802,7 @@ function PurposeZones({ project }: { project: Project }) {
 
 function PurposeMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -2941,7 +2941,7 @@ function ConnectionZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -3032,7 +3032,7 @@ function ConnectionZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Brought Near + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -3248,7 +3248,7 @@ function ConnectionZones({ project }: { project: Project }) {
 
 function ConnectionMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -3387,7 +3387,7 @@ function IdentityZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -3478,7 +3478,7 @@ function IdentityZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Reconciled + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -3694,7 +3694,7 @@ function IdentityZones({ project }: { project: Project }) {
 
 function IdentityMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -3833,7 +3833,7 @@ function JoyZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.8rem, 4.5vw, 4.5rem)' }}
@@ -3924,7 +3924,7 @@ function JoyZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Streams in the Negev + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -4140,7 +4140,7 @@ function JoyZones({ project }: { project: Project }) {
 
 function JoyMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -4279,7 +4279,7 @@ function ForgivenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.5rem, 3.8vw, 3.8rem)' }}
@@ -4370,7 +4370,7 @@ function ForgivenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Just as in Christ + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -4586,7 +4586,7 @@ function ForgivenessZones({ project }: { project: Project }) {
 
 function ForgivenessMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -4724,7 +4724,7 @@ function SurrenderZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.5rem, 3.8vw, 3.8rem)' }}
@@ -4815,7 +4815,7 @@ function SurrenderZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: God's Sovereignty + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -5031,7 +5031,7 @@ function SurrenderZones({ project }: { project: Project }) {
 
 function SurrenderMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (
@@ -5169,7 +5169,7 @@ function TrustZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 2: The Hook ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 80%, var(--app-bg))` }}>
         <h3
           className="mb-elem absolute top-[12%] left-[5%] font-['Cormorant_Garamond'] italic font-light text-white leading-[1.15] max-w-[30vw]"
           style={{ fontSize: 'clamp(1.5rem, 3.8vw, 3.8rem)' }}
@@ -5260,7 +5260,7 @@ function TrustZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 4: Straight Paths + Timeless Principle ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--plaster))` }}>
+      <div className="relative flex-shrink-0 h-screen" style={{ width: '200vw', backgroundColor: `color-mix(in srgb, ${ov} 85%, var(--app-bg))` }}>
         <div
           className="mb-elem absolute top-[4%] bottom-0 overflow-hidden"
           style={{ left: '5vw', width: '35vw' }}
@@ -5476,7 +5476,7 @@ function TrustZones({ project }: { project: Project }) {
 
 function TrustMobile({ project }: { project: Project }) {
   const bg = project.overlayColor;
-  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--plaster))`;
+  const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
   return (

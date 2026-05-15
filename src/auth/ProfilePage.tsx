@@ -40,7 +40,7 @@ export function ProfilePage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--plaster)' }}
+        style={{ background: 'var(--app-bg)' }}
       >
         <p style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Loading...</p>
       </div>
@@ -122,7 +122,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--plaster)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--app-bg)' }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-6 py-4 border-b"
