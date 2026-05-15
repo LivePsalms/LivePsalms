@@ -12,6 +12,28 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Nav-collapse: per-element fade windows in [0,1] progress space. Order
+// matches the visual left→right reading order. Indexes 0..3 are the four
+// navItems anchors (Purpose, Notepad, Devotion, Contact); index 4 is the
+// Social-block wrapper (em-dash + Social dropdown).
+const NAV_WINDOWS: readonly { start: number; end: number }[] = [
+  { start: 0.150, end: 0.310 }, // Purpose
+  { start: 0.210, end: 0.370 }, // Notepad
+  { start: 0.270, end: 0.430 }, // Devotion
+  { start: 0.330, end: 0.490 }, // Contact
+  { start: 0.390, end: 0.520 }, // Social-block
+] as const;
+const BURGER_WINDOW = { start: 0.45, end: 0.55 } as const;
+const ITEM_TRANSLATE_PX = 28;
+const ITEM_BLUR_PX = 3;
+
+// Stand-alone ease helpers — pure math, no GSAP dependency. Used by the
+// hot-path applyDom function which runs every scroll frame.
+const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
+const easePower1Out = (n: number): number => 1 - (1 - n);
+const easePower2Out = (n: number): number => 1 - (1 - n) * (1 - n);
+const easePower3Out = (n: number): number => 1 - (1 - n) * (1 - n) * (1 - n);
+
 // Labels that fire the loading overlay when clicked. Contact and Social
 // are intentionally excluded.
 const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
@@ -111,10 +133,13 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     };
   }, [isMobileMenuOpen]);
 
-  // TEMP scaffolding: consumes the new bindings introduced in Task 3 so that
-  // tsconfig's `noUnusedLocals: true` does not error. Each entry is removed
-  // as a subsequent task in the nav-collapse plan consumes the identifier
-  // for real. The whole expression is deleted once Task 11 lands.
+  // TEMP scaffolding: consumes bindings introduced across Tasks 3 and 7 so
+  // that tsconfig's `noUnusedLocals: true` does not error. Each entry is
+  // removed as a subsequent task in the nav-collapse plan consumes the
+  // identifier for real. The whole expression is deleted once Task 8 lands
+  // (which consumes all the module-scope constants and ease helpers via the
+  // applyDom hot path) and Task 11 lands (which consumes the remaining
+  // component-scope refs and pub/sub bindings).
   void [
     stateRef,
     currentProgressRef,
@@ -123,6 +148,14 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     subscribeNavCollapseProgress,
     setNavCollapseProgress,
     getNavCollapseProgress,
+    NAV_WINDOWS,
+    BURGER_WINDOW,
+    ITEM_TRANSLATE_PX,
+    ITEM_BLUR_PX,
+    clamp01,
+    easePower1Out,
+    easePower2Out,
+    easePower3Out,
   ];
 
   return (
