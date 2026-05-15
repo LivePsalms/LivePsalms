@@ -67,6 +67,12 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     const attr = quoteAttrRef.current;
     if (!container || !l1 || !l2 || !attr) return;
 
+    if (prefersReducedMotion) {
+      // Reduced motion: hold all three lines at their settled state, no scroll fade.
+      gsap.set([l1, l2, attr], { opacity: 1, y: 0, filter: 'blur(0px)' });
+      return;
+    }
+
     const ctx = gsap.context(() => {
       gsap.set([l1, l2, attr], { opacity: 0, y: 40, filter: 'blur(10px)' });
 
@@ -98,7 +104,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     }, container);
 
     return () => ctx.revert();
-  }, []);
+  }, [prefersReducedMotion]);
 
   /* ── Mask-expand scroll animation ── */
   useEffect(() => {
