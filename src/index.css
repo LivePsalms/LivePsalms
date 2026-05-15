@@ -75,7 +75,7 @@
     --app-bg: #988F80;
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
-    --text-muted: #E8E1D3;
+    --text-muted: #FBF6EA;
     --deep-umber: #3A3426;
     --charred: #19130C;
     --silica: #8A8B90;
@@ -135,6 +135,13 @@
   text-decoration: underline transparent;
   text-underline-offset: 6px;
   text-decoration-thickness: 1.5px;
+  /* Glass quality: a hairline white highlight stacked over a soft black
+     shadow. Both alphas stay low so the effect reads as "frosted edge"
+     not "drop shadow." Works on both light and dark backgrounds because
+     the two layers cancel into neutral lift. */
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 10px rgba(0, 0, 0, 0.08);
 }
 
 .psalms-nav-link:hover {

@@ -52,10 +52,13 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const textColor = darkText
-    ? (isScrolled ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)')
-    : (isScrolled ? '#000000' : 'rgba(0, 0, 0, 0.7)');
-  const hoverColor = darkText ? '#FFFFFF' : '#000000';
+
+  // Soft-translucent text — paired with the glass text-shadow in
+  // .psalms-nav-link (index.css). Constant across scroll; only flips to
+  // the light variant when the page itself declares a dark theme via the
+  // darkText prop (e.g. detail pages with colored backgrounds).
+  const textColor = darkText ? 'rgba(255, 255, 255, 0.72)' : 'rgba(0, 0, 0, 0.65)';
+  const hoverColor = darkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -137,6 +140,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide"
               style={{
                 fontFamily: "'The Softly Serif', serif",
+                fontStyle: 'italic',
                 opacity: showNav ? 1 : 0,
                 transform: showNav
                   ? 'translateY(0)'
@@ -183,6 +187,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide cursor-pointer"
               style={{
                 fontFamily: "'The Softly Serif', serif",
+                fontStyle: 'italic',
                 transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
                 ['--c-rest' as string]: textColor,
                 ['--c-hover' as string]: hoverColor,
@@ -209,6 +214,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
                   className="psalms-nav-link block text-base lg:text-lg font-bold tracking-wide whitespace-nowrap"
                   style={{
                     fontFamily: "'The Softly Serif', serif",
+                    fontStyle: 'italic',
                     transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
                     ['--c-rest' as string]: textColor,
                     ['--c-hover' as string]: hoverColor,
@@ -272,6 +278,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               className="psalms-nav-link text-2xl font-bold tracking-wide"
               style={{
                 fontFamily: "'The Softly Serif', serif",
+                fontStyle: 'italic',
                 transition: 'color 300ms ease, text-decoration-color 300ms ease',
                 ['--c-rest' as string]: textColor,
                 ['--c-hover' as string]: hoverColor,
@@ -290,6 +297,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
             className="psalms-nav-link text-2xl font-bold tracking-wide"
             style={{
               fontFamily: "'The Softly Serif', serif",
+              fontStyle: 'italic',
               transition: 'color 300ms ease, text-decoration-color 300ms ease',
               ['--c-rest' as string]: textColor,
               ['--c-hover' as string]: hoverColor,
