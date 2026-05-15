@@ -441,7 +441,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
             onClick={handleBurgerClick}
             aria-label="Toggle navigation"
             aria-controls="primary-nav"
-            aria-expanded={false}
             className="hidden md:flex items-center justify-center w-10 h-10 absolute right-4 md:right-6 lg:right-10 top-1/2"
             style={{
               opacity: 0,
