@@ -105,6 +105,45 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
 
   const isHome = location.pathname === '/';
 
+  // Hot-path DOM applier. Reads the current progress and mutates inline
+  // styles + aria attributes on each nav-item wrapper and on the burger.
+  // Declared inside the component (closes over refs) but allocated once per
+  // render — fine because the refs themselves are stable.
+  const applyDom = (progress: number): void => {
+    currentProgressRef.current = progress;
+    itemRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const w = NAV_WINDOWS[i];
+      const local = clamp01((progress - w.start) / (w.end - w.start));
+      const x = ITEM_TRANSLATE_PX * easePower3Out(local);
+      const op = 1 - easePower1Out(local);
+      const blur = ITEM_BLUR_PX * easePower2Out(local);
+      el.style.transform = `translateX(${x}px)`;
+      el.style.opacity = String(op);
+      el.style.filter = `blur(${blur}px)`;
+      if (op < 0.05) {
+        el.setAttribute('aria-hidden', 'true');
+        el.style.pointerEvents = 'none';
+      } else {
+        el.removeAttribute('aria-hidden');
+        el.style.pointerEvents = '';
+      }
+    });
+    const burgerEl = burgerRef.current;
+    if (burgerEl) {
+      const local = clamp01((progress - BURGER_WINDOW.start) / (BURGER_WINDOW.end - BURGER_WINDOW.start));
+      const op = easePower2Out(local);
+      const scale = 0.7 + 0.3 * easePower2Out(local);
+      burgerEl.style.opacity = String(op);
+      burgerEl.style.transform = `translateY(-50%) scale(${scale})`;
+      burgerEl.style.pointerEvents = progress >= 0.5 ? 'auto' : 'none';
+      burgerEl.setAttribute(
+        'aria-expanded',
+        stateRef.current === 'click-expanded' ? 'true' : 'false',
+      );
+    }
+  };
+
   // Soft-translucent text — paired with the glass text-shadow in
   // .psalms-nav-link (index.css). Constant across scroll; only flips to
   // the light variant when the page itself declares a dark theme via the
@@ -133,29 +172,18 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     };
   }, [isMobileMenuOpen]);
 
-  // TEMP scaffolding: consumes bindings introduced across Tasks 3 and 7 so
-  // that tsconfig's `noUnusedLocals: true` does not error. Each entry is
-  // removed as a subsequent task in the nav-collapse plan consumes the
-  // identifier for real. The whole expression is deleted once Task 8 lands
-  // (which consumes all the module-scope constants and ease helpers via the
-  // applyDom hot path) and Task 11 lands (which consumes the remaining
-  // component-scope refs and pub/sub bindings).
+  // TEMP scaffolding: consumes bindings introduced across Tasks 3 and 7 that
+  // aren't yet read by component code. `tsconfig`'s `noUnusedLocals: true`
+  // requires every declared local to be read somewhere; this `void`
+  // expression satisfies that until the remaining bindings are consumed by
+  // Tasks 9-11. The whole expression is deleted once Task 11 lands.
   void [
-    stateRef,
-    currentProgressRef,
     activeTweenRef,
     isHome,
     subscribeNavCollapseProgress,
     setNavCollapseProgress,
     getNavCollapseProgress,
-    NAV_WINDOWS,
-    BURGER_WINDOW,
-    ITEM_TRANSLATE_PX,
-    ITEM_BLUR_PX,
-    clamp01,
-    easePower1Out,
-    easePower2Out,
-    easePower3Out,
+    applyDom,
   ];
 
   return (
