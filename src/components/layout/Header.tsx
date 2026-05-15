@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';  
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';  
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -160,6 +160,36 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Nav-collapse: subscribe to progress; on non-home routes, run our own
+  // ScrollTrigger as the publisher. On home, Hero is the publisher.
+  useLayoutEffect(() => {
+    if (prefersReducedMotion) return;
+
+    let fallbackTrigger: ScrollTrigger | undefined;
+    if (!isHome) {
+      fallbackTrigger = ScrollTrigger.create({
+        trigger: document.documentElement,
+        start: 'top top-=40',
+        end: 'top top-=360',
+        scrub: 1,
+        onUpdate: (self) => setNavCollapseProgress(self.progress),
+      });
+    }
+
+    const unsubscribe = subscribeNavCollapseProgress((p) => {
+      if (stateRef.current === 'scrub') applyDom(p);
+    });
+
+    return () => {
+      unsubscribe();
+      fallbackTrigger?.kill();
+      // On the next mount the singleton's `current` will be whatever the
+      // previous publisher last wrote — that's intentional, it prevents a
+      // visual pop on route change.
+    };
+     
+  }, [isHome, prefersReducedMotion]);
+
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -179,11 +209,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
   // Tasks 9-11. The whole expression is deleted once Task 11 lands.
   void [
     activeTweenRef,
-    isHome,
-    subscribeNavCollapseProgress,
-    setNavCollapseProgress,
     getNavCollapseProgress,
-    applyDom,
   ];
 
   return (
