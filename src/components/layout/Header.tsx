@@ -116,8 +116,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
   // as a subsequent task in the nav-collapse plan consumes the identifier
   // for real. The whole expression is deleted once Task 11 lands.
   void [
-    navRef,
-    itemRefs,
     burgerRef,
     stateRef,
     currentProgressRef,
@@ -168,6 +166,8 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
 
         {/* Desktop Navigation - 3D emergence effect */}
         <nav
+          ref={navRef}
+          id="primary-nav"
           className="hidden md:flex items-center gap-6 lg:gap-8"
           style={{
             opacity: showNav ? 1 : 0,
@@ -181,34 +181,39 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
           }}
         >
           {navItems.map((item, index) => (
-            <WaterText
+            <span
               key={item.label}
-              href={item.href}
-              as="a"
-              className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide"
-              style={{
-                fontFamily: "'The Softly Serif', serif",
-                fontStyle: 'italic',
-                opacity: showNav ? 1 : 0,
-                transform: showNav
-                  ? 'translateY(0)'
-                  : 'translateY(20px)',
-                transition: `opacity 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, transform 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, color 300ms ease, text-decoration-color 300ms ease`,
-                ['--c-rest' as string]: textColor,
-                ['--c-hover' as string]: hoverColor,
-              } as React.CSSProperties}
-              onClick={(e: React.MouseEvent) => {
-                if (NAV_TRIGGER_LABELS.has(item.label)) {
-                  onNavTrigger?.();
-                }
-                if (item.href.startsWith('/')) {
-                  e.preventDefault();
-                  navigate(item.href);
-                }
-              }}
+              ref={(el) => { itemRefs.current[index] = el; }}
+              style={{ display: 'inline-flex', willChange: 'transform, opacity, filter' }}
             >
-              {item.label}
-            </WaterText>
+              <WaterText
+                href={item.href}
+                as="a"
+                className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide"
+                style={{
+                  fontFamily: "'The Softly Serif', serif",
+                  fontStyle: 'italic',
+                  opacity: showNav ? 1 : 0,
+                  transform: showNav
+                    ? 'translateY(0)'
+                    : 'translateY(20px)',
+                  transition: `opacity 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, transform 2.5s cubic-bezier(0.16, 1, 0.3, 1) ${800 + index * 150}ms, color 300ms ease, text-decoration-color 300ms ease`,
+                  ['--c-rest' as string]: textColor,
+                  ['--c-hover' as string]: hoverColor,
+                } as React.CSSProperties}
+                onClick={(e: React.MouseEvent) => {
+                  if (NAV_TRIGGER_LABELS.has(item.label)) {
+                    onNavTrigger?.();
+                  }
+                  if (item.href.startsWith('/')) {
+                    e.preventDefault();
+                    navigate(item.href);
+                  }
+                }}
+              >
+                {item.label}
+              </WaterText>
+            </span>
           ))}
           <span 
             style={{
