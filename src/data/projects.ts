@@ -38,7 +38,6 @@ const serenityImages = [
   'serenity2.png',
   'serenity3.png',
   'serenity5.png',
-  'serenity7.png',
 ];
 
 // Devotional slugs override the default filename-derived id for projects that

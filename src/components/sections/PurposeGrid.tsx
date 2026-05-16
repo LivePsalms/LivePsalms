@@ -28,7 +28,6 @@ const overlayLabelById: Record<string, string> = {
   forgiveness: 'Serenity of Forgiveness',
   surrender: 'Serenity of Surrender',
   trust: 'Serenity of Trust',
-  serenity7: 'Serenity of Presence',
 };
 
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
