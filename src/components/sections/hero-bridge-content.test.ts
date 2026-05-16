@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BRIDGE_COPY, BRIDGE_CASCADE_TIMING } from './hero-bridge-content';
+import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
 
 describe('BRIDGE_COPY', () => {
   it('exports the invitation beat', () => {
@@ -19,16 +19,57 @@ describe('BRIDGE_COPY', () => {
   });
 });
 
-describe('BRIDGE_CASCADE_TIMING', () => {
-  it('positions the invitation at the start of the timeline', () => {
-    expect(BRIDGE_CASCADE_TIMING.invitation).toBe(0);
+describe('BRIDGE_PIN_TIMING', () => {
+  describe('text1 (invitation)', () => {
+    it('enters at the start of the timeline', () => {
+      expect(BRIDGE_PIN_TIMING.text1.enter).toBe(0);
+    });
+    it('reaches full opacity at 0.10', () => {
+      expect(BRIDGE_PIN_TIMING.text1.holdStart).toBe(0.10);
+    });
+    it('begins exit fade at 0.28', () => {
+      expect(BRIDGE_PIN_TIMING.text1.holdEnd).toBe(0.28);
+    });
+    it('completes exit at 0.34 (kiss handoff to text2)', () => {
+      expect(BRIDGE_PIN_TIMING.text1.exit).toBe(0.34);
+    });
   });
 
-  it('positions the thesis at 0.35 (matches Psalm 23 line-2 stagger)', () => {
-    expect(BRIDGE_CASCADE_TIMING.thesis).toBe(0.35);
+  describe('text2 (thesis)', () => {
+    it('enters at 0.34 (kissing text1 exit)', () => {
+      expect(BRIDGE_PIN_TIMING.text2.enter).toBe(0.34);
+    });
+    it('reaches full opacity at 0.40', () => {
+      expect(BRIDGE_PIN_TIMING.text2.holdStart).toBe(0.40);
+    });
+    it('begins exit fade at 0.60', () => {
+      expect(BRIDGE_PIN_TIMING.text2.holdEnd).toBe(0.60);
+    });
+    it('completes exit at 0.66 (kiss handoff to text3)', () => {
+      expect(BRIDGE_PIN_TIMING.text2.exit).toBe(0.66);
+    });
   });
 
-  it('positions the assurance at 0.7 (matches Psalm 23 attribution stagger)', () => {
-    expect(BRIDGE_CASCADE_TIMING.assurance).toBe(0.7);
+  describe('text3 (assurance)', () => {
+    it('enters at 0.66 (kissing text2 exit)', () => {
+      expect(BRIDGE_PIN_TIMING.text3.enter).toBe(0.66);
+    });
+    it('reaches full opacity at 0.72', () => {
+      expect(BRIDGE_PIN_TIMING.text3.holdStart).toBe(0.72);
+    });
+    it('begins exit fade at 0.95 (long hold)', () => {
+      expect(BRIDGE_PIN_TIMING.text3.holdEnd).toBe(0.95);
+    });
+    it('completes exit at 1.0 (end of pin)', () => {
+      expect(BRIDGE_PIN_TIMING.text3.exit).toBe(1.0);
+    });
+  });
+
+  it('uses kiss-handoff: text2 enters exactly where text1 exits', () => {
+    expect(BRIDGE_PIN_TIMING.text2.enter).toBe(BRIDGE_PIN_TIMING.text1.exit);
+  });
+
+  it('uses kiss-handoff: text3 enters exactly where text2 exits', () => {
+    expect(BRIDGE_PIN_TIMING.text3.enter).toBe(BRIDGE_PIN_TIMING.text2.exit);
   });
 });
