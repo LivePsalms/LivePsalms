@@ -137,7 +137,12 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: scrollEl,
-          start: 'top top',
+          // 'top 80%' (not 'top top') so text 1 begins fading in while the
+          // bridge is still scrolling up into pin position — the top 20vh of
+          // cream stage is visible when the timeline starts scrubbing. CSS
+          // sticky still engages at its natural point (bridge top hitting
+          // viewport top); only the GSAP scrub starts earlier.
+          start: 'top 80%',
           end: 'bottom bottom',
           scrub: 2,
           invalidateOnRefresh: true,
