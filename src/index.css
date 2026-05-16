@@ -264,19 +264,30 @@ img {
 }
 
 /* ============================================
-   HERO BRIDGE STYLES - manifesto cascade
+   HERO BRIDGE STYLES - pinned spatial sequence
    ============================================ */
 
-.bridge-line {
+/* Typography variants — side beat (text 1) and center beat (text 3) share
+   the same base type ramp but differ in max-width because the side beats
+   live in a narrower column on the desktop stage. */
+.bridge-line-side {
   font-family: 'Cormorant Garamond', serif;
   font-size: clamp(24px, 4vw, 40px);
   font-weight: 300;
   font-style: italic;
   line-height: 1.4;
   color: var(--deep-umber);
-  max-width: 720px;
-  position: relative;
-  z-index: 1;
+  max-width: 440px;
+}
+
+.bridge-line-center {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--deep-umber);
+  max-width: 560px;
 }
 
 .bridge-thesis {
@@ -284,11 +295,34 @@ img {
   font-size: clamp(32px, 5.5vw, 60px);
   font-weight: 400;
   font-style: italic;
-  line-height: 1.25;
+  line-height: 1.4;
   color: var(--deep-umber);
-  max-width: 720px;
-  position: relative;
-  z-index: 1;
+  max-width: 440px;
+}
+
+/* Stage positioning utilities. Mobile (default): all three beats absolutely
+   centered on the stage — they overlap, but kiss-handoff opacity timing
+   means only one is visible at a time. Desktop (≥ 768px): left and right
+   positions activate; center beat keeps the default. */
+.bridge-beat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .bridge-beat-left {
+    left: 10vw;
+    transform: translate(0, -50%);
+  }
+  .bridge-beat-right {
+    left: auto;
+    right: 10vw;
+    transform: translate(0, -50%);
+  }
+  /* .bridge-beat-center keeps the default mobile centering on desktop too */
 }
 
 .divider {
