@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
-import { BRIDGE_COPY, BRIDGE_CASCADE_TIMING } from './hero-bridge-content';
+import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
 import { setNavCollapseProgress } from '@/lib/nav-collapse-progress';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -111,49 +111,82 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     return () => ctx.revert();
   }, [prefersReducedMotion]);
 
-  /* ── Bridge cascade: three-beat manifesto fades in as you scroll into the section ── */
+  /* ── Bridge cascade: pinned three-beat sequence. Text 1 enters from the
+        left, hands off to text 2 on the right, hands off to text 3 at center.
+        Same scroll-scrub pattern as the wordmark-collapse: CSS sticky owns
+        the visual pin; GSAP owns the timeline scrub. ── */
   useEffect(() => {
-    const container = bridgeRef.current;
-    const l1 = bridgeInviteRef.current;
-    const l2 = bridgeThesisRef.current;
-    const l3 = bridgeAssureRef.current;
-    if (!container || !l1 || !l2 || !l3) return;
+    const scrollEl = bridgeRef.current;
+    const t1 = bridgeInviteRef.current;
+    const t2 = bridgeThesisRef.current;
+    const t3 = bridgeAssureRef.current;
+    if (!scrollEl || !t1 || !t2 || !t3) return;
 
     if (prefersReducedMotion) {
-      // Reduced motion: hold all three beats at their settled state, no scroll fade.
-      gsap.set([l1, l2, l3], { opacity: 1, y: 0, filter: 'blur(0px)' });
+      // Reduced motion: all three beats settle to visible at their static
+      // positions. The reduced-motion JSX path renders them in normal flow
+      // (no pin, no overlap), so we just clear any transform/blur state.
+      gsap.set([t1, t2, t3], { opacity: 1, y: 0, filter: 'blur(0px)' });
       return;
     }
 
     const ctx = gsap.context(() => {
-      gsap.set([l1, l2, l3], { opacity: 0, y: 40, filter: 'blur(10px)' });
+      // All three beats start hidden, lifted, and blurred.
+      gsap.set([t1, t2, t3], { opacity: 0, y: 40, filter: 'blur(10px)' });
 
       const tl = gsap.timeline({
         scrollTrigger: {
-          trigger: container,
-          start: 'top 95%',
-          end: 'top 10%',
-          scrub: 3,
+          trigger: scrollEl,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 2,
           invalidateOnRefresh: true,
         },
       });
 
+      // Text 1 — enter (rise + blur clear + fade up), hold, exit (opacity only).
       tl.to(
-        l1,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        BRIDGE_CASCADE_TIMING.invitation,
+        t1,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text1.holdStart - BRIDGE_PIN_TIMING.text1.enter },
+        BRIDGE_PIN_TIMING.text1.enter,
       );
       tl.to(
-        l2,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        BRIDGE_CASCADE_TIMING.thesis,
+        t1,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text1.exit - BRIDGE_PIN_TIMING.text1.holdEnd },
+        BRIDGE_PIN_TIMING.text1.holdEnd,
+      );
+
+      // Text 2.
+      tl.to(
+        t2,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text2.holdStart - BRIDGE_PIN_TIMING.text2.enter },
+        BRIDGE_PIN_TIMING.text2.enter,
       );
       tl.to(
-        l3,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        BRIDGE_CASCADE_TIMING.assurance,
+        t2,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text2.exit - BRIDGE_PIN_TIMING.text2.holdEnd },
+        BRIDGE_PIN_TIMING.text2.holdEnd,
       );
-    }, container);
+
+      // Text 3 — long hold; exits in the last 5% so the stage is clean cream
+      // for the final frame before pin release hands off to the mask section.
+      tl.to(
+        t3,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text3.holdStart - BRIDGE_PIN_TIMING.text3.enter },
+        BRIDGE_PIN_TIMING.text3.enter,
+      );
+      tl.to(
+        t3,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text3.exit - BRIDGE_PIN_TIMING.text3.holdEnd },
+        BRIDGE_PIN_TIMING.text3.holdEnd,
+      );
+    }, scrollEl);
 
     return () => ctx.revert();
   }, [prefersReducedMotion]);
@@ -646,27 +679,54 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         </div>
       </div>
 
-      {/* Bridge — three-beat manifesto. Cream canvas, italic Cormorant cascade.
-          Sits between the wordmark distillation and the silhouette mask;
-          mirrors the Psalm 23 cascade below the mask in shape and voice. */}
-      <section
-        ref={bridgeRef}
-        aria-label="Site introduction"
-        className="relative flex flex-col items-center justify-center px-6 text-center"
-        style={{ minHeight: '80vh', backgroundColor: 'var(--paper-cream)' }}
-      >
-        <div className="flex flex-col items-center" style={{ maxWidth: '720px' }}>
-          <p ref={bridgeInviteRef} className="bridge-line">
-            {BRIDGE_COPY.invitation}
-          </p>
-          <p ref={bridgeThesisRef} className="bridge-thesis mt-8 md:mt-12">
-            {BRIDGE_COPY.thesis}
-          </p>
-          <p ref={bridgeAssureRef} className="bridge-line mt-8 md:mt-12">
-            {BRIDGE_COPY.assurance}
-          </p>
+      {/* Bridge — pinned three-beat manifesto. Cream stage with text 1 on the
+          left, text 2 on the right, text 3 at center; kiss-handoff timing across
+          a 300vh pinned scroll range. Mirrors the wordmark-collapse structure:
+          outer 300vh + sticky-inner h-screen. Reduced-motion users get a static
+          flex column (no pin, all three beats visible at once). */}
+      {prefersReducedMotion ? (
+        <section
+          ref={bridgeRef}
+          aria-label="Site introduction"
+          className="relative flex flex-col items-center justify-center px-6 py-24 text-center"
+          style={{ minHeight: '100vh', backgroundColor: 'var(--paper-cream)' }}
+        >
+          <div className="flex flex-col items-center">
+            <p ref={bridgeInviteRef} className="bridge-line-center">
+              {BRIDGE_COPY.invitation}
+            </p>
+            <p ref={bridgeThesisRef} className="bridge-thesis mt-8 md:mt-12">
+              {BRIDGE_COPY.thesis}
+            </p>
+            <p ref={bridgeAssureRef} className="bridge-line-center mt-8 md:mt-12">
+              {BRIDGE_COPY.assurance}
+            </p>
+          </div>
+        </section>
+      ) : (
+        <div ref={bridgeRef} className="relative" style={{ height: '300vh' }}>
+          <section
+            aria-label="Site introduction"
+            className="overflow-hidden"
+            style={{
+              position: 'sticky',
+              top: 0,
+              height: '100vh',
+              backgroundColor: 'var(--paper-cream)',
+            }}
+          >
+            <p ref={bridgeInviteRef} className="bridge-beat bridge-beat-left bridge-line-side">
+              {BRIDGE_COPY.invitation}
+            </p>
+            <p ref={bridgeThesisRef} className="bridge-beat bridge-beat-right bridge-thesis">
+              {BRIDGE_COPY.thesis}
+            </p>
+            <p ref={bridgeAssureRef} className="bridge-beat bridge-beat-center bridge-line-center">
+              {BRIDGE_COPY.assurance}
+            </p>
+          </section>
         </div>
-      </section>
+      )}
 
       {/* Hidden SVG defs for the mask clip-path */}
       <svg
@@ -686,7 +746,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         className="relative"
         style={{
           height: prefersReducedMotion ? '100vh' : '250vh',
-          marginTop: '-35vh',
+          marginTop: '-10vh',
         }}
       >
         <div
