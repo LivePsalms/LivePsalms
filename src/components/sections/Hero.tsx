@@ -131,8 +131,13 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
     }
 
     const ctx = gsap.context(() => {
-      // All three beats start hidden, lifted, and blurred.
-      gsap.set([t1, t2, t3], { opacity: 0, y: 40, filter: 'blur(10px)' });
+      // Per-beat initial states. Text 1 rises from below (y:40). Text 2 slides
+      // in from offscreen-right (x:120). Text 3 rises with more pronounced
+      // travel (y:80) to read as "coming in" rather than fading. All three
+      // start hidden and blurred.
+      gsap.set(t1, { opacity: 0, y: 40,  filter: 'blur(10px)' });
+      gsap.set(t2, { opacity: 0, x: 120, filter: 'blur(10px)' });
+      gsap.set(t3, { opacity: 0, y: 80,  filter: 'blur(10px)' });
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -163,10 +168,10 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
         BRIDGE_PIN_TIMING.text1.holdEnd,
       );
 
-      // Text 2.
+      // Text 2 — horizontal slide from offscreen-right into resting position.
       tl.to(
         t2,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+        { opacity: 1, x: 0, filter: 'blur(0px)', ease: 'power2.out',
           duration: BRIDGE_PIN_TIMING.text2.holdStart - BRIDGE_PIN_TIMING.text2.enter },
         BRIDGE_PIN_TIMING.text2.enter,
       );

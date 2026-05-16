@@ -39,8 +39,8 @@ describe('BRIDGE_PIN_TIMING', () => {
     it('enters at 0.34 (kissing text1 exit)', () => {
       expect(BRIDGE_PIN_TIMING.text2.enter).toBe(0.34);
     });
-    it('reaches full opacity at 0.40', () => {
-      expect(BRIDGE_PIN_TIMING.text2.holdStart).toBe(0.40);
+    it('reaches full opacity at 0.44 (longer enter window for the slide-in)', () => {
+      expect(BRIDGE_PIN_TIMING.text2.holdStart).toBe(0.44);
     });
     it('begins exit fade at 0.60', () => {
       expect(BRIDGE_PIN_TIMING.text2.holdEnd).toBe(0.60);
@@ -54,8 +54,8 @@ describe('BRIDGE_PIN_TIMING', () => {
     it('enters at 0.66 (kissing text2 exit)', () => {
       expect(BRIDGE_PIN_TIMING.text3.enter).toBe(0.66);
     });
-    it('reaches full opacity at 0.72', () => {
-      expect(BRIDGE_PIN_TIMING.text3.holdStart).toBe(0.72);
+    it('reaches full opacity at 0.76 (longer enter window for the pronounced rise)', () => {
+      expect(BRIDGE_PIN_TIMING.text3.holdStart).toBe(0.76);
     });
     it('begins exit fade at 0.95 (long hold)', () => {
       expect(BRIDGE_PIN_TIMING.text3.holdEnd).toBe(0.95);
