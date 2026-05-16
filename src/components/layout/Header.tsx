@@ -339,7 +339,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
                 className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide"
                 style={{
                   fontFamily: "'The Softly Serif', serif",
-                  fontStyle: 'italic',
                   opacity: showNav ? 1 : 0,
                   transform: showNav
                     ? 'translateY(0)'
@@ -392,7 +391,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               className="psalms-nav-link text-base lg:text-lg font-bold tracking-wide cursor-pointer"
               style={{
                 fontFamily: "'The Softly Serif', serif",
-                fontStyle: 'italic',
                 transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
                 ['--c-rest' as string]: textColor,
                 ['--c-hover' as string]: hoverColor,
@@ -419,7 +417,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
                   className="psalms-nav-link block text-base lg:text-lg font-bold tracking-wide whitespace-nowrap"
                   style={{
                     fontFamily: "'The Softly Serif', serif",
-                    fontStyle: 'italic',
                     transition: 'color 300ms ease, text-decoration-color 300ms ease, opacity 300ms ease',
                     ['--c-rest' as string]: textColor,
                     ['--c-hover' as string]: hoverColor,
@@ -507,7 +504,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
               className="psalms-nav-link text-2xl font-bold tracking-wide"
               style={{
                 fontFamily: "'The Softly Serif', serif",
-                fontStyle: 'italic',
                 transition: 'color 300ms ease, text-decoration-color 300ms ease',
                 ['--c-rest' as string]: textColor,
                 ['--c-hover' as string]: hoverColor,
@@ -526,7 +522,6 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
             className="psalms-nav-link text-2xl font-bold tracking-wide"
             style={{
               fontFamily: "'The Softly Serif', serif",
-              fontStyle: 'italic',
               transition: 'color 300ms ease, text-decoration-color 300ms ease',
               ['--c-rest' as string]: textColor,
               ['--c-hover' as string]: hoverColor,
