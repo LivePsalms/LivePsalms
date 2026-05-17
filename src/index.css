@@ -327,6 +327,127 @@ img {
   /* .bridge-beat-center keeps the default mobile centering on desktop too */
 }
 
+/* ───── Mid-section motion (scroll-scrubbed video + 5 text beats) ─────
+   Renders between the Psalm 23:2-3 verse and PurposeGrid on the home route.
+   Architecture: 500vh outer wrapper defines pin distance; 100vh sticky stage
+   stays glued to viewport during the pin; video and beats are positioned
+   absolutely within the stage. */
+
+.mid-section-wrapper {
+  position: relative;
+  height: 500vh;
+  background: var(--app-bg);
+}
+
+.mid-section-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--app-bg); /* shown until the video has its first frame */
+}
+
+.mid-section-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.mid-section-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--app-bg-rgb), 0)    0%,
+    rgba(var(--app-bg-rgb), 0.18) 60%,
+    rgba(var(--app-bg-rgb), 0.32) 100%
+  );
+  opacity: var(--mid-section-scrim-opacity, 1);
+  pointer-events: none;
+}
+
+.mid-section-beats {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mid-section-beat {
+  /* Family inherits from Hero bridge — same italic Cormorant voice. */
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--deep-umber);
+
+  /* Departures from bridge type ramp for sustained prose reading. */
+  font-size: clamp(22px, 3.4vw, 36px);
+  line-height: 1.5;
+  max-width: 680px;
+
+  /* Absolute-center on the stage. GSAP tweens y and opacity from there. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 0 24px;
+  margin: 0;
+
+  /* Initial state — invisible until GSAP's first tick. */
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+/* ───── Reduced-motion fallback: no pin, no scrub, stacked beats ───── */
+.mid-section-reduced {
+  position: relative;
+  background: var(--app-bg);
+}
+
+.mid-section-reduced-block {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mid-section-reduced-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.mid-section-reduced-beat {
+  position: relative;
+  z-index: 1;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--deep-umber);
+  font-size: clamp(22px, 3.4vw, 36px);
+  line-height: 1.5;
+  max-width: 680px;
+  text-align: center;
+  padding: 0 24px;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+
+.mid-section-reduced-beat[data-visible='true'] {
+  opacity: 1;
+}
+
 .divider {
   height: 1px;
   background: var(--pale-stone);
