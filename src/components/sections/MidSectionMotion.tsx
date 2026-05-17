@@ -30,6 +30,25 @@ const OUTRO_START = WEBGPU_TEXT_SCALE; // 0.8333
 const INTENSITY_BRIGHT = { brightness: 3.45, bloomStrength: 3.30, bloomThreshold: 0.14 };
 const INTENSITY_NORMAL = { brightness: 1.20, bloomStrength: 2.20, bloomThreshold: 0.15 };
 
+// Slow-motion wake-up curve. The simulation's per-frame delta is scaled by
+// (target fps / 60) so the curl-lines crawl at first and accelerate to a
+// slightly-throttled resting rate by the time beat 2 enters.
+// Waypoints: 3 fps → 20 → 35 → 40 (peak) → 39 (steady state).
+// Spans progress [0, 0.133] — the overture plus beat 1's primary window
+// (ends just as beat 1's exit fade begins, so the scene is steady by then).
+const WAKEUP_END = TIMING[0].holdEnd * WEBGPU_TEXT_SCALE; // ≈ 0.1333
+const WAKEUP_FPS_WAYPOINTS = [3, 20, 35, 40, 39] as const;
+const STEADY_FPS = WAKEUP_FPS_WAYPOINTS[WAKEUP_FPS_WAYPOINTS.length - 1]; // 39
+
+function wakeUpFps(progress: number): number {
+  if (progress >= WAKEUP_END) return STEADY_FPS;
+  const segments = WAKEUP_FPS_WAYPOINTS.length - 1; // 4 segments between 5 waypoints
+  const segmentWidth = WAKEUP_END / segments;
+  const idx = Math.min(segments - 1, Math.floor(progress / segmentWidth));
+  const t = (progress - idx * segmentWidth) / segmentWidth;
+  return lerp(WAKEUP_FPS_WAYPOINTS[idx], WAKEUP_FPS_WAYPOINTS[idx + 1], t);
+}
+
 type RenderMode = 'webgpu' | 'video' | 'reduced';
 
 function initialRenderMode(): RenderMode {
@@ -184,6 +203,12 @@ export function MidSectionMotion() {
       invalidateOnRefresh: true,
       onUpdate: (self) => {
         const p = self.progress;
+
+        // Slow-motion wake-up — independent of the three-act color phases.
+        // Crawls at 3 fps at pin engage, accelerates through 20 / 35 / 40 fps,
+        // settles at 39 fps by progress 0.133 and stays there for Acts 2 + 3.
+        intensity.simSpeed = wakeUpFps(p) / 60;
+
         if (p < OVERTURE_END) {
           // Act 1 — overture: bright → normal during text 1's entry window.
           const t = p / OVERTURE_END;

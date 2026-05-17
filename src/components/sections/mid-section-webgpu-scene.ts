@@ -20,6 +20,9 @@ export interface CurlLinesIntensity {
   brightness: number;
   bloomStrength: number;
   bloomThreshold: number;
+  /** Multiplier on the per-frame time delta. 1.0 = natural rate, 0.5 = half-speed slow-motion.
+   *  Used by the React component to script a wake-up fps ramp during the overture. */
+  simSpeed: number;
 }
 
 export interface CurlLinesHandle {
@@ -467,9 +470,14 @@ export async function mountCurlLinesScene(
   await renderer.computeAsync(writeToGeometry);
 
   // 15. Animation loop (stripped of controls + FPS per Modify-list #4)
+  //     simSpeed scales the per-frame delta so the React component can script a
+  //     wake-up slow-motion ramp during the overture. Browser rAF still fires at
+  //     ~60 Hz; only the simulation's accumulated time advances slower.
+   
+  let simSpeed = 1.0;
   const clock = new THREE.Clock();
   function animate() {
-    const dt = clock.getDelta();
+    const dt = clock.getDelta() * simSpeed;
     uTime.value += dt;
     uDeltaTime.value = dt;
     renderer.compute(shiftTrails);
@@ -502,6 +510,8 @@ export async function mountCurlLinesScene(
     set bloomStrength(v: number) { bloomPass.strength.value = v; },
     get bloomThreshold() { return bloomPass.threshold.value; },
     set bloomThreshold(v: number) { bloomPass.threshold.value = v; },
+    get simSpeed() { return simSpeed; },
+    set simSpeed(v: number) { simSpeed = v; },
   };
 
   return {
