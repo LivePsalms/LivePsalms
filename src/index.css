@@ -335,7 +335,7 @@ img {
 
 .mid-section-wrapper {
   position: relative;
-  height: 500vh;
+  /* height is driven by inline style: 500vh (video) or 600vh (webgpu overture+outro). */
   background: var(--app-bg);
 }
 

@@ -16,9 +16,20 @@ const TOTAL_POINTS = LINE_COUNT * TRAIL_LENGTH;
 const BOUNDS = 6.0;
 const NUM_SCHEMES = 5;
 
+export interface CurlLinesIntensity {
+  brightness: number;
+  bloomStrength: number;
+  bloomThreshold: number;
+}
+
+export interface CurlLinesHandle {
+  dispose: () => void;
+  intensity: CurlLinesIntensity;
+}
+
 export async function mountCurlLinesScene(
   canvas: HTMLCanvasElement,
-): Promise<{ dispose: () => void }> {
+): Promise<CurlLinesHandle> {
 
   // 1. Scene + camera + renderer
   const scene = new THREE.Scene();
@@ -479,7 +490,20 @@ export async function mountCurlLinesScene(
   });
   resizeObserver.observe(target);
 
-  // 17. Return dispose handle (per Modify-list #6)
+  // 17. Return dispose handle + mutable intensity API
+  //     The intensity object exposes brightness / bloomStrength / bloomThreshold as
+  //     plain numeric properties backed by getter/setters. The React component can
+  //     drive these via a ScrollTrigger onUpdate callback to script overture / outro
+  //     visual phases on top of the continuously-running curl-noise simulation.
+  const intensity: CurlLinesIntensity = {
+    get brightness() { return uBrightness.value; },
+    set brightness(v: number) { uBrightness.value = v; },
+    get bloomStrength() { return bloomPass.strength.value; },
+    set bloomStrength(v: number) { bloomPass.strength.value = v; },
+    get bloomThreshold() { return bloomPass.threshold.value; },
+    set bloomThreshold(v: number) { bloomPass.threshold.value = v; },
+  };
+
   return {
     dispose() {
       renderer.setAnimationLoop(null);
@@ -488,5 +512,6 @@ export async function mountCurlLinesScene(
       lineMaterial.dispose();
       renderer.dispose();
     },
+    intensity,
   };
 }
