@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   BEATS,
   MID_SECTION_PIN_TIMING,
-  MID_SECTION_VIDEO_DURATION,
 } from './mid-section-motion-content';
+import { mountCurlLinesScene } from './mid-section-webgpu-scene';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,33 +17,68 @@ const TIMING = [
   MID_SECTION_PIN_TIMING.beat5,
 ] as const;
 
+type RenderMode = 'webgpu' | 'video' | 'reduced';
+
+function initialRenderMode(): RenderMode {
+  if (typeof window === 'undefined') return 'video';
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'reduced';
+  if ('gpu' in navigator) return 'webgpu';
+  return 'video';
+}
+
 export function MidSectionMotion() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const beatRefs = useRef<Array<HTMLParagraphElement | null>>([]);
   // Reduced-motion path uses a separate set of refs to keep the two paths cleanly isolated.
   const reducedBeatRefs = useRef<Array<HTMLParagraphElement | null>>([]);
 
-  const prefersReducedMotion = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
+  const [renderMode, setRenderMode] = useState<RenderMode>(initialRenderMode);
 
-  /* ── Full-motion path: pinned, scrubbed video + 5-beat slideshow ── */
+  /* ── WebGPU mount path: live curl-lines canvas ── */
   useEffect(() => {
-    if (prefersReducedMotion) return;
+    if (renderMode !== 'webgpu') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let disposed = false;
+    let mountedHandle: { dispose: () => void } | null = null;
+
+    mountCurlLinesScene(canvas)
+      .then((handle) => {
+        if (disposed) {
+          handle.dispose();
+          return;
+        }
+        mountedHandle = handle;
+      })
+      .catch((err) => {
+        // navigator.gpu existed but mount failed (requestAdapter returned null,
+        // or the renderer init threw). Escalate to MP4 fallback.
+        console.warn('[MidSectionMotion] WebGPU init failed, falling back to video', err);
+        if (!disposed) setRenderMode('video');
+      });
+
+    return () => {
+      disposed = true;
+      mountedHandle?.dispose();
+    };
+  }, [renderMode]);
+
+  /* ── Full-motion path: pinned stage + 5-beat slideshow (shared by webgpu and video modes) ── */
+  useEffect(() => {
+    if (renderMode !== 'webgpu' && renderMode !== 'video') return;
 
     const wrapperEl = wrapperRef.current;
     const stageEl = stageRef.current;
-    const videoEl = videoRef.current;
     const beatEls = beatRefs.current.slice(0, 5);
-    if (!wrapperEl || !stageEl || !videoEl || beatEls.some((b) => !b)) return;
+    if (!wrapperEl || !stageEl || beatEls.some((b) => !b)) return;
 
     const ctx = gsap.context(() => {
-      // Initial states — beats hidden and offset below resting position; video at frame 0.
+      // Initial states — beats hidden and offset below resting position.
       gsap.set(beatEls, { opacity: 0, y: 20 });
-      videoEl.currentTime = 0;
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -56,20 +91,16 @@ export function MidSectionMotion() {
         },
       });
 
-      // Video scrub — single continuous tween of currentTime across the entire timeline.
-      // GSAP tweens any numeric property; videoEl.currentTime ramps 0 → duration linearly.
-      tl.to(
-        videoEl,
-        { currentTime: MID_SECTION_VIDEO_DURATION, ease: 'none', duration: 1 },
-        0,
-      );
-
       // Per-beat enter / exit tweens at MID_SECTION_PIN_TIMING positions.
+      // The video.currentTime tween that was here in the prior revision is intentionally
+      // removed — the WebGPU canvas runs its own animation loop and the video fallback
+      // auto-plays in a loop. Both background paths are continuously animated, decoupled
+      // from scroll.
       TIMING.forEach((t, i) => {
         const beat = beatEls[i];
         if (!beat) return;
 
-        // Enter tween — fade in + rise from y:20 to y:0. Skip if enter === holdStart (no entry window).
+        // Enter tween — fade in + rise from y:20 to y:0.
         if (t.enter < t.holdStart) {
           tl.to(
             beat,
@@ -77,11 +108,10 @@ export function MidSectionMotion() {
             t.enter,
           );
         } else {
-          // No entry window — beat starts at full opacity at progress 0 (i.e., beat 1 only).
           tl.set(beat, { opacity: 1, y: 0 }, t.enter);
         }
 
-        // Exit tween — fade out + lift to y:−20. Skip if holdEnd === exit (no exit window).
+        // Exit tween — fade out + lift to y:−20.
         if (t.holdEnd < t.exit) {
           tl.to(
             beat,
@@ -93,11 +123,11 @@ export function MidSectionMotion() {
     }, wrapperEl);
 
     return () => ctx.revert();
-  }, [prefersReducedMotion]);
+  }, [renderMode]);
 
   /* ── Reduced-motion fallback: IntersectionObserver fades on five stacked blocks ── */
   useEffect(() => {
-    if (!prefersReducedMotion) return;
+    if (renderMode !== 'reduced') return;
 
     const blocks = reducedBeatRefs.current.filter(
       (el): el is HTMLParagraphElement => el !== null,
@@ -117,10 +147,10 @@ export function MidSectionMotion() {
 
     for (const block of blocks) observer.observe(block);
     return () => observer.disconnect();
-  }, [prefersReducedMotion]);
+  }, [renderMode]);
 
   // ─── Reduced-motion JSX: five stacked blocks with poster + beat, no pin, no video element ───
-  if (prefersReducedMotion) {
+  if (renderMode === 'reduced') {
     return (
       <section className="mid-section-reduced" aria-label="Reflection">
         {BEATS.map((text, i) => (
@@ -145,7 +175,7 @@ export function MidSectionMotion() {
     );
   }
 
-  // ─── Full-motion JSX: 500vh wrapper, sticky 100vh stage, full-bleed video + 5 absolute-centered beats ───
+  // ─── Full-motion JSX: 500vh wrapper, sticky 100vh stage, scene/video + 5 absolute-centered beats ───
   return (
     <section
       ref={wrapperRef}
@@ -153,17 +183,27 @@ export function MidSectionMotion() {
       aria-label="Reflection"
     >
       <div ref={stageRef} className="mid-section-stage">
-        <video
-          ref={videoRef}
-          src="/mid-section-video.mp4"
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden="true"
-          disablePictureInPicture
-          disableRemotePlayback
-          className="mid-section-video"
-        />
+        {renderMode === 'webgpu' ? (
+          <canvas
+            ref={canvasRef}
+            className="mid-section-video"
+            aria-hidden="true"
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src="/mid-section-video.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+            disablePictureInPicture
+            disableRemotePlayback
+            className="mid-section-video"
+          />
+        )}
         <div className="mid-section-scrim" aria-hidden="true" />
         <div className="mid-section-beats">
           {BEATS.map((text, i) => (
