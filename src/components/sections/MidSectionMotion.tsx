@@ -122,6 +122,15 @@ export function MidSectionMotion() {
         },
       });
 
+      // In webgpu mode the last text tween ends at timeline-position WEBGPU_TEXT_SCALE
+      // (≈ 0.833), but ScrollTrigger.scrub maps its 0..1 progress onto the timeline's
+      // totalDuration. Without padding, scroll progress 1.0 would only reach timeline
+      // position 0.833 — beat 5 would stay visible through the entire outro. Pad with
+      // a phantom set at position 1 so timeline totalDuration matches the scroll range.
+      if (renderMode === 'webgpu') {
+        tl.set({}, {}, 1);
+      }
+
       // Per-beat enter / exit tweens, positions and durations scaled by textScale.
       TIMING.forEach((t, i) => {
         const beat = beatEls[i];
