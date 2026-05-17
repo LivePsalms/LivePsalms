@@ -31,12 +31,13 @@ const INTENSITY_BRIGHT = { brightness: 3.45, bloomStrength: 3.30, bloomThreshold
 const INTENSITY_NORMAL = { brightness: 1.20, bloomStrength: 2.20, bloomThreshold: 0.15 };
 
 // Slow-motion wake-up curve. The simulation's per-frame delta is scaled by
-// (target fps / 60) so the curl-lines crawl at first and accelerate to a
-// slightly-throttled resting rate by the time beat 2 enters.
+// (target fps / 60) so the curl-lines crawl at first and gradually accelerate
+// to a slightly-throttled resting rate over the first ~3/8 of the timeline.
 // Waypoints: 3 fps → 20 → 35 → 40 (peak) → 39 (steady state).
-// Spans progress [0, 0.133] — the overture plus beat 1's primary window
-// (ends just as beat 1's exit fade begins, so the scene is steady by then).
-const WAKEUP_END = TIMING[0].holdEnd * WEBGPU_TEXT_SCALE; // ≈ 0.1333
+// Spans progress [0, 0.40] — through the overture, beat 1, the kiss-handoff to
+// beat 2, and into beat 2's primary window. Each waypoint gets ~0.10 of progress
+// (≈60vh of scroll), so the acceleration feels deliberate rather than snapped.
+const WAKEUP_END = 0.40;
 const WAKEUP_FPS_WAYPOINTS = [3, 20, 35, 40, 39] as const;
 const STEADY_FPS = WAKEUP_FPS_WAYPOINTS[WAKEUP_FPS_WAYPOINTS.length - 1]; // 39
 
