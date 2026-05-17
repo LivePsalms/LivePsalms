@@ -8,3 +8,19 @@ export const BEATS = [
   'Reconnect with yourself. With the One who has been waiting. The threshold between the noise and the sanctuary that has always lived inside you.',
   "No matter what the day is doing. No matter what the news is doing. The peace you've been looking for isn't out there. It's a room inside you have the capability to return to, anytime.",
 ] as const;
+
+// GSAP timeline progress points for the pinned mid-section stage.
+// Mirrors the BRIDGE_PIN_TIMING shape exactly. Each beat has:
+//   enter      — when its enter tween starts (opacity 0→1, y 20→0)
+//   holdStart  — when it reaches full opacity at resting position
+//   holdEnd    — when its exit tween starts (opacity 1→0, y 0→−20)
+//   exit       — when it has fully exited
+// Kiss handoff: beatN.exit === beatN+1.enter, so beat N+1's enter tween
+// starts exactly as beat N's exit tween finishes — back-to-back, never a gap.
+export const MID_SECTION_PIN_TIMING = {
+  beat1: { enter: 0,    holdStart: 0.04, holdEnd: 0.16, exit: 0.20 },
+  beat2: { enter: 0.20, holdStart: 0.24, holdEnd: 0.36, exit: 0.40 },
+  beat3: { enter: 0.40, holdStart: 0.44, holdEnd: 0.56, exit: 0.60 },
+  beat4: { enter: 0.60, holdStart: 0.64, holdEnd: 0.76, exit: 0.80 },
+  beat5: { enter: 0.80, holdStart: 0.84, holdEnd: 0.96, exit: 1.00 },
+} as const;
