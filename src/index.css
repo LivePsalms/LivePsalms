@@ -388,6 +388,10 @@ img {
   line-height: 1.5;
   max-width: 680px;
 
+  /* Soft taupe halo so deep-umber letters lift off the bright Cosmic particles
+     in the WebGPU path. No visible darkening of surrounding particles. */
+  text-shadow: 0 0 24px rgba(var(--app-bg-rgb), 0.6);
+
   /* Absolute-center on the stage. GSAP tweens y and opacity from there. */
   position: absolute;
   top: 50%;
