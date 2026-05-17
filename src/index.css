@@ -73,6 +73,8 @@
     /* PSALMS Brand Colors */
     --plaster: #F0ECE8;
     --app-bg: #988F80;
+    --app-bg-rgb: 152, 143, 128;   /* RGB triplet of --app-bg for use in rgba() */
+    --mid-section-scrim-opacity: 1; /* Tunable knob for mid-section legibility scrim (0 = no scrim) */
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
     --text-muted: #FBF6EA;
