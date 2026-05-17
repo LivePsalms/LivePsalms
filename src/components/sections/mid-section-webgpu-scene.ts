@@ -29,7 +29,7 @@ export async function mountCurlLinesScene(
     : { width: window.innerWidth, height: window.innerHeight };
 
   const camera = new THREE.PerspectiveCamera(60, initialRect.width / initialRect.height, 0.1, 200);
-  camera.position.set(0, 6, 18);
+  camera.position.set(0, 0, 14);
 
   const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
   renderer.setSize(initialRect.width, initialRect.height);
@@ -51,7 +51,7 @@ export async function mountCurlLinesScene(
   const uParticleSpeed = uniform(float(4.0));
   const uBrightness = uniform(float(1.2));
   const uCurlOctaves = uniform(float(2.0));
-  const uSpawnRadius = uniform(float(0.8));
+  const uSpawnRadius = uniform(float(1.0));
   const uTipIntensity = uniform(float(1.0));
   const uTime = uniform(float(0.0));
   const uDeltaTime = uniform(float(1.0 / 60.0));
