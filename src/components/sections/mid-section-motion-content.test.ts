@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BEATS, MID_SECTION_PIN_TIMING } from './mid-section-motion-content';
+import { BEATS, MID_SECTION_PIN_TIMING, MID_SECTION_VIDEO_DURATION } from './mid-section-motion-content';
 
 describe('BEATS', () => {
   it('exports exactly five beats', () => {
@@ -138,5 +138,11 @@ describe('MID_SECTION_PIN_TIMING', () => {
   it('first beat enter is 0; last beat exit is 1.0', () => {
     expect(MID_SECTION_PIN_TIMING.beat1.enter).toBe(0);
     expect(MID_SECTION_PIN_TIMING.beat5.exit).toBe(1.0);
+  });
+});
+
+describe('MID_SECTION_VIDEO_DURATION', () => {
+  it('matches the source video duration in seconds (from ffprobe)', () => {
+    expect(MID_SECTION_VIDEO_DURATION).toBeCloseTo(10.041667, 5);
   });
 });

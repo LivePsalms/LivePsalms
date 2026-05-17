@@ -24,3 +24,9 @@ export const MID_SECTION_PIN_TIMING = {
   beat4: { enter: 0.60, holdStart: 0.64, holdEnd: 0.76, exit: 0.80 },
   beat5: { enter: 0.80, holdStart: 0.84, holdEnd: 0.96, exit: 1.00 },
 } as const;
+
+// Exact duration in seconds of public/mid-section-video.mp4 per ffprobe.
+// Used as the end-value for the GSAP currentTime tween so scroll progress
+// 0..1 maps to a clean 0..duration scrub across all 241 frames at 24 fps.
+// If the asset is re-encoded, update this value to match the new ffprobe output.
+export const MID_SECTION_VIDEO_DURATION = 10.041667;
