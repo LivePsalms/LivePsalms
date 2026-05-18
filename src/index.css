@@ -585,6 +585,33 @@ img {
   }
 }
 
+/* Decorative "Devotions" watermark in the top-left of the Purpose Grid
+   section. Sits in the section's top padding band, above the filter row.
+   Starts invisible — GSAP scroll-linked reveal in PurposeGrid.tsx tweens
+   opacity to its resting decorative value of 0.32. */
+.pg-devotions-watermark {
+  position: absolute;
+  top: 1.4rem;
+  left: 1rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 2.6rem;
+  line-height: 0.9;
+  letter-spacing: 0.005em;
+  color: var(--deep-umber);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .pg-devotions-watermark {
+    top: 1.6rem;
+    left: 2rem;
+    font-size: 4.4rem;
+  }
+}
+
 /* TipTap Notepad Editor */
 .notepad-editor .tiptap {
   font-family: 'Outfit', sans-serif;
