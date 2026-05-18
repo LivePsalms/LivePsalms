@@ -679,8 +679,8 @@ img {
   /* Initial state — entrance animation tweens these to 0 / 1. */
   opacity: 0;
 }
-.two-path-col-left { justify-self: end; transform: translateX(20px); }
-.two-path-col-right { justify-self: start; transform: translateX(-20px); }
+.two-path-col-left { justify-self: end; transform: translateY(60px); }
+.two-path-col-right { justify-self: start; transform: translateY(-60px); }
 
 .two-path-statement {
   font-family: 'Cormorant Garamond', serif;
@@ -789,11 +789,12 @@ img {
     justify-self: center;
     transform: scaleX(0);
   }
+  /* Layout-only override on mobile; let the desktop transforms (translateY(+60px) /
+     translateY(-60px)) carry over so the rise/fall entrance still works on mobile. */
   .two-path-col,
   .two-path-col-left,
   .two-path-col-right {
     justify-self: center;
-    transform: translateY(20px);
   }
 }
 

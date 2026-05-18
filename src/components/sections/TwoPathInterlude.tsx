@@ -50,24 +50,32 @@ export function TwoPathInterlude() {
       },
     });
 
-    // Hairline radiates from center outward, 0.9s.
+    // Sequential 1·2·3 reveal — Cathedral pacing, ~4.2s total.
+    // Each beat 1.8s; gap of 1.0s between beat starts so they overlap slightly
+    // but the sequence is clearly readable (hairline → left rises → right falls).
+
+    // 1 — Hairline radiates from center outward.
     tl.to(hairline, {
       scaleY: 1,
-      duration: 0.9,
+      duration: 1.8,
       ease: 'power2.out',
-    }, 0);
+    }, 0.1);
 
-    // Columns fade in and drift inward, starting at 0.6s, 1.2s duration.
-    // Tween both x and y because the desktop initial state is translateX(±20px)
-    // but the mobile media query (in index.css) overrides it to translateY(20px).
-    // Tweening both lets the same useEffect cover both layouts.
-    tl.to([left, right], {
+    // 2 — Left column rises from below (translateY(+60px) → 0, opacity 0 → 1).
+    tl.to(left, {
       opacity: 1,
-      x: 0,
       y: 0,
-      duration: 1.2,
+      duration: 1.8,
       ease: 'power3.out',
-    }, 0.6);
+    }, 1.4);
+
+    // 3 — Right column falls from above (translateY(-60px) → 0, opacity 0 → 1).
+    tl.to(right, {
+      opacity: 1,
+      y: 0,
+      duration: 1.8,
+      ease: 'power3.out',
+    }, 2.4);
 
     const st = ScrollTrigger.create({
       trigger: section,
