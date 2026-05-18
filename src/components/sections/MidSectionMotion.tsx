@@ -32,12 +32,13 @@ const INTENSITY_NORMAL = { brightness: 1.20, bloomStrength: 2.20, bloomThreshold
 
 // Slow-motion wake-up curve. The simulation's per-frame delta is scaled by
 // (target fps / 60) so the curl-lines crawl at first and gradually accelerate
-// to a slightly-throttled resting rate over the first ~3/5 of the timeline.
+// to a slightly-throttled resting rate over the first ~3/4 of the timeline.
 // Waypoints: 3 fps → 20 → 35 → 40 (peak) → 39 (steady state).
-// Spans progress [0, 0.60] — through the overture, beats 1 + 2, and into
-// beat 3's primary window. Each waypoint gets ~0.15 of progress (≈90vh of
-// scroll), so the acceleration feels like a slow exhale rather than a snap.
-const WAKEUP_END = 0.6;
+// Spans progress [0, 0.75] — through the overture, beats 1 + 2, beat 3, and
+// into beat 4's primary window. Each waypoint gets ~0.1875 of progress
+// (≈112vh of scroll), so the acceleration feels like an even slower exhale
+// — the dramatic crawl-out lingers longer before settling into steady state.
+const WAKEUP_END = 0.75;
 const WAKEUP_FPS_WAYPOINTS = [3, 20, 35, 40, 39] as const;
 const STEADY_FPS = WAKEUP_FPS_WAYPOINTS[WAKEUP_FPS_WAYPOINTS.length - 1]; // 39
 
