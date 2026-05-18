@@ -26,21 +26,35 @@ const overlayLabelById: Record<string, string> = {
 
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.
-// Special case: a lone last item spans the full row (full-bleed).
+// When a planned final row is a lone item AND the previous row holds exactly
+// three items, the lone item is folded into the previous row so it ends as a
+// clean row of four (span-3 each) — avoiding the awkward orphan on its own row.
 function computeSpans(n: number): number[] {
-  const spans: number[] = [];
+  const rows: number[] = [];
   let remaining = n;
   let rowIdx = 0;
   while (remaining > 0) {
     const expected = rowIdx % 2 === 0 ? 3 : 4;
     const take = Math.min(expected, remaining);
+    rows.push(take);
+    remaining -= take;
+    rowIdx += 1;
+  }
+
+  // Fold an orphan last item into the previous row when that row has 3 items.
+  // Result: 3 → 4 items in the previous row (still 12-col safe).
+  if (rows.length >= 2 && rows[rows.length - 1] === 1 && rows[rows.length - 2] === 3) {
+    rows[rows.length - 2] = 4;
+    rows.pop();
+  }
+
+  const spans: number[] = [];
+  for (const count of rows) {
     // 12-col grid: 3 items per row → span 4; 4 items per row → span 3.
     // Partial short rows (1 or 2 items) keep the span-3 cell so lone items
     // match the row-of-4 aspect and sit at the left instead of stretching.
-    const span = take === 3 ? 4 : 3;
-    for (let k = 0; k < take; k++) spans.push(span);
-    remaining -= take;
-    rowIdx += 1;
+    const span = count === 3 ? 4 : 3;
+    for (let k = 0; k < count; k++) spans.push(span);
   }
   return spans;
 }
