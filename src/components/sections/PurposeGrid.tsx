@@ -137,6 +137,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
   const [gridReady, setGridReady] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
+  const watermarkRef = useRef<HTMLSpanElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const flipStateRef = useRef<Flip.FlipState | null>(null);
@@ -417,8 +418,16 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
       ref={sectionRef}
       id="projects"
       className="pt-44 md:pt-64 pb-16 md:pb-24 px-0"
-      style={{ background: 'var(--app-bg)' }}
+      style={{ background: 'var(--app-bg)', position: 'relative' }}
     >
+      <span
+        ref={watermarkRef}
+        aria-hidden="true"
+        className="pg-devotions-watermark"
+      >
+        Devotions
+      </span>
+
       {/* Filter Tabs */}
       <div ref={filterWrapRef} className="px-4 md:px-8 mb-4 md:mb-6">
         <FilterTabs activeFilter={activeFilter} onFilterChange={handleFilterChange} />
