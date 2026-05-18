@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/sections/Hero';
 import { HeroLoadingOverlay } from '@/components/sections/HeroLoadingOverlay';
 import { MidSectionMotion } from '@/components/sections/MidSectionMotion';
+import { TwoPathInterlude } from '@/components/sections/TwoPathInterlude';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
@@ -128,6 +129,7 @@ function App() {
                     <Hero introActive={introActive} onIntroComplete={handleIntroComplete} onHandoff={handleIntroHandoff} />
                   </WaterRipple>
                   <MidSectionMotion />
+                  <TwoPathInterlude />
                   <PurposeGrid projects={projects} onProjectClick={handleProjectClick} />
                 </main>
               }
