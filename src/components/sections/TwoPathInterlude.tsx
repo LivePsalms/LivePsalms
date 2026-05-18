@@ -33,6 +33,7 @@ export function TwoPathInterlude() {
           for (const entry of entries) {
             if (entry.isIntersecting) {
               section.dataset.entered = 'true';
+              observer.unobserve(section);
             }
           }
         },
