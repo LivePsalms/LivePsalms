@@ -445,7 +445,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
 
 function DefaultZones({ project }: { project: Project }) {
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -667,7 +667,7 @@ function PeaceZones({ project }: { project: Project }) {
 
   // Find the next project in the same category, wrapping around
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
   return (
@@ -1125,7 +1125,7 @@ function HopeZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -1571,7 +1571,7 @@ function StrengthZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -2017,7 +2017,7 @@ function WholenessZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -2463,7 +2463,7 @@ function PurposeZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -2909,7 +2909,7 @@ function ConnectionZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -3355,7 +3355,7 @@ function IdentityZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -3801,7 +3801,7 @@ function JoyZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 
@@ -4247,7 +4247,7 @@ function ForgivenessZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
   // Next Devotion chains across all projects in declared order:
-  // residential → retail → hospitality → wraps back to residential.
+  // residential → hospitality → wraps back to residential.
   const currentIndex = projects.findIndex(p => p.id === project.id);
   const nextProject = projects[(currentIndex + 1) % projects.length];
 

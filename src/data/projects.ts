@@ -2,12 +2,10 @@ import type { Project } from '@/types';
 
 /** Warm taupe — used as the default overlay when no colour is available. */
 export const FALLBACK_OVERLAY_COLOR = '#8B8378';
-export const FALLBACK_RENEWAL_COLOR = '#5A7A6A';
 export const FALLBACK_SERENITY_COLOR = '#B08A6A';
 
 export const categoryLabel: Record<Project['category'], string> = {
   residential: 'Restoration',
-  retail: 'Renewal',
   hospitality: 'Serenity',
 };
 
@@ -23,15 +21,6 @@ const restorationImages = [
   'restoration8.png',
   'restoration9.png',
   'restoration10.png',
-];
-
-const renewalImages = [
-  'renewal1.png',
-  'renewal3.png',
-  'renewal4.png',
-  'renewal6.png',
-  'renewal8.png',
-  'renewal9.png',
 ];
 
 const serenityImages = [
@@ -86,14 +75,6 @@ const restorationOverlays = [
   '#938A7E', // putty
   '#B0A898', // linen
 ];
-const renewalOverlays = [
-  '#5A7A6A', // forest sage
-  '#6B8B7A', // muted jade
-  '#4E6E5E', // deep moss
-  '#7A9A8A', // celadon
-  '#5E7E6E', // olive sage
-  '#6A8A7A', // fern
-];
 const serenityOverlays = [
   '#B08A6A', // warm ochre
   '#C49A78', // terracotta
@@ -105,9 +86,6 @@ const serenityOverlays = [
 export const projects: Project[] = [
   ...restorationImages.map((file, i) =>
     toProject(file, 'residential', `Restoration ${String(i + 1).padStart(2, '0')}`, restorationOverlays[i] ?? FALLBACK_OVERLAY_COLOR)
-  ),
-  ...renewalImages.map((file, i) =>
-    toProject(file, 'retail', `Renewal ${String(i + 1).padStart(2, '0')}`, renewalOverlays[i] ?? FALLBACK_RENEWAL_COLOR)
   ),
   ...serenityImages.map((file, i) =>
     toProject(file, 'hospitality', `Serenity ${String(i + 1).padStart(2, '0')}`, serenityOverlays[i] ?? FALLBACK_SERENITY_COLOR)
