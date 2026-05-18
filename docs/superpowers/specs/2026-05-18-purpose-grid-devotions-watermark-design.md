@@ -74,8 +74,8 @@ still clearly left-anchored.
 
 | Breakpoint | `top` | `left` |
 |---|---|---|
-| Default (mobile) | `3rem` | `2.5rem` |
-| `md` and up | `5.5rem` | `6rem` |
+| Default (mobile) | `1.5rem` | `2.5rem` |
+| `md` and up | `3rem` | `6rem` |
 
 `pointer-events: none` so the word never intercepts clicks or hover targets
 for anything that might overlap it during the grid's pinned morph.
@@ -86,10 +86,10 @@ The watermark sits low within the section's top padding zone, so it reads
 as adjacent to the filter row rather than as a separate band. The section's
 existing top padding is `pt-44 md:pt-64` (~11rem / 16rem):
 
-- **Mobile:** watermark top at `3rem`, filter row begins around the
-  existing `pt-44` boundary — yielding ~4em of vertical gap between them.
-- **Desktop (md+):** watermark top at `5.5rem`, filter row begins around the
-  existing `pt-64` boundary — yielding ~4–5em of vertical gap between them.
+- **Mobile:** watermark top at `1.5rem`, filter row begins around the
+  existing `pt-44` boundary — yielding ~5–6em of vertical gap between them.
+- **Desktop (md+):** watermark top at `3rem`, filter row begins around the
+  existing `pt-64` boundary — yielding ~6–7em of vertical gap between them.
 
 No change to the section's existing top padding is required; the watermark
 fits within it. If the rendered gap proves too tight in real pixels, the
@@ -170,7 +170,7 @@ Add one CSS class:
 ```css
 .pg-devotions-watermark {
   position: absolute;
-  top: 3rem;
+  top: 1.5rem;
   left: 2.5rem;
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
@@ -185,7 +185,7 @@ Add one CSS class:
 
 @media (min-width: 768px) {
   .pg-devotions-watermark {
-    top: 5.5rem;
+    top: 3rem;
     left: 6rem;
     font-size: 7.2rem;
   }
