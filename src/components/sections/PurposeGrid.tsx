@@ -135,10 +135,16 @@ function ProjectCard({
             <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">
               {overlayLabelById[project.id] ?? categoryLabel[project.category]}
             </span>
-            {/* Start-here CTA — anchored bottom-right of the overlay */}
-            <span className="absolute bottom-4 right-4 text-[10px] uppercase tracking-[0.2em] text-white/60">
+            {/* Start-here CTA — anchored bottom-right of the overlay,
+                italic serif voice + subtle vertical bounce to draw the eye. */}
+            <motion.span
+              className="absolute bottom-8 right-4 text-lg italic text-white/80"
+              style={{ fontFamily: '"Cormorant Garamond", serif', fontWeight: 300 }}
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            >
               Start here
-            </span>
+            </motion.span>
           </motion.div>
         )}
       </AnimatePresence>
