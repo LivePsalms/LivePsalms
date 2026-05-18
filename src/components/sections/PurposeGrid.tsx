@@ -121,6 +121,10 @@ function ProjectCard({
             <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">
               {overlayLabelById[project.id] ?? categoryLabel[project.category]}
             </span>
+            {/* Start-here CTA — anchored bottom-right of the overlay */}
+            <span className="absolute bottom-4 right-4 text-[10px] uppercase tracking-[0.2em] text-white/60">
+              Start here
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
