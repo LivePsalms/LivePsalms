@@ -796,3 +796,29 @@ img {
     transform: translateY(20px);
   }
 }
+
+/* ─── Reduced-motion path: no draw, no drift, simple cross-fade ─── */
+@media (prefers-reduced-motion: reduce) {
+  .two-path-hairline {
+    transform: scaleY(1);
+    opacity: 0;
+    transition: opacity 600ms ease-out;
+  }
+  .two-path-col,
+  .two-path-col-left,
+  .two-path-col-right {
+    transform: none;
+    transition: opacity 600ms ease-out;
+  }
+  .two-path-interlude[data-entered="true"] .two-path-hairline,
+  .two-path-interlude[data-entered="true"] .two-path-col {
+    opacity: 1;
+  }
+  /* Arrow remains static — no bob. */
+  .two-path-interlude[data-entered="true"] .two-path-arrow,
+  .two-path-arrow {
+    animation: none;
+    transform: none;
+    opacity: 0.7;
+  }
+}

@@ -25,10 +25,22 @@ export function TwoPathInterlude() {
     const right = rightColRef.current;
     if (!section || !hairline || !left || !right) return;
 
-    // Respect reduced-motion — handled separately in Task 6. For now, skip the
-    // entrance entirely when reduced-motion is preferred (Task 6 will replace
-    // this branch with the IntersectionObserver cross-fade).
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReduced) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              section.dataset.entered = 'true';
+            }
+          }
+        },
+        { threshold: 0.4 },
+      );
+      observer.observe(section);
+      return () => observer.disconnect();
+    }
 
     const tl = gsap.timeline({
       paused: true,
