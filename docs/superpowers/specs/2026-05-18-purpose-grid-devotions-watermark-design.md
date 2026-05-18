@@ -62,33 +62,34 @@ Cormorant Garamond is already loaded site-wide via the existing
 
 | Breakpoint | Font size |
 |---|---|
-| Default (mobile) | `2.6rem` |
-| `md` and up (≥ 768px) | `4.4rem` |
+| Default (mobile) | `3.8rem` |
+| `md` and up (≥ 768px) | `6.4rem` |
 
 ## Position
 
-Anchored top-left of the Purpose Grid section, inset to match the
-section's horizontal safe area.
+Anchored to the left half of the Purpose Grid section, dropped well below
+the section's top edge so the watermark sits close to the filter row, and
+inset far enough from the left edge to read as pulled toward center while
+still clearly left-anchored.
 
 | Breakpoint | `top` | `left` |
 |---|---|---|
-| Default (mobile) | `1.4rem` | `1rem` |
-| `md` and up | `1.6rem` | `2rem` |
+| Default (mobile) | `4rem` | `2.5rem` |
+| `md` and up | `7rem` | `6rem` |
 
 `pointer-events: none` so the word never intercepts clicks or hover targets
 for anything that might overlap it during the grid's pinned morph.
 
 ## Vertical breathing room — section top padding
 
-The watermark sits noticeably higher than the filter row, in its own
-visual band. The section's existing top padding is
-`pt-44 md:pt-64` (~11rem / 16rem). The watermark slots into the upper portion
-of that padding zone:
+The watermark sits low within the section's top padding zone, so it reads
+as adjacent to the filter row rather than as a separate band. The section's
+existing top padding is `pt-44 md:pt-64` (~11rem / 16rem):
 
-- **Mobile:** watermark top at `1.4rem`, filter row begins around the
-  existing `pt-44` boundary — yielding ~7em of vertical gap between them.
-- **Desktop (md+):** watermark top at `1.6rem`, filter row begins around the
-  existing `pt-64` boundary — yielding ~11em of vertical gap between them.
+- **Mobile:** watermark top at `4rem`, filter row begins around the
+  existing `pt-44` boundary — yielding ~3–4em of vertical gap between them.
+- **Desktop (md+):** watermark top at `7rem`, filter row begins around the
+  existing `pt-64` boundary — yielding ~3–4em of vertical gap between them.
 
 No change to the section's existing top padding is required; the watermark
 fits within it. If the rendered gap proves too tight in real pixels, the
@@ -169,12 +170,12 @@ Add one CSS class:
 ```css
 .pg-devotions-watermark {
   position: absolute;
-  top: 1.4rem;
-  left: 1rem;
+  top: 4rem;
+  left: 2.5rem;
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-weight: 300;
-  font-size: 2.6rem;
+  font-size: 3.8rem;
   line-height: 0.9;
   letter-spacing: 0.005em;
   color: var(--deep-umber);
@@ -184,9 +185,9 @@ Add one CSS class:
 
 @media (min-width: 768px) {
   .pg-devotions-watermark {
-    top: 1.6rem;
-    left: 2rem;
-    font-size: 4.4rem;
+    top: 7rem;
+    left: 6rem;
+    font-size: 6.4rem;
   }
 }
 ```
