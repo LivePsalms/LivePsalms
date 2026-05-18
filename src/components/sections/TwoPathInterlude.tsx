@@ -1,15 +1,73 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { scrollToPurposeGrid } from './two-path-interlude-actions';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function TwoPathInterlude() {
   const sectionRef = useRef<HTMLElement>(null);
+  const hairlineRef = useRef<HTMLDivElement>(null);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
 
   const handleReadBelow = () => {
     scrollToPurposeGrid({
       findElementById: (id) => document.getElementById(id),
     });
   };
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const hairline = hairlineRef.current;
+    const left = leftColRef.current;
+    const right = rightColRef.current;
+    if (!section || !hairline || !left || !right) return;
+
+    // Respect reduced-motion — handled separately in Task 6. For now, skip the
+    // entrance entirely when reduced-motion is preferred (Task 6 will replace
+    // this branch with the IntersectionObserver cross-fade).
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const tl = gsap.timeline({
+      paused: true,
+      onComplete: () => {
+        section.dataset.entered = 'true';
+      },
+    });
+
+    // Hairline radiates from center outward, 0.9s.
+    tl.to(hairline, {
+      scaleY: 1,
+      duration: 0.9,
+      ease: 'power2.out',
+    }, 0);
+
+    // Columns fade in and drift inward, starting at 0.6s, 1.2s duration.
+    // Tween both x and y because the desktop initial state is translateX(±20px)
+    // but the mobile media query (in index.css) overrides it to translateY(20px).
+    // Tweening both lets the same useEffect cover both layouts.
+    tl.to([left, right], {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      duration: 1.2,
+      ease: 'power3.out',
+    }, 0.6);
+
+    const st = ScrollTrigger.create({
+      trigger: section,
+      start: 'top 70%',
+      once: true,
+      onEnter: () => tl.play(),
+    });
+
+    return () => {
+      st.kill();
+      tl.kill();
+    };
+  }, []);
 
   return (
     <section
@@ -18,9 +76,9 @@ export function TwoPathInterlude() {
       data-entered="false"
       aria-label="Two ways to continue"
     >
-      <div className="two-path-hairline" aria-hidden="true" />
+      <div ref={hairlineRef} className="two-path-hairline" aria-hidden="true" />
 
-      <div className="two-path-col two-path-col-left">
+      <div ref={leftColRef} className="two-path-col two-path-col-left">
         <p className="two-path-statement">
           Let's take a journey through God's word and find the peace that returns your joy. Let restoration guide you to serenity.
         </p>
@@ -35,7 +93,7 @@ export function TwoPathInterlude() {
         </button>
       </div>
 
-      <div className="two-path-col two-path-col-right">
+      <div ref={rightColRef} className="two-path-col two-path-col-right">
         <p className="two-path-statement">
           Take a moment to write about where you're at and see how God meets you there.
         </p>
