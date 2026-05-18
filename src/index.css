@@ -74,6 +74,7 @@
     --plaster: #F0ECE8;
     --app-bg: #988F80;
     --app-bg-rgb: 152, 143, 128;   /* RGB triplet of --app-bg for use in rgba() */
+    --deep-umber-rgb: 58, 52, 38;   /* RGB triplet of --deep-umber for use in rgba() */
     --mid-section-scrim-opacity: 1; /* Tunable knob for mid-section legibility scrim (0 = no scrim) */
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
@@ -663,7 +664,7 @@ img {
   bottom: 28%;
   left: 50%;
   width: 1px;
-  background: rgba(58, 47, 36, 0.22);
+  background: rgba(var(--deep-umber-rgb), 0.22);
   transform-origin: center;
   /* Initial state — set explicitly so GSAP has a clean baseline to tween from. */
   transform: scaleY(0);
@@ -762,15 +763,21 @@ img {
   opacity: 1;
 }
 
-/* ─── Mobile (< 768px): stack vertically, horizontal hairline stub ─── */
+/* ─── Mobile (< 768px): stack vertically, horizontal hairline stub between columns ─── */
 @media (max-width: 767px) {
   .two-path-interlude {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto 1fr;
+    grid-template-rows: auto auto auto;
     gap: 64px;
     min-height: auto;
     padding: 12vh 24px;
   }
+  /* Explicit row assignment so the hairline ends up between the columns
+     regardless of DOM order. */
+  .two-path-col-left { grid-row: 1; }
+  .two-path-hairline { grid-row: 2; }
+  .two-path-col-right { grid-row: 3; }
+
   .two-path-hairline {
     position: relative;
     top: auto;
