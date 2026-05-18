@@ -16,7 +16,7 @@ export function TwoPathInterlude() {
       ref={sectionRef}
       className="two-path-interlude"
       data-entered="false"
-      aria-label="Continue"
+      aria-label="Two ways to continue"
     >
       <div className="two-path-hairline" aria-hidden="true" />
 
