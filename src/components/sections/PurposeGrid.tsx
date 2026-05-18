@@ -202,6 +202,38 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
     return () => ctx.revert();
   }, []);
 
+  // Scroll-linked reveal for the "Devotions" watermark. Mirrors the
+  // filter-row reveal but lands at opacity 0.32 (its resting decorative
+  // opacity), with a smaller y offset because it's a quieter element.
+  useEffect(() => {
+    const section = sectionRef.current;
+    const watermark = watermarkRef.current;
+    if (!section || !watermark) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        watermark,
+        { opacity: 0, y: 20, filter: 'blur(8px)' },
+        {
+          opacity: 0.32,
+          y: 0,
+          filter: 'blur(0px)',
+          ease: 'power2.out',
+          duration: 1,
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 85%',
+            end: 'top 20%',
+            scrub: 5,
+            invalidateOnRefresh: true,
+          },
+        }
+      );
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
+
   // Scroll-linked come-in for the whole image strip, matching the Hero
   // quote's feel (opacity + y + blur, scrub 3). Applied to the grid
   // container so its transform sits OUTSIDE Flip's per-item transforms
