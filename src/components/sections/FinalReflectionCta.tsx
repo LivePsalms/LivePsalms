@@ -69,7 +69,7 @@ export function FinalReflectionCta() {
             fontWeight: 400,
             fontSize: 'clamp(18px, 2vw, 22px)',
             lineHeight: 1.45,
-            color: 'hsla(var(--mersi-dark), 0.72)',
+            color: 'hsl(var(--mersi-dark) / 0.72)',
             maxWidth: '600px',
             margin: '0 0 28px',
           }}
@@ -102,7 +102,7 @@ export function FinalReflectionCta() {
           style={{
             marginTop: '48px',
             paddingTop: '24px',
-            borderTop: '1px solid hsla(var(--mersi-dark), 0.22)',
+            borderTop: '1px solid hsl(var(--mersi-dark) / 0.22)',
           }}
         >
           <p
@@ -111,7 +111,7 @@ export function FinalReflectionCta() {
               fontFamily: 'Inter, system-ui, sans-serif',
               fontSize: '12px',
               lineHeight: 1.5,
-              color: 'hsla(var(--mersi-dark), 0.7)',
+              color: 'hsl(var(--mersi-dark) / 0.7)',
               margin: 0,
             }}
           >
@@ -125,7 +125,7 @@ export function FinalReflectionCta() {
                   fontFamily: '"Cormorant Garamond", Georgia, serif',
                   fontStyle: 'italic',
                   fontSize: '16px',
-                  color: 'hsla(var(--mersi-dark), 0.78)',
+                  color: 'hsl(var(--mersi-dark) / 0.78)',
                   margin: 0,
                 }}
               >
@@ -139,7 +139,7 @@ export function FinalReflectionCta() {
                   className="final-reflection-form flex items-center gap-2"
                   aria-label="Newsletter subscription"
                   style={{
-                    borderBottom: '1px solid hsla(var(--mersi-dark), 0.22)',
+                    borderBottom: '1px solid hsl(var(--mersi-dark) / 0.22)',
                     paddingBottom: '8px',
                     transition: 'border-color 200ms ease-out',
                   }}
@@ -164,7 +164,7 @@ export function FinalReflectionCta() {
                     style={{
                       fontFamily: 'Inter, system-ui, sans-serif',
                       fontSize: '13px',
-                      color: 'hsla(var(--mersi-dark), 0.85)',
+                      color: 'hsl(var(--mersi-dark) / 0.85)',
                     }}
                   />
                   <button
