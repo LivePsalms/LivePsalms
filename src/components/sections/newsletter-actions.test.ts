@@ -87,6 +87,16 @@ describe('subscribe', () => {
     expect(inserts[0]?.row.email).toBe('hello@example.com');
   });
 
+  it('lowercases the email before inserting', async () => {
+    const { client, inserts } = makeFakeClient({ error: null });
+    await subscribe({
+      email: '  Alice@Example.COM  ',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(inserts[0]?.row.email).toBe('alice@example.com');
+  });
+
   it('returns invalid-email when the email fails validation', async () => {
     const { client } = makeFakeClient({ error: null });
     const result = await subscribe({

@@ -27,7 +27,10 @@ export interface SubscribeInput {
 }
 
 export async function subscribe(input: SubscribeInput): Promise<SubscribeResult> {
-  const email = input.email.trim();
+  // Normalize early: trim + lowercase. The DB also enforces case-insensitive
+  // uniqueness via a unique index on lower(email) (migration 006), but doing
+  // it here too means the row we write is the canonical form.
+  const email = input.email.trim().toLowerCase();
   if (!isValidEmail(email)) {
     return { kind: 'invalid-email' };
   }
