@@ -1,7 +1,7 @@
 # Restoration CTA — Notepad Link Design
 
 **Date:** 2026-05-18
-**Scope:** Add a notepad reflection CTA to the "Continue Restoring Your [Purpose]" zone on every purpose detail page, and refactor the repeated CTA block into a shared component.
+**Scope:** Add a notepad reflection CTA to the "Continue Restoring Your [Purpose]" zone on every purpose detail page (11 desktop components), and refactor the repeated CTA block into a shared component.
 
 ---
 
@@ -11,7 +11,9 @@ On every purpose detail page, between the "Continue Restoring Your [Purpose]" he
 
 ## Current State
 
-Inside [src/components/sections/MoodBoard.tsx](src/components/sections/MoodBoard.tsx), each of the 8 purpose detail page components (Peace, Hope, Strength, Wholeness, Purpose, Connection, Identity, Joy) contains an identical "Zone 7: CTA" block. The block currently renders:
+Inside [src/components/sections/MoodBoard.tsx](src/components/sections/MoodBoard.tsx), each of the 11 desktop purpose detail page components (Peace, Hope, Strength, Wholeness, Purpose, Connection, Identity, Joy, Forgiveness, Surrender, Trust) contains an identical "Zone 7: CTA" block. The 3 trailing components (Forgiveness, Surrender, Trust) currently render the placeholder heading "Continue Restoring Your Serenity" — that placeholder copy is preserved unchanged; only the surrounding new lines are added. The corresponding `*Mobile` components use a different layout and do not contain this CTA block, so they are out of scope.
+
+The block currently renders:
 
 1. `<h3>` — `"Continue Restoring Your {Purpose}"` (Cormorant Garamond italic, white/90).
 2. `<p>` — `"Sign up for our newsletter to receive devotions that restores you"` (text-sm, white/50).
@@ -22,18 +24,19 @@ The block differs across the 8 detail pages only in:
 - The trailing purpose word in the heading (`Peace`, `Hope`, …).
 - The overlay color `ov` (a local constant in each detail component) that drives the section background via `color-mix`.
 
-The 8 copies are otherwise byte-identical. Today's first set of locations:
+The 11 copies are otherwise byte-identical. Today's locations (find via grep for the "Continue Restoring" string match — exact line numbers shift as edits land):
 
-- Line 955: Peace
-- Line 1404: Hope
-- Line 1850 (approx): Strength
-- Line 2296 (approx): Wholeness
-- Line 2742 (approx): Purpose
-- Line 3188 (approx): Connection
-- Line 3634 (approx): Identity
-- Line 4080 (approx): Joy
-
-(Exact line numbers shift as edits land; treat these as starting points to locate the block via the "Continue Restoring" string match.)
+- ~955: Peace
+- ~1404: Hope
+- ~1850: Strength
+- ~2296: Wholeness
+- ~2742: Purpose
+- ~3188: Connection
+- ~3634: Identity
+- ~4080: Joy
+- ~4526: Forgiveness (placeholder heading "Serenity")
+- ~4971: Surrender (placeholder heading "Serenity")
+- ~5416: Trust (placeholder heading "Serenity")
 
 ## New Behavior
 
@@ -69,7 +72,7 @@ The 8 copies are otherwise byte-identical. Today's first set of locations:
 
 ## Refactor: Extract `RestorationCTA` component
 
-The 8 byte-identical copies are an existing maintenance smell that the new edit would make worse (16 lines of new code × 8 = 128 duplicated lines to keep in sync). The refactor is bounded to the CTA block and is justified by the work in flight.
+The 11 byte-identical copies are an existing maintenance smell that the new edit would make worse (16 lines of new code × 11 = 176 duplicated lines to keep in sync). The refactor is bounded to the CTA block and is justified by the work in flight.
 
 ### Component shape
 
@@ -77,14 +80,14 @@ Defined inline at the top of [src/components/sections/MoodBoard.tsx](src/compone
 
 ```tsx
 type RestorationCTAProps = {
-  purposeWord: string;   // "Peace" | "Hope" | "Strength" | "Wholeness" | "Purpose" | "Connection" | "Identity" | "Joy"
+  purposeWord: string;   // "Peace" | "Hope" | "Strength" | "Wholeness" | "Purpose" | "Connection" | "Identity" | "Joy" | "Serenity"
   overlayColor: string;  // the local `ov` value from the parent detail component
 };
 
 function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) { … }
 ```
 
-The component renders the full Zone 7 wrapper (the `h-screen` flex container with the `color-mix` background) so each call site replaces its 22-line JSX block with a one-liner: `<RestorationCTA purposeWord="Peace" overlayColor={ov} />`.
+The component renders the full Zone 7 wrapper (the `h-screen` flex container with the `color-mix` background) so each call site replaces its 22-line JSX block with a one-liner: `<RestorationCTA purposeWord="Peace" overlayColor={ov} />`. Forgiveness, Surrender, and Trust call sites pass `purposeWord="Serenity"` to preserve their current placeholder heading.
 
 ### React Router import
 
@@ -92,7 +95,7 @@ The component renders the full Zone 7 wrapper (the `h-screen` flex container wit
 
 ### Call site update
 
-Each of the 8 existing CTA blocks (lines ~955, ~1404, ~1850, ~2296, ~2742, ~3188, ~3634, ~4080) is replaced with the single component call. The 8 detail-component functions are otherwise untouched.
+Each of the 11 existing CTA blocks (lines ~955, ~1404, ~1850, ~2296, ~2742, ~3188, ~3634, ~4080, ~4526, ~4971, ~5416) is replaced with the single component call. The 11 detail-component functions are otherwise untouched.
 
 ## Accessibility
 
@@ -106,7 +109,7 @@ Each of the 8 existing CTA blocks (lines ~955, ~1404, ~1850, ~2296, ~2742, ~3188
 
 The change is presentational. Manual verification covers:
 
-1. Navigate to each of the 8 purpose detail pages, scroll to the CTA zone, confirm the new reflection prompt, link, and divider render before the newsletter block.
+1. Navigate to each of the 11 purpose detail pages, scroll to the CTA zone, confirm the new reflection prompt, link, and divider render before the newsletter block.
 2. Click "Open your notepad →" — confirm SPA navigation to `/notepad` (no full page reload).
 3. Keyboard `Tab` through the section — confirm the link receives a visible focus ring; `Enter` activates it.
 4. Toggle the OS "Reduce motion" setting — confirm the arrow does not animate on hover but color/underline transitions still apply.
@@ -116,5 +119,5 @@ No automated tests are added; this matches the convention of the surrounding CTA
 
 ## Risks
 
-- **Regression risk on 7 of 8 pages**: because the refactor edits all 8 call sites in one pass, a typo in the component or a missed prop on one call site is the main failure mode. Mitigated by the prop signature being tiny (2 strings) and by manual verification on each page after the change.
+- **Regression risk across 11 pages**: because the refactor edits all 11 call sites in one pass, a typo in the component or a missed prop on one call site is the main failure mode. Mitigated by the prop signature being tiny (2 strings) and by manual verification on each page after the change.
 - **Layout overflow at small heights**: adding 4 elements (prompt, link, divider, existing newsletter prompt) before the form could push content below the fold on very short viewports. The current zone is `h-screen flex items-center justify-center` with `max-w-lg`, which absorbs reasonable additions; if overflow appears at < 700px viewport height during verification, the fix is to tighten the divider's `my-8` to `my-6`. Not pre-emptively changed — verify first.
