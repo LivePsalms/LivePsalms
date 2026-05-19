@@ -855,3 +855,9 @@ img {
 .final-reflection-form:focus-within {
   border-bottom-color: hsl(var(--mersi-dark)) !important;
 }
+
+/* FinalReflectionCta — placeholder color, more legible than browser default */
+.final-reflection-form input::placeholder {
+  color: hsl(var(--mersi-dark) / 0.6);
+  opacity: 1; /* Firefox lowers placeholder opacity by default; pin it */
+}
