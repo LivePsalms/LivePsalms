@@ -6,6 +6,7 @@ import { ScrollTrigger } from 'gsap/all';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { categoryLabel, projects } from '@/data/projects';
 import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
+import { NewsletterDialog } from '@/components/sections/NewsletterDialog';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -29,12 +30,12 @@ function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) {
         >
           Continue Restoring Your {purposeWord}
         </h3>
-        <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-3">
+        <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-8">
           Take a few moments to pause, reflect, and jot down what God is revealing to you.
         </p>
         <Link
           to="/notepad"
-          className="group inline-flex items-center gap-2 text-sm text-white/80 tracking-wide underline underline-offset-4 decoration-white/30 hover:text-white hover:decoration-white/70 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm"
+          className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-white/30 bg-white/5 text-sm text-white/95 tracking-wide hover:bg-white/10 hover:border-white/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 mt-2"
         >
           Open your notepad
           <span
@@ -44,20 +45,17 @@ function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) {
             →
           </span>
         </Link>
-        <div className="w-16 h-px bg-white/10 my-8" aria-hidden="true" />
-        <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-          Sign up for our newsletter to receive devotions that restores you
+        <p className="mt-6 text-xs text-white/40 tracking-wide">
+          Or{' '}
+          <NewsletterDialog>
+            <button
+              type="button"
+              className="underline underline-offset-4 decoration-white/30 text-white/70 hover:text-white hover:decoration-white/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm"
+            >
+              join the newsletter
+            </button>
+          </NewsletterDialog>
         </p>
-        <div className="flex w-full max-w-md">
-          <input
-            type="email"
-            placeholder="Your email address"
-            className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-          />
-          <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-            Subscribe
-          </button>
-        </div>
       </div>
     </div>
   );
