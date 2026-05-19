@@ -8,6 +8,7 @@ import { HeroLoadingOverlay } from '@/components/sections/HeroLoadingOverlay';
 import { MidSectionMotion } from '@/components/sections/MidSectionMotion';
 import { TwoPathInterlude } from '@/components/sections/TwoPathInterlude';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
+import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
 import { PurposeGallery } from '@/components/sections/PurposeGallery';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
@@ -156,9 +157,7 @@ function App() {
             />
           </Routes>
 
-          {!hideFooter && (
-            <div className="h-[20vh] md:h-[25vh]" style={{ background: 'var(--app-bg)' }} />
-          )}
+          {!hideFooter && <FinalReflectionCta />}
         </div>
       </div>
 
