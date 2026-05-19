@@ -84,4 +84,63 @@ describe('subscribe', () => {
     });
     expect(inserts[0]?.row.email).toBe('hello@example.com');
   });
+
+  it('returns invalid-email when the email fails validation', async () => {
+    const { client } = makeFakeClient({ error: null });
+    const result = await subscribe({
+      email: 'not-an-email',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(result).toEqual({ kind: 'invalid-email' });
+  });
+
+  it('returns no-client when client is null', async () => {
+    const result = await subscribe({
+      email: 'hello@example.com',
+      source: 'home-final-cta',
+      client: null,
+    });
+    expect(result).toEqual({ kind: 'no-client' });
+  });
+
+  it('maps Postgres unique-violation 23505 to alreadySubscribed: true', async () => {
+    const { client } = makeFakeClient({
+      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+    });
+    const result = await subscribe({
+      email: 'hello@example.com',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(result).toEqual({ kind: 'success', alreadySubscribed: true });
+  });
+
+  it('returns network-error for any other Supabase error', async () => {
+    const { client } = makeFakeClient({
+      error: { code: '08000', message: 'connection exception' },
+    });
+    const result = await subscribe({
+      email: 'hello@example.com',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(result).toEqual({ kind: 'network-error' });
+  });
+
+  it('returns network-error when the client throws', async () => {
+    const client: NewsletterClient = {
+      from: () => ({
+        insert: async () => {
+          throw new Error('network down');
+        },
+      }),
+    };
+    const result = await subscribe({
+      email: 'hello@example.com',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(result).toEqual({ kind: 'network-error' });
+  });
 });
