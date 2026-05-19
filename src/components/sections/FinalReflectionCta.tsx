@@ -88,7 +88,7 @@ export function FinalReflectionCta() {
       style={{ background: 'var(--app-bg)' }}
       aria-label="Final reflection"
     >
-      <div className="max-w-[720px]">
+      <div className="max-w-[720px] mx-auto text-center">
         <p
           className="text-mersi-dark"
           style={{
@@ -110,7 +110,7 @@ export function FinalReflectionCta() {
             lineHeight: 1.45,
             color: 'hsl(var(--mersi-dark) / 0.72)',
             maxWidth: '600px',
-            margin: '0 0 28px',
+            margin: '0 auto 28px',
           }}
         >
           In the verses you underlined, the prayers you wrote. Add your notes and journals here and see what He's been revealing about you — to you.
@@ -137,7 +137,7 @@ export function FinalReflectionCta() {
         </Link>
 
         <div
-          className="final-reflection-newsletter flex flex-col gap-4 md:flex-row md:items-end md:gap-6"
+          className="final-reflection-newsletter flex flex-col items-center gap-4"
           style={{
             marginTop: '48px',
             paddingTop: '24px',
@@ -145,19 +145,19 @@ export function FinalReflectionCta() {
           }}
         >
           <p
-            className="flex-1"
             style={{
               fontFamily: 'Inter, system-ui, sans-serif',
               fontSize: '12px',
               lineHeight: 1.5,
               color: 'hsl(var(--mersi-dark) / 0.7)',
               margin: 0,
+              maxWidth: '420px',
             }}
           >
             Subscribe to our newsletter for more devotions and deep dives into God's word.
           </p>
 
-          <div className="flex-[1.2]" aria-live="polite">
+          <div className="w-full max-w-[420px]" aria-live="polite">
             {state.status === 'success' ? (
               <p
                 style={{
