@@ -1006,29 +1006,7 @@ function PeaceZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Peace
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Peace" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -1455,29 +1433,7 @@ function HopeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Hope
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Hope" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -1901,29 +1857,7 @@ function StrengthZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Strength
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Strength" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -2347,29 +2281,7 @@ function WholenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Wholeness
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Wholeness" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -2793,29 +2705,7 @@ function PurposeZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Purpose
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Purpose" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -3239,29 +3129,7 @@ function ConnectionZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Connection
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Connection" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -3685,29 +3553,7 @@ function IdentityZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Identity
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Identity" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -4131,29 +3977,7 @@ function JoyZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Joy
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Joy" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -4577,29 +4401,7 @@ function ForgivenessZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Serenity
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -5022,29 +4824,7 @@ function SurrenderZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Serenity
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
@@ -5467,29 +5247,7 @@ function TrustZones({ project }: { project: Project }) {
       </div>
 
       {/* ── Zone 7: CTA ── */}
-      <div className="relative flex-shrink-0 h-screen flex items-center justify-center" style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${ov} 95%, black 10%)` }}>
-        <div className="flex flex-col items-center text-center max-w-lg px-8">
-          <h3
-            className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Continue Restoring Your Serenity
-          </h3>
-          <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
-            Sign up for our newsletter to receive devotions that restores you
-          </p>
-          <div className="flex w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
-            />
-            <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
       {/* ── Zone 8: Next Devotion Hero ── */}
       <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
