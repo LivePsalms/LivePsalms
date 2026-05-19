@@ -1,11 +1,15 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { supabase } from '@/lib/supabase';
 import {
   subscribe,
   type NewsletterClient,
   type SubscribeResult,
 } from './newsletter-actions';
+
+gsap.registerPlugin(ScrollTrigger);
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -21,6 +25,40 @@ export function FinalReflectionCta() {
     alreadySubscribed: false,
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 30, filter: 'blur(8px)' },
+        {
+          opacity: 1,
+          y: 0,
+          filter: 'blur(0px)',
+          ease: 'power2.out',
+          duration: 1,
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 90%',
+            end: 'top 30%',
+            scrub: 5,
+            invalidateOnRefresh: true,
+          },
+        },
+      );
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,6 +83,7 @@ export function FinalReflectionCta() {
 
   return (
     <section
+      ref={sectionRef}
       className="final-reflection-cta py-32 md:py-40 px-4 md:px-8"
       style={{ background: 'var(--app-bg)' }}
       aria-label="Final reflection"
