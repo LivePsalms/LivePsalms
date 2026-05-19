@@ -850,3 +850,8 @@ img {
     opacity: 0.7;
   }
 }
+
+/* FinalReflectionCta — focus state lifts the form's hairline to full ink */
+.final-reflection-form:focus-within {
+  border-bottom-color: hsl(var(--mersi-dark)) !important;
+}

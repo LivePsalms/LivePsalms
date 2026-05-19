@@ -1,6 +1,48 @@
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import {
+  subscribe,
+  type NewsletterClient,
+  type SubscribeResult,
+} from './newsletter-actions';
+
+type Status = 'idle' | 'submitting' | 'success' | 'error';
+
+interface NewsletterState {
+  status: Status;
+  alreadySubscribed: boolean;
+}
 
 export function FinalReflectionCta() {
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState<NewsletterState>({
+    status: 'idle',
+    alreadySubscribed: false,
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (state.status === 'submitting') return;
+    setState({ status: 'submitting', alreadySubscribed: false });
+    const result: SubscribeResult = await subscribe({
+      email,
+      source: 'home-final-cta',
+      // Supabase's PostgrestFilterBuilder is thenable but not structurally
+      // a Promise; the runtime shape matches NewsletterClient so we narrow it
+      // here at the boundary.
+      client: supabase as unknown as NewsletterClient | null,
+    });
+    if (result.kind === 'success') {
+      setState({ status: 'success', alreadySubscribed: result.alreadySubscribed });
+      return;
+    }
+    setState({ status: 'error', alreadySubscribed: false });
+    // Refocus the input so the user can correct and retry.
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   return (
     <section
       className="final-reflection-cta py-32 md:py-40 px-4 md:px-8"
@@ -75,50 +117,90 @@ export function FinalReflectionCta() {
           >
             Subscribe to our newsletter for more devotions and deep dives into God's word.
           </p>
-          <form
-            className="flex-[1.2] flex items-center gap-2"
-            aria-label="Newsletter subscription"
-            style={{
-              borderBottom: '1px solid hsla(var(--mersi-dark), 0.22)',
-              paddingBottom: '8px',
-            }}
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <label htmlFor="newsletter-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="newsletter-email"
-              type="email"
-              name="email"
-              required
-              inputMode="email"
-              autoComplete="email"
-              placeholder="you@email.com"
-              className="flex-1 bg-transparent border-0 outline-0"
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '13px',
-                color: 'hsla(var(--mersi-dark), 0.85)',
-              }}
-            />
-            <button
-              type="submit"
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '10px',
-                letterSpacing: '0.24em',
-                padding: '8px 14px',
-                border: '1px solid hsl(var(--mersi-dark))',
-                background: 'transparent',
-                color: 'hsl(var(--mersi-dark))',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
-            >
-              Subscribe
-            </button>
-          </form>
+
+          <div className="flex-[1.2]" aria-live="polite">
+            {state.status === 'success' ? (
+              <p
+                style={{
+                  fontFamily: '"Cormorant Garamond", Georgia, serif',
+                  fontStyle: 'italic',
+                  fontSize: '16px',
+                  color: 'hsla(var(--mersi-dark), 0.78)',
+                  margin: 0,
+                }}
+              >
+                {state.alreadySubscribed
+                  ? "You're already in."
+                  : 'Thanks — keep an eye on your inbox.'}
+              </p>
+            ) : (
+              <>
+                <form
+                  className="final-reflection-form flex items-center gap-2"
+                  aria-label="Newsletter subscription"
+                  style={{
+                    borderBottom: '1px solid hsla(var(--mersi-dark), 0.22)',
+                    paddingBottom: '8px',
+                    transition: 'border-color 200ms ease-out',
+                  }}
+                  onSubmit={handleSubmit}
+                >
+                  <label htmlFor="newsletter-email" className="sr-only">
+                    Email address
+                  </label>
+                  <input
+                    id="newsletter-email"
+                    ref={inputRef}
+                    type="email"
+                    name="email"
+                    required
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={state.status === 'submitting'}
+                    className="flex-1 bg-transparent border-0 outline-0 disabled:opacity-50"
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '13px',
+                      color: 'hsla(var(--mersi-dark), 0.85)',
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={state.status === 'submitting'}
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '10px',
+                      letterSpacing: '0.24em',
+                      padding: '8px 14px',
+                      border: '1px solid hsl(var(--mersi-dark))',
+                      background: 'transparent',
+                      color: 'hsl(var(--mersi-dark))',
+                      textTransform: 'uppercase',
+                      cursor: state.status === 'submitting' ? 'not-allowed' : 'pointer',
+                      opacity: state.status === 'submitting' ? 0.5 : 1,
+                    }}
+                  >
+                    {state.status === 'submitting' ? '…' : 'Subscribe'}
+                  </button>
+                </form>
+                {state.status === 'error' && (
+                  <p
+                    style={{
+                      marginTop: '8px',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '11px',
+                      color: 'hsl(var(--mersi-orange))',
+                    }}
+                  >
+                    Try that again?
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </section>
