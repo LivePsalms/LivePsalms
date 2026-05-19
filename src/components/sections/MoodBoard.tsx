@@ -1,5 +1,6 @@
 // src/components/sections/MoodBoard.tsx
 import { useRef, useLayoutEffect } from 'react';
+import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -8,6 +9,59 @@ import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
+
+/* ── Shared CTA used by every Zone 7 (Continue Restoring …) ── */
+type RestorationCTAProps = {
+  purposeWord: string;
+  overlayColor: string;
+};
+
+function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) {
+  return (
+    <div
+      className="relative flex-shrink-0 h-screen flex items-center justify-center"
+      style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${overlayColor} 95%, black 10%)` }}
+    >
+      <div className="flex flex-col items-center text-center max-w-lg px-8">
+        <h3
+          className="font-['Cormorant_Garamond'] italic font-light text-white/90 leading-[1.15] mb-6"
+          style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+        >
+          Continue Restoring Your {purposeWord}
+        </h3>
+        <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-3">
+          Take a few moments to pause, reflect, and jot down what God is revealing to you.
+        </p>
+        <Link
+          to="/notepad"
+          className="group inline-flex items-center gap-2 text-sm text-white/80 tracking-wide underline underline-offset-4 decoration-white/30 hover:text-white hover:decoration-white/70 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm"
+        >
+          Open your notepad
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-200 group-hover:translate-x-[3px] motion-reduce:transform-none"
+          >
+            →
+          </span>
+        </Link>
+        <div className="w-16 h-px bg-white/10 my-8" aria-hidden="true" />
+        <p className="text-sm text-white/50 tracking-wide leading-relaxed mb-10">
+          Sign up for our newsletter to receive devotions that restores you
+        </p>
+        <div className="flex w-full max-w-md">
+          <input
+            type="email"
+            placeholder="Your email address"
+            className="flex-1 bg-white/10 border border-white/20 text-white text-sm tracking-wide px-5 py-4 placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
+          />
+          <button className="px-6 py-4 bg-white text-mersi-dark text-sm tracking-wide hover:bg-white/90 transition-colors whitespace-nowrap">
+            Subscribe
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ── Trust (serenity5) image map — filenames preserved as authored ── */
 const T = {
