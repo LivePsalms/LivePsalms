@@ -38,3 +38,50 @@ describe('isValidEmail', () => {
     expect(isValidEmail('foo@bar')).toBe(false);
   });
 });
+
+import { subscribe } from './newsletter-actions';
+import type { NewsletterClient, NewsletterInsertResult } from './newsletter-actions';
+
+function makeFakeClient(result: NewsletterInsertResult): {
+  client: NewsletterClient;
+  inserts: Array<{ table: string; row: Record<string, unknown> }>;
+} {
+  const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
+  const client: NewsletterClient = {
+    from: (table: string) => ({
+      insert: async (row: Record<string, unknown>) => {
+        inserts.push({ table, row });
+        return result;
+      },
+    }),
+  };
+  return { client, inserts };
+}
+
+describe('subscribe', () => {
+  it('returns success when the client resolves with no error', async () => {
+    const { client, inserts } = makeFakeClient({ error: null });
+    const result = await subscribe({
+      email: 'hello@example.com',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(result).toEqual({ kind: 'success', alreadySubscribed: false });
+    expect(inserts).toEqual([
+      {
+        table: 'newsletter_subscribers',
+        row: { email: 'hello@example.com', source: 'home-final-cta' },
+      },
+    ]);
+  });
+
+  it('trims whitespace before inserting', async () => {
+    const { client, inserts } = makeFakeClient({ error: null });
+    await subscribe({
+      email: '  hello@example.com  ',
+      source: 'home-final-cta',
+      client,
+    });
+    expect(inserts[0]?.row.email).toBe('hello@example.com');
+  });
+});
