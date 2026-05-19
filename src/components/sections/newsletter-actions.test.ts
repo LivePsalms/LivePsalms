@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isValidEmail } from './newsletter-actions';
+import {
+  isValidEmail,
+  subscribe,
+  type NewsletterClient,
+  type NewsletterInsertResult,
+} from './newsletter-actions';
 
 describe('isValidEmail', () => {
   it('returns true for a normal address', () => {
@@ -38,9 +43,6 @@ describe('isValidEmail', () => {
     expect(isValidEmail('foo@bar')).toBe(false);
   });
 });
-
-import { subscribe } from './newsletter-actions';
-import type { NewsletterClient, NewsletterInsertResult } from './newsletter-actions';
 
 function makeFakeClient(result: NewsletterInsertResult): {
   client: NewsletterClient;
