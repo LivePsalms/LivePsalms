@@ -440,7 +440,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const bgColor = project.overlayColor;
 
   if (isMobile) {
-    const mobileNode = isPeace ? <PeaceMobile />
+    const mobileNode = isPeace ? <PeaceMobile project={project} />
       : isHope ? <HopeMobile project={project} />
       : isStrength ? <StrengthMobile project={project} />
       : isWholeness ? <WholenessMobile project={project} />
@@ -1044,10 +1044,13 @@ function PeaceZones({ project }: { project: Project }) {
    PEACE MOBILE — vertical devotional stack
    ════════════════════════════════════════════════════════════════ */
 
-function PeaceMobile() {
+function PeaceMobile({ project }: { project: Project }) {
   const bg = '#8B8378';
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
+
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <div style={{ backgroundColor: bg }}>
@@ -1137,10 +1140,12 @@ function PeaceMobile() {
         <PhotoDevelopImage src={R1.ivyNook} alt="Peaceful nook" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={R1.stoneBedLight} alt="Serene stone bed" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -1450,6 +1455,9 @@ function HopeMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Hope Title */}
@@ -1538,10 +1546,12 @@ function HopeMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src="/restoration3/image13.png" alt="Hope fulfilled" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src="/restoration3/image14.png" alt="Restoration complete" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -1851,6 +1861,9 @@ function StrengthMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Strength Title */}
@@ -1939,10 +1952,12 @@ function StrengthMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={S.prayer} alt="Soar like eagles" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={S.closing} alt="Restoration of strength" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -2252,6 +2267,9 @@ function WholenessMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Wholeness Title */}
@@ -2340,10 +2358,12 @@ function WholenessMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={W.prayer} alt="Years redeemed" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={W.closing} alt="Restoration of wholeness" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -2653,6 +2673,9 @@ function PurposeMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Purpose Title */}
@@ -2741,10 +2764,12 @@ function PurposeMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={P.prayer} alt="Author of all things" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={P.closing} alt="Restoration of purpose" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -3054,6 +3079,9 @@ function ConnectionMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Connection Title */}
@@ -3142,10 +3170,12 @@ function ConnectionMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={C.prayer} alt="Coming home" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={C.closing} alt="Restoration of connection" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -3455,6 +3485,9 @@ function IdentityMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Identity Title */}
@@ -3543,10 +3576,12 @@ function IdentityMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={I.prayer} alt="Beloved" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={I.closing} alt="Restoration of identity" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -3856,6 +3891,9 @@ function JoyMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Joy Title */}
@@ -3944,10 +3982,12 @@ function JoyMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={J.prayer} alt="Mourning into dancing" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={J.closing} alt="Restoration of joy" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -4257,6 +4297,9 @@ function ForgivenessMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Forgiveness Title */}
@@ -4345,10 +4388,12 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={F.prayer} alt="Unburdened heart" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={F.closing} alt="Serenity of forgiveness" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -4657,6 +4702,9 @@ function SurrenderMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Surrender Title */}
@@ -4745,10 +4793,12 @@ function SurrenderMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={Su.prayer} alt="That is enough" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={Su.closing} alt="Serenity of surrender" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
@@ -5057,6 +5107,9 @@ function TrustMobile({ project }: { project: Project }) {
   const bgLight = `color-mix(in srgb, ${bg} 85%, var(--app-bg))`;
   const bgDark = `color-mix(in srgb, ${bg} 75%, black 8%)`;
 
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+
   return (
     <div style={{ backgroundColor: bg }}>
       {/* Trust Title */}
@@ -5145,10 +5198,12 @@ function TrustMobile({ project }: { project: Project }) {
         <PhotoDevelopImage src={T.prayer} alt="Rest in His wisdom" className="w-full aspect-[2/3]" />
       </section>
 
-      {/* Final image */}
-      <section style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={T.closing} alt="Serenity of trust" className="w-full aspect-video" />
-      </section>
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+        variant="mobile"
+      />
     </div>
   );
 }
