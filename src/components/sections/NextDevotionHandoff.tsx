@@ -299,7 +299,8 @@ function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onAct
           </span>
         </div>
 
-        {/* Center column: logo watermark */}
+        {/* Center column: logo watermark — nudged down to visually center
+            in the pill's main body (the clipPath has a notch at the top). */}
         <img
           src="/logo-icon.png"
           alt=""
@@ -307,6 +308,7 @@ function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onAct
           loading="lazy"
           decoding="async"
           className={`next-handoff-logo opacity-25 invert pointer-events-none ${isMobile ? 'w-5' : 'w-10'}`}
+          style={{ transform: isMobile ? 'translateY(6px)' : 'translateY(12px)' }}
         />
 
         {/* Right column: category + scripture */}
@@ -446,18 +448,10 @@ function useIdleLoop({
     if (!root || !left || !right || !pill) return;
 
     const ctx = gsap.context(() => {
-      // Pill breathes — runs continuously, GSAP picks up at the resting
-      // transform set by the entrance animation.
-      gsap.to(pill, {
-        scale: 1.02,
-        transformOrigin: 'center center',
-        duration: 4,
-        ease: 'sine.inOut',
-        repeat: -1,
-        yoyo: true,
-        // Multiply onto the existing transform (which is the centering).
-        // GSAP composes scale with existing translate when written this way.
-      });
+      // Pill stays static after entrance — no breathing loop. Ken Burns
+      // drift on the two background images carries the residual sense of
+      // motion. (`pill` is intentionally unused here.)
+      void pill;
 
       // Ken Burns drift — each image breathes and drifts outward slowly.
       gsap.to(left, {
