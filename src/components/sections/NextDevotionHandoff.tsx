@@ -36,7 +36,7 @@ interface LayoutProps {
 
 function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
   return (
-    <div
+    <section
       className="next-handoff relative flex-shrink-0 h-screen overflow-hidden"
       style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}
     >
@@ -47,6 +47,8 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
             src={nextProject.thumbnail}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="next-handoff-img-left absolute inset-0 w-full h-full object-cover"
           />
         </div>
@@ -55,6 +57,8 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
             src={nextDevotion.firstMoodboardImage}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="next-handoff-img-right absolute inset-0 w-full h-full object-cover"
           />
         </div>
@@ -67,7 +71,7 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
       />
 
       <Pill nextProject={nextProject} nextDevotion={nextDevotion} variant="desktop" />
-    </div>
+    </section>
   );
 }
 
@@ -84,6 +88,8 @@ function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
             src={nextProject.thumbnail}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="next-handoff-img-left absolute inset-0 w-full h-full object-cover"
           />
         </div>
@@ -92,6 +98,8 @@ function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
             src={nextDevotion.firstMoodboardImage}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="next-handoff-img-right absolute inset-0 w-full h-full object-cover"
           />
         </div>
@@ -125,8 +133,6 @@ function Pill({ nextProject, nextDevotion, variant }: PillProps) {
     <div
       className="next-handoff-pill absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
       style={pillStyle}
-      role="link"
-      aria-label={`Next devotion: ${nextDevotion.title}`}
     >
       <div
         className="absolute inset-0 grid items-center text-white"
