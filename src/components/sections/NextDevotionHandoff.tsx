@@ -70,6 +70,8 @@ export function NextDevotionHandoff({
   const pillRef = useRef<HTMLDivElement>(null);
   const pillFillRef = useRef<HTMLDivElement>(null);
   const pillContentRef = useRef<HTMLDivElement>(null);
+  const actTwoSentinelRef = useRef<HTMLDivElement>(null);
+  const navigatedRef = useRef(false);
 
   useEntranceAnimation({
     rootRef,
@@ -78,10 +80,13 @@ export function NextDevotionHandoff({
     pillRef,
     pillFillRef,
     pillContentRef,
+    actTwoSentinelRef,
+    navigatedRef,
+    nextProject,
     reducedMotion,
   });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
-  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion, pillColor);
+  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion, pillColor, navigatedRef);
 
   const layoutProps: LayoutProps = {
     nextProject,
@@ -92,6 +97,7 @@ export function NextDevotionHandoff({
     pillRef,
     pillFillRef,
     pillContentRef,
+    actTwoSentinelRef,
     onActivate: startExpand,
     pillColor,
   };
@@ -112,6 +118,7 @@ interface LayoutProps {
   pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
+  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
   onActivate: () => void;
   pillColor: string;
 }
@@ -125,6 +132,7 @@ function DesktopLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
+  actTwoSentinelRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -133,47 +141,57 @@ function DesktopLayout({
       ref={rootRef}
       onClick={onActivate}
       className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
-      style={{ width: '100vw', backgroundColor: pillColor }}
+      style={{ width: '200vw', backgroundColor: pillColor }}
     >
-      <div className="absolute inset-0 grid grid-cols-2">
-        <div className="relative overflow-hidden">
-          <img
-            ref={leftImgRef}
-            src={nextProject.thumbnail}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+      {/* Act 1 viewport — split images + pill, all centered in the first 100vw */}
+      <div className="absolute top-0 left-0 h-full" style={{ width: '100vw' }}>
+        <div className="absolute inset-0 grid grid-cols-2">
+          <div className="relative overflow-hidden">
+            <img
+              ref={leftImgRef}
+              src={nextProject.thumbnail}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+          <div className="relative overflow-hidden">
+            <img
+              ref={rightImgRef}
+              src={nextDevotion.firstMoodboardImage}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
         </div>
-        <div className="relative overflow-hidden">
-          <img
-            ref={rightImgRef}
-            src={nextDevotion.firstMoodboardImage}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        </div>
-      </div>
-      <div
-        className="absolute top-0 bottom-0 left-1/2 w-px"
-        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-        aria-hidden="true"
-      />
+        <div
+          className="absolute top-0 bottom-0 left-1/2 w-px"
+          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+          aria-hidden="true"
+        />
 
-      <Pill
-        pillRef={pillRef}
-        pillFillRef={pillFillRef}
-        pillContentRef={pillContentRef}
-        nextProject={nextProject}
-        nextDevotion={nextDevotion}
-        variant="desktop"
-        onActivate={onActivate}
-        pillColor={pillColor}
+        <Pill
+          pillRef={pillRef}
+          pillFillRef={pillFillRef}
+          pillContentRef={pillContentRef}
+          nextProject={nextProject}
+          nextDevotion={nextDevotion}
+          variant="desktop"
+          onActivate={onActivate}
+          pillColor={pillColor}
+        />
+      </div>
+      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
+      <div
+        ref={actTwoSentinelRef}
+        aria-hidden="true"
+        className="absolute top-0 h-full pointer-events-none"
+        style={{ left: '50%', width: '1px' }}
       />
     </section>
   );
@@ -188,6 +206,7 @@ function MobileLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
+  actTwoSentinelRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -196,47 +215,57 @@ function MobileLayout({
       ref={rootRef}
       onClick={onActivate}
       className="next-handoff relative w-full overflow-hidden cursor-pointer"
-      style={{ minHeight: '100vh', backgroundColor: pillColor }}
+      style={{ minHeight: '200vh', backgroundColor: pillColor }}
     >
-      <div className="absolute inset-0 grid grid-cols-2">
-        <div className="relative overflow-hidden">
-          <img
-            ref={leftImgRef}
-            src={nextProject.thumbnail}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+      {/* Act 1 viewport — split images + pill, in the first 100vh */}
+      <div className="absolute top-0 left-0 right-0" style={{ height: '100vh' }}>
+        <div className="absolute inset-0 grid grid-cols-2">
+          <div className="relative overflow-hidden">
+            <img
+              ref={leftImgRef}
+              src={nextProject.thumbnail}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+          <div className="relative overflow-hidden">
+            <img
+              ref={rightImgRef}
+              src={nextDevotion.firstMoodboardImage}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
         </div>
-        <div className="relative overflow-hidden">
-          <img
-            ref={rightImgRef}
-            src={nextDevotion.firstMoodboardImage}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        </div>
-      </div>
-      <div
-        className="absolute top-0 bottom-0 left-1/2 w-px"
-        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-        aria-hidden="true"
-      />
+        <div
+          className="absolute top-0 bottom-0 left-1/2 w-px"
+          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+          aria-hidden="true"
+        />
 
-      <Pill
-        pillRef={pillRef}
-        pillFillRef={pillFillRef}
-        pillContentRef={pillContentRef}
-        nextProject={nextProject}
-        nextDevotion={nextDevotion}
-        variant="mobile"
-        onActivate={onActivate}
-        pillColor={pillColor}
+        <Pill
+          pillRef={pillRef}
+          pillFillRef={pillFillRef}
+          pillContentRef={pillContentRef}
+          nextProject={nextProject}
+          nextDevotion={nextDevotion}
+          variant="mobile"
+          onActivate={onActivate}
+          pillColor={pillColor}
+        />
+      </div>
+      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
+      <div
+        ref={actTwoSentinelRef}
+        aria-hidden="true"
+        className="absolute left-0 w-full pointer-events-none"
+        style={{ top: '50%', height: '1px' }}
       />
     </section>
   );
@@ -397,6 +426,9 @@ interface EntranceArgs {
   pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
+  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
+  navigatedRef: React.RefObject<boolean>;
+  nextProject: Project;
 }
 
 function useEntranceAnimation({
@@ -406,8 +438,13 @@ function useEntranceAnimation({
   pillRef,
   pillFillRef,
   pillContentRef,
+  actTwoSentinelRef,
+  navigatedRef,
+  nextProject,
   reducedMotion,
 }: EntranceArgs & { reducedMotion: boolean }) {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const root = rootRef.current;
     const left = leftImgRef.current;
@@ -415,11 +452,13 @@ function useEntranceAnimation({
     const pill = pillRef.current;
     const fill = pillFillRef.current;
     const content = pillContentRef.current;
-    if (!root || !left || !right || !pill || !fill || !content) return;
+    const actTwoSentinel = actTwoSentinelRef.current;
+    if (!root || !left || !right || !pill || !fill || !content || !actTwoSentinel) return;
 
     if (reducedMotion) {
       // Single fade of the whole zone — snap motion targets to their
-      // final state.
+      // final state. Reduced motion skips Act 2 entirely; the extra
+      // 100vw/100vh of section is just a color wash.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: root,
@@ -465,7 +504,8 @@ function useEntranceAnimation({
         gsap.set(fill, { scaleX: 0, transformOrigin: '50% 50%' });
         gsap.set(content, { opacity: 0 });
 
-        const tl = gsap.timeline({
+        // ===== ACT 1: Slide-in entrance =====
+        const actOne = gsap.timeline({
           scrollTrigger: {
             trigger: root,
             containerAnimation,
@@ -479,12 +519,13 @@ function useEntranceAnimation({
         });
 
         // All three motions in parallel from t=0 to t=1.0:
-        tl.fromTo(
-          left,
-          { yPercent: -100 },
-          { yPercent: 0, duration: 1.0, ease: 'power3.out' },
-          0,
-        )
+        actOne
+          .fromTo(
+            left,
+            { yPercent: -100 },
+            { yPercent: 0, duration: 1.0, ease: 'power3.out' },
+            0,
+          )
           .fromTo(
             right,
             { yPercent: 100 },
@@ -499,6 +540,37 @@ function useEntranceAnimation({
           )
           // Text fades in during the final 40% (t=0.6 to t=1.0).
           .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
+
+        // ===== ACT 2: Scrubbed exit + re-enter + navigate =====
+        const actTwo = gsap.timeline({
+          scrollTrigger: {
+            trigger: actTwoSentinel,
+            containerAnimation,
+            // Act 2 begins when the sentinel just enters viewport from the
+            // right and ends when it has scrolled 10% past viewport left.
+            start: 'left 100%',
+            end: 'left -10%',
+            scrub: 1,
+            onUpdate: (self) => {
+              if (self.progress >= 0.98 && !navigatedRef.current) {
+                navigatedRef.current = true;
+                navigate(`/purpose/${nextProject.id}`);
+              }
+            },
+          },
+        });
+        // Exit phase: 0 → 0.4 — images slide back out, pill fades.
+        actTwo
+          .to(left, { yPercent: -100, duration: 0.4, ease: 'power2.in' }, 0)
+          .to(right, { yPercent: 100, duration: 0.4, ease: 'power2.in' }, 0)
+          .to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.in' }, 0)
+          .to(content, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0);
+        // Breathing room: 0.4 → 0.6 — everything stays at exit state.
+        actTwo.to({}, { duration: 0.2 }, 0.4);
+        // Re-enter phase: 0.6 → 1.0 — same images slide back in.
+        actTwo
+          .to(left, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6)
+          .to(right, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6);
       }, root);
     });
 
@@ -506,7 +578,19 @@ function useEntranceAnimation({
       cancelAnimationFrame(rafId);
       ctx?.revert();
     };
-  }, [rootRef, leftImgRef, rightImgRef, pillRef, pillFillRef, pillContentRef, reducedMotion]);
+  }, [
+    rootRef,
+    leftImgRef,
+    rightImgRef,
+    pillRef,
+    pillFillRef,
+    pillContentRef,
+    actTwoSentinelRef,
+    navigatedRef,
+    nextProject,
+    reducedMotion,
+    navigate,
+  ]);
 }
 
 function useIdleLoop({
@@ -564,6 +648,7 @@ function useClickToExpand(
   nextProject: Project,
   reducedMotion: boolean,
   pillColor: string,
+  navigatedRef: React.RefObject<boolean>,
 ): { startExpand: () => void } {
   const navigate = useNavigate();
 
@@ -578,10 +663,16 @@ function useClickToExpand(
   }, []);
 
   const startExpand = () => {
+    // Coordinate with Act 2 scroll-driven navigation — if either path has
+    // already initiated nav, don't fire again.
+    if (navigatedRef.current) return;
     const pill = pillRef.current;
     if (!pill) return;
     // Guard against double-clicks while a cover is already animating.
     if (document.querySelector('[data-pill-cover]')) return;
+
+    // Set early so Act 2's onUpdate can't also call navigate() in parallel.
+    navigatedRef.current = true;
 
     const rect = pill.getBoundingClientRect();
     document.body.style.overflow = 'hidden';
