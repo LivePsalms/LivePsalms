@@ -145,7 +145,6 @@ function DesktopLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ transform: 'translateY(-100%)' }}
           />
         </div>
         <div className="relative overflow-hidden">
@@ -157,7 +156,6 @@ function DesktopLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ transform: 'translateY(100%)' }}
           />
         </div>
       </div>
@@ -210,7 +208,6 @@ function MobileLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ transform: 'translateY(-100%)' }}
           />
         </div>
         <div className="relative overflow-hidden">
@@ -222,7 +219,6 @@ function MobileLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ transform: 'translateY(100%)' }}
           />
         </div>
       </div>
@@ -459,6 +455,16 @@ function useEntranceAnimation({
       }
 
       ctx = gsap.context(() => {
+        // Seed the off-screen start state via GSAP so it owns the transform
+        // matrix outright. The previous inline `transform: translateY(±100%)`
+        // got composed with the idle Ken Burns tween's translate3d, leaving
+        // the images permanently double-offset. Letting GSAP own the
+        // transform from initial render avoids that composition entirely.
+        gsap.set(left, { yPercent: -100 });
+        gsap.set(right, { yPercent: 100 });
+        gsap.set(fill, { scaleX: 0, transformOrigin: '50% 50%' });
+        gsap.set(content, { opacity: 0 });
+
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: root,
@@ -469,10 +475,7 @@ function useEntranceAnimation({
           },
         });
 
-        // All three motions in parallel from t=0 to t=1.0. Each tween uses
-        // fromTo so the starting state is set by GSAP rather than parsed
-        // from the inline CSS — GSAP's parser sometimes mis-reads
-        // `translateY(±100%)` on <img> as `y` pixels instead of `yPercent`.
+        // All three motions in parallel from t=0 to t=1.0:
         tl.fromTo(
           left,
           { yPercent: -100 },
