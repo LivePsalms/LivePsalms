@@ -208,7 +208,7 @@ When `window.matchMedia('(prefers-reduced-motion: reduce)').matches`:
 
 - Skip entrance parallax, skip scrub. Use a single `opacity: 0 → 1` fade over 400ms on the whole zone.
 - Skip the idle breathing and Ken Burns.
-- On click, skip the pill-expand morph. Fall back to the existing app-wide flow: `transition.beginNavigation('/purpose/{next.id}', next.overlayColor)`. The existing `RouteTransition` already handles reduced motion via its own shorter durations. To access `beginNavigation` without prop drilling under reduced motion, we route the click through `useNavigate()` *plus* a small `useRouteTransitionContext()` (a new lightweight context provided by `App.tsx` that exposes the existing `transition` instance to descendants). This context is only consumed under reduced motion; the standard path doesn't need it.
+- On click, use the **same code path** as the standard flow — `useNavigate()` plus a portaled fixed-position pill as the color cover — but with animation durations collapsed: pill-expand tween duration → 0 (jump straight to fullscreen), pill fade-out 200ms instead of 400ms. The destination's `useDetailReveal` already respects reduced motion on its end. We do not call `transition.beginNavigation` — keeping a single, simple control path for both motion modes.
 
 ---
 
@@ -244,7 +244,7 @@ File location: `src/components/ui-custom/HeroMaskClipDef.tsx`.
 
 - `src/data/projects.ts` (no schema change — devotions are a parallel typed map)
 - `src/types/index.ts` (we can add the `Devotion` type to `src/data/devotions.ts` itself, or to types; either is fine — proposal puts it in `devotions.ts` to keep `types/index.ts` focused on cross-cutting types)
-- `src/App.tsx` and `transition` system (no API change — we reuse existing `beginNavigation`)
+- `src/App.tsx` and `RouteTransition` system (no API change — `NextDevotionHandoff` bypasses it entirely for next-devotion clicks, using `useNavigate()` directly)
 
 ---
 
