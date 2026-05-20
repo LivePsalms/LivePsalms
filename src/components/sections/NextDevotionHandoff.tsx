@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
+import { extractDominantColor } from '@/utils/extractDominantColor';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,6 +22,22 @@ function useReducedMotion(): boolean {
   }, []);
 
   return reduced;
+}
+
+function useNextProjectColor(nextProject: Project): string {
+  const [color, setColor] = useState<string>(nextProject.overlayColor);
+
+  useEffect(() => {
+    let cancelled = false;
+    extractDominantColor(nextProject.thumbnail).then((c) => {
+      if (!cancelled) setColor(c);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nextProject.thumbnail, nextProject.overlayColor]);
+
+  return color;
 }
 
 interface NextDevotionHandoffProps {
@@ -46,6 +63,7 @@ export function NextDevotionHandoff({
   void currentProject; // reserved for future analytics
 
   const reducedMotion = useReducedMotion();
+  const pillColor = useNextProjectColor(nextProject);
   const rootRef = useRef<HTMLDivElement>(null);
   const leftImgRef = useRef<HTMLImageElement>(null);
   const rightImgRef = useRef<HTMLImageElement>(null);
@@ -53,7 +71,7 @@ export function NextDevotionHandoff({
 
   useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
-  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion);
+  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion, pillColor);
 
   const layoutProps: LayoutProps = {
     nextProject,
@@ -63,6 +81,7 @@ export function NextDevotionHandoff({
     rightImgRef,
     pillRef,
     onActivate: startExpand,
+    pillColor,
   };
 
   return variant === 'mobile' ? (
@@ -80,6 +99,7 @@ interface LayoutProps {
   rightImgRef: React.RefObject<HTMLImageElement | null>;
   pillRef: React.RefObject<HTMLDivElement | null>;
   onActivate: () => void;
+  pillColor: string;
 }
 
 function DesktopLayout({
@@ -90,13 +110,14 @@ function DesktopLayout({
   rightImgRef,
   pillRef,
   onActivate,
+  pillColor,
 }: LayoutProps) {
   return (
     <section
       ref={rootRef}
       onClick={onActivate}
       className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
-      style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}
+      style={{ width: '100vw', backgroundColor: pillColor }}
     >
       <div className="absolute inset-0 grid grid-cols-2">
         <div className="relative overflow-hidden">
@@ -135,6 +156,7 @@ function DesktopLayout({
         nextDevotion={nextDevotion}
         variant="desktop"
         onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -148,13 +170,14 @@ function MobileLayout({
   rightImgRef,
   pillRef,
   onActivate,
+  pillColor,
 }: LayoutProps) {
   return (
     <section
       ref={rootRef}
       onClick={onActivate}
       className="next-handoff relative w-full overflow-hidden cursor-pointer"
-      style={{ minHeight: '100vh', backgroundColor: nextProject.overlayColor }}
+      style={{ minHeight: '100vh', backgroundColor: pillColor }}
     >
       {/* Two vertical columns */}
       <div className="absolute inset-0 grid grid-cols-2">
@@ -193,6 +216,7 @@ function MobileLayout({
         nextDevotion={nextDevotion}
         variant="mobile"
         onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -204,12 +228,14 @@ interface PillProps {
   variant: 'desktop' | 'mobile';
   pillRef?: React.RefObject<HTMLDivElement | null>;
   onActivate?: () => void;
+  pillColor: string;
 }
 
-function Pill({ nextProject, nextDevotion, variant, pillRef, onActivate }: PillProps) {
+function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onActivate, pillColor }: PillProps) {
+  void _nextProject;
   const isMobile = variant === 'mobile';
   const pillStyle: React.CSSProperties = {
-    backgroundColor: nextProject.overlayColor,
+    backgroundColor: pillColor,
     clipPath: 'url(#hero-mask-clip)',
     width: isMobile ? '92%' : 'min(62vw, 920px)',
     aspectRatio: '11 / 3.2',
@@ -465,6 +491,7 @@ function useClickToExpand(
   pillRef: React.RefObject<HTMLDivElement | null>,
   nextProject: Project,
   reducedMotion: boolean,
+  pillColor: string,
 ): { startExpand: () => void } {
   const navigate = useNavigate();
 
@@ -506,7 +533,7 @@ function useClickToExpand(
     Object.assign(clippedLayer.style, {
       position: 'absolute',
       inset: '0',
-      backgroundColor: nextProject.overlayColor,
+      backgroundColor: pillColor,
       clipPath: 'url(#hero-mask-clip)',
     } as Partial<CSSStyleDeclaration>);
 
@@ -515,7 +542,7 @@ function useClickToExpand(
     Object.assign(unclippedLayer.style, {
       position: 'absolute',
       inset: '0',
-      backgroundColor: nextProject.overlayColor,
+      backgroundColor: pillColor,
       opacity: '0',
     } as Partial<CSSStyleDeclaration>);
 
