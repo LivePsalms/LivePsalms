@@ -46,6 +46,7 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
   const pillRef = useRef<HTMLDivElement>(null);
 
   useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef });
+  useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef });
 
   return (
     <section
@@ -294,5 +295,50 @@ function useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef }: Ent
       cancelAnimationFrame(rafId);
       ctx?.revert();
     };
+  }, [rootRef, leftImgRef, rightImgRef, pillRef]);
+}
+
+function useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef }: EntranceArgs) {
+  useEffect(() => {
+    const root = rootRef.current;
+    const left = leftImgRef.current;
+    const right = rightImgRef.current;
+    const pill = pillRef.current;
+    if (!root || !left || !right || !pill) return;
+
+    const ctx = gsap.context(() => {
+      // Pill breathes — runs continuously, GSAP picks up at the resting
+      // transform set by the entrance animation.
+      gsap.to(pill, {
+        scale: 1.02,
+        transformOrigin: 'center center',
+        duration: 4,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        // Multiply onto the existing transform (which is the centering).
+        // GSAP composes scale with existing translate when written this way.
+      });
+
+      // Ken Burns drift — each image breathes and drifts outward slowly.
+      gsap.to(left, {
+        scale: 1.05,
+        x: -10,
+        duration: 12,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
+      gsap.to(right, {
+        scale: 1.05,
+        x: 10,
+        duration: 12,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
+    }, root);
+
+    return () => ctx.revert();
   }, [rootRef, leftImgRef, rightImgRef, pillRef]);
 }
