@@ -469,9 +469,22 @@ function useEntranceAnimation({
           },
         });
 
-        // All three motions in parallel from t=0 to t=1.0:
-        tl.to(left, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
-          .to(right, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
+        // All three motions in parallel from t=0 to t=1.0. Each tween uses
+        // fromTo so the starting state is set by GSAP rather than parsed
+        // from the inline CSS — GSAP's parser sometimes mis-reads
+        // `translateY(±100%)` on <img> as `y` pixels instead of `yPercent`.
+        tl.fromTo(
+          left,
+          { yPercent: -100 },
+          { yPercent: 0, duration: 1.0, ease: 'power3.out' },
+          0,
+        )
+          .fromTo(
+            right,
+            { yPercent: 100 },
+            { yPercent: 0, duration: 1.0, ease: 'power3.out' },
+            0,
+          )
           .fromTo(
             fill,
             { scaleX: 0, transformOrigin: '50% 50%' },
