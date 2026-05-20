@@ -68,8 +68,18 @@ export function NextDevotionHandoff({
   const leftImgRef = useRef<HTMLImageElement>(null);
   const rightImgRef = useRef<HTMLImageElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
+  const pillFillRef = useRef<HTMLDivElement>(null);
+  const pillContentRef = useRef<HTMLDivElement>(null);
 
-  useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
+  useEntranceAnimation({
+    rootRef,
+    leftImgRef,
+    rightImgRef,
+    pillRef,
+    pillFillRef,
+    pillContentRef,
+    reducedMotion,
+  });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
   const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion, pillColor);
 
@@ -80,6 +90,8 @@ export function NextDevotionHandoff({
     leftImgRef,
     rightImgRef,
     pillRef,
+    pillFillRef,
+    pillContentRef,
     onActivate: startExpand,
     pillColor,
   };
@@ -98,6 +110,8 @@ interface LayoutProps {
   leftImgRef: React.RefObject<HTMLImageElement | null>;
   rightImgRef: React.RefObject<HTMLImageElement | null>;
   pillRef: React.RefObject<HTMLDivElement | null>;
+  pillFillRef: React.RefObject<HTMLDivElement | null>;
+  pillContentRef: React.RefObject<HTMLDivElement | null>;
   onActivate: () => void;
   pillColor: string;
 }
@@ -109,6 +123,8 @@ function DesktopLayout({
   leftImgRef,
   rightImgRef,
   pillRef,
+  pillFillRef,
+  pillContentRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -129,7 +145,7 @@ function DesktopLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ clipPath: 'inset(0 100% 0 0)' }}
+            style={{ transform: 'translateY(-100%)' }}
           />
         </div>
         <div className="relative overflow-hidden">
@@ -141,7 +157,7 @@ function DesktopLayout({
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ clipPath: 'inset(0 0 0 100%)' }}
+            style={{ transform: 'translateY(100%)' }}
           />
         </div>
       </div>
@@ -150,8 +166,11 @@ function DesktopLayout({
         style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
         aria-hidden="true"
       />
+
       <Pill
         pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
         nextProject={nextProject}
         nextDevotion={nextDevotion}
         variant="desktop"
@@ -169,6 +188,8 @@ function MobileLayout({
   leftImgRef,
   rightImgRef,
   pillRef,
+  pillFillRef,
+  pillContentRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -179,7 +200,6 @@ function MobileLayout({
       className="next-handoff relative w-full overflow-hidden cursor-pointer"
       style={{ minHeight: '100vh', backgroundColor: pillColor }}
     >
-      {/* Two vertical columns */}
       <div className="absolute inset-0 grid grid-cols-2">
         <div className="relative overflow-hidden">
           <img
@@ -189,7 +209,8 @@ function MobileLayout({
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="next-handoff-img-left absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ transform: 'translateY(-100%)' }}
           />
         </div>
         <div className="relative overflow-hidden">
@@ -200,7 +221,8 @@ function MobileLayout({
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="next-handoff-img-right absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ transform: 'translateY(100%)' }}
           />
         </div>
       </div>
@@ -212,6 +234,8 @@ function MobileLayout({
 
       <Pill
         pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
         nextProject={nextProject}
         nextDevotion={nextDevotion}
         variant="mobile"
@@ -227,21 +251,56 @@ interface PillProps {
   nextDevotion: Devotion;
   variant: 'desktop' | 'mobile';
   pillRef?: React.RefObject<HTMLDivElement | null>;
+  pillFillRef?: React.RefObject<HTMLDivElement | null>;
+  pillContentRef?: React.RefObject<HTMLDivElement | null>;
   onActivate?: () => void;
   pillColor: string;
 }
 
-function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onActivate, pillColor }: PillProps) {
+function Pill({
+  nextProject: _nextProject,
+  nextDevotion,
+  variant,
+  pillRef,
+  pillFillRef,
+  pillContentRef,
+  onActivate,
+  pillColor,
+}: PillProps) {
   void _nextProject;
   const isMobile = variant === 'mobile';
+
+  // Outer pill — owns sizing, clipPath, centering, click affordance.
+  // No background or shadow of its own; the inner fill carries those so the
+  // pill is invisible until the entrance fills it from the center outward.
   const pillStyle: React.CSSProperties = {
-    backgroundColor: pillColor,
     clipPath: 'url(#hero-mask-clip)',
     width: isMobile ? '92%' : 'min(62vw, 920px)',
     aspectRatio: '11 / 3.2',
+    transform: 'translate(-50%, -50%)',
+  };
+
+  // Inner fill — colored layer that GSAP scaleX's from 0 to 1.
+  const fillStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: pillColor,
     boxShadow: '0 25px 50px -20px rgba(0,0,0,0.55)',
+    transform: 'scaleX(0)',
+    transformOrigin: '50% 50%',
+  };
+
+  // Inner content — three-column grid; fades in late.
+  const contentStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
+    alignItems: 'center',
+    padding: isMobile ? '0 14%' : '0 10%',
+    fontFamily: '"Cormorant Garamond", Georgia, serif',
+    color: '#fff',
     opacity: 0,
-    transform: 'translate(-50%, calc(-50% + 40px)) scale(0.96)',
   };
 
   return (
@@ -263,14 +322,8 @@ function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onAct
           : undefined
       }
     >
-      <div
-        className="absolute inset-0 grid items-center text-white"
-        style={{
-          gridTemplateColumns: '1fr auto 1fr',
-          padding: isMobile ? '0 14%' : '0 10%',
-          fontFamily: '"Cormorant Garamond", Georgia, serif',
-        }}
-      >
+      <div ref={pillFillRef} className="next-handoff-pill-fill" style={fillStyle} />
+      <div ref={pillContentRef} className="next-handoff-pill-content" style={contentStyle}>
         {/* Left column: label + title */}
         <div className="flex flex-col gap-1 text-left">
           <span
@@ -346,6 +399,8 @@ interface EntranceArgs {
   leftImgRef: React.RefObject<HTMLImageElement | null>;
   rightImgRef: React.RefObject<HTMLImageElement | null>;
   pillRef: React.RefObject<HTMLDivElement | null>;
+  pillFillRef: React.RefObject<HTMLDivElement | null>;
+  pillContentRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function useEntranceAnimation({
@@ -353,6 +408,8 @@ function useEntranceAnimation({
   leftImgRef,
   rightImgRef,
   pillRef,
+  pillFillRef,
+  pillContentRef,
   reducedMotion,
 }: EntranceArgs & { reducedMotion: boolean }) {
   useEffect(() => {
@@ -360,10 +417,13 @@ function useEntranceAnimation({
     const left = leftImgRef.current;
     const right = rightImgRef.current;
     const pill = pillRef.current;
-    if (!root || !left || !right || !pill) return;
+    const fill = pillFillRef.current;
+    const content = pillContentRef.current;
+    if (!root || !left || !right || !pill || !fill || !content) return;
 
     if (reducedMotion) {
-      // Single fade of the whole zone — avoids briefly hiding the images.
+      // Single fade of the whole zone — snap motion targets to their
+      // final state.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: root,
@@ -371,8 +431,9 @@ function useEntranceAnimation({
           toggleActions: 'play none none reverse',
         },
       });
-      tl.set([left, right], { clipPath: 'inset(0 0 0 0)' });
-      tl.set(pill, { transform: 'translate(-50%, -50%) scale(1)' }, 0);
+      tl.set([left, right], { yPercent: 0 });
+      tl.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
+      tl.set(content, { opacity: 1 });
       tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
       return () => {
         tl.kill();
@@ -387,13 +448,13 @@ function useEntranceAnimation({
       const mainTrigger = ScrollTrigger.getById('moodboard-pin');
       const containerAnimation = mainTrigger?.animation;
       if (!containerAnimation) {
-        // No horizontal-scroll container is available — this happens on mobile
-        // (vertical scroll, no horizontal pin) and during the race-condition
-        // window where MoodBoard hasn't registered its trigger yet. In either
-        // case, snap the zone to its visible resting state so the pill and
-        // images are not stuck at their pre-entrance hidden values.
-        gsap.set([left, right], { clipPath: 'inset(0 0 0 0)' });
-        gsap.set(pill, { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' });
+        // No horizontal-scroll container available — happens on mobile (no
+        // horizontal pin) and during the race-condition window where MoodBoard
+        // hasn't registered its trigger yet. Snap to the visible resting
+        // state so nothing is stuck off-screen or invisible.
+        gsap.set([left, right], { yPercent: 0 });
+        gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
+        gsap.set(content, { opacity: 1 });
         return;
       }
 
@@ -408,20 +469,17 @@ function useEntranceAnimation({
           },
         });
 
-        tl.to(left, { clipPath: 'inset(0 0 0 0)', duration: 0.8, ease: 'power3.out' }, 0)
-          .fromTo(left, { y: 24 }, { y: 0, duration: 0.8, ease: 'power3.out' }, 0)
-          .to(right, { clipPath: 'inset(0 0 0 0)', duration: 0.8, ease: 'power3.out' }, 0)
-          .fromTo(right, { y: 24 }, { y: 0, duration: 0.8, ease: 'power3.out' }, 0)
-          .to(
-            pill,
-            {
-              opacity: 1,
-              transform: 'translate(-50%, -50%) scale(1)',
-              duration: 0.6,
-              ease: 'power3.out',
-            },
-            0.5,
-          );
+        // All three motions in parallel from t=0 to t=1.0:
+        tl.to(left, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
+          .to(right, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
+          .fromTo(
+            fill,
+            { scaleX: 0, transformOrigin: '50% 50%' },
+            { scaleX: 1, transformOrigin: '50% 50%', duration: 1.0, ease: 'power3.out' },
+            0,
+          )
+          // Text fades in during the final 40% (t=0.6 to t=1.0).
+          .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
       }, root);
     });
 
@@ -429,7 +487,7 @@ function useEntranceAnimation({
       cancelAnimationFrame(rafId);
       ctx?.revert();
     };
-  }, [rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion]);
+  }, [rootRef, leftImgRef, rightImgRef, pillRef, pillFillRef, pillContentRef, reducedMotion]);
 }
 
 function useIdleLoop({
@@ -438,7 +496,13 @@ function useIdleLoop({
   rightImgRef,
   pillRef,
   reducedMotion,
-}: EntranceArgs & { reducedMotion: boolean }) {
+}: {
+  rootRef: React.RefObject<HTMLDivElement | null>;
+  leftImgRef: React.RefObject<HTMLImageElement | null>;
+  rightImgRef: React.RefObject<HTMLImageElement | null>;
+  pillRef: React.RefObject<HTMLDivElement | null>;
+  reducedMotion: boolean;
+}) {
   useEffect(() => {
     if (reducedMotion) return;
     const root = rootRef.current;
