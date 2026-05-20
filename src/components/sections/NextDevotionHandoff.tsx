@@ -4,6 +4,8 @@ import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
 
+gsap.registerPlugin(ScrollTrigger);
+
 interface NextDevotionHandoffProps {
   currentProject: Project;
   nextProject: Project;
