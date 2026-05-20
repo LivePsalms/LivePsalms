@@ -469,8 +469,11 @@ function useEntranceAnimation({
           scrollTrigger: {
             trigger: root,
             containerAnimation,
-            start: 'left 90%',
-            end: 'left 30%',
+            // Animation starts when the zone is ~70% visible (left edge at
+            // 30% of the viewport) and completes shortly after the zone is
+            // fully in view (left edge at -10%).
+            start: 'left 30%',
+            end: 'left -10%',
             toggleActions: 'play none none reverse',
           },
         });
