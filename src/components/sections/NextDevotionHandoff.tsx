@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
@@ -6,6 +6,22 @@ import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
 
 gsap.registerPlugin(ScrollTrigger);
+
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return reduced;
+}
 
 interface NextDevotionHandoffProps {
   currentProject: Project;
@@ -41,14 +57,15 @@ interface LayoutProps {
 }
 
 function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
+  const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const leftImgRef = useRef<HTMLImageElement>(null);
   const rightImgRef = useRef<HTMLImageElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
 
-  useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef });
-  useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef });
-  const { startExpand } = useClickToExpand(pillRef, nextProject);
+  useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
+  useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
+  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion);
 
   return (
     <section
@@ -264,13 +281,40 @@ interface EntranceArgs {
   pillRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef }: EntranceArgs) {
+function useEntranceAnimation({
+  rootRef,
+  leftImgRef,
+  rightImgRef,
+  pillRef,
+  reducedMotion,
+}: EntranceArgs & { reducedMotion: boolean }) {
   useEffect(() => {
     const root = rootRef.current;
     const left = leftImgRef.current;
     const right = rightImgRef.current;
     const pill = pillRef.current;
     if (!root || !left || !right || !pill) return;
+
+    if (reducedMotion) {
+      // Single fade — skip clip-reveals, skip parallax.
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: root,
+          start: 'top 80%',
+          toggleActions: 'play none none reverse',
+        },
+      });
+      tl.set([left, right], { clipPath: 'inset(0 0 0 0)' });
+      tl.fromTo(
+        [left, right, pill],
+        { opacity: 0 },
+        { opacity: 1, duration: 0.4, ease: 'power2.out' },
+      );
+      tl.set(pill, { transform: 'translate(-50%, -50%) scale(1)' }, 0);
+      return () => {
+        tl.kill();
+      };
+    }
 
     // The moodboard's main horizontal scroll tween lives at id 'moodboard-pin'.
     // It's created in MoodBoard's useEffect, which fires AFTER this component's
@@ -313,11 +357,18 @@ function useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef }: Ent
       cancelAnimationFrame(rafId);
       ctx?.revert();
     };
-  }, [rootRef, leftImgRef, rightImgRef, pillRef]);
+  }, [rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion]);
 }
 
-function useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef }: EntranceArgs) {
+function useIdleLoop({
+  rootRef,
+  leftImgRef,
+  rightImgRef,
+  pillRef,
+  reducedMotion,
+}: EntranceArgs & { reducedMotion: boolean }) {
   useEffect(() => {
+    if (reducedMotion) return;
     const root = rootRef.current;
     const left = leftImgRef.current;
     const right = rightImgRef.current;
@@ -358,12 +409,13 @@ function useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef }: EntranceArgs
     }, root);
 
     return () => ctx.revert();
-  }, [rootRef, leftImgRef, rightImgRef, pillRef]);
+  }, [rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion]);
 }
 
 function useClickToExpand(
   pillRef: React.RefObject<HTMLDivElement | null>,
   nextProject: Project,
+  reducedMotion: boolean,
 ): { startExpand: () => void } {
   const navigate = useNavigate();
 
@@ -412,9 +464,10 @@ function useClickToExpand(
     cover.appendChild(unclippedLayer);
     document.body.appendChild(cover);
 
-    const EXPAND_S = 0.65;
-    const POST_NAV_HOLD_MS = 200;
-    const FADE_MS = 400;
+    const EXPAND_S = reducedMotion ? 0 : 0.65;
+    const FADE_LAYER_DUR = reducedMotion ? 0 : 0.35;
+    const POST_NAV_HOLD_MS = reducedMotion ? 50 : 200;
+    const FADE_MS = reducedMotion ? 200 : 400;
 
     const tl = gsap.timeline();
     tl.to(
@@ -429,8 +482,16 @@ function useClickToExpand(
       },
       0,
     );
-    tl.to(clippedLayer, { opacity: 0, duration: 0.35, ease: 'power2.out' }, 0.15);
-    tl.to(unclippedLayer, { opacity: 1, duration: 0.35, ease: 'power2.in' }, 0.15);
+    tl.to(
+      clippedLayer,
+      { opacity: 0, duration: FADE_LAYER_DUR, ease: 'power2.out' },
+      reducedMotion ? 0 : 0.15,
+    );
+    tl.to(
+      unclippedLayer,
+      { opacity: 1, duration: FADE_LAYER_DUR, ease: 'power2.in' },
+      reducedMotion ? 0 : 0.15,
+    );
 
     tl.call(() => {
       // The cover now fully paints the next project's color. Navigate.
