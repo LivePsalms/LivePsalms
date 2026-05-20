@@ -299,20 +299,15 @@ function Pill({ nextProject: _nextProject, nextDevotion, variant, pillRef, onAct
           </span>
         </div>
 
-        {/* Center column: monogram */}
-        <div
-          className="next-handoff-monogram"
-          style={{
-            fontFamily: 'ui-sans-serif, system-ui',
-            fontSize: isMobile ? '11px' : '22px',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.25)',
-          }}
-        >
-          {nextDevotion.monogram}
-        </div>
+        {/* Center column: logo watermark */}
+        <img
+          src="/logo-icon.png"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className={`next-handoff-logo opacity-25 invert pointer-events-none ${isMobile ? 'w-5' : 'w-10'}`}
+        />
 
         {/* Right column: category + scripture */}
         <div className="flex flex-col gap-1 text-right">
