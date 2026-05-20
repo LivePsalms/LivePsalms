@@ -5,9 +5,21 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { categoryLabel, projects } from '@/data/projects';
-import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
+import { devotions, type Devotion } from '@/data/devotions';
 import { NewsletterDialog } from '@/components/sections/NewsletterDialog';
+import { NextDevotionHandoff } from '@/components/sections/NextDevotionHandoff';
+import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
+import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import type { Project } from '@/types';
+
+const FALLBACK_DEVOTION: Devotion = {
+  id: 'fallback',
+  label: 'Next Devotion',
+  title: 'Continue Reading',
+  scriptureRef: '—',
+  monogram: 'ND',
+  firstMoodboardImage: '/mid_section/restoration1.png',
+};
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -440,54 +452,57 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   }
 
   return (
-    <div ref={sectionRef} className="relative overflow-hidden" style={{ backgroundColor: bgColor }}>
-      <div
-        ref={trackRef}
-        className="flex h-screen will-change-transform"
-      >
-        {isPeace ? (
-          <PeaceZones project={project} />
-        ) : isHope ? (
-          <HopeZones project={project} />
-        ) : isStrength ? (
-          <StrengthZones project={project} />
-        ) : isWholeness ? (
-          <WholenessZones project={project} />
-        ) : isPurpose ? (
-          <PurposeZones project={project} />
-        ) : isConnection ? (
-          <ConnectionZones project={project} />
-        ) : isIdentity ? (
-          <IdentityZones project={project} />
-        ) : isJoy ? (
-          <JoyZones project={project} />
-        ) : isForgiveness ? (
-          <ForgivenessZones project={project} />
-        ) : isSurrender ? (
-          <SurrenderZones project={project} />
-        ) : isTrust ? (
-          <TrustZones project={project} />
-        ) : (
-          <DefaultZones project={project} />
-        )}
-      </div>
-
-      {/* Progress bar */}
-      <div
-        ref={progressTrackRef}
-        className="fixed bottom-0 left-0 right-0 h-[2px] z-50 transition-opacity duration-300"
-        style={{
-          backgroundColor: 'rgba(255,255,255,0.15)',
-          opacity: 0,
-        }}
-      >
+    <>
+      <HeroMaskClipDef />
+      <div ref={sectionRef} className="relative overflow-hidden" style={{ backgroundColor: bgColor }}>
         <div
-          ref={progressBarRef}
-          className="h-full bg-white/60"
-          style={{ width: '0%' }}
-        />
+          ref={trackRef}
+          className="flex h-screen will-change-transform"
+        >
+          {isPeace ? (
+            <PeaceZones project={project} />
+          ) : isHope ? (
+            <HopeZones project={project} />
+          ) : isStrength ? (
+            <StrengthZones project={project} />
+          ) : isWholeness ? (
+            <WholenessZones project={project} />
+          ) : isPurpose ? (
+            <PurposeZones project={project} />
+          ) : isConnection ? (
+            <ConnectionZones project={project} />
+          ) : isIdentity ? (
+            <IdentityZones project={project} />
+          ) : isJoy ? (
+            <JoyZones project={project} />
+          ) : isForgiveness ? (
+            <ForgivenessZones project={project} />
+          ) : isSurrender ? (
+            <SurrenderZones project={project} />
+          ) : isTrust ? (
+            <TrustZones project={project} />
+          ) : (
+            <DefaultZones project={project} />
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div
+          ref={progressTrackRef}
+          className="fixed bottom-0 left-0 right-0 h-[2px] z-50 transition-opacity duration-300"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            opacity: 0,
+          }}
+        >
+          <div
+            ref={progressBarRef}
+            className="h-full bg-white/60"
+            style={{ width: '0%' }}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -2705,35 +2720,12 @@ function PurposeZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Purpose" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
