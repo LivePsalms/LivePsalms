@@ -38,22 +38,13 @@ interface NextDevotionHandoffProps {
  * the next devotion page.
  */
 export function NextDevotionHandoff({
+  currentProject,
   nextProject,
   nextDevotion,
   variant = 'desktop',
 }: NextDevotionHandoffProps) {
-  if (variant === 'mobile') {
-    return <MobileLayout nextProject={nextProject} nextDevotion={nextDevotion} />;
-  }
-  return <DesktopLayout nextProject={nextProject} nextDevotion={nextDevotion} />;
-}
+  void currentProject; // reserved for future analytics
 
-interface LayoutProps {
-  nextProject: Project;
-  nextDevotion: Devotion;
-}
-
-function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const leftImgRef = useRef<HTMLImageElement>(null);
@@ -64,10 +55,46 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
   const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion);
 
+  const layoutProps: LayoutProps = {
+    nextProject,
+    nextDevotion,
+    rootRef,
+    leftImgRef,
+    rightImgRef,
+    pillRef,
+    onActivate: startExpand,
+  };
+
+  return variant === 'mobile' ? (
+    <MobileLayout {...layoutProps} />
+  ) : (
+    <DesktopLayout {...layoutProps} />
+  );
+}
+
+interface LayoutProps {
+  nextProject: Project;
+  nextDevotion: Devotion;
+  rootRef: React.RefObject<HTMLDivElement | null>;
+  leftImgRef: React.RefObject<HTMLImageElement | null>;
+  rightImgRef: React.RefObject<HTMLImageElement | null>;
+  pillRef: React.RefObject<HTMLDivElement | null>;
+  onActivate: () => void;
+}
+
+function DesktopLayout({
+  nextProject,
+  nextDevotion,
+  rootRef,
+  leftImgRef,
+  rightImgRef,
+  pillRef,
+  onActivate,
+}: LayoutProps) {
   return (
     <section
       ref={rootRef}
-      onClick={startExpand}
+      onClick={onActivate}
       className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
       style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}
     >
@@ -107,22 +134,33 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
         nextProject={nextProject}
         nextDevotion={nextDevotion}
         variant="desktop"
-        onActivate={startExpand}
+        onActivate={onActivate}
       />
     </section>
   );
 }
 
-function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
+function MobileLayout({
+  nextProject,
+  nextDevotion,
+  rootRef,
+  leftImgRef,
+  rightImgRef,
+  pillRef,
+  onActivate,
+}: LayoutProps) {
   return (
     <section
-      className="next-handoff relative w-full overflow-hidden"
+      ref={rootRef}
+      onClick={onActivate}
+      className="next-handoff relative w-full overflow-hidden cursor-pointer"
       style={{ minHeight: '100vh', backgroundColor: nextProject.overlayColor }}
     >
       {/* Two vertical columns */}
       <div className="absolute inset-0 grid grid-cols-2">
         <div className="relative overflow-hidden">
           <img
+            ref={leftImgRef}
             src={nextProject.thumbnail}
             alt=""
             aria-hidden="true"
@@ -133,6 +171,7 @@ function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
         </div>
         <div className="relative overflow-hidden">
           <img
+            ref={rightImgRef}
             src={nextDevotion.firstMoodboardImage}
             alt=""
             aria-hidden="true"
@@ -148,12 +187,20 @@ function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
         aria-hidden="true"
       />
 
-      <Pill nextProject={nextProject} nextDevotion={nextDevotion} variant="mobile" />
+      <Pill
+        pillRef={pillRef}
+        nextProject={nextProject}
+        nextDevotion={nextDevotion}
+        variant="mobile"
+        onActivate={onActivate}
+      />
     </section>
   );
 }
 
-interface PillProps extends LayoutProps {
+interface PillProps {
+  nextProject: Project;
+  nextDevotion: Devotion;
   variant: 'desktop' | 'mobile';
   pillRef?: React.RefObject<HTMLDivElement | null>;
   onActivate?: () => void;
@@ -293,7 +340,7 @@ function useEntranceAnimation({
     if (!root || !left || !right || !pill) return;
 
     if (reducedMotion) {
-      // Single fade — skip clip-reveals, skip parallax.
+      // Single fade of the whole zone — avoids briefly hiding the images.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: root,
@@ -302,12 +349,8 @@ function useEntranceAnimation({
         },
       });
       tl.set([left, right], { clipPath: 'inset(0 0 0 0)' });
-      tl.fromTo(
-        [left, right, pill],
-        { opacity: 0 },
-        { opacity: 1, duration: 0.4, ease: 'power2.out' },
-      );
       tl.set(pill, { transform: 'translate(-50%, -50%) scale(1)' }, 0);
+      tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
       return () => {
         tl.kill();
       };
@@ -320,7 +363,16 @@ function useEntranceAnimation({
     const rafId = requestAnimationFrame(() => {
       const mainTrigger = ScrollTrigger.getById('moodboard-pin');
       const containerAnimation = mainTrigger?.animation;
-      if (!containerAnimation) return; // graceful no-op; entrance just won't play
+      if (!containerAnimation) {
+        // No horizontal-scroll container is available — this happens on mobile
+        // (vertical scroll, no horizontal pin) and during the race-condition
+        // window where MoodBoard hasn't registered its trigger yet. In either
+        // case, snap the zone to its visible resting state so the pill and
+        // images are not stuck at their pre-entrance hidden values.
+        gsap.set([left, right], { clipPath: 'inset(0 0 0 0)' });
+        gsap.set(pill, { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' });
+        return;
+      }
 
       ctx = gsap.context(() => {
         const tl = gsap.timeline({
@@ -415,6 +467,16 @@ function useClickToExpand(
   reducedMotion: boolean,
 ): { startExpand: () => void } {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Cleanup any orphaned cover and scroll lock if the component unmounts
+    // mid-transition (e.g., user hits browser back).
+    return () => {
+      const orphan = document.querySelector('[data-pill-cover]');
+      orphan?.remove();
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   const startExpand = () => {
     const pill = pillRef.current;
