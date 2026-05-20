@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
@@ -47,11 +48,13 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
 
   useEntranceAnimation({ rootRef, leftImgRef, rightImgRef, pillRef });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef });
+  const { startExpand } = useClickToExpand(pillRef, nextProject);
 
   return (
     <section
       ref={rootRef}
-      className="next-handoff relative flex-shrink-0 h-screen overflow-hidden"
+      onClick={startExpand}
+      className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
       style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}
     >
       <div className="absolute inset-0 grid grid-cols-2">
@@ -90,6 +93,7 @@ function DesktopLayout({ nextProject, nextDevotion }: LayoutProps) {
         nextProject={nextProject}
         nextDevotion={nextDevotion}
         variant="desktop"
+        onActivate={startExpand}
       />
     </section>
   );
@@ -138,9 +142,10 @@ function MobileLayout({ nextProject, nextDevotion }: LayoutProps) {
 interface PillProps extends LayoutProps {
   variant: 'desktop' | 'mobile';
   pillRef?: React.RefObject<HTMLDivElement | null>;
+  onActivate?: () => void;
 }
 
-function Pill({ nextProject, nextDevotion, variant, pillRef }: PillProps) {
+function Pill({ nextProject, nextDevotion, variant, pillRef, onActivate }: PillProps) {
   const isMobile = variant === 'mobile';
   const pillStyle: React.CSSProperties = {
     backgroundColor: nextProject.overlayColor,
@@ -157,6 +162,19 @@ function Pill({ nextProject, nextDevotion, variant, pillRef }: PillProps) {
       ref={pillRef}
       className="next-handoff-pill absolute left-1/2 top-1/2 cursor-pointer"
       style={pillStyle}
+      role={onActivate ? 'link' : undefined}
+      aria-label={onActivate ? `Next devotion: ${nextDevotion.title}` : undefined}
+      tabIndex={onActivate ? 0 : undefined}
+      onKeyDown={
+        onActivate
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onActivate();
+              }
+            }
+          : undefined
+      }
     >
       <div
         className="absolute inset-0 grid items-center text-white"
@@ -341,4 +359,94 @@ function useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef }: EntranceArgs
 
     return () => ctx.revert();
   }, [rootRef, leftImgRef, rightImgRef, pillRef]);
+}
+
+function useClickToExpand(
+  pillRef: React.RefObject<HTMLDivElement | null>,
+  nextProject: Project,
+): { startExpand: () => void } {
+  const navigate = useNavigate();
+
+  const startExpand = () => {
+    const pill = pillRef.current;
+    if (!pill) return;
+    // Guard against double-clicks while a cover is already animating.
+    if (document.querySelector('[data-pill-cover]')) return;
+
+    const rect = pill.getBoundingClientRect();
+    document.body.style.overflow = 'hidden';
+
+    // Cover container — survives React unmounts because it's a DOM node, not React.
+    const cover = document.createElement('div');
+    cover.setAttribute('data-pill-cover', '');
+    Object.assign(cover.style, {
+      position: 'fixed',
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      zIndex: '100',
+      pointerEvents: 'none',
+      opacity: '1',
+    } as Partial<CSSStyleDeclaration>);
+
+    // Clipped layer — visible at start, fades out mid-expand.
+    const clippedLayer = document.createElement('div');
+    Object.assign(clippedLayer.style, {
+      position: 'absolute',
+      inset: '0',
+      backgroundColor: nextProject.overlayColor,
+      clipPath: 'url(#hero-mask-clip)',
+    } as Partial<CSSStyleDeclaration>);
+
+    // Unclipped layer — fades in mid-expand to complete the morph to rect.
+    const unclippedLayer = document.createElement('div');
+    Object.assign(unclippedLayer.style, {
+      position: 'absolute',
+      inset: '0',
+      backgroundColor: nextProject.overlayColor,
+      opacity: '0',
+    } as Partial<CSSStyleDeclaration>);
+
+    cover.appendChild(clippedLayer);
+    cover.appendChild(unclippedLayer);
+    document.body.appendChild(cover);
+
+    const EXPAND_S = 0.65;
+    const POST_NAV_HOLD_MS = 200;
+    const FADE_MS = 400;
+
+    const tl = gsap.timeline();
+    tl.to(
+      cover,
+      {
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        duration: EXPAND_S,
+        ease: 'power3.inOut',
+      },
+      0,
+    );
+    tl.to(clippedLayer, { opacity: 0, duration: 0.35, ease: 'power2.out' }, 0.15);
+    tl.to(unclippedLayer, { opacity: 1, duration: 0.35, ease: 'power2.in' }, 0.15);
+
+    tl.call(() => {
+      // The cover now fully paints the next project's color. Navigate.
+      navigate(`/purpose/${nextProject.id}`);
+
+      // After the destination renders, fade the cover out.
+      window.setTimeout(() => {
+        cover.style.transition = `opacity ${FADE_MS}ms ease-out`;
+        cover.style.opacity = '0';
+        window.setTimeout(() => {
+          cover.remove();
+          document.body.style.overflow = '';
+        }, FADE_MS + 50);
+      }, POST_NAV_HOLD_MS);
+    });
+  };
+
+  return { startExpand };
 }
