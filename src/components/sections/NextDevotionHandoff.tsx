@@ -24,6 +24,7 @@ function useReducedMotion(): boolean {
 }
 
 interface NextDevotionHandoffProps {
+  // currentProject is reserved for future use (e.g. analytics, ABT).
   currentProject: Project;
   nextProject: Project;
   nextDevotion: Devotion;
@@ -37,14 +38,10 @@ interface NextDevotionHandoffProps {
  * the next devotion page.
  */
 export function NextDevotionHandoff({
-  currentProject: _currentProject,
   nextProject,
   nextDevotion,
   variant = 'desktop',
 }: NextDevotionHandoffProps) {
-  // currentProject is reserved for future use (e.g. analytics, ABT).
-  // Underscore prefix silences the unused-arg lint.
-
   if (variant === 'mobile') {
     return <MobileLayout nextProject={nextProject} nextDevotion={nextDevotion} />;
   }

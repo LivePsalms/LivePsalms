@@ -7,6 +7,10 @@ import { ImageReveal } from '@/components/ui-custom/ImageReveal';
 import { useDetailReveal } from '@/transitions/useDetailReveal';
 import { DETAIL_REVEAL_TIMELINE } from '@/transitions/purpose-detail-reveal';
 
+// TODO(handoff): devotion-specific strings below (label, title, scripture)
+// are duplicated in src/data/devotions.ts. A future refactor should make
+// this component consume that data instead.
+
 interface PurposeDetailProps {
   project: Project;
   exiting?: boolean;

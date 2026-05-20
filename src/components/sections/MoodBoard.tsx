@@ -76,6 +76,10 @@ function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) {
   );
 }
 
+// TODO(handoff): the `hero` field of each devotion image map is also stored
+// at src/data/devotions.ts as `firstMoodboardImage`. A future refactor
+// should consolidate these.
+
 /* ── Trust (serenity5) image map — filenames preserved as authored ── */
 const T = {
   hero: '/serenity5/IMG_3096.jpg',
