@@ -12,6 +12,9 @@ import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import type { Project } from '@/types';
 
+// Used by NextDevotionHandoff when devotions[nextProject.id] is undefined
+// (e.g. the next project in the array is a non-devotional project). Keeps
+// the handoff renderable rather than crashing on a missing key.
 const FALLBACK_DEVOTION: Devotion = {
   id: 'fallback',
   label: 'Next Devotion',
@@ -437,18 +440,24 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const bgColor = project.overlayColor;
 
   if (isMobile) {
-    if (isPeace) return <PeaceMobile />;
-    if (isHope) return <HopeMobile project={project} />;
-    if (isStrength) return <StrengthMobile project={project} />;
-    if (isWholeness) return <WholenessMobile project={project} />;
-    if (isPurpose) return <PurposeMobile project={project} />;
-    if (isConnection) return <ConnectionMobile project={project} />;
-    if (isIdentity) return <IdentityMobile project={project} />;
-    if (isJoy) return <JoyMobile project={project} />;
-    if (isForgiveness) return <ForgivenessMobile project={project} />;
-    if (isSurrender) return <SurrenderMobile project={project} />;
-    if (isTrust) return <TrustMobile project={project} />;
-    return <MoodBoardMobile project={project} />;
+    const mobileNode = isPeace ? <PeaceMobile />
+      : isHope ? <HopeMobile project={project} />
+      : isStrength ? <StrengthMobile project={project} />
+      : isWholeness ? <WholenessMobile project={project} />
+      : isPurpose ? <PurposeMobile project={project} />
+      : isConnection ? <ConnectionMobile project={project} />
+      : isIdentity ? <IdentityMobile project={project} />
+      : isJoy ? <JoyMobile project={project} />
+      : isForgiveness ? <ForgivenessMobile project={project} />
+      : isSurrender ? <SurrenderMobile project={project} />
+      : isTrust ? <TrustMobile project={project} />
+      : <MoodBoardMobile project={project} />;
+    return (
+      <>
+        <HeroMaskClipDef />
+        {mobileNode}
+      </>
+    );
   }
 
   return (
