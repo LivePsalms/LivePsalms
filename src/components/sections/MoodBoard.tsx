@@ -1030,38 +1030,12 @@ function PeaceZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Peace" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          {/* Left Content */}
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-
-          {/* Right Image */}
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -1457,35 +1431,12 @@ function HopeZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Hope" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -1881,35 +1832,12 @@ function StrengthZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Strength" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -2305,35 +2233,12 @@ function WholenessZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Wholeness" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -3130,35 +3035,12 @@ function ConnectionZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Connection" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -3554,35 +3436,12 @@ function IdentityZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Identity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -3978,35 +3837,12 @@ function JoyZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Joy" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -4402,35 +4238,12 @@ function ForgivenessZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -4825,35 +4638,12 @@ function SurrenderZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
@@ -5248,35 +5038,12 @@ function TrustZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Hero ── */}
-      <div className="relative flex-shrink-0 h-screen" style={{ width: '100vw', backgroundColor: nextProject.overlayColor }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="relative flex flex-col justify-start px-16 pt-28 pb-20">
-            <p className="text-xs tracking-[0.25em] uppercase text-white/50 mb-10">
-              Next Devotion
-            </p>
-            <h3
-              className="font-['Cormorant_Garamond'] italic font-light text-white/90 tracking-tight mb-12"
-              style={{ fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)', lineHeight: 0.95 }}
-            >
-              {nextProject.name}
-            </h3>
-            {nextProject.description && (
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                {nextProject.description}
-              </p>
-            )}
-          </div>
-          <div className="relative h-full overflow-hidden">
-            <PhotoDevelopImage
-              src={nextProject.thumbnail}
-              alt={nextProject.name}
-              className="w-full h-full"
-              threshold={0.05}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ── Zone 8: Next Devotion Handoff ── */}
+      <NextDevotionHandoff
+        currentProject={project}
+        nextProject={nextProject}
+        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
+      />
     </>
   );
 }
