@@ -36,18 +36,18 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
       resetStack(stackLabelRef.current,     `<span class="pl-lbl">${escapeHtml(data.label)}</span>`);
       resetStack(stackTitleRef.current,     `<span class="pl-title">${escapeHtml(data.title)}</span>`);
       resetStack(stackCategoryRef.current,  `<span class="pl-meta">${escapeHtml(data.category)}</span>`);
-      resetStack(stackScriptureRef.current, `<span class="pl-meta">${escapeHtml(data.scripture)} ${data.scripture ? '↗' : ''}</span>`);
+      resetStack(stackScriptureRef.current, `<span class="pl-meta">${scriptureHtml(data.scripture)}</span>`);
     },
     morphTo: (data) => {
       if (shapeRef.current) shapeRef.current.style.backgroundColor = data.pillColor;
       pushFrame(stackLabelRef.current,     `<span class="pl-lbl">${escapeHtml(data.label)}</span>`);
       pushFrame(stackTitleRef.current,     `<span class="pl-title">${escapeHtml(data.title)}</span>`);
       pushFrame(stackCategoryRef.current,  `<span class="pl-meta">${escapeHtml(data.category)}</span>`);
-      pushFrame(stackScriptureRef.current, `<span class="pl-meta">${escapeHtml(data.scripture)} ${data.scripture ? '↗' : ''}</span>`);
+      pushFrame(stackScriptureRef.current, `<span class="pl-meta">${scriptureHtml(data.scripture)}</span>`);
     },
   }), []);
 
-  const initialScripture = `${escapeHtml(initial.scripture)} ${initial.scripture ? '↗' : ''}`;
+  const initialScriptureHtml = `<span class="pl-meta">${scriptureHtml(initial.scripture)}</span>`;
 
   return (
     <div
@@ -106,7 +106,7 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
             <Stack ref={stackCategoryRef} innerHtml={`<span class="pl-meta">${escapeHtml(initial.category)}</span>`} />
           </Mask>
           <Mask alignEnd>
-            <Stack ref={stackScriptureRef} innerHtml={`<span class="pl-meta">${initialScripture}</span>`} />
+            <Stack ref={stackScriptureRef} innerHtml={initialScriptureHtml} />
           </Mask>
         </div>
       </div>
@@ -152,7 +152,6 @@ function pushFrame(stack: HTMLDivElement | null, html: string): void {
     stack.style.transform = 'translateY(0)';
     void stack.offsetHeight; // reflow
     stack.style.transition = '';
-    stack.removeEventListener('transitionend', onEnd);
   };
   stack.addEventListener('transitionend', onEnd, { once: true });
 }
@@ -168,4 +167,8 @@ function resetStack(stack: HTMLDivElement | null, html: string): void {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function scriptureHtml(s: string): string {
+  return s ? `${escapeHtml(s)} ↗` : '';
 }
