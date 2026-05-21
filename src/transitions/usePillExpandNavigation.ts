@@ -27,6 +27,7 @@ interface CoverHandle {
 export function usePillExpandNavigation() {
   const navigate = useNavigate();
   const coverHandleRef = useRef<CoverHandle | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
 
   // Build the deps once; rebuild only if navigate identity changes.
   const controller = useMemo(() => {
@@ -35,6 +36,9 @@ export function usePillExpandNavigation() {
         coverHandleRef.current = buildCoverDom(rect, pillColor);
       },
       removeCover: () => {
+        // Kill any in-flight timeline before touching the DOM.
+        tlRef.current?.kill();
+        tlRef.current = null;
         const orphan = document.querySelector(`[${COVER_ATTR}]`);
         orphan?.remove();
         coverHandleRef.current = null;
@@ -42,7 +46,8 @@ export function usePillExpandNavigation() {
       runExpandTimeline: ({ timing, targetUrl }) => {
         const handle = coverHandleRef.current;
         if (!handle) return;
-        runTimeline(handle, timing, targetUrl, navigate, coverHandleRef);
+        const setBodyOverflow = deps.setBodyOverflow;
+        runTimeline(handle, timing, targetUrl, navigate, tlRef, setBodyOverflow);
       },
       setBodyOverflow: (value) => { document.body.style.overflow = value; },
       hasExistingCover: () => !!document.querySelector(`[${COVER_ATTR}]`),
@@ -109,11 +114,14 @@ function runTimeline(
   timing: ExpandTiming,
   targetUrl: string,
   navigate: NavigateFunction,
-  coverHandleRef: React.RefObject<CoverHandle | null>,
+  tlRef: React.MutableRefObject<gsap.core.Timeline | null>,
+  setBodyOverflow: (value: string) => void,
 ): void {
   const { cover, clippedLayer, unclippedLayer } = handle;
 
   const tl = gsap.timeline();
+  tlRef.current = tl;
+
   tl.to(
     cover,
     { top: 0, left: 0, width: '100vw', height: '100vh', duration: timing.expandSeconds, ease: 'power3.inOut' },
@@ -129,8 +137,8 @@ function runTimeline(
       cover.style.opacity = '0';
       window.setTimeout(() => {
         cover.remove();
-        document.body.style.overflow = '';
-        coverHandleRef.current = null;
+        setBodyOverflow('');
+        tlRef.current = null;
       }, timing.coverFadeMs + 50);
     }, timing.postNavHoldMs);
   });
