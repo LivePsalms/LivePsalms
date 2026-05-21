@@ -54,14 +54,32 @@ export function PurposeStack({ projects }: Props) {
         if (r) gsap.set(r, { yPercent: -100 });
       });
 
+      // Total timeline duration = N-1 (each panel transition is duration 1).
+      // Panel i becomes "current" when progress crosses (i - 0.5) / (N-1).
+      const totalDuration = panels.length - 1;
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: wrapper,
           start: 'top top',
-          end: () => `+=${(panels.length - 1) * window.innerHeight}`,
+          end: () => `+=${totalDuration * window.innerHeight}`,
           pin: true,
           scrub: 0.6,
           invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            // Determine which devotion is currently focal based on scrubbed
+            // progress. The active index advances at the half-meet point of
+            // each transition (progress = (i - 0.5) / totalDuration).
+            const progress = self.progress;
+            let idx = 0;
+            for (let i = 1; i < panels.length; i++) {
+              if (progress >= (i - 0.5) / totalDuration) idx = i;
+              else break;
+            }
+            if (idx !== currentIndexRef.current) {
+              currentIndexRef.current = idx;
+              pillRef.current?.morphTo(pillDataPerPanel[idx]);
+            }
+          },
         },
       });
 
@@ -71,23 +89,6 @@ export function PurposeStack({ projects }: Props) {
         const r = panel.querySelector<HTMLDivElement>('[data-ps-half="r"]');
         if (l) tl.to(l, { yPercent: 0, ease: 'none' }, i - 1);
         if (r) tl.to(r, { yPercent: 0, ease: 'none' }, i - 1);
-      });
-
-      // Midpoint triggers — drive the pill morph and update currentIndexRef.
-      panels.forEach((_, i) => {
-        if (i === 0) return;
-        ScrollTrigger.create({
-          trigger: wrapper,
-          start: () => `top -${(i - 0.5) * window.innerHeight}px`,
-          onEnter: () => {
-            currentIndexRef.current = i;
-            pillRef.current?.morphTo(pillDataPerPanel[i]);
-          },
-          onLeaveBack: () => {
-            currentIndexRef.current = i - 1;
-            pillRef.current?.morphTo(pillDataPerPanel[i - 1]);
-          },
-        });
       });
     }, wrapper);
 
@@ -157,7 +158,7 @@ export function PurposeStack({ projects }: Props) {
               key={project.id}
               data-ps-panel
               className="absolute inset-0 grid grid-cols-2 overflow-hidden"
-              style={{ zIndex: i + 1, backgroundColor: data.pillColor }}
+              style={{ zIndex: i + 1 }}
             >
               <div
                 data-ps-half="l"
