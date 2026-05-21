@@ -129,8 +129,10 @@ export function PurposeStack({ projects }: Props) {
           const data = pillDataPerPanel[i];
           if (!project) return;
           // No shared pill in fallback; pass the activated panel's pill root.
+          // `.ps-pill` is the actual pill element (absolute-positioned with the
+          // pill geometry); the `[data-ps-fallback-pill]` wrapper has 0 height.
           const root = document.querySelector<HTMLDivElement>(
-            `[data-ps-fallback-panel="${i}"] [data-ps-fallback-pill]`,
+            `[data-ps-fallback-panel="${i}"] .ps-pill`,
           );
           if (!root) return;
           startFromPill({
