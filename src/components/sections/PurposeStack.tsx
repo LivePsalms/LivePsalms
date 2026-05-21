@@ -115,6 +115,35 @@ export function PurposeStack({ projects }: Props) {
 
   if (pillDataPerPanel.length === 0) return null;
 
+  const useFallback =
+    reducedMotion ||
+    (typeof window !== 'undefined' && window.innerWidth <= 768);
+
+  if (useFallback) {
+    return (
+      <FallbackStack
+        projects={projects}
+        pillDataPerPanel={pillDataPerPanel}
+        onPillActivate={(i) => {
+          const project = projects[i];
+          const data = pillDataPerPanel[i];
+          if (!project) return;
+          // No shared pill in fallback; pass the activated panel's pill root.
+          const root = document.querySelector<HTMLDivElement>(
+            `[data-ps-fallback-panel="${i}"] [data-ps-fallback-pill]`,
+          );
+          if (!root) return;
+          startFromPill({
+            pillEl: root,
+            pillColor: data.pillColor,
+            targetUrl: `/purpose/${project.id}`,
+            reducedMotion,
+          });
+        }}
+      />
+    );
+  }
+
   return (
     <div ref={wrapperRef} className="ps-wrap relative w-full bg-[var(--app-bg)] pt-20">
       <HeroMaskClipDef />
@@ -157,6 +186,89 @@ export function PurposeStack({ projects }: Props) {
           onActivate={handlePillActivate}
         />
       </div>
+    </div>
+  );
+}
+
+function FallbackStack({
+  projects,
+  pillDataPerPanel,
+  onPillActivate,
+}: {
+  projects: Project[];
+  pillDataPerPanel: PillData[];
+  onPillActivate: (index: number) => void;
+}) {
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      const panels = gsap.utils.toArray<HTMLDivElement>('[data-ps-fallback-panel]');
+      panels.forEach((panel) => {
+        const l = panel.querySelector<HTMLDivElement>('[data-ps-half="l"]');
+        const r = panel.querySelector<HTMLDivElement>('[data-ps-half="r"]');
+        if (l) gsap.set(l, { yPercent: 100 });
+        if (r) gsap.set(r, { yPercent: -100 });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: panel,
+            start: 'top 80%',
+            toggleActions: 'play none none reverse',
+          },
+        });
+        if (l) tl.to(l, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0);
+        if (r) tl.to(r, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0);
+      });
+    });
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+  return (
+    <div className="ps-wrap relative w-full bg-[var(--app-bg)] pt-20">
+      <HeroMaskClipDef />
+      {projects.map((project, i) => {
+        const data = pillDataPerPanel[i];
+        return (
+          <section
+            key={project.id}
+            data-ps-fallback-panel={i}
+            className="relative w-full h-screen overflow-hidden grid grid-cols-2"
+            style={{ backgroundColor: data.pillColor }}
+          >
+            <div
+              data-ps-half="l"
+              className="relative overflow-hidden will-change-transform"
+              style={{
+                backgroundImage: `url(${data.leftImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div
+              data-ps-half="r"
+              className="relative overflow-hidden will-change-transform"
+              style={{
+                backgroundImage: `url(${data.rightImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/15 pointer-events-none" />
+            <div data-ps-fallback-pill>
+              <PurposeStackPill
+                initial={data}
+                onActivate={() => onPillActivate(i)}
+              />
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
