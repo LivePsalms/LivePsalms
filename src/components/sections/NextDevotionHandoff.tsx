@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
 import { extractDominantColor } from '@/utils/extractDominantColor';
+import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -70,23 +70,26 @@ export function NextDevotionHandoff({
   const pillRef = useRef<HTMLDivElement>(null);
   const pillFillRef = useRef<HTMLDivElement>(null);
   const pillContentRef = useRef<HTMLDivElement>(null);
-  const actTwoSentinelRef = useRef<HTMLDivElement>(null);
-  const navigatedRef = useRef(false);
-
   useEntranceAnimation({
     rootRef,
     leftImgRef,
     rightImgRef,
-    pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
-    navigatedRef,
-    nextProject,
     reducedMotion,
   });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
-  const { startExpand } = useClickToExpand(pillRef, nextProject, reducedMotion, pillColor, navigatedRef);
+  const { startFromPill } = usePillExpandNavigation();
+  const startExpand = () => {
+    const pill = pillRef.current;
+    if (!pill) return;
+    startFromPill({
+      pillEl: pill,
+      pillColor,
+      targetUrl: `/purpose/${nextProject.id}`,
+      reducedMotion,
+    });
+  };
 
   const layoutProps: LayoutProps = {
     nextProject,
@@ -97,7 +100,6 @@ export function NextDevotionHandoff({
     pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
     onActivate: startExpand,
     pillColor,
   };
@@ -118,7 +120,6 @@ interface LayoutProps {
   pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
-  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
   onActivate: () => void;
   pillColor: string;
 }
@@ -132,7 +133,6 @@ function DesktopLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -141,57 +141,47 @@ function DesktopLayout({
       ref={rootRef}
       onClick={onActivate}
       className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
-      style={{ width: '200vw', backgroundColor: pillColor }}
+      style={{ width: '100vw', backgroundColor: pillColor }}
     >
-      {/* Act 1 viewport — split images + pill, all centered in the first 100vw */}
-      <div className="absolute top-0 left-0 h-full" style={{ width: '100vw' }}>
-        <div className="absolute inset-0 grid grid-cols-2">
-          <div className="relative overflow-hidden">
-            <img
-              ref={leftImgRef}
-              src={nextProject.thumbnail}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
-          <div className="relative overflow-hidden">
-            <img
-              ref={rightImgRef}
-              src={nextDevotion.firstMoodboardImage}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+      <div className="absolute inset-0 grid grid-cols-2">
+        <div className="relative overflow-hidden">
+          <img
+            ref={leftImgRef}
+            src={nextProject.thumbnail}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
-        <div
-          className="absolute top-0 bottom-0 left-1/2 w-px"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-          aria-hidden="true"
-        />
-
-        <Pill
-          pillRef={pillRef}
-          pillFillRef={pillFillRef}
-          pillContentRef={pillContentRef}
-          nextProject={nextProject}
-          nextDevotion={nextDevotion}
-          variant="desktop"
-          onActivate={onActivate}
-          pillColor={pillColor}
-        />
+        <div className="relative overflow-hidden">
+          <img
+            ref={rightImgRef}
+            src={nextDevotion.firstMoodboardImage}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
       </div>
-      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
       <div
-        ref={actTwoSentinelRef}
+        className="absolute top-0 bottom-0 left-1/2 w-px"
+        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
         aria-hidden="true"
-        className="absolute top-0 h-full pointer-events-none"
-        style={{ left: '50%', width: '1px' }}
+      />
+
+      <Pill
+        pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
+        nextProject={nextProject}
+        nextDevotion={nextDevotion}
+        variant="desktop"
+        onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -206,7 +196,6 @@ function MobileLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
   onActivate,
   pillColor,
 }: LayoutProps) {
@@ -214,58 +203,48 @@ function MobileLayout({
     <section
       ref={rootRef}
       onClick={onActivate}
-      className="next-handoff relative w-full overflow-hidden cursor-pointer"
-      style={{ minHeight: '200vh', backgroundColor: pillColor }}
+      className="next-handoff relative w-full h-screen overflow-hidden cursor-pointer"
+      style={{ backgroundColor: pillColor }}
     >
-      {/* Act 1 viewport — split images + pill, in the first 100vh */}
-      <div className="absolute top-0 left-0 right-0" style={{ height: '100vh' }}>
-        <div className="absolute inset-0 grid grid-cols-2">
-          <div className="relative overflow-hidden">
-            <img
-              ref={leftImgRef}
-              src={nextProject.thumbnail}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
-          <div className="relative overflow-hidden">
-            <img
-              ref={rightImgRef}
-              src={nextDevotion.firstMoodboardImage}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+      <div className="absolute inset-0 grid grid-cols-2">
+        <div className="relative overflow-hidden">
+          <img
+            ref={leftImgRef}
+            src={nextProject.thumbnail}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
-        <div
-          className="absolute top-0 bottom-0 left-1/2 w-px"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-          aria-hidden="true"
-        />
-
-        <Pill
-          pillRef={pillRef}
-          pillFillRef={pillFillRef}
-          pillContentRef={pillContentRef}
-          nextProject={nextProject}
-          nextDevotion={nextDevotion}
-          variant="mobile"
-          onActivate={onActivate}
-          pillColor={pillColor}
-        />
+        <div className="relative overflow-hidden">
+          <img
+            ref={rightImgRef}
+            src={nextDevotion.firstMoodboardImage}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
       </div>
-      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
       <div
-        ref={actTwoSentinelRef}
+        className="absolute top-0 bottom-0 left-1/2 w-px"
+        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
         aria-hidden="true"
-        className="absolute left-0 w-full pointer-events-none"
-        style={{ top: '50%', height: '1px' }}
+      />
+
+      <Pill
+        pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
+        nextProject={nextProject}
+        nextDevotion={nextDevotion}
+        variant="mobile"
+        onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -386,7 +365,7 @@ function Pill({
           loading="lazy"
           decoding="async"
           className={`next-handoff-logo opacity-25 invert pointer-events-none ${isMobile ? 'w-5' : 'w-10'}`}
-          style={{ transform: isMobile ? 'translateY(6px)' : 'translateY(12px)' }}
+          style={{ transform: isMobile ? 'translateY(12px)' : 'translateY(22px)' }}
         />
 
         {/* Right column: category + scripture */}
@@ -423,42 +402,27 @@ interface EntranceArgs {
   rootRef: React.RefObject<HTMLDivElement | null>;
   leftImgRef: React.RefObject<HTMLImageElement | null>;
   rightImgRef: React.RefObject<HTMLImageElement | null>;
-  pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
-  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
-  navigatedRef: React.RefObject<boolean>;
-  nextProject: Project;
 }
 
 function useEntranceAnimation({
   rootRef,
   leftImgRef,
   rightImgRef,
-  pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
-  navigatedRef,
-  nextProject,
   reducedMotion,
 }: EntranceArgs & { reducedMotion: boolean }) {
-  const navigate = useNavigate();
-
   useEffect(() => {
     const root = rootRef.current;
     const left = leftImgRef.current;
     const right = rightImgRef.current;
-    const pill = pillRef.current;
     const fill = pillFillRef.current;
     const content = pillContentRef.current;
-    const actTwoSentinel = actTwoSentinelRef.current;
-    if (!root || !left || !right || !pill || !fill || !content || !actTwoSentinel) return;
+    if (!root || !left || !right || !fill || !content) return;
 
     if (reducedMotion) {
-      // Single fade of the whole zone — snap motion targets to their
-      // final state. Reduced motion skips Act 2 entirely; the extra
-      // 100vw/100vh of section is just a color wash.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: root,
@@ -494,31 +458,24 @@ function useEntranceAnimation({
       }
 
       ctx = gsap.context(() => {
-        // Seed the off-screen start state via GSAP so it owns the transform
-        // matrix outright. The previous inline `transform: translateY(±100%)`
-        // got composed with the idle Ken Burns tween's translate3d, leaving
-        // the images permanently double-offset. Letting GSAP own the
-        // transform from initial render avoids that composition entirely.
+        // Seed off-screen start state via GSAP so it owns the transform matrix
+        // outright — avoids composition with the idle Ken Burns tween.
         gsap.set(left, { yPercent: -100 });
         gsap.set(right, { yPercent: 100 });
         gsap.set(fill, { scaleX: 0, transformOrigin: '50% 50%' });
         gsap.set(content, { opacity: 0 });
 
-        // ===== ACT 1: Slide-in entrance =====
+        // Slide-in entrance — fires when the zone is ~70% visible.
         const actOne = gsap.timeline({
           scrollTrigger: {
             trigger: root,
             containerAnimation,
-            // Animation starts when the zone is ~70% visible (left edge at
-            // 30% of the viewport) and completes shortly after the zone is
-            // fully in view (left edge at -10%).
             start: 'left 30%',
             end: 'left -10%',
             toggleActions: 'play none none reverse',
           },
         });
 
-        // All three motions in parallel from t=0 to t=1.0:
         actOne
           .fromTo(
             left,
@@ -538,39 +495,7 @@ function useEntranceAnimation({
             { scaleX: 1, transformOrigin: '50% 50%', duration: 1.0, ease: 'power3.out' },
             0,
           )
-          // Text fades in during the final 40% (t=0.6 to t=1.0).
           .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
-
-        // ===== ACT 2: Scrubbed exit + re-enter + navigate =====
-        const actTwo = gsap.timeline({
-          scrollTrigger: {
-            trigger: actTwoSentinel,
-            containerAnimation,
-            // Act 2 begins when the sentinel just enters viewport from the
-            // right and ends when it has scrolled 10% past viewport left.
-            start: 'left 100%',
-            end: 'left -10%',
-            scrub: 1,
-            onUpdate: (self) => {
-              if (self.progress >= 0.98 && !navigatedRef.current) {
-                navigatedRef.current = true;
-                navigate(`/purpose/${nextProject.id}`);
-              }
-            },
-          },
-        });
-        // Exit phase: 0 → 0.4 — images slide back out, pill fades.
-        actTwo
-          .to(left, { yPercent: -100, duration: 0.4, ease: 'power2.in' }, 0)
-          .to(right, { yPercent: 100, duration: 0.4, ease: 'power2.in' }, 0)
-          .to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.in' }, 0)
-          .to(content, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0);
-        // Breathing room: 0.4 → 0.6 — everything stays at exit state.
-        actTwo.to({}, { duration: 0.2 }, 0.4);
-        // Re-enter phase: 0.6 → 1.0 — same images slide back in.
-        actTwo
-          .to(left, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6)
-          .to(right, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6);
       }, root);
     });
 
@@ -582,14 +507,9 @@ function useEntranceAnimation({
     rootRef,
     leftImgRef,
     rightImgRef,
-    pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
-    navigatedRef,
-    nextProject,
     reducedMotion,
-    navigate,
   ]);
 }
 
@@ -643,120 +563,3 @@ function useIdleLoop({
   }, [rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion]);
 }
 
-function useClickToExpand(
-  pillRef: React.RefObject<HTMLDivElement | null>,
-  nextProject: Project,
-  reducedMotion: boolean,
-  pillColor: string,
-  navigatedRef: React.RefObject<boolean>,
-): { startExpand: () => void } {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Cleanup any orphaned cover and scroll lock if the component unmounts
-    // mid-transition (e.g., user hits browser back).
-    return () => {
-      const orphan = document.querySelector('[data-pill-cover]');
-      orphan?.remove();
-      document.body.style.overflow = '';
-    };
-  }, []);
-
-  const startExpand = () => {
-    // Coordinate with Act 2 scroll-driven navigation — if either path has
-    // already initiated nav, don't fire again.
-    if (navigatedRef.current) return;
-    const pill = pillRef.current;
-    if (!pill) return;
-    // Guard against double-clicks while a cover is already animating.
-    if (document.querySelector('[data-pill-cover]')) return;
-
-    // Set early so Act 2's onUpdate can't also call navigate() in parallel.
-    navigatedRef.current = true;
-
-    const rect = pill.getBoundingClientRect();
-    document.body.style.overflow = 'hidden';
-
-    // Cover container — survives React unmounts because it's a DOM node, not React.
-    const cover = document.createElement('div');
-    cover.setAttribute('data-pill-cover', '');
-    Object.assign(cover.style, {
-      position: 'fixed',
-      top: `${rect.top}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      zIndex: '100',
-      pointerEvents: 'none',
-      opacity: '1',
-    } as Partial<CSSStyleDeclaration>);
-
-    // Clipped layer — visible at start, fades out mid-expand.
-    const clippedLayer = document.createElement('div');
-    Object.assign(clippedLayer.style, {
-      position: 'absolute',
-      inset: '0',
-      backgroundColor: pillColor,
-      clipPath: 'url(#hero-mask-clip)',
-    } as Partial<CSSStyleDeclaration>);
-
-    // Unclipped layer — fades in mid-expand to complete the morph to rect.
-    const unclippedLayer = document.createElement('div');
-    Object.assign(unclippedLayer.style, {
-      position: 'absolute',
-      inset: '0',
-      backgroundColor: pillColor,
-      opacity: '0',
-    } as Partial<CSSStyleDeclaration>);
-
-    cover.appendChild(clippedLayer);
-    cover.appendChild(unclippedLayer);
-    document.body.appendChild(cover);
-
-    const EXPAND_S = reducedMotion ? 0 : 0.65;
-    const FADE_LAYER_DUR = reducedMotion ? 0 : 0.35;
-    const POST_NAV_HOLD_MS = reducedMotion ? 50 : 200;
-    const FADE_MS = reducedMotion ? 200 : 400;
-
-    const tl = gsap.timeline();
-    tl.to(
-      cover,
-      {
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        duration: EXPAND_S,
-        ease: 'power3.inOut',
-      },
-      0,
-    );
-    tl.to(
-      clippedLayer,
-      { opacity: 0, duration: FADE_LAYER_DUR, ease: 'power2.out' },
-      reducedMotion ? 0 : 0.15,
-    );
-    tl.to(
-      unclippedLayer,
-      { opacity: 1, duration: FADE_LAYER_DUR, ease: 'power2.in' },
-      reducedMotion ? 0 : 0.15,
-    );
-
-    tl.call(() => {
-      // The cover now fully paints the next project's color. Navigate.
-      navigate(`/purpose/${nextProject.id}`);
-
-      // After the destination renders, fade the cover out.
-      window.setTimeout(() => {
-        cover.style.transition = `opacity ${FADE_MS}ms ease-out`;
-        cover.style.opacity = '0';
-        window.setTimeout(() => {
-          cover.remove();
-          document.body.style.overflow = '';
-        }, FADE_MS + 50);
-      }, POST_NAV_HOLD_MS);
-    });
-  };
-
-  return { startExpand };
-}
