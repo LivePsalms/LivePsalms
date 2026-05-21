@@ -201,6 +201,7 @@ function PurposeDetailRoute({
 
   return (
     <PurposeDetail
+      key={project.id}
       project={project}
       exiting={exiting}
       onExitComplete={onExitComplete}
