@@ -9,7 +9,7 @@ import { MidSectionMotion } from '@/components/sections/MidSectionMotion';
 import { TwoPathInterlude } from '@/components/sections/TwoPathInterlude';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
-import { PurposeGallery } from '@/components/sections/PurposeGallery';
+import { PurposeStack } from '@/components/sections/PurposeStack';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
@@ -141,9 +141,7 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route
               path="/purpose"
-              element={
-                <PurposeGallery projects={projects} onProjectClick={handleProjectClick} />
-              }
+              element={<PurposeStack projects={projects} />}
             />
             <Route
               path="/purpose/:projectId"
