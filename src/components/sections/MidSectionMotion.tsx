@@ -9,47 +9,12 @@ import {
   mountCurlLinesScene,
   type CurlLinesIntensity,
 } from './mid-section-webgpu-scene';
+import {
+  computeIntensityState,
+  mapBeatProgressWebGPU,
+} from './mid-section-intensity';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const TIMING = [
-  MID_SECTION_PIN_TIMING.beat1,
-  MID_SECTION_PIN_TIMING.beat2,
-  MID_SECTION_PIN_TIMING.beat3,
-  MID_SECTION_PIN_TIMING.beat4,
-  MID_SECTION_PIN_TIMING.beat5,
-] as const;
-
-// Three-act intensity sequence for WebGPU mode.
-// Wrapper grows 500vh → 600vh; text occupies the first 5/6 (≈0.833) of the timeline,
-// outro re-bright occupies the last 1/6 (≈0.167). Overture re-bright→normal fires
-// over text 1's entry window (first 1/6 of the text range = 5/6 × 1/6 ≈ 0.028).
-const WEBGPU_TEXT_SCALE = 5 / 6;
-const OVERTURE_END = TIMING[0].holdStart * WEBGPU_TEXT_SCALE; // ≈ 0.0333
-const OUTRO_START = WEBGPU_TEXT_SCALE; // 0.8333
-const INTENSITY_BRIGHT = { brightness: 3.45, bloomStrength: 3.30, bloomThreshold: 0.14 };
-const INTENSITY_NORMAL = { brightness: 1.20, bloomStrength: 2.20, bloomThreshold: 0.15 };
-
-// Slow-motion wake-up curve. The simulation's per-frame delta is scaled by
-// (target fps / 60) so the curl-lines crawl at first and gradually accelerate
-// to a slightly-throttled resting rate over the first ~3/4 of the timeline.
-// Waypoints: 3 fps → 20 → 35 → 40 (peak) → 39 (steady state).
-// Spans progress [0, 0.75] — through the overture, beats 1 + 2, beat 3, and
-// into beat 4's primary window. Each waypoint gets ~0.1875 of progress
-// (≈112vh of scroll), so the acceleration feels like an even slower exhale
-// — the dramatic crawl-out lingers longer before settling into steady state.
-const WAKEUP_END = 0.75;
-const WAKEUP_FPS_WAYPOINTS = [3, 20, 35, 40, 39] as const;
-const STEADY_FPS = WAKEUP_FPS_WAYPOINTS[WAKEUP_FPS_WAYPOINTS.length - 1]; // 39
-
-function wakeUpFps(progress: number): number {
-  if (progress >= WAKEUP_END) return STEADY_FPS;
-  const segments = WAKEUP_FPS_WAYPOINTS.length - 1; // 4 segments between 5 waypoints
-  const segmentWidth = WAKEUP_END / segments;
-  const idx = Math.min(segments - 1, Math.floor(progress / segmentWidth));
-  const t = (progress - idx * segmentWidth) / segmentWidth;
-  return lerp(WAKEUP_FPS_WAYPOINTS[idx], WAKEUP_FPS_WAYPOINTS[idx + 1], t);
-}
 
 type RenderMode = 'webgpu' | 'video' | 'reduced';
 
@@ -58,10 +23,6 @@ function initialRenderMode(): RenderMode {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'reduced';
   if ('gpu' in navigator) return 'webgpu';
   return 'video';
-}
-
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
 }
 
 export function MidSectionMotion() {
@@ -126,8 +87,6 @@ export function MidSectionMotion() {
     const beatEls = beatRefs.current.slice(0, 5);
     if (!wrapperEl || !stageEl || beatEls.some((b) => !b)) return;
 
-    const textScale = renderMode === 'webgpu' ? WEBGPU_TEXT_SCALE : 1;
-
     const ctx = gsap.context(() => {
       // Initial states — beats hidden and offset below resting position.
       gsap.set(beatEls, { opacity: 0, y: 20 });
@@ -143,24 +102,29 @@ export function MidSectionMotion() {
         },
       });
 
-      // In webgpu mode the last text tween ends at timeline-position WEBGPU_TEXT_SCALE
-      // (≈ 0.833), but ScrollTrigger.scrub maps its 0..1 progress onto the timeline's
+      // In webgpu mode the last text tween ends at timeline-position OUTRO_START
+      // (≈ 0.857), but ScrollTrigger.scrub maps its 0..1 progress onto the timeline's
       // totalDuration. Without padding, scroll progress 1.0 would only reach timeline
-      // position 0.833 — beat 5 would stay visible through the entire outro. Pad with
+      // position 0.857 — beat 5 would stay visible through the entire outro. Pad with
       // a phantom set at position 1 so timeline totalDuration matches the scroll range.
       if (renderMode === 'webgpu') {
         tl.set({}, {}, 1);
       }
 
-      // Per-beat enter / exit tweens, positions and durations scaled by textScale.
-      TIMING.forEach((t, i) => {
+      // Map a raw reading-relative position (0..1) onto the full pinned timeline.
+      // WebGPU mode offsets/scales into the reading band; video mode uses raw.
+      const mapPos = (raw: number) =>
+        renderMode === 'webgpu' ? mapBeatProgressWebGPU(raw) : raw;
+
+      const beatKeys = ['beat1', 'beat2', 'beat3', 'beat4', 'beat5'] as const;
+      beatKeys.forEach((key, i) => {
         const beat = beatEls[i];
         if (!beat) return;
-
-        const enter = t.enter * textScale;
-        const holdStart = t.holdStart * textScale;
-        const holdEnd = t.holdEnd * textScale;
-        const exit = t.exit * textScale;
+        const raw = MID_SECTION_PIN_TIMING[key];
+        const enter = mapPos(raw.enter);
+        const holdStart = mapPos(raw.holdStart);
+        const holdEnd = mapPos(raw.holdEnd);
+        const exit = mapPos(raw.exit);
 
         // Enter tween — fade in + rise from y:20 to y:0.
         if (enter < holdStart) {
@@ -204,31 +168,11 @@ export function MidSectionMotion() {
       scrub: 2,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        const p = self.progress;
-
-        // Slow-motion wake-up — independent of the three-act color phases.
-        // Crawls at 3 fps at pin engage, accelerates through 20 / 35 / 40 fps,
-        // settles at 39 fps by progress 0.133 and stays there for Acts 2 + 3.
-        intensity.simSpeed = wakeUpFps(p) / 60;
-
-        if (p < OVERTURE_END) {
-          // Act 1 — overture: bright → normal during text 1's entry window.
-          const t = p / OVERTURE_END;
-          intensity.brightness = lerp(INTENSITY_BRIGHT.brightness, INTENSITY_NORMAL.brightness, t);
-          intensity.bloomStrength = lerp(INTENSITY_BRIGHT.bloomStrength, INTENSITY_NORMAL.bloomStrength, t);
-          intensity.bloomThreshold = lerp(INTENSITY_BRIGHT.bloomThreshold, INTENSITY_NORMAL.bloomThreshold, t);
-        } else if (p > OUTRO_START) {
-          // Act 3 — outro: normal → bright after beat 5 exits.
-          const t = (p - OUTRO_START) / (1 - OUTRO_START);
-          intensity.brightness = lerp(INTENSITY_NORMAL.brightness, INTENSITY_BRIGHT.brightness, t);
-          intensity.bloomStrength = lerp(INTENSITY_NORMAL.bloomStrength, INTENSITY_BRIGHT.bloomStrength, t);
-          intensity.bloomThreshold = lerp(INTENSITY_NORMAL.bloomThreshold, INTENSITY_BRIGHT.bloomThreshold, t);
-        } else {
-          // Act 2 — reading: hold at normal values.
-          intensity.brightness = INTENSITY_NORMAL.brightness;
-          intensity.bloomStrength = INTENSITY_NORMAL.bloomStrength;
-          intensity.bloomThreshold = INTENSITY_NORMAL.bloomThreshold;
-        }
+        const state = computeIntensityState(self.progress);
+        intensity.brightness = state.brightness;
+        intensity.bloomStrength = state.bloomStrength;
+        intensity.bloomThreshold = state.bloomThreshold;
+        intensity.simSpeed = state.simSpeed;
       },
     });
 
@@ -286,7 +230,7 @@ export function MidSectionMotion() {
   }
 
   // ─── Full-motion JSX: wrapper height 600vh (webgpu) or 500vh (video), sticky 100vh stage ───
-  const wrapperHeight = renderMode === 'webgpu' ? '600vh' : '500vh';
+  const wrapperHeight = renderMode === 'webgpu' ? '700vh' : '500vh';
   return (
     <section
       ref={wrapperRef}
