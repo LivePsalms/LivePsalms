@@ -1,10 +1,13 @@
-// Pure helpers + constants for the mid-section's symmetric bookend.
+// Pure helpers + constants for the mid-section's intro/outro bookend.
 // The WebGPU pinned timeline is divided into three bands:
-//   intro     p ∈ [0, INTRO_END]            — 100vh, bright + low-fps crawl
+//   intro     p ∈ [0, INTRO_END]            — 100vh, bright+crawl → normal+steady
 //   reading   p ∈ [INTRO_END, OUTRO_START]  — 500vh, normal + steady fps
-//   outro    p ∈ [OUTRO_START, 1]           — 100vh, normal+steady → bright+crawl
-// Brightness and sim-speed move on the same cubic ease-in within each band,
-// so the dramatic end-state lingers and the resolution snaps near the boundary.
+//   outro     p ∈ [OUTRO_START, 1]          — 100vh, normal → bright (linear); fps held steady
+// The intro uses cubic ease-in on both brightness and sim-speed so the dramatic
+// look + slow-mo crawl dwell at pin engage and resolve toward reading. The outro
+// is intentionally asymmetric: brightness ramps linearly so the resolution feels
+// like a steady fade-up rather than a dwell-then-snap, and sim-speed never drops
+// below FPS_STEADY — the lines keep flowing at reading pace through pin release.
 
 import type { CurlLinesIntensity } from './mid-section-webgpu-scene';
 
@@ -57,9 +60,9 @@ function lerp(a: number, b: number, t: number): number {
 /**
  * Returns the full canvas intensity state for a given timeline progress.
  *
- * Intro band  (p ∈ [0, INTRO_END])     bright/floor → normal/steady, cubic ease-in.
- * Reading     (p ∈ (INTRO_END, OUTRO_START))  held at normal/steady.
- * Outro band  (p ∈ [OUTRO_START, 1])   normal/steady → bright/floor, cubic ease-in.
+ * Intro band  (p ∈ [0, INTRO_END])           bright/floor → normal/steady, cubic ease-in.
+ * Reading     (p ∈ (INTRO_END, OUTRO_START)) held at normal/steady.
+ * Outro band  (p ∈ [OUTRO_START, 1])         normal → bright, linear; sim-speed held at steady.
  *
  * Inputs outside [0, 1] (or NaN / non-finite) are clamped to the nearest endpoint.
  * Without the clamp, negative or NaN progress would produce negative simSpeed
@@ -78,12 +81,12 @@ export function computeIntensityState(p: number): IntensityState {
     };
   }
   if (p >= OUTRO_START) {
-    const t = easeInCubic((p - OUTRO_START) / (1 - OUTRO_START));
+    const t = (p - OUTRO_START) / (1 - OUTRO_START);
     return {
       brightness: lerp(INTENSITY_NORMAL.brightness, INTENSITY_BRIGHT.brightness, t),
       bloomStrength: lerp(INTENSITY_NORMAL.bloomStrength, INTENSITY_BRIGHT.bloomStrength, t),
       bloomThreshold: lerp(INTENSITY_NORMAL.bloomThreshold, INTENSITY_BRIGHT.bloomThreshold, t),
-      simSpeed: lerp(FPS_STEADY, FPS_FLOOR, t) / 60,
+      simSpeed: FPS_STEADY / 60,
     };
   }
   return {

@@ -157,21 +157,25 @@ describe('computeIntensityState — outro band', () => {
     expect(s.bloomThreshold).toBeCloseTo(INTENSITY_BRIGHT.bloomThreshold, 10);
   });
 
-  it('p=1: simSpeed at FPS_FLOOR / 60', () => {
+  it('p=1: simSpeed stays at FPS_STEADY / 60 (no slow-down through outro)', () => {
     const s = computeIntensityState(1);
-    expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
+    expect(s.simSpeed).toBeCloseTo(FPS_STEADY / 60, 10);
   });
 
-  it('p at midpoint of outro band: dwells near NORMAL (cubic ease-in)', () => {
+  it('p at midpoint of outro band: brightness is 50% of the way to BRIGHT (linear)', () => {
     const midOutro = OUTRO_START + (1 - OUTRO_START) / 2;
     const s = computeIntensityState(midOutro);
-    // brightness should be 12.5% of the way from NORMAL toward BRIGHT
     const expected = INTENSITY_NORMAL.brightness
-      + 0.125 * (INTENSITY_BRIGHT.brightness - INTENSITY_NORMAL.brightness);
-    expect(s.brightness).toBeCloseTo(expected, 6);
-    // simSpeed should be 12.5% of the way from FPS_STEADY toward FPS_FLOOR (then /60)
-    const expectedFps = FPS_STEADY + 0.125 * (FPS_FLOOR - FPS_STEADY);
-    expect(s.simSpeed).toBeCloseTo(expectedFps / 60, 6);
+      + 0.5 * (INTENSITY_BRIGHT.brightness - INTENSITY_NORMAL.brightness);
+    expect(s.brightness).toBeCloseTo(expected, 10);
+  });
+
+  it('simSpeed is held flat at FPS_STEADY across the entire outro band', () => {
+    for (const t of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
+      const p = OUTRO_START + t * (1 - OUTRO_START);
+      const s = computeIntensityState(p);
+      expect(s.simSpeed).toBeCloseTo(FPS_STEADY / 60, 10);
+    }
   });
 });
 
@@ -181,10 +185,10 @@ describe('computeIntensityState — input clamping', () => {
     expect(s.brightness).toBeCloseTo(INTENSITY_BRIGHT.brightness, 10);
     expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
   });
-  it('progress > 1 clamps to BRIGHT/floor (same as p=1)', () => {
+  it('progress > 1 clamps to p=1 (BRIGHT brightness, steady fps)', () => {
     const s = computeIntensityState(1.5);
     expect(s.brightness).toBeCloseTo(INTENSITY_BRIGHT.brightness, 10);
-    expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
+    expect(s.simSpeed).toBeCloseTo(FPS_STEADY / 60, 10);
   });
   it('NaN progress clamps to BRIGHT/floor (treated as 0)', () => {
     const s = computeIntensityState(NaN);
