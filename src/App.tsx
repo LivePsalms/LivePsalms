@@ -12,6 +12,8 @@ import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
 import { PurposeStack } from '@/components/sections/PurposeStack';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
+import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
+import { Contact } from '@/components/sections/Contact';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
@@ -95,7 +97,9 @@ function App() {
   const isLoginPage = location.pathname === '/login';
   const isProfilePage = location.pathname === '/profile';
   const isWelcomePage = location.pathname === '/welcome';
-  const hideFooter = isDetailPage || isPurposePage || isNotepadPage || isLoginPage || isProfilePage || isWelcomePage;
+  const isCommunityPage = location.pathname === '/community';
+  const isContactPage = location.pathname === '/contact';
+  const hideFooter = isDetailPage || isPurposePage || isNotepadPage || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage;
 
   const handleProjectClick = useCallback(
     (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
@@ -136,6 +140,8 @@ function App() {
               }
             />
             <Route path="/notepad" element={<Notepad />} />
+            <Route path="/community" element={<CommunityComingSoon />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/profile" element={<ProfilePage />} />

@@ -19,12 +19,12 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Nav-collapse: per-element fade windows in [0,1] progress space. Order
 // matches the visual left→right reading order. Indexes 0..3 are the four
-// navItems anchors (Purpose, Notepad, Devotion, Contact); index 4 is the
+// navItems anchors (Purpose, Notepad, Community, Contact); index 4 is the
 // Social-block wrapper (em-dash + Social dropdown).
 const NAV_WINDOWS: readonly { start: number; end: number }[] = [
   { start: 0.150, end: 0.310 }, // Purpose
   { start: 0.210, end: 0.370 }, // Notepad
-  { start: 0.270, end: 0.430 }, // Devotion
+  { start: 0.270, end: 0.430 }, // Community
   { start: 0.330, end: 0.490 }, // Contact
   { start: 0.390, end: 0.520 }, // Social-block
 ] as const;
@@ -39,9 +39,9 @@ const easePower1Out = (n: number): number => 1 - (1 - n);
 const easePower2Out = (n: number): number => 1 - (1 - n) * (1 - n);
 const easePower3Out = (n: number): number => 1 - (1 - n) * (1 - n) * (1 - n);
 
-// Labels that fire the loading overlay when clicked. Contact and Social
-// are intentionally excluded.
-const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
+// Labels that fire the loading overlay when clicked. Social is intentionally
+// excluded (it's a hover dropdown, not a navigation).
+const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Community', 'Contact']);
 
 function WaterText({ children, className, style, as: Tag = 'a', ...props }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties; as?: React.ElementType; [key: string]: unknown }) {
   const text = typeof children === 'string' ? children : '';
@@ -64,7 +64,7 @@ interface HeaderProps {
   darkText?: boolean;
   /**
    * Called when the user clicks one of the trigger nav entries
-   * (Logo, Purpose, Notepad, Devotion — and their mobile equivalents).
+   * (Logo, Purpose, Notepad, Community — and their mobile equivalents).
    * The logo suppresses this on same-path clicks; other entries fire
    * unconditionally. Optional so the component remains usable without it.
    */

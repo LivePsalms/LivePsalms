@@ -97,6 +97,6 @@ export const projects: Project[] = [
 export const navItems = [
   { label: 'Purpose', href: '/purpose' },
   { label: 'Notepad', href: '/notepad' },
-  { label: 'Devotion', href: '#devotion' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Community', href: '/community' },
+  { label: 'Contact', href: '/contact' },
 ];
