@@ -114,7 +114,7 @@ function App() {
       <>
         <div className="relative min-h-screen" style={{ background: 'var(--app-bg)', zIndex: 1 }}>
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
+          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
 
           <Routes>
             <Route
