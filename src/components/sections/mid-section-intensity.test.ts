@@ -9,7 +9,9 @@ import {
   INTENSITY_NORMAL,
   easeInCubic,
   computeIntensityState,
+  mapBeatProgressWebGPU,
 } from './mid-section-intensity';
+import { MID_SECTION_PIN_TIMING } from './mid-section-motion-content';
 
 describe('band-edge constants', () => {
   it('INTRO_END is 1/7 of the timeline', () => {
@@ -170,5 +172,43 @@ describe('computeIntensityState — outro band', () => {
     // simSpeed should be 12.5% of the way from FPS_STEADY toward FPS_FLOOR (then /60)
     const expectedFps = FPS_STEADY + 0.125 * (FPS_FLOOR - FPS_STEADY);
     expect(s.simSpeed).toBeCloseTo(expectedFps / 60, 6);
+  });
+});
+
+describe('mapBeatProgressWebGPU', () => {
+  it('raw 0 maps to INTRO_END (beat 1 enters as intro ends)', () => {
+    expect(mapBeatProgressWebGPU(0)).toBeCloseTo(INTRO_END, 10);
+  });
+
+  it('raw 1 maps to OUTRO_START (beat 5 exits as outro begins)', () => {
+    expect(mapBeatProgressWebGPU(1)).toBeCloseTo(OUTRO_START, 10);
+  });
+
+  it('raw 0.5 maps to the midpoint of the reading band (4/7)', () => {
+    expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(INTRO_END + 0.5 * READING_SCALE, 10);
+    expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(4 / 7, 10);
+  });
+
+  it('preserves the kiss handoff between beats (beat2 enter == beat1 exit, mapped)', () => {
+    const beat1ExitMapped = mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING.beat1.exit);
+    const beat2EnterMapped = mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING.beat2.enter);
+    expect(beat1ExitMapped).toBeCloseTo(beat2EnterMapped, 10);
+  });
+
+  it('preserves the kiss handoff between every adjacent beat pair', () => {
+    const pairs: Array<[keyof typeof MID_SECTION_PIN_TIMING, keyof typeof MID_SECTION_PIN_TIMING]> = [
+      ['beat1', 'beat2'],
+      ['beat2', 'beat3'],
+      ['beat3', 'beat4'],
+      ['beat4', 'beat5'],
+    ];
+    for (const [a, b] of pairs) {
+      expect(mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING[a].exit))
+        .toBeCloseTo(mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING[b].enter), 10);
+    }
+  });
+
+  it('beat 1 hold-start lands at ~0.172 (matches spec example)', () => {
+    expect(mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING.beat1.holdStart)).toBeCloseTo(0.1714, 4);
   });
 });

@@ -87,3 +87,12 @@ export function computeIntensityState(p: number): IntensityState {
     simSpeed: FPS_STEADY / 60,
   };
 }
+
+/**
+ * Maps a reading-relative beat progress (0 = first beat enters, 1 = last beat exits)
+ * onto the full pinned timeline by offsetting into the intro band and scaling by
+ * the reading band's width. WebGPU mode only — video mode uses raw beat positions.
+ */
+export function mapBeatProgressWebGPU(raw: number): number {
+  return INTRO_END + raw * READING_SCALE;
+}
