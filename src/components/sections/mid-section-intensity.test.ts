@@ -185,14 +185,7 @@ describe('mapBeatProgressWebGPU', () => {
   });
 
   it('raw 0.5 maps to 0.5 (the symmetric bookends make timeline midpoint == reading midpoint)', () => {
-    expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(INTRO_END + 0.5 * READING_SCALE, 10);
     expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(0.5, 10);
-  });
-
-  it('preserves the kiss handoff between beats (beat2 enter == beat1 exit, mapped)', () => {
-    const beat1ExitMapped = mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING.beat1.exit);
-    const beat2EnterMapped = mapBeatProgressWebGPU(MID_SECTION_PIN_TIMING.beat2.enter);
-    expect(beat1ExitMapped).toBeCloseTo(beat2EnterMapped, 10);
   });
 
   it('preserves the kiss handoff between every adjacent beat pair', () => {
