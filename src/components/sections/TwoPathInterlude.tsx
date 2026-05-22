@@ -55,14 +55,14 @@ export function TwoPathInterlude() {
       },
     });
 
-    // Sequential 1·2·3 reveal — Cathedral pacing, ~4.2s total.
-    // Each beat 1.8s; gap of 1.0s between beat starts so they overlap slightly
-    // but the sequence is clearly readable (hairline → left rises → right falls).
+    // Sequential 1·2·3 reveal — ~2.7s total. Faster than cathedral but still
+    // readable: hairline → left rises → right falls, with 0.7s between starts
+    // so the beats overlap meaningfully without collapsing into one moment.
 
     // 1 — Hairline radiates from center outward.
     tl.to(hairline, {
       scaleY: 1,
-      duration: 1.8,
+      duration: 1.2,
       ease: 'power2.out',
     }, 0.1);
 
@@ -70,17 +70,17 @@ export function TwoPathInterlude() {
     tl.to(left, {
       opacity: 1,
       y: 0,
-      duration: 1.8,
+      duration: 1.2,
       ease: 'power3.out',
-    }, 1.4);
+    }, 0.8);
 
     // 3 — Right column falls from above (translateY(-60px) → 0, opacity 0 → 1).
     tl.to(right, {
       opacity: 1,
       y: 0,
-      duration: 1.8,
+      duration: 1.2,
       ease: 'power3.out',
-    }, 2.4);
+    }, 1.5);
 
     const st = ScrollTrigger.create({
       trigger: section,
