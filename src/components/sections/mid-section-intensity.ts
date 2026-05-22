@@ -49,3 +49,41 @@ export type IntensityState = Pick<
   CurlLinesIntensity,
   'brightness' | 'bloomStrength' | 'bloomThreshold' | 'simSpeed'
 >;
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+/**
+ * Returns the full canvas intensity state for a given timeline progress.
+ *
+ * Intro band  (p ∈ [0, INTRO_END])     bright/floor → normal/steady, cubic ease-in.
+ * Reading     (p ∈ (INTRO_END, OUTRO_START))  held at normal/steady.
+ * Outro band  (p ∈ [OUTRO_START, 1])   normal/steady → bright/floor, cubic ease-in.
+ */
+export function computeIntensityState(p: number): IntensityState {
+  if (p <= INTRO_END) {
+    const t = easeInCubic(p / INTRO_END);
+    return {
+      brightness: lerp(INTENSITY_BRIGHT.brightness, INTENSITY_NORMAL.brightness, t),
+      bloomStrength: lerp(INTENSITY_BRIGHT.bloomStrength, INTENSITY_NORMAL.bloomStrength, t),
+      bloomThreshold: lerp(INTENSITY_BRIGHT.bloomThreshold, INTENSITY_NORMAL.bloomThreshold, t),
+      simSpeed: lerp(FPS_FLOOR, FPS_STEADY, t) / 60,
+    };
+  }
+  if (p >= OUTRO_START) {
+    const t = easeInCubic((p - OUTRO_START) / (1 - OUTRO_START));
+    return {
+      brightness: lerp(INTENSITY_NORMAL.brightness, INTENSITY_BRIGHT.brightness, t),
+      bloomStrength: lerp(INTENSITY_NORMAL.bloomStrength, INTENSITY_BRIGHT.bloomStrength, t),
+      bloomThreshold: lerp(INTENSITY_NORMAL.bloomThreshold, INTENSITY_BRIGHT.bloomThreshold, t),
+      simSpeed: lerp(FPS_STEADY, FPS_FLOOR, t) / 60,
+    };
+  }
+  return {
+    brightness: INTENSITY_NORMAL.brightness,
+    bloomStrength: INTENSITY_NORMAL.bloomStrength,
+    bloomThreshold: INTENSITY_NORMAL.bloomThreshold,
+    simSpeed: FPS_STEADY / 60,
+  };
+}
