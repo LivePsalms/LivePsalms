@@ -856,6 +856,15 @@ img {
   border-bottom-color: hsl(var(--mersi-dark)) !important;
 }
 
+/* FinalReflectionCta — pill CTA hover/focus lift (mirrors Zone 7 notepad CTA) */
+.final-reflection-notepad-cta:hover {
+  background-color: hsl(var(--mersi-dark) / 0.10) !important;
+  border-color: hsl(var(--mersi-dark) / 0.50) !important;
+}
+.final-reflection-notepad-cta:focus-visible {
+  box-shadow: 0 0 0 1px hsl(var(--mersi-dark) / 0.40);
+}
+
 /* FinalReflectionCta — placeholder color, more legible than browser default */
 .final-reflection-form input::placeholder {
   color: hsl(var(--mersi-dark) / 0.6);

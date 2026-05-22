@@ -123,25 +123,28 @@ export function FinalReflectionCta() {
         <Link
           to="/notepad"
           aria-label="Open your notepad"
-          className="final-reflection-notepad-cta"
+          className="final-reflection-notepad-cta group inline-flex items-center gap-2 px-8 py-3.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
             fontFamily: '"Cormorant Garamond", Georgia, serif',
             fontStyle: 'italic',
             fontWeight: 300,
             fontSize: '18px',
-            color: 'hsl(var(--mersi-dark))',
-            borderBottom: '1px solid currentColor',
-            paddingBottom: '2px',
+            color: 'hsl(var(--mersi-dark) / 0.95)',
+            border: '1px solid hsl(var(--mersi-dark) / 0.30)',
+            background: 'hsl(var(--mersi-dark) / 0.05)',
             textDecoration: 'none',
           }}
         >
           <TextStaggerHover as="span">
-            <TextStaggerHoverActive animation="blur">Open your notepad →</TextStaggerHoverActive>
-            <TextStaggerHoverHidden animation="blur">Open your notepad →</TextStaggerHoverHidden>
+            <TextStaggerHoverActive animation="blur">Open your notepad</TextStaggerHoverActive>
+            <TextStaggerHoverHidden animation="blur">Open your notepad</TextStaggerHoverHidden>
           </TextStaggerHover>
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-200 group-hover:translate-x-[3px] motion-reduce:transform-none"
+          >
+            →
+          </span>
         </Link>
 
         <div
