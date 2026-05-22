@@ -20,21 +20,26 @@ export const FPS_FLOOR = 3;
 /** FPS the curl-noise simulation runs at during the calm reading window. */
 export const FPS_STEADY = 39;
 
-/** Intensity at the bright/dramatic end-state (pin engage; just before pin release). */
+/** Visual intensity at the bright/dramatic end-state (pin engage; just before pin release).
+ *  Sim-speed is intentionally tracked separately as `FPS_FLOOR` — these objects
+ *  hold only the visual fields that share the same brightness/bloom interpolation. */
 export const INTENSITY_BRIGHT = {
   brightness: 3.45,
   bloomStrength: 3.30,
   bloomThreshold: 0.14,
 } as const;
 
-/** Intensity during the calm reading window. */
+/** Visual intensity during the calm reading window. Pair with `FPS_STEADY` for sim-speed. */
 export const INTENSITY_NORMAL = {
   brightness: 1.20,
   bloomStrength: 2.20,
   bloomThreshold: 0.15,
 } as const;
 
-/** Cubic ease-in: slow start, fast finish. Dwells at the start value before snapping. */
+/** Cubic ease-in (`t³`): slow start, fast finish. Caller chooses the value direction —
+ *  in this module `t=0` maps to the dramatic end-state (bright + low FPS) and `t=1`
+ *  maps to the calm end-state (normal + steady FPS), so "slow start" means the
+ *  dramatic look dwells before snapping to calm. */
 export function easeInCubic(t: number): number {
   return t * t * t;
 }
