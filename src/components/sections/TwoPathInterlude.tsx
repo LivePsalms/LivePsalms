@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { scrollToPurposeGrid } from './two-path-interlude-actions';
+import {
+  TextStaggerHover,
+  TextStaggerHoverActive,
+  TextStaggerHoverHidden,
+} from '@/components/ui/text-stagger-hover';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -109,7 +114,10 @@ export function TwoPathInterlude() {
           className="two-path-cta two-path-cta-read"
           aria-label="Read below — scroll to the purpose grid"
         >
-          <span className="two-path-cta-label">Read Below</span>
+          <TextStaggerHover as="span" className="two-path-cta-label">
+            <TextStaggerHoverActive animation="blur">Read Below</TextStaggerHoverActive>
+            <TextStaggerHoverHidden animation="blur">Read Below</TextStaggerHoverHidden>
+          </TextStaggerHover>
           <span className="two-path-arrow" aria-hidden="true" />
         </button>
       </div>
@@ -123,7 +131,10 @@ export function TwoPathInterlude() {
           className="two-path-cta two-path-cta-notepad"
           aria-label="Go to Notepad"
         >
-          <span className="two-path-cta-label">Go to Notepad</span>
+          <TextStaggerHover as="span" className="two-path-cta-label">
+            <TextStaggerHoverActive animation="blur">Go to Notepad</TextStaggerHoverActive>
+            <TextStaggerHoverHidden animation="blur">Go to Notepad</TextStaggerHoverHidden>
+          </TextStaggerHover>
           <span className="two-path-underline" aria-hidden="true" />
         </Link>
       </div>

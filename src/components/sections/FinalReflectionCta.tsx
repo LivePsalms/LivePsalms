@@ -8,6 +8,11 @@ import {
   type NewsletterClient,
   type SubscribeResult,
 } from './newsletter-actions';
+import {
+  TextStaggerHover,
+  TextStaggerHoverActive,
+  TextStaggerHoverHidden,
+} from '@/components/ui/text-stagger-hover';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -133,7 +138,10 @@ export function FinalReflectionCta() {
             textDecoration: 'none',
           }}
         >
-          Open your notepad →
+          <TextStaggerHover as="span">
+            <TextStaggerHoverActive animation="blur">Open your notepad →</TextStaggerHoverActive>
+            <TextStaggerHoverHidden animation="blur">Open your notepad →</TextStaggerHoverHidden>
+          </TextStaggerHover>
         </Link>
 
         <div
@@ -222,7 +230,14 @@ export function FinalReflectionCta() {
                       opacity: state.status === 'submitting' ? 0.5 : 1,
                     }}
                   >
-                    {state.status === 'submitting' ? '…' : 'Subscribe'}
+                    {state.status === 'submitting' ? (
+                      '…'
+                    ) : (
+                      <TextStaggerHover as="span">
+                        <TextStaggerHoverActive animation="blur">Subscribe</TextStaggerHoverActive>
+                        <TextStaggerHoverHidden animation="blur">Subscribe</TextStaggerHoverHidden>
+                      </TextStaggerHover>
+                    )}
                   </button>
                 </form>
                 {state.status === 'error' && (

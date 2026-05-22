@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';  
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -9,6 +9,11 @@ import {
   setNavCollapseProgress,
   getNavCollapseProgress,
 } from '@/lib/nav-collapse-progress';
+import {
+  TextStaggerHover,
+  TextStaggerHoverActive,
+  TextStaggerHoverHidden,
+} from '@/components/ui/text-stagger-hover';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -39,30 +44,18 @@ const easePower3Out = (n: number): number => 1 - (1 - n) * (1 - n) * (1 - n);
 const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Devotion']);
 
 function WaterText({ children, className, style, as: Tag = 'a', ...props }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties; as?: React.ElementType; [key: string]: unknown }) {
-  const [isHovered, setIsHovered] = useState(false);
   const text = typeof children === 'string' ? children : '';
 
   return (
-    <Tag
+    <TextStaggerHover
+      as={Tag}
       className={className}
       style={style}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       {...props}
     >
-      {text.split('').map((char: string, i: number) => (
-        <span
-          key={i}
-          className="inline-block"
-          style={{
-            animation: isHovered ? `water-letter 2.4s ease-in-out ${i * 100}ms infinite` : 'none',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </span>
-      ))}
-    </Tag>
+      <TextStaggerHoverActive animation="blur">{text}</TextStaggerHoverActive>
+      <TextStaggerHoverHidden animation="blur">{text}</TextStaggerHoverHidden>
+    </TextStaggerHover>
   );
 }
 

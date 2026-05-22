@@ -13,6 +13,11 @@ import {
   type NewsletterClient,
   type SubscribeResult,
 } from './newsletter-actions';
+import {
+  TextStaggerHover,
+  TextStaggerHoverActive,
+  TextStaggerHoverHidden,
+} from '@/components/ui/text-stagger-hover';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -155,7 +160,14 @@ export function NewsletterDialog({ children, source = 'restoration-cta' }: Newsl
                   opacity: state.status === 'submitting' ? 0.5 : 1,
                 }}
               >
-                {state.status === 'submitting' ? '…' : 'Subscribe'}
+                {state.status === 'submitting' ? (
+                  '…'
+                ) : (
+                  <TextStaggerHover as="span">
+                    <TextStaggerHoverActive animation="blur">Subscribe</TextStaggerHoverActive>
+                    <TextStaggerHoverHidden animation="blur">Subscribe</TextStaggerHoverHidden>
+                  </TextStaggerHover>
+                )}
               </button>
             </form>
           )}
