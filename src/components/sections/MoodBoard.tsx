@@ -271,8 +271,8 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const isMobile = useIsMobile();
   const onInMoodBoardRef = useRef(onInMoodBoard);
   onInMoodBoardRef.current = onInMoodBoard;
-  const isPeace = project.id === 'restoration1';
-  const isHope = project.id === 'restoration3';
+  const isPeace = project.id === 'peace';
+  const isHope = project.id === 'hope';
   const isStrength = project.id === 'strength';
   const isWholeness = project.id === 'wholeness';
   const isPurpose = project.id === 'purpose';

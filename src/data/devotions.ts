@@ -14,16 +14,16 @@ export interface Devotion {
 }
 
 export const devotions: Record<string, Devotion> = {
-  restoration1: {
-    id: 'restoration1',
+  peace: {
+    id: 'peace',
     label: 'Restoration of Peace',
     title: 'Beside Still Waters',
     scriptureRef: 'Psalm 23:2–3',
     monogram: 'PE',
     firstMoodboardImage: '/restoration1/image1.png',
   },
-  restoration3: {
-    id: 'restoration3',
+  hope: {
+    id: 'hope',
     label: 'The Restoration of Hope',
     title: 'A Future You Cannot See Yet',
     scriptureRef: 'Jeremiah 29:11',

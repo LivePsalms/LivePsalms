@@ -11,8 +11,8 @@ gsap.registerPlugin(Flip, ScrollTrigger);
 // Per-image overlay overrides keyed by project id. Falls back to the
 // shared category label when no override exists.
 const overlayLabelById: Record<string, string> = {
-  restoration1: 'Restoration of Peace',
-  restoration3: 'Restoration of Hope',
+  peace: 'Restoration of Peace',
+  hope: 'Restoration of Hope',
   strength: 'Restoration of Strength',
   wholeness: 'Restoration of Wholeness',
   purpose: 'Restoration of Purpose',

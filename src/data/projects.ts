@@ -33,6 +33,8 @@ const serenityImages = [
 // have a written devotion attached. The URL becomes /purpose/<slug> instead of
 // /purpose/<filename>.
 const idOverrides: Record<string, string> = {
+  restoration1: 'peace',
+  restoration3: 'hope',
   restoration5: 'strength',
   restoration6: 'wholeness',
   restoration7: 'purpose',

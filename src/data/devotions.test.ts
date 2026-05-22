@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { devotions, type Devotion } from './devotions';
 
 const REQUIRED_IDS = [
-  'restoration1',
-  'restoration3',
+  'peace',
+  'hope',
   'strength',
   'wholeness',
   'purpose',

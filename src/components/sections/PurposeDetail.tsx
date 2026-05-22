@@ -19,8 +19,8 @@ interface PurposeDetailProps {
 
 
 export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetailProps) {
-  const isRestoration1 = project.id === 'restoration1';
-  const isRestoration3 = project.id === 'restoration3';
+  const isPeace = project.id === 'peace';
+  const isHope = project.id === 'hope';
   const isStrength = project.id === 'strength';
   const isWholeness = project.id === 'wholeness';
   const isPurpose = project.id === 'purpose';
@@ -31,8 +31,8 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
   const isSurrender = project.id === 'surrender';
   const isTrust = project.id === 'trust';
   const isDevotion =
-    isRestoration1 ||
-    isRestoration3 ||
+    isPeace ||
+    isHope ||
     isStrength ||
     isWholeness ||
     isPurpose ||
@@ -78,9 +78,9 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                 enabled={textReady}
               >
                 <span>
-                  {isRestoration1
+                  {isPeace
                     ? 'Restoration of Peace'
-                    : isRestoration3
+                    : isHope
                     ? 'The Restoration of Hope'
                     : isStrength
                     ? 'The Restoration of Strength'
@@ -126,9 +126,9 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                     transition: `transform 1.6s ${DETAIL_REVEAL_TIMELINE.easing}`,
                   }}
                 >
-                  {isRestoration1
+                  {isPeace
                     ? 'Beside Still Waters'
-                    : isRestoration3
+                    : isHope
                     ? 'A Future You Cannot See Yet'
                     : isStrength
                     ? 'Wings Like Eagles'
@@ -159,13 +159,13 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   threshold={0.1}
                   enabled={textReady}
                 >
-                  {isRestoration1 ? (
+                  {isPeace ? (
                     <>
                       <p>&ldquo;He makes me lie down in green pastures,</p>
                       <p>he leads me beside quiet waters,</p>
                       <p>he refreshes my soul.&rdquo;</p>
                     </>
-                  ) : isRestoration3 ? (
+                  ) : isHope ? (
                     <>
                       <p>&ldquo;For I know the plans I have for you,&rdquo;</p>
                       <p>declares the Lord, &ldquo;plans to prosper you</p>
@@ -250,9 +250,9 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                     transition: `opacity 1.2s ${DETAIL_REVEAL_TIMELINE.easing} 0.6s`,
                   }}
                 >
-                  {isRestoration1 ? (
+                  {isPeace ? (
                     <>Psalm 23:2&ndash;3</>
-                  ) : isRestoration3 ? (
+                  ) : isHope ? (
                     'Jeremiah 29:11'
                   ) : isStrength ? (
                     'Isaiah 40:31'
