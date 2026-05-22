@@ -9,14 +9,19 @@ export const BEATS = [
   "No matter what the day is doing. No matter what the news is doing. The peace you've been looking for isn't out there. It's a room inside you have the capability to return to, anytime.",
 ] as const;
 
-// GSAP timeline progress points for the pinned mid-section stage.
-// Mirrors the BRIDGE_PIN_TIMING shape exactly. Each beat has:
+// Reading-relative GSAP timeline progress points for the pinned mid-section stage.
+// Values express positions within the 5-beat reading band as a 0..1 range, NOT
+// positions on the full pinned timeline. Each beat has:
 //   enter      — when its enter tween starts (opacity 0→1, y 20→0)
 //   holdStart  — when it reaches full opacity at resting position
 //   holdEnd    — when its exit tween starts (opacity 1→0, y 0→−20)
 //   exit       — when it has fully exited
 // Kiss handoff: beatN.exit === beatN+1.enter, so beat N+1's enter tween
 // starts exactly as beat N's exit tween finishes — back-to-back, never a gap.
+//
+// WebGPU consumer offsets/scales these into the reading band via
+// `mapBeatProgressWebGPU` from ./mid-section-intensity (intro/outro bookends).
+// Video consumer uses the raw values (no bookends).
 export const MID_SECTION_PIN_TIMING = {
   beat1: { enter: 0,    holdStart: 0.04, holdEnd: 0.16, exit: 0.20 },
   beat2: { enter: 0.20, holdStart: 0.24, holdEnd: 0.36, exit: 0.40 },
