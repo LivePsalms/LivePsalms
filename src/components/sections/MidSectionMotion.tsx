@@ -229,7 +229,7 @@ export function MidSectionMotion() {
     );
   }
 
-  // ─── Full-motion JSX: wrapper height 600vh (webgpu) or 500vh (video), sticky 100vh stage ───
+  // ─── Full-motion JSX: wrapper height 700vh (webgpu) or 500vh (video), sticky 100vh stage ───
   const wrapperHeight = renderMode === 'webgpu' ? '700vh' : '500vh';
   return (
     <section
