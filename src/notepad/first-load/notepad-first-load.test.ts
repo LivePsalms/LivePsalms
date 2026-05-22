@@ -151,6 +151,7 @@ describe('decideFirstLoadActions — gating', () => {
       decideFirstLoadActions({
         user,
         authLoading: true,
+        profileLoading: false,
         hasBeenWelcomed: false,
         hasBeenGreetedToday: false,
         localNoteCount: 5,
@@ -163,7 +164,22 @@ describe('decideFirstLoadActions — gating', () => {
       decideFirstLoadActions({
         user: null,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: true,
+        hasBeenGreetedToday: false,
+        localNoteCount: 5,
+      }),
+    ).toEqual([]);
+  });
+
+  it('returns no actions while profileLoading', () => {
+    const user = makeUser({ id: 'u1', email: 'a@b.com' });
+    expect(
+      decideFirstLoadActions({
+        user,
+        authLoading: false,
+        profileLoading: true,
+        hasBeenWelcomed: false,
         hasBeenGreetedToday: false,
         localNoteCount: 5,
       }),
@@ -178,6 +194,7 @@ describe('decideFirstLoadActions — welcome redirect short-circuits greet', () 
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: false,
         hasBeenGreetedToday: false,
         localNoteCount: 0,
@@ -191,6 +208,7 @@ describe('decideFirstLoadActions — welcome redirect short-circuits greet', () 
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: false,
         hasBeenGreetedToday: false,
         localNoteCount: 3,
@@ -210,6 +228,7 @@ describe('decideFirstLoadActions — returning user', () => {
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: true,
         hasBeenGreetedToday: false,
         localNoteCount: 0,
@@ -223,6 +242,7 @@ describe('decideFirstLoadActions — returning user', () => {
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: true,
         hasBeenGreetedToday: true,
         localNoteCount: 0,
@@ -236,6 +256,7 @@ describe('decideFirstLoadActions — returning user', () => {
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: true,
         hasBeenGreetedToday: false,
         localNoteCount: 1,
@@ -249,6 +270,7 @@ describe('decideFirstLoadActions — returning user', () => {
       decideFirstLoadActions({
         user,
         authLoading: false,
+        profileLoading: false,
         hasBeenWelcomed: true,
         hasBeenGreetedToday: true,
         localNoteCount: 7,

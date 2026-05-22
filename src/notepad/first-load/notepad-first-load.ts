@@ -8,6 +8,7 @@ export type FirstLoadAction =
 export interface FirstLoadInput {
   user: User | null;
   authLoading: boolean;
+  profileLoading: boolean;
   hasBeenWelcomed: boolean;
   hasBeenGreetedToday: boolean;
   localNoteCount: number;
@@ -52,8 +53,8 @@ export const markGreetedToday = (
 export const todayDateString = (now: Date): string => now.toDateString();
 
 export function decideFirstLoadActions(input: FirstLoadInput): FirstLoadAction[] {
-  const { user, authLoading, hasBeenWelcomed, hasBeenGreetedToday, localNoteCount } = input;
-  if (authLoading || !user) return [];
+  const { user, authLoading, profileLoading, hasBeenWelcomed, hasBeenGreetedToday, localNoteCount } = input;
+  if (authLoading || profileLoading || !user) return [];
 
   const actions: FirstLoadAction[] = [];
   if (!hasBeenWelcomed) {
