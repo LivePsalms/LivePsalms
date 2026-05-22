@@ -1,5 +1,5 @@
 // src/components/sections/PurposeStackPill.tsx
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import type { PillData } from './purpose-stack-data';
 
 export interface PurposeStackPillHandle {
@@ -28,6 +28,49 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
   const stackTitleRef = useRef<HTMLDivElement>(null);
   const stackCategoryRef = useRef<HTMLDivElement>(null);
   const stackScriptureRef = useRef<HTMLDivElement>(null);
+  const maskLabelRef = useRef<HTMLDivElement>(null);
+  const maskTitleRef = useRef<HTMLDivElement>(null);
+  const maskCategoryRef = useRef<HTMLDivElement>(null);
+  const maskScriptureRef = useRef<HTMLDivElement>(null);
+
+  // Lock each mask's height to its single-frame natural height so that
+  // during a morph (when the stack briefly contains 2 frames) overflow:hidden
+  // actually clips. Without this, the mask grows to fit both frames and they
+  // render simultaneously instead of one sliding behind the other.
+  useLayoutEffect(() => {
+    const pairs = [
+      [maskLabelRef, stackLabelRef],
+      [maskTitleRef, stackTitleRef],
+      [maskCategoryRef, stackCategoryRef],
+      [maskScriptureRef, stackScriptureRef],
+    ] as const;
+
+    const measure = () => {
+      for (const [maskRef, stackRef] of pairs) {
+        const mask = maskRef.current;
+        const stack = stackRef.current;
+        if (!mask || !stack) continue;
+        // Skip if a morph is mid-flight — measuring then would capture 2×.
+        if (stack.children.length !== 1) continue;
+        mask.style.height = '';
+        const h = mask.offsetHeight;
+        if (h > 0) mask.style.height = `${h}px`;
+      }
+    };
+
+    measure();
+
+    let rafId = 0;
+    const onResize = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     getRoot: () => rootRef.current,
@@ -85,10 +128,10 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
         }}
       >
         <div className="flex flex-col gap-1 text-left">
-          <Mask alignEnd={false}>
+          <Mask ref={maskLabelRef} alignEnd={false}>
             <Stack ref={stackLabelRef} innerHtml={`<span class="pl-lbl">${escapeHtml(initial.label)}</span>`} />
           </Mask>
-          <Mask alignEnd={false}>
+          <Mask ref={maskTitleRef} alignEnd={false}>
             <Stack ref={stackTitleRef} innerHtml={`<span class="pl-title">${escapeHtml(initial.title)}</span>`} />
           </Mask>
         </div>
@@ -102,10 +145,10 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
           style={{ transform: 'translateY(22px)' }}
         />
         <div className="flex flex-col gap-1 text-right">
-          <Mask alignEnd>
+          <Mask ref={maskCategoryRef} alignEnd>
             <Stack ref={stackCategoryRef} innerHtml={`<span class="pl-meta">${escapeHtml(initial.category)}</span>`} />
           </Mask>
-          <Mask alignEnd>
+          <Mask ref={maskScriptureRef} alignEnd>
             <Stack ref={stackScriptureRef} innerHtml={initialScriptureHtml} />
           </Mask>
         </div>
@@ -123,9 +166,11 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
   );
 });
 
-function Mask({ alignEnd, children }: { alignEnd: boolean; children: React.ReactNode }) {
-  return <div className={`ps-mask ${alignEnd ? 'r' : ''}`}>{children}</div>;
-}
+const Mask = forwardRef<HTMLDivElement, { alignEnd: boolean; children: React.ReactNode }>(
+  function Mask({ alignEnd, children }, ref) {
+    return <div ref={ref} className={`ps-mask ${alignEnd ? 'r' : ''}`}>{children}</div>;
+  },
+);
 
 const Stack = forwardRef<HTMLDivElement, { innerHtml: string }>(function Stack({ innerHtml }, ref) {
   return (
