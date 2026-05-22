@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthSession } from './context/useAuthSession';
 import { useAccountProfile } from './context/useAccountProfile';
-import { markWelcomed } from '@/notepad/first-load/notepad-first-load';
 
 export function WelcomePage() {
   const navigate = useNavigate();
@@ -32,12 +31,6 @@ export function WelcomePage() {
     );
   }
 
-  const markUserWelcomed = () => {
-    if (user) {
-      markWelcomed(user.id, localStorage);
-    }
-  };
-
   const handleContinue = async () => {
     if (!fullName.trim()) {
       toast.error('Please enter your name to continue.');
@@ -49,7 +42,6 @@ export function WelcomePage() {
         fullName: fullName.trim(),
         dateOfBirth: dateOfBirth || null,
       });
-      markUserWelcomed();
       toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
       navigate('/notepad');
     } catch (err) {
@@ -57,11 +49,6 @@ export function WelcomePage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSkip = () => {
-    markUserWelcomed();
-    navigate('/notepad');
   };
 
   const inputStyle = {
@@ -171,14 +158,6 @@ export function WelcomePage() {
             {saving ? 'Saving...' : 'Continue'}
           </button>
 
-          <button
-            onClick={handleSkip}
-            disabled={saving}
-            className="w-full text-xs hover:opacity-70 transition-opacity"
-            style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-          >
-            Skip for now
-          </button>
         </div>
       </div>
     </div>
