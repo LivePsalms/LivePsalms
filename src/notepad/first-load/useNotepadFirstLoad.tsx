@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthSession } from '@/auth/context/useAuthSession';
+import { useAccountProfile } from '@/auth/context/useAccountProfile';
 import { localAdapter } from '@/notepad/storage/local-storage';
 import {
   decideFirstLoadActions,
-  hasBeenWelcomed,
   hasBeenGreetedToday,
   markGreetedToday,
   todayDateString,
@@ -18,11 +18,13 @@ interface UseNotepadFirstLoadResult {
 
 export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
   const { user, loading: authLoading } = useAuthSession();
+  const { profile, profileStatus } = useAccountProfile();
   const navigate = useNavigate();
   const [showMigration, setShowMigration] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
+    if (profileStatus === 'loading') return;
     let cancelled = false;
     (async () => {
       const notes = await localAdapter.getNotes();
@@ -31,7 +33,8 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
       const actions = decideFirstLoadActions({
         user,
         authLoading,
-        hasBeenWelcomed: hasBeenWelcomed(user.id, localStorage),
+        profileLoading: false, // guarded above: profileStatus === 'loading' already returned
+        hasBeenWelcomed: !!profile?.fullName?.trim(),
         hasBeenGreetedToday: hasBeenGreetedToday(user.id, today, sessionStorage),
         localNoteCount: notes.length,
       });
@@ -53,7 +56,7 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, profile?.fullName, profileStatus, navigate]);
 
   return {
     showMigration,
