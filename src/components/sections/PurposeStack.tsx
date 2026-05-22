@@ -1,5 +1,5 @@
 // src/components/sections/PurposeStack.tsx
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
@@ -15,11 +15,19 @@ interface Props {
   projects: Project[];
 }
 
+const CYCLES = 10; // K — number of cycles spanned by the pinned scroll range
+
 export function PurposeStack({ projects }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const slotARef = useRef<HTMLDivElement>(null);
+  const slotBRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<PurposeStackPillHandle>(null);
-  const currentIndexRef = useRef<number>(0);
+
+  // Tracks the last applied integer step (so slot data swaps fire once per boundary)
+  const lastStepRef = useRef<number | null>(null);
+  // Tracks the currently visible devotion (drives pill morph + click handler)
+  const visibleIdxRef = useRef<number>(0);
 
   const pillDataPerPanel = useMemo<PillData[]>(
     () => projects.map((p) => computePillData(p, devotions[p.id])),
@@ -32,76 +40,84 @@ export function PurposeStack({ projects }: Props) {
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Master pinned timeline. Skips work when reducedMotion or narrow viewport.
   useLayoutEffect(() => {
-    if (reducedMotion) return;
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) return;
-
     const stage = stageRef.current;
     const wrapper = wrapperRef.current;
-    if (!stage || !wrapper) return;
+    const slotA = slotARef.current;
+    const slotB = slotBRef.current;
+    if (!stage || !wrapper || !slotA || !slotB) return;
 
-    const panels = Array.from(stage.querySelectorAll<HTMLDivElement>('[data-ps-panel]'));
-    if (panels.length === 0) return;
+    const N = pillDataPerPanel.length;
+    if (N === 0) return;
 
     const ctx = gsap.context(() => {
-      // Initial state for panels 2..N.
-      panels.forEach((panel, i) => {
-        if (i === 0) return;
-        const l = panel.querySelector<HTMLDivElement>('[data-ps-half="l"]');
-        const r = panel.querySelector<HTMLDivElement>('[data-ps-half="r"]');
-        if (l) gsap.set(l, { yPercent: 100 });
-        if (r) gsap.set(r, { yPercent: -100 });
-      });
+      // Initial slot state
+      setSlotImages(slotA, pillDataPerPanel[0]);
+      setSlotImages(slotB, pillDataPerPanel[1 % N]);
+      const aHalves = getHalves(slotA);
+      const bHalves = getHalves(slotB);
+      gsap.set([aHalves.l, aHalves.r], { yPercent: 0 });
+      if (bHalves.l) gsap.set(bHalves.l, { yPercent: 100 });
+      if (bHalves.r) gsap.set(bHalves.r, { yPercent: -100 });
 
-      // Total timeline duration = N-1 (each panel transition is duration 1).
-      // Panel i becomes "current" when progress crosses (i - 0.5) / (N-1).
-      const totalDuration = panels.length - 1;
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: wrapper,
-          start: 'top top',
-          end: () => `+=${totalDuration * window.innerHeight}`,
-          pin: true,
-          scrub: 0.6,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            // Determine which devotion is currently focal based on scrubbed
-            // progress. The active index advances at the half-meet point of
-            // each transition (progress = (i - 0.5) / totalDuration).
-            const progress = self.progress;
-            let idx = 0;
-            for (let i = 1; i < panels.length; i++) {
-              if (progress >= (i - 0.5) / totalDuration) idx = i;
-              else break;
-            }
-            if (idx !== currentIndexRef.current) {
-              currentIndexRef.current = idx;
-              pillRef.current?.morphTo(pillDataPerPanel[idx]);
-            }
-          },
+      lastStepRef.current = 0;
+      visibleIdxRef.current = 0;
+
+      ScrollTrigger.create({
+        trigger: wrapper,
+        start: 'top top',
+        end: () => `+=${CYCLES * N * window.innerHeight}`,
+        pin: true,
+        scrub: 0.6,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const globalStep = self.progress * CYCLES * N;
+          const intStep = Math.floor(globalStep);
+          let frac = globalStep - intStep;
+          if (frac < 0) frac += 1; // safety for negative floor edge cases
+
+          const aIdx = ((intStep % N) + N) % N;
+          const bIdx = (aIdx + 1) % N;
+
+          if (intStep !== lastStepRef.current) {
+            lastStepRef.current = intStep;
+            setSlotImages(slotA, pillDataPerPanel[aIdx]);
+            setSlotImages(slotB, pillDataPerPanel[bIdx]);
+          }
+
+          if (reducedMotion) {
+            // Snap-cut: halves either fully met or fully off-screen, no interpolation
+            const met = frac >= 0.5;
+            if (bHalves.l) gsap.set(bHalves.l, { yPercent: met ? 0 : 100 });
+            if (bHalves.r) gsap.set(bHalves.r, { yPercent: met ? 0 : -100 });
+          } else {
+            const t = 1 - frac;
+            if (bHalves.l) gsap.set(bHalves.l, { yPercent: 100 * t });
+            if (bHalves.r) gsap.set(bHalves.r, { yPercent: -100 * t });
+          }
+
+          // Active devotion (for pill + click handler): same half-meet rule as before
+          const visibleIdx = frac < 0.5 ? aIdx : bIdx;
+          if (visibleIdx !== visibleIdxRef.current) {
+            visibleIdxRef.current = visibleIdx;
+            const data = pillDataPerPanel[visibleIdx];
+            if (reducedMotion) pillRef.current?.setStatic(data);
+            else pillRef.current?.morphTo(data);
+          }
         },
-      });
-
-      panels.forEach((panel, i) => {
-        if (i === 0) return;
-        const l = panel.querySelector<HTMLDivElement>('[data-ps-half="l"]');
-        const r = panel.querySelector<HTMLDivElement>('[data-ps-half="r"]');
-        if (l) tl.to(l, { yPercent: 0, ease: 'none' }, i - 1);
-        if (r) tl.to(r, { yPercent: 0, ease: 'none' }, i - 1);
       });
     }, wrapper);
 
     return () => ctx.revert();
   }, [pillDataPerPanel, reducedMotion]);
 
-  // Scroll to top on mount (parity with current PurposeGallery).
+  // Scroll to top on mount (parity with prior behavior).
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const handlePillActivate = () => {
-    const i = currentIndexRef.current;
+    const i = visibleIdxRef.current;
     const project = projects[i];
     const data = pillDataPerPanel[i];
     const pillRoot = pillRef.current?.getRoot();
@@ -116,73 +132,12 @@ export function PurposeStack({ projects }: Props) {
 
   if (pillDataPerPanel.length === 0) return null;
 
-  const useFallback =
-    reducedMotion ||
-    (typeof window !== 'undefined' && window.innerWidth <= 768);
-
-  if (useFallback) {
-    return (
-      <FallbackStack
-        projects={projects}
-        pillDataPerPanel={pillDataPerPanel}
-        onPillActivate={(i) => {
-          const project = projects[i];
-          const data = pillDataPerPanel[i];
-          if (!project) return;
-          // No shared pill in fallback; pass the activated panel's pill root.
-          // `.ps-pill` is the actual pill element (absolute-positioned with the
-          // pill geometry); the `[data-ps-fallback-pill]` wrapper has 0 height.
-          const root = document.querySelector<HTMLDivElement>(
-            `[data-ps-fallback-panel="${i}"] .ps-pill`,
-          );
-          if (!root) return;
-          startFromPill({
-            pillEl: root,
-            pillColor: data.pillColor,
-            targetUrl: `/purpose/${project.id}`,
-            reducedMotion,
-          });
-        }}
-      />
-    );
-  }
-
   return (
-    <div ref={wrapperRef} className="ps-wrap relative w-full bg-[var(--app-bg)] pt-20">
+    <div ref={wrapperRef} className="ps-wrap relative w-full bg-[var(--app-bg)]">
       <HeroMaskClipDef />
       <div ref={stageRef} className="ps-stage relative w-full h-screen overflow-hidden">
-        {projects.map((project, i) => {
-          const data = pillDataPerPanel[i];
-          return (
-            <div
-              key={project.id}
-              data-ps-panel
-              className="absolute inset-0 grid grid-cols-2 overflow-hidden"
-              style={{ zIndex: i + 1 }}
-            >
-              <div
-                data-ps-half="l"
-                className="relative overflow-hidden will-change-transform"
-                style={{
-                  backgroundImage: `url(${data.leftImage})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              />
-              <div
-                data-ps-half="r"
-                className="relative overflow-hidden will-change-transform"
-                style={{
-                  backgroundImage: `url(${data.rightImage})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              />
-              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/15 pointer-events-none" />
-            </div>
-          );
-        })}
-
+        <Slot ref={slotARef} z={1} />
+        <Slot ref={slotBRef} z={2} />
         <PurposeStackPill
           ref={pillRef}
           initial={pillDataPerPanel[0]}
@@ -193,85 +148,40 @@ export function PurposeStack({ projects }: Props) {
   );
 }
 
-function FallbackStack({
-  projects,
-  pillDataPerPanel,
-  onPillActivate,
-}: {
-  projects: Project[];
-  pillDataPerPanel: PillData[];
-  onPillActivate: (index: number) => void;
-}) {
-  const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// --- helpers ---
 
-  useEffect(() => {
-    if (reducedMotion) return;
+function getHalves(slot: HTMLDivElement) {
+  return {
+    l: slot.querySelector<HTMLDivElement>('[data-ps-half="l"]'),
+    r: slot.querySelector<HTMLDivElement>('[data-ps-half="r"]'),
+  };
+}
 
-    const ctx = gsap.context(() => {
-      const panels = gsap.utils.toArray<HTMLDivElement>('[data-ps-fallback-panel]');
-      panels.forEach((panel) => {
-        const l = panel.querySelector<HTMLDivElement>('[data-ps-half="l"]');
-        const r = panel.querySelector<HTMLDivElement>('[data-ps-half="r"]');
-        if (l) gsap.set(l, { yPercent: 100 });
-        if (r) gsap.set(r, { yPercent: -100 });
+function setSlotImages(slot: HTMLDivElement, data: PillData) {
+  const l = slot.querySelector<HTMLDivElement>('[data-ps-half="l"]');
+  const r = slot.querySelector<HTMLDivElement>('[data-ps-half="r"]');
+  if (l) l.style.backgroundImage = `url(${data.leftImage})`;
+  if (r) r.style.backgroundImage = `url(${data.rightImage})`;
+}
 
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: panel,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
-          },
-        });
-        if (l) tl.to(l, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0);
-        if (r) tl.to(r, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0);
-      });
-    });
-
-    return () => ctx.revert();
-  }, [reducedMotion]);
-
+const Slot = forwardRef<HTMLDivElement, { z: number }>(function Slot({ z }, ref) {
   return (
-    <div className="ps-wrap relative w-full bg-[var(--app-bg)] pt-20">
-      <HeroMaskClipDef />
-      {projects.map((project, i) => {
-        const data = pillDataPerPanel[i];
-        return (
-          <section
-            key={project.id}
-            data-ps-fallback-panel={i}
-            className="relative w-full h-screen overflow-hidden grid grid-cols-2"
-            style={{ backgroundColor: data.pillColor }}
-          >
-            <div
-              data-ps-half="l"
-              className="relative overflow-hidden will-change-transform"
-              style={{
-                backgroundImage: `url(${data.leftImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            <div
-              data-ps-half="r"
-              className="relative overflow-hidden will-change-transform"
-              style={{
-                backgroundImage: `url(${data.rightImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/15 pointer-events-none" />
-            <div data-ps-fallback-pill>
-              <PurposeStackPill
-                initial={data}
-                onActivate={() => onPillActivate(i)}
-              />
-            </div>
-          </section>
-        );
-      })}
+    <div
+      ref={ref}
+      className="absolute inset-0 grid grid-cols-2 overflow-hidden"
+      style={{ zIndex: z }}
+    >
+      <div
+        data-ps-half="l"
+        className="relative overflow-hidden will-change-transform"
+        style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
+      />
+      <div
+        data-ps-half="r"
+        className="relative overflow-hidden will-change-transform"
+        style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
+      />
+      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/15 pointer-events-none" />
     </div>
   );
-}
+});
