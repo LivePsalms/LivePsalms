@@ -24,17 +24,8 @@ export function firstNameOf(user: User): string {
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
-export const welcomedKey = (userId: string): string => `welcomed_${userId}`;
-
 export const greetedKey = (userId: string, today: string): string =>
   `greeted_${userId}_${today}`;
-
-export const hasBeenWelcomed = (userId: string, storage: StorageLike): boolean =>
-  storage.getItem(welcomedKey(userId)) !== null;
-
-export const markWelcomed = (userId: string, storage: StorageLike): void => {
-  storage.setItem(welcomedKey(userId), 'true');
-};
 
 export const hasBeenGreetedToday = (
   userId: string,

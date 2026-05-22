@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import {
   firstNameOf,
-  welcomedKey,
   greetedKey,
-  hasBeenWelcomed,
-  markWelcomed,
   hasBeenGreetedToday,
   markGreetedToday,
   todayDateString,
@@ -71,37 +68,8 @@ describe('firstNameOf', () => {
 });
 
 describe('storage keys', () => {
-  it('welcomedKey embeds the user id', () => {
-    expect(welcomedKey('user-42')).toBe('welcomed_user-42');
-  });
-
   it('greetedKey embeds the user id and date string', () => {
     expect(greetedKey('user-42', 'Wed May 07 2026')).toBe('greeted_user-42_Wed May 07 2026');
-  });
-});
-
-describe('hasBeenWelcomed / markWelcomed', () => {
-  it('returns false when the key is absent', () => {
-    const storage = makeFakeStorage();
-    expect(hasBeenWelcomed('u1', storage)).toBe(false);
-  });
-
-  it('returns true after markWelcomed', () => {
-    const storage = makeFakeStorage();
-    markWelcomed('u1', storage);
-    expect(hasBeenWelcomed('u1', storage)).toBe(true);
-  });
-
-  it('is scoped per-user-id', () => {
-    const storage = makeFakeStorage();
-    markWelcomed('u1', storage);
-    expect(hasBeenWelcomed('u2', storage)).toBe(false);
-  });
-
-  it('writes the value "true" to the storage', () => {
-    const storage = makeFakeStorage();
-    markWelcomed('u1', storage);
-    expect(storage.data.get('welcomed_u1')).toBe('true');
   });
 });
 
