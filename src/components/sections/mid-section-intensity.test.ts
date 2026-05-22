@@ -175,6 +175,30 @@ describe('computeIntensityState — outro band', () => {
   });
 });
 
+describe('computeIntensityState — input clamping', () => {
+  it('negative progress clamps to BRIGHT/floor (same as p=0)', () => {
+    const s = computeIntensityState(-0.5);
+    expect(s.brightness).toBeCloseTo(INTENSITY_BRIGHT.brightness, 10);
+    expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
+  });
+  it('progress > 1 clamps to BRIGHT/floor (same as p=1)', () => {
+    const s = computeIntensityState(1.5);
+    expect(s.brightness).toBeCloseTo(INTENSITY_BRIGHT.brightness, 10);
+    expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
+  });
+  it('NaN progress clamps to BRIGHT/floor (treated as 0)', () => {
+    const s = computeIntensityState(NaN);
+    expect(s.brightness).toBeCloseTo(INTENSITY_BRIGHT.brightness, 10);
+    expect(s.simSpeed).toBeCloseTo(FPS_FLOOR / 60, 10);
+  });
+  it('never produces negative simSpeed', () => {
+    for (const p of [-100, -1, -0.0001, 0, 0.5, 1, 1.0001, 100, NaN, Infinity, -Infinity]) {
+      const s = computeIntensityState(p);
+      expect(s.simSpeed).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
+
 describe('mapBeatProgressWebGPU', () => {
   it('raw 0 maps to INTRO_END (beat 1 enters as intro ends)', () => {
     expect(mapBeatProgressWebGPU(0)).toBeCloseTo(INTRO_END, 10);

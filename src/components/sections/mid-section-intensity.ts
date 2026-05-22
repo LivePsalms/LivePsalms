@@ -60,8 +60,14 @@ function lerp(a: number, b: number, t: number): number {
  * Intro band  (p ∈ [0, INTRO_END])     bright/floor → normal/steady, cubic ease-in.
  * Reading     (p ∈ (INTRO_END, OUTRO_START))  held at normal/steady.
  * Outro band  (p ∈ [OUTRO_START, 1])   normal/steady → bright/floor, cubic ease-in.
+ *
+ * Inputs outside [0, 1] (or NaN / non-finite) are clamped to the nearest endpoint.
+ * Without the clamp, negative or NaN progress would produce negative simSpeed
+ * (reversed simulation) and out-of-range brightness.
  */
 export function computeIntensityState(p: number): IntensityState {
+  if (!(p >= 0)) p = 0;
+  else if (p > 1) p = 1;
   if (p <= INTRO_END) {
     const t = easeInCubic(p / INTRO_END);
     return {
