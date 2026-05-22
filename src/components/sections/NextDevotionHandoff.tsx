@@ -47,6 +47,11 @@ interface NextDevotionHandoffProps {
   nextProject: Project;
   nextDevotion: Devotion;
   variant?: 'desktop' | 'mobile';
+  // When true (desktop only), the handoff renders as the final panel inside
+  // the moodboard horizontal track. Skips its own pin + entrance/exit
+  // choreography and auto-nav — user reaches it by horizontal scroll like
+  // every other zone.
+  inHorizontalTrack?: boolean;
 }
 
 /**
@@ -60,6 +65,7 @@ export function NextDevotionHandoff({
   nextProject,
   nextDevotion,
   variant = 'desktop',
+  inHorizontalTrack = false,
 }: NextDevotionHandoffProps) {
   void currentProject; // reserved for future analytics
 
@@ -71,7 +77,6 @@ export function NextDevotionHandoff({
   const pillRef = useRef<HTMLDivElement>(null);
   const pillFillRef = useRef<HTMLDivElement>(null);
   const pillContentRef = useRef<HTMLDivElement>(null);
-  const actTwoSentinelRef = useRef<HTMLDivElement>(null);
   const navigatedRef = useRef(false);
 
   useEntranceAnimation({
@@ -81,10 +86,11 @@ export function NextDevotionHandoff({
     pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
     navigatedRef,
     nextProject,
     reducedMotion,
+    variant,
+    inHorizontalTrack,
   });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
 
@@ -111,9 +117,9 @@ export function NextDevotionHandoff({
     pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
     onActivate: startExpand,
     pillColor,
+    inHorizontalTrack,
   };
 
   return variant === 'mobile' ? (
@@ -132,9 +138,9 @@ interface LayoutProps {
   pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
-  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
   onActivate: () => void;
   pillColor: string;
+  inHorizontalTrack: boolean;
 }
 
 function DesktopLayout({
@@ -146,66 +152,66 @@ function DesktopLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
   onActivate,
   pillColor,
+  inHorizontalTrack,
 }: LayoutProps) {
+  // Inside the moodboard horizontal track, the section must behave like every
+  // other zone: non-shrinking 100vw flex item. Standalone (legacy / non-custom
+  // devotion) keeps the original w-full sizing.
+  const sectionClassName = inHorizontalTrack
+    ? 'next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer'
+    : 'next-handoff relative w-full h-screen overflow-hidden cursor-pointer';
+  const sectionStyle: React.CSSProperties = inHorizontalTrack
+    ? { width: '100vw', backgroundColor: pillColor }
+    : { backgroundColor: pillColor };
+
   return (
     <section
       ref={rootRef}
       onClick={onActivate}
-      className="next-handoff relative flex-shrink-0 h-screen overflow-hidden cursor-pointer"
-      style={{ width: '200vw', backgroundColor: pillColor }}
+      className={sectionClassName}
+      style={sectionStyle}
     >
-      {/* Act 1 viewport — split images + pill, all centered in the first 100vw */}
-      <div className="absolute top-0 left-0 h-full" style={{ width: '100vw' }}>
-        <div className="absolute inset-0 grid grid-cols-2">
-          <div className="relative overflow-hidden">
-            <img
-              ref={leftImgRef}
-              src={nextProject.thumbnail}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
-          <div className="relative overflow-hidden">
-            <img
-              ref={rightImgRef}
-              src={nextDevotion.firstMoodboardImage}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+      <div className="absolute inset-0 grid grid-cols-2">
+        <div className="relative overflow-hidden">
+          <img
+            ref={leftImgRef}
+            src={nextProject.thumbnail}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
-        <div
-          className="absolute top-0 bottom-0 left-1/2 w-px"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-          aria-hidden="true"
-        />
-
-        <Pill
-          pillRef={pillRef}
-          pillFillRef={pillFillRef}
-          pillContentRef={pillContentRef}
-          nextProject={nextProject}
-          nextDevotion={nextDevotion}
-          variant="desktop"
-          onActivate={onActivate}
-          pillColor={pillColor}
-        />
+        <div className="relative overflow-hidden">
+          <img
+            ref={rightImgRef}
+            src={nextDevotion.firstMoodboardImage}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
       </div>
-      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
       <div
-        ref={actTwoSentinelRef}
+        className="absolute top-0 bottom-0 left-1/2 w-px"
+        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
         aria-hidden="true"
-        className="absolute top-0 h-full pointer-events-none"
-        style={{ left: '50%', width: '1px' }}
+      />
+
+      <Pill
+        pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
+        nextProject={nextProject}
+        nextDevotion={nextDevotion}
+        variant="desktop"
+        onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -220,66 +226,57 @@ function MobileLayout({
   pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
   onActivate,
   pillColor,
+  inHorizontalTrack: _inHorizontalTrack,
 }: LayoutProps) {
+  void _inHorizontalTrack; // mobile has no horizontal track; flag is ignored
   return (
     <section
       ref={rootRef}
       onClick={onActivate}
-      className="next-handoff relative w-full overflow-hidden cursor-pointer"
-      style={{ minHeight: '200vh', backgroundColor: pillColor }}
+      className="next-handoff relative w-full h-screen overflow-hidden cursor-pointer"
+      style={{ backgroundColor: pillColor }}
     >
-      {/* Act 1 viewport — split images + pill, in the first 100vh */}
-      <div className="absolute top-0 left-0 right-0" style={{ height: '100vh' }}>
-        <div className="absolute inset-0 grid grid-cols-2">
-          <div className="relative overflow-hidden">
-            <img
-              ref={leftImgRef}
-              src={nextProject.thumbnail}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
-          <div className="relative overflow-hidden">
-            <img
-              ref={rightImgRef}
-              src={nextDevotion.firstMoodboardImage}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </div>
+      <div className="absolute inset-0 grid grid-cols-2">
+        <div className="relative overflow-hidden">
+          <img
+            ref={leftImgRef}
+            src={nextProject.thumbnail}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
-        <div
-          className="absolute top-0 bottom-0 left-1/2 w-px"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-          aria-hidden="true"
-        />
-
-        <Pill
-          pillRef={pillRef}
-          pillFillRef={pillFillRef}
-          pillContentRef={pillContentRef}
-          nextProject={nextProject}
-          nextDevotion={nextDevotion}
-          variant="mobile"
-          onActivate={onActivate}
-          pillColor={pillColor}
-        />
+        <div className="relative overflow-hidden">
+          <img
+            ref={rightImgRef}
+            src={nextDevotion.firstMoodboardImage}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
       </div>
-      {/* Act 2 sentinel — at the 50% mark of the SECTION (= start of Act 2 viewport) */}
       <div
-        ref={actTwoSentinelRef}
+        className="absolute top-0 bottom-0 left-1/2 w-px"
+        style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
         aria-hidden="true"
-        className="absolute left-0 w-full pointer-events-none"
-        style={{ top: '50%', height: '1px' }}
+      />
+
+      <Pill
+        pillRef={pillRef}
+        pillFillRef={pillFillRef}
+        pillContentRef={pillContentRef}
+        nextProject={nextProject}
+        nextDevotion={nextDevotion}
+        variant="mobile"
+        onActivate={onActivate}
+        pillColor={pillColor}
       />
     </section>
   );
@@ -440,7 +437,6 @@ interface EntranceArgs {
   pillRef: React.RefObject<HTMLDivElement | null>;
   pillFillRef: React.RefObject<HTMLDivElement | null>;
   pillContentRef: React.RefObject<HTMLDivElement | null>;
-  actTwoSentinelRef: React.RefObject<HTMLDivElement | null>;
   navigatedRef: React.RefObject<boolean>;
   nextProject: Project;
 }
@@ -452,11 +448,16 @@ function useEntranceAnimation({
   pillRef,
   pillFillRef,
   pillContentRef,
-  actTwoSentinelRef,
   navigatedRef,
   nextProject,
   reducedMotion,
-}: EntranceArgs & { reducedMotion: boolean }) {
+  variant,
+  inHorizontalTrack,
+}: EntranceArgs & {
+  reducedMotion: boolean;
+  variant: 'desktop' | 'mobile';
+  inHorizontalTrack: boolean;
+}) {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -466,13 +467,22 @@ function useEntranceAnimation({
     const pill = pillRef.current;
     const fill = pillFillRef.current;
     const content = pillContentRef.current;
-    const actTwoSentinel = actTwoSentinelRef.current;
-    if (!root || !left || !right || !pill || !fill || !content || !actTwoSentinel) return;
+    if (!root || !left || !right || !pill || !fill || !content) return;
+
+    // Inside the moodboard horizontal track, the handoff is the final panel
+    // reached by the same horizontal scroll as zones 1–7. No pin of its own,
+    // no entrance/exit choreography, no auto-navigate — the pill click is the
+    // only way forward. Just snap to resting state and let the idle Ken Burns
+    // loop keep the images alive.
+    if (inHorizontalTrack && variant === 'desktop') {
+      gsap.set([left, right], { yPercent: 0 });
+      gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
+      gsap.set(content, { opacity: 1 });
+      return;
+    }
 
     if (reducedMotion) {
-      // Single fade of the whole zone — snap motion targets to their
-      // final state. Reduced motion skips Act 2 entirely; the extra
-      // 100vw/100vh of section is just a color wash.
+      // Snap to final state; fade the whole section once when it enters.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: root,
@@ -489,108 +499,90 @@ function useEntranceAnimation({
       };
     }
 
-    // The moodboard's main horizontal scroll tween lives at id 'moodboard-pin'.
-    // It's created in MoodBoard's useEffect, which fires AFTER this component's
-    // child useEffects. Defer to the next frame so the parent has registered it.
-    let ctx: gsap.Context | null = null;
-    const rafId = requestAnimationFrame(() => {
-      const mainTrigger = ScrollTrigger.getById('moodboard-pin');
-      const containerAnimation = mainTrigger?.animation;
-      if (!containerAnimation) {
-        // No horizontal-scroll container available — happens on mobile (no
-        // horizontal pin) and during the race-condition window where MoodBoard
-        // hasn't registered its trigger yet. Snap to the visible resting
-        // state so nothing is stuck off-screen or invisible.
-        gsap.set([left, right], { yPercent: 0 });
-        gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
-        gsap.set(content, { opacity: 1 });
-        return;
-      }
+    if (variant === 'mobile') {
+      // Mobile renders without a horizontal pin — just present the pill in its
+      // resting state when the section enters the viewport.
+      gsap.set([left, right], { yPercent: 0 });
+      gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
+      gsap.set(content, { opacity: 1 });
+      return;
+    }
 
-      ctx = gsap.context(() => {
-        // Seed the off-screen start state via GSAP so it owns the transform
-        // matrix outright. The previous inline `transform: translateY(±100%)`
-        // got composed with the idle Ken Burns tween's translate3d, leaving
-        // the images permanently double-offset. Letting GSAP own the
-        // transform from initial render avoids that composition entirely.
-        gsap.set(left, { yPercent: -100 });
-        gsap.set(right, { yPercent: 100 });
-        gsap.set(fill, { scaleX: 0, transformOrigin: '50% 50%' });
-        gsap.set(content, { opacity: 0 });
+    const ctx = gsap.context(() => {
+      // Seed off-screen state. GSAP owns the transform matrix outright so it
+      // doesn't get composed with the idle Ken Burns tween's translate3d.
+      gsap.set(left, { yPercent: -100 });
+      gsap.set(right, { yPercent: 100 });
+      gsap.set(fill, { scaleX: 0, transformOrigin: '50% 50%' });
+      gsap.set(content, { opacity: 0 });
 
-        // ===== ACT 1: Slide-in entrance =====
-        const actOne = gsap.timeline({
-          scrollTrigger: {
-            trigger: root,
-            containerAnimation,
-            // Animation starts when the zone is ~70% visible (left edge at
-            // 30% of the viewport) and completes shortly after the zone is
-            // fully in view (left edge at -10%).
-            start: 'left 30%',
-            end: 'left -10%',
-            toggleActions: 'play none none reverse',
+      // Pin the section while Act 2 scrubs. `+=120%` of viewport gives Act 2
+      // enough scroll distance to read clearly without dragging.
+      const pinTrigger = ScrollTrigger.create({
+        id: 'next-handoff-pin',
+        trigger: root,
+        start: 'top top',
+        end: '+=120%',
+        pin: true,
+        pinSpacing: true,
+        anticipatePin: 1,
+      });
+
+      // ACT 1: scrubbed entrance, plays as the section scrolls toward the pin.
+      // From 'top 70%' (section 30% visible) to 'top top' (pin engages).
+      const actOne = gsap.timeline({
+        scrollTrigger: {
+          trigger: root,
+          start: 'top 70%',
+          end: 'top top',
+          scrub: 1,
+        },
+      });
+      actOne
+        .fromTo(left, { yPercent: -100 }, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
+        .fromTo(right, { yPercent: 100 }, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
+        .fromTo(
+          fill,
+          { scaleX: 0, transformOrigin: '50% 50%' },
+          { scaleX: 1, transformOrigin: '50% 50%', duration: 1.0, ease: 'power3.out' },
+          0,
+        )
+        .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
+
+      // ACT 2: scrubbed exit + re-enter + navigate, runs while pinned.
+      const actTwo = gsap.timeline({
+        scrollTrigger: {
+          trigger: root,
+          start: 'top top',
+          end: '+=120%',
+          scrub: 1,
+          onUpdate: (self) => {
+            if (self.progress >= 0.98 && !navigatedRef.current) {
+              navigatedRef.current = true;
+              navigate(`/purpose/${nextProject.id}`);
+            }
           },
-        });
+        },
+      });
+      actTwo
+        .fromTo(left, { yPercent: 0 }, { yPercent: -100, duration: 0.4, ease: 'power2.in' }, 0)
+        .fromTo(right, { yPercent: 0 }, { yPercent: 100, duration: 0.4, ease: 'power2.in' }, 0)
+        .fromTo(
+          fill,
+          { scaleX: 1, transformOrigin: '50% 50%' },
+          { scaleX: 0, transformOrigin: '50% 50%', duration: 0.3, ease: 'power2.in' },
+          0,
+        )
+        .fromTo(content, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0)
+        .to({}, { duration: 0.2 }, 0.4)
+        .to(left, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6)
+        .to(right, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6);
 
-        // All three motions in parallel from t=0 to t=1.0:
-        actOne
-          .fromTo(
-            left,
-            { yPercent: -100 },
-            { yPercent: 0, duration: 1.0, ease: 'power3.out' },
-            0,
-          )
-          .fromTo(
-            right,
-            { yPercent: 100 },
-            { yPercent: 0, duration: 1.0, ease: 'power3.out' },
-            0,
-          )
-          .fromTo(
-            fill,
-            { scaleX: 0, transformOrigin: '50% 50%' },
-            { scaleX: 1, transformOrigin: '50% 50%', duration: 1.0, ease: 'power3.out' },
-            0,
-          )
-          // Text fades in during the final 40% (t=0.6 to t=1.0).
-          .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
-
-        // ===== ACT 2: Scrubbed exit + re-enter + navigate =====
-        const actTwo = gsap.timeline({
-          scrollTrigger: {
-            trigger: actTwoSentinel,
-            containerAnimation,
-            // Act 2 begins when the sentinel just enters viewport from the
-            // right and ends when it has scrolled 10% past viewport left.
-            start: 'left 100%',
-            end: 'left -10%',
-            scrub: 1,
-            onUpdate: (self) => {
-              if (self.progress >= 0.98 && !navigatedRef.current) {
-                navigatedRef.current = true;
-                navigate(`/purpose/${nextProject.id}`);
-              }
-            },
-          },
-        });
-        // Exit phase: 0 → 0.4 — images slide back out, pill fades.
-        actTwo
-          .to(left, { yPercent: -100, duration: 0.4, ease: 'power2.in' }, 0)
-          .to(right, { yPercent: 100, duration: 0.4, ease: 'power2.in' }, 0)
-          .to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.in' }, 0)
-          .to(content, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0);
-        // Breathing room: 0.4 → 0.6 — everything stays at exit state.
-        actTwo.to({}, { duration: 0.2 }, 0.4);
-        // Re-enter phase: 0.6 → 1.0 — same images slide back in.
-        actTwo
-          .to(left, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6)
-          .to(right, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6);
-      }, root);
-    });
+      void pinTrigger;
+    }, root);
 
     return () => {
-      cancelAnimationFrame(rafId);
-      ctx?.revert();
+      ctx.revert();
     };
   }, [
     rootRef,
@@ -599,10 +591,11 @@ function useEntranceAnimation({
     pillRef,
     pillFillRef,
     pillContentRef,
-    actTwoSentinelRef,
     navigatedRef,
     nextProject,
     reducedMotion,
+    variant,
+    inHorizontalTrack,
     navigate,
   ]);
 }

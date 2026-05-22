@@ -283,6 +283,16 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
   const isSurrender = project.id === 'surrender';
   const isTrust = project.id === 'trust';
 
+  // Desktop NextDevotionHandoff renders as a sibling AFTER the moodboard
+  // pinned section. (Each *Mobile fragment still includes its own NDH inline
+  // because mobile has no horizontal pin.)
+  const isCustomDevotion =
+    isPeace || isHope || isStrength || isWholeness || isPurpose ||
+    isConnection || isIdentity || isJoy || isForgiveness || isSurrender || isTrust;
+  const currentIndex = projects.findIndex((p) => p.id === project.id);
+  const nextProject = projects[(currentIndex + 1) % projects.length];
+  const nextDevotion = devotions[nextProject.id] ?? FALLBACK_DEVOTION;
+
   useLayoutEffect(() => {
     if (isMobile || !sectionRef.current || !trackRef.current) return;
 
@@ -473,7 +483,7 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
           className="flex h-screen will-change-transform"
         >
           {isPeace ? (
-            <PeaceZones project={project} />
+            <PeaceZones />
           ) : isHope ? (
             <HopeZones project={project} />
           ) : isStrength ? (
@@ -496,6 +506,18 @@ export function MoodBoard({ project, onInMoodBoard }: MoodBoardProps) {
             <TrustZones project={project} />
           ) : (
             <DefaultZones project={project} />
+          )}
+
+          {/* Zone 8: NextDevotionHandoff — final panel of the horizontal
+              moodboard. Reached by the same horizontal scroll as zones 1–7
+              so it reads as part of the same sequence. */}
+          {isCustomDevotion && (
+            <NextDevotionHandoff
+              currentProject={project}
+              nextProject={nextProject}
+              nextDevotion={nextDevotion}
+              inHorizontalTrack
+            />
           )}
         </div>
 
@@ -742,14 +764,9 @@ function DefaultZones({ project }: { project: Project }) {
    PEACE ZONES — Restoration of Peace devotional (desktop)
    ════════════════════════════════════════════════════════════════ */
 
-function PeaceZones({ project }: { project: Project }) {
+function PeaceZones() {
   const ov = '#8B8378';
 
-  // Find the next project in the same category, wrapping around
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
   return (
     <>
       {/* ── Zone 1: Peace Title ── */}
@@ -1034,12 +1051,6 @@ function PeaceZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Peace" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -1161,10 +1172,6 @@ function PeaceMobile({ project }: { project: Project }) {
 function HopeZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -1440,12 +1447,6 @@ function HopeZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Hope" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -1567,10 +1568,6 @@ function HopeMobile({ project }: { project: Project }) {
 function StrengthZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -1846,12 +1843,6 @@ function StrengthZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Strength" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -1973,10 +1964,6 @@ function StrengthMobile({ project }: { project: Project }) {
 function WholenessZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -2252,12 +2239,6 @@ function WholenessZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Wholeness" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -2379,10 +2360,6 @@ function WholenessMobile({ project }: { project: Project }) {
 function PurposeZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -2658,12 +2635,6 @@ function PurposeZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Purpose" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -2785,10 +2756,6 @@ function PurposeMobile({ project }: { project: Project }) {
 function ConnectionZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -3064,12 +3031,6 @@ function ConnectionZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Connection" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -3191,10 +3152,6 @@ function ConnectionMobile({ project }: { project: Project }) {
 function IdentityZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -3470,12 +3427,6 @@ function IdentityZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Identity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -3597,10 +3548,6 @@ function IdentityMobile({ project }: { project: Project }) {
 function JoyZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -3876,12 +3823,6 @@ function JoyZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Joy" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -4003,10 +3944,6 @@ function JoyMobile({ project }: { project: Project }) {
 function ForgivenessZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order:
-  // residential → hospitality → wraps back to residential.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -4282,12 +4219,6 @@ function ForgivenessZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -4409,9 +4340,6 @@ function ForgivenessMobile({ project }: { project: Project }) {
 function SurrenderZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -4687,12 +4615,6 @@ function SurrenderZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
@@ -4814,9 +4736,6 @@ function SurrenderMobile({ project }: { project: Project }) {
 function TrustZones({ project }: { project: Project }) {
   const ov = project.overlayColor;
 
-  // Next Devotion chains across all projects in declared order.
-  const currentIndex = projects.findIndex(p => p.id === project.id);
-  const nextProject = projects[(currentIndex + 1) % projects.length];
 
   return (
     <>
@@ -5092,12 +5011,6 @@ function TrustZones({ project }: { project: Project }) {
       {/* ── Zone 7: CTA ── */}
       <RestorationCTA purposeWord="Serenity" overlayColor={ov} />
 
-      {/* ── Zone 8: Next Devotion Handoff ── */}
-      <NextDevotionHandoff
-        currentProject={project}
-        nextProject={nextProject}
-        nextDevotion={devotions[nextProject.id] ?? FALLBACK_DEVOTION}
-      />
     </>
   );
 }
