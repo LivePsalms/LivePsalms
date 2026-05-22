@@ -10,66 +10,67 @@ import {
   easeInCubic,
 } from './mid-section-intensity';
 
-describe('mid-section-intensity', () => {
-  // Constants: band edges
-  describe('band edges', () => {
-    it('exports INTRO_END as 0.3', () => {
-      expect(INTRO_END).toBe(0.3);
-    });
+describe('band-edge constants', () => {
+  it('INTRO_END is 1/7 of the timeline', () => {
+    expect(INTRO_END).toBeCloseTo(1 / 7, 10);
+  });
+  it('OUTRO_START is 6/7 of the timeline', () => {
+    expect(OUTRO_START).toBeCloseTo(6 / 7, 10);
+  });
+  it('READING_SCALE equals OUTRO_START - INTRO_END (5/7)', () => {
+    expect(READING_SCALE).toBeCloseTo(5 / 7, 10);
+    expect(READING_SCALE).toBeCloseTo(OUTRO_START - INTRO_END, 10);
+  });
+  it('intro and outro bands are symmetric — same span on either side of reading', () => {
+    expect(INTRO_END).toBeCloseTo(1 - OUTRO_START, 10);
+  });
+});
 
-    it('exports OUTRO_START as 0.7', () => {
-      expect(OUTRO_START).toBe(0.7);
+describe('FPS endpoints', () => {
+  it('floor is 3 fps (matches the spec)', () => {
+    expect(FPS_FLOOR).toBe(3);
+  });
+  it('steady is 39 fps (matches the spec)', () => {
+    expect(FPS_STEADY).toBe(39);
+  });
+});
+
+describe('INTENSITY_BRIGHT', () => {
+  it('matches the spec endpoints', () => {
+    expect(INTENSITY_BRIGHT).toEqual({
+      brightness: 3.45,
+      bloomStrength: 3.30,
+      bloomThreshold: 0.14,
     });
   });
+});
 
-  // Constants: reading scale
-  describe('reading scale', () => {
-    it('exports READING_SCALE as 0.85', () => {
-      expect(READING_SCALE).toBe(0.85);
+describe('INTENSITY_NORMAL', () => {
+  it('matches the spec endpoints', () => {
+    expect(INTENSITY_NORMAL).toEqual({
+      brightness: 1.20,
+      bloomStrength: 2.20,
+      bloomThreshold: 0.15,
     });
   });
+});
 
-  // Constants: FPS endpoints
-  describe('FPS endpoints', () => {
-    it('exports FPS_FLOOR as 24', () => {
-      expect(FPS_FLOOR).toBe(24);
-    });
-
-    it('exports FPS_STEADY as 30', () => {
-      expect(FPS_STEADY).toBe(30);
-    });
+describe('easeInCubic', () => {
+  it('returns 0 at t=0', () => {
+    expect(easeInCubic(0)).toBe(0);
   });
-
-  // Constants: intensity states
-  describe('intensity states', () => {
-    it('exports INTENSITY_BRIGHT as 1.4', () => {
-      expect(INTENSITY_BRIGHT).toBe(1.4);
-    });
-
-    it('exports INTENSITY_NORMAL as 1.0', () => {
-      expect(INTENSITY_NORMAL).toBe(1.0);
-    });
+  it('returns 1 at t=1', () => {
+    expect(easeInCubic(1)).toBe(1);
   });
-
-  // Function: easeInCubic
-  describe('easeInCubic', () => {
-    it('returns 0 at t=0', () => {
-      expect(easeInCubic(0)).toBe(0);
-    });
-
-    it('returns 1 at t=1', () => {
-      expect(easeInCubic(1)).toBe(1);
-    });
-
-    it('returns t³ for any t in [0,1]', () => {
-      expect(easeInCubic(0.5)).toBe(0.125); // 0.5^3 = 0.125
-      expect(easeInCubic(0.25)).toBe(0.015625); // 0.25^3
-      expect(easeInCubic(0.75)).toBe(0.421875); // 0.75^3
-    });
-
-    it('is a cubic function', () => {
-      const t = 0.6;
-      expect(easeInCubic(t)).toBeCloseTo(t * t * t);
-    });
+  it('returns 0.125 at t=0.5 (cubic ease-in dwells at start)', () => {
+    expect(easeInCubic(0.5)).toBeCloseTo(0.125, 10);
+  });
+  it('is monotonically increasing', () => {
+    let prev = easeInCubic(0);
+    for (let i = 1; i <= 100; i++) {
+      const curr = easeInCubic(i / 100);
+      expect(curr).toBeGreaterThanOrEqual(prev);
+      prev = curr;
+    }
   });
 });
