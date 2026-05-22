@@ -76,9 +76,11 @@ export function MidSectionMotion() {
   }, [renderMode]);
 
   /* ── Full-motion path: pinned stage + 5-beat slideshow ──
-     Text tweens scale by WEBGPU_TEXT_SCALE in webgpu mode so beat 5 exits at
-     progress 0.833, leaving 0.833 → 1.0 of the timeline for the intensity outro.
-     In video mode, scale = 1 and beat 5 exits at progress 1.0 (no outro). */
+     WebGPU mode maps beat positions through mapBeatProgressWebGPU, offsetting them
+     into the reading band (INTRO_END → OUTRO_START, i.e. 1/7 → 6/7 ≈ 0.143 → 0.857).
+     Beat 5 exits at OUTRO_START, leaving the final 1/7 of the timeline for the
+     intensity outro. In video mode, beat positions are used raw and beat 5 exits
+     at progress 1.0 (no outro). */
   useEffect(() => {
     if (renderMode !== 'webgpu' && renderMode !== 'video') return;
 
