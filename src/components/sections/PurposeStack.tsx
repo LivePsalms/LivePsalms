@@ -70,6 +70,14 @@ export function PurposeStack({ projects }: Props) {
         pin: true,
         scrub: 0.6,
         invalidateOnRefresh: true,
+        snap: {
+          snapTo: 1 / (CYCLES * N),
+          duration: reducedMotion ? 0 : 0.7,
+          ease: 'power2.inOut',
+          delay: 0.15,
+          inertia: false,
+          directional: false,
+        },
         onUpdate: (self) => {
           const globalStep = self.progress * CYCLES * N;
           const intStep = Math.floor(globalStep);
