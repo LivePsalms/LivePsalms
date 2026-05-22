@@ -381,9 +381,9 @@ describe('mapBeatProgressWebGPU', () => {
     expect(mapBeatProgressWebGPU(1)).toBeCloseTo(OUTRO_START, 10);
   });
 
-  it('raw 0.5 maps to the midpoint of the reading band (4/7)', () => {
+  it('raw 0.5 maps to 0.5 (the symmetric bookends make timeline midpoint == reading midpoint)', () => {
     expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(INTRO_END + 0.5 * READING_SCALE, 10);
-    expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(4 / 7, 10);
+    expect(mapBeatProgressWebGPU(0.5)).toBeCloseTo(0.5, 10);
   });
 
   it('preserves the kiss handoff between beats (beat2 enter == beat1 exit, mapped)', () => {
