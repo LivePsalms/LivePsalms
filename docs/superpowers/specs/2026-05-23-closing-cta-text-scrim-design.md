@@ -34,13 +34,13 @@ Make the heading and subtitle clearly readable without introducing a visible "pa
 The scrim is a single layer composed of two effects co-located inside the same pseudo-element:
 
 1. **Radial darken** — a centered ellipse that fades from near-black at the middle to fully transparent at ~70% radius:
-   `radial-gradient(ellipse 60% 45% at 50% 50%, rgba(8, 8, 10, 0.72), rgba(8, 8, 10, 0) 70%)`
+   `radial-gradient(ellipse 75% 55% at 50% 50%, rgba(8, 8, 10, 0.72), rgba(8, 8, 10, 0) 70%)`
 
 2. **Backdrop blur with feathered edge** — a 6px blur applied through a mask that fades the blur itself to nothing at the edges, so there's no visible seam where the blur stops:
    - `backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);`
-   - Mask: `radial-gradient(ellipse 55% 42% at 50% 50%, #000 35%, transparent 75%)`
+   - Mask: `radial-gradient(ellipse 70% 52% at 50% 50%, #000 35%, transparent 75%)`
 
-The scrim spills out around the text by approximately `-2rem` vertical and `-3rem` horizontal so the fade has room to feather past the typography without the edge meeting the type.
+The scrim spills out around the text by approximately `-3rem` vertical and `-5rem` horizontal so the fade has room to feather past the typography without the edge meeting the type. The ellipse was widened from a tighter 60%/45% during visual verification: the particle system morphs between a narrow pencil shape and a wider heart shape, and the bigger ellipse keeps the heart's outer extremes inside the darken footprint.
 
 ## DOM & CSS changes
 
@@ -71,21 +71,21 @@ Add a new rule next to the existing `.closing-*` block:
 .closing-text-block::before {
   content: '';
   position: absolute;
-  inset: -2rem -3rem;
+  inset: -3rem -5rem;
   background: radial-gradient(
-    ellipse 60% 45% at 50% 50%,
+    ellipse 75% 55% at 50% 50%,
     rgba(8, 8, 10, 0.72),
     rgba(8, 8, 10, 0) 70%
   );
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   -webkit-mask: radial-gradient(
-    ellipse 55% 42% at 50% 50%,
+    ellipse 70% 52% at 50% 50%,
     #000 35%,
     transparent 75%
   );
   mask: radial-gradient(
-    ellipse 55% 42% at 50% 50%,
+    ellipse 70% 52% at 50% 50%,
     #000 35%,
     transparent 75%
   );
