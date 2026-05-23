@@ -6,18 +6,12 @@ import { StationScriptureMargin } from './stations/04-scripture-margin';
 import { StationSevenPapers } from './stations/05-seven-papers';
 import { StationTierPath } from './stations/06-tier-path';
 import { StationTrustImport } from './stations/07-trust-import';
-import { computeItemIndex } from './compute-item-index';
 
 interface GardenContentLayerProps {
   currentStation: number;
-  scrollProgress: { current: number };
 }
 
-export function GardenContentLayer({
-  currentStation,
-  scrollProgress,
-}: GardenContentLayerProps) {
-  const itemIndex = computeItemIndex(currentStation, scrollProgress.current);
+export function GardenContentLayer({ currentStation }: GardenContentLayerProps) {
   return (
     <div className="garden-content-layer">
       <StationThreeVoices       isActive={currentStation === 0} />
@@ -25,7 +19,7 @@ export function GardenContentLayer({
       <StationLamplight         isActive={currentStation === 2} />
       <StationScriptureMargin   isActive={currentStation === 3} />
       <StationSevenPapers       isActive={currentStation === 4} />
-      <StationTierPath          isActive={currentStation === 5} itemIndex={itemIndex} />
+      <StationTierPath          isActive={currentStation === 5} />
       <StationTrustImport       isActive={currentStation === 6} />
     </div>
   );

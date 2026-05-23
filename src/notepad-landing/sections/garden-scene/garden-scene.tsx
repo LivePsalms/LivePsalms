@@ -56,7 +56,7 @@ function ActiveGardenScene() {
       <div className="garden-scene-viewport">
         <GardenCanvas scrollProgress={scrollProgress} onStationChange={onStationChange} />
         <PaperOverlay />
-        <GardenContentLayer currentStation={currentStation} scrollProgress={scrollProgress} />
+        <GardenContentLayer currentStation={currentStation} />
         <GardenProgress current={currentStation} onJump={jumpTo} />
       </div>
       {/* renderTick used only as a re-render trigger for list-station item reveals */}
