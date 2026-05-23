@@ -741,6 +741,33 @@
 
 .notepad-landing .garden-station-content {
   max-width: 640px;
+  position: relative;
+  isolation: isolate;
+}
+
+.notepad-landing .garden-station-content::before {
+  content: '';
+  position: absolute;
+  inset: -1.5rem -2rem;
+  background: radial-gradient(
+    ellipse 75% 70% at 50% 50%,
+    rgba(246, 240, 230, 0.82),
+    rgba(246, 240, 230, 0) 75%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-mask: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  mask: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
 .notepad-landing .garden-station-content--center { margin: 0 auto; text-align: center; }
