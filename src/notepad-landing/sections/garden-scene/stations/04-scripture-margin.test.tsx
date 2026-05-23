@@ -47,4 +47,10 @@ describe('<StationScriptureMargin /> playback', () => {
     const video = document.querySelector<HTMLVideoElement>('.scripture-margin-video');
     expect(video?.currentTime).toBe(0);
   });
+
+  it('never plays when prefers-reduced-motion is set, even with isActive=true', () => {
+    installMatchMedia(true); // user has reduced motion on before mount
+    render(<StationScriptureMargin isActive={true} />);
+    expect(playSpy).not.toHaveBeenCalled();
+  });
 });
