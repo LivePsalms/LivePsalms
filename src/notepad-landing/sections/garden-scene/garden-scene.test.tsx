@@ -77,4 +77,20 @@ describe('<GardenScene /> — Living Graph station layout', () => {
     expect(pair?.querySelector('.garden-station-content--left')).not.toBeNull();
     expect(pair?.querySelector('.living-graph-video-wrap')).not.toBeNull();
   });
+
+  it('renders a muted, looping, playsInline video pointing at the shared graph assets', () => {
+    renderScene(false);
+    const video = document.querySelector<HTMLVideoElement>('.living-graph-video');
+    expect(video).not.toBeNull();
+    expect(video?.muted).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.getAttribute('playsinline')).not.toBeNull();
+    expect(video?.getAttribute('preload')).toBe('metadata');
+    expect(video?.getAttribute('poster')).toBe('/notepad-landing/graph-poster.jpg');
+
+    const sources = Array.from(video?.querySelectorAll('source') ?? []);
+    const srcs = sources.map((s) => s.getAttribute('src'));
+    expect(srcs).toContain('/notepad-landing/graph.webm');
+    expect(srcs).toContain('/notepad-landing/graph.mp4');
+  });
 });

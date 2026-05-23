@@ -20,7 +20,18 @@ export function StationLivingGraph({ isActive }: Props) {
           <p className="caption">{caption}</p>
         </div>
         <div className="living-graph-video-wrap">
-          {/* video element added in Task 2 */}
+          <video
+            className="living-graph-video"
+            poster="/notepad-landing/graph-poster.jpg"
+            preload="metadata"
+            muted
+            loop
+            playsInline
+            aria-label="The Notepad Living Graph in motion — nodes representing scriptures and notes connect as the user navigates them."
+          >
+            <source src="/notepad-landing/graph.webm" type="video/webm" />
+            <source src="/notepad-landing/graph.mp4"  type="video/mp4"  />
+          </video>
         </div>
       </div>
     </article>
