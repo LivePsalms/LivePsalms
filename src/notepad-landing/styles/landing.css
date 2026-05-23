@@ -73,6 +73,33 @@
   margin-bottom: 2.4rem;
   border-left: 2px solid rgba(196, 181, 160, 0.25);
   padding-left: 1.2rem;
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-sub::before {
+  content: '';
+  position: absolute;
+  inset: -0.8rem -1.5rem;
+  background: radial-gradient(
+    ellipse 70% 70% at 50% 50%,
+    rgba(8, 8, 10, 0.72),
+    rgba(8, 8, 10, 0) 75%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-mask: radial-gradient(
+    ellipse 65% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  mask: radial-gradient(
+    ellipse 65% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
 .hero-actions {
