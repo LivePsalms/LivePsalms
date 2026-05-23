@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { copy } from '../data/copy';
 import { useIntersectionStage } from '../hooks/use-intersection-stage';
-import { mountParticleSystem } from '../three/particle-system';
 
 interface ClosingCTAProps {
   prm: boolean;
@@ -16,10 +15,18 @@ export function ClosingCTA({ prm }: ClosingCTAProps) {
 
   useEffect(() => {
     if (!staged || !canvasRef.current) return;
-    const handle = mountParticleSystem(canvasRef.current, { prm });
-    // Settle on the Journal shape (index 2)
-    handle.setShape(2);
-    return handle.cleanup;
+    let cleanup = () => {};
+    let cancelled = false;
+    import('../three/particle-system').then(({ mountParticleSystem }) => {
+      if (cancelled || !canvasRef.current) return;
+      const handle = mountParticleSystem(canvasRef.current, { prm });
+      handle.setShape(2);
+      cleanup = handle.cleanup;
+    });
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
   }, [prm, staged]);
 
   return (

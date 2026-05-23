@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { copy } from '../data/copy';
-import { mountParticleSystem } from '../three/particle-system';
 
 interface ParticleHeroProps {
   prm: boolean;
@@ -13,11 +12,20 @@ export function ParticleHero({ prm }: ParticleHeroProps) {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const handle = mountParticleSystem(canvasRef.current, {
-      prm,
-      onShapeChange: setShapeIdx,
+    let cleanup = () => {};
+    let cancelled = false;
+    import('../three/particle-system').then(({ mountParticleSystem }) => {
+      if (cancelled || !canvasRef.current) return;
+      const handle = mountParticleSystem(canvasRef.current, {
+        prm,
+        onShapeChange: setShapeIdx,
+      });
+      cleanup = handle.cleanup;
     });
-    return handle.cleanup;
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
   }, [prm]);
 
   const { eyebrow, h1, sub, ctaPrimary, ctaGhost, activeFormLabel, shapeNames } = copy.section01;
