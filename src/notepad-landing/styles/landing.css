@@ -284,3 +284,62 @@
     display: none;
   }
 }
+
+.lamplight {
+  background: var(--np-bg-paper);
+}
+
+.lamplight-content {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lamplight-content > .body.lamplight-body {
+  max-width: 620px;
+  margin-top: 1rem;
+}
+
+.lamplight-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin: 3.5rem 0 2.5rem;
+}
+
+.lamplight-card {
+  border-top: 1px solid rgba(102, 84, 79, 0.18);
+  padding-top: 1.4rem;
+}
+
+.lamplight-card h3 {
+  font-family: var(--np-display);
+  font-size: 1.2rem;
+  font-style: italic;
+  font-weight: 500;
+  margin-bottom: 0.6rem;
+}
+
+.lamplight-card p {
+  font-family: var(--np-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--np-ink-mid);
+}
+
+.lamplight-trust {
+  font-family: var(--np-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--np-ink-warm);
+  margin-top: 2rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(102, 84, 79, 0.12);
+}
+
+@media (max-width: 768px) {
+  .lamplight-cards {
+    grid-template-columns: 1fr;
+    gap: 1.4rem;
+  }
+}
