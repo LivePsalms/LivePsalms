@@ -43,7 +43,7 @@ export function WelcomePage() {
         dateOfBirth: dateOfBirth || null,
       });
       toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
-      navigate('/notepad');
+      navigate('/notepad/notes');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save your profile.');
     } finally {

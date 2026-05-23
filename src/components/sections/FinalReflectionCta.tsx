@@ -121,7 +121,7 @@ export function FinalReflectionCta() {
           In the verses you underlined, the prayers you wrote. Add your notes and journals here and see what He's been revealing about you — to you.
         </p>
         <Link
-          to="/notepad"
+          to="/notepad/notes"
           aria-label="Open your notepad"
           className="final-reflection-notepad-cta group inline-flex items-center gap-2 px-8 py-3.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1"
           style={{
@@ -214,7 +214,7 @@ export function FinalReflectionCta() {
                     style={{
                       fontFamily: 'Inter, system-ui, sans-serif',
                       fontSize: '13px',
-                      color: 'hsl(var(--mersi-dark) / 0.85)',
+                      color: 'hsl(var(--mersi-dark))',
                     }}
                   />
                   <button

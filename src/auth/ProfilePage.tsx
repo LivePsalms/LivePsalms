@@ -129,7 +129,7 @@ export function ProfilePage() {
         style={{ borderColor: 'var(--pale-stone)' }}
       >
         <button
-          onClick={() => navigate('/notepad')}
+          onClick={() => navigate('/notepad/notes')}
           className="flex items-center justify-center w-8 h-8 rounded hover:bg-black/5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
@@ -210,7 +210,7 @@ export function ProfilePage() {
             >
               {profile?.fullName}
             </p>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+            <p className="text-xs" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
               {user?.email}
             </p>
           </div>
