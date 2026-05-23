@@ -42,11 +42,10 @@ function ActiveGardenScene() {
     return () => cancelAnimationFrame(raf);
   }, [currentStation]);
 
-  const onStationChange = useCallback((_i: number) => {
-    // currentStation already drives React state through useGardenScroll;
-    // this callback exists so mount-garden can report station changes if
-    // we ever want them for analytics. Intentionally a noop.
-  }, []);
+  // currentStation already drives React state via useGardenScroll, so this
+  // callback is a noop. It exists only because mount-garden's option type
+  // includes onStationChange for future analytics use.
+  const onStationChange = useCallback(() => {}, []);
 
   return (
     <div className="garden-scene">
