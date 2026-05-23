@@ -12,6 +12,7 @@ import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
 import { PurposeStack } from '@/components/sections/PurposeStack';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
+import { NotepadLanding } from './notepad-landing';
 import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
 import { Contact } from '@/components/sections/Contact';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
@@ -93,13 +94,15 @@ function App() {
 
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
-  const isNotepadPage = location.pathname === '/notepad';
+  const isNotepadLanding = location.pathname === '/notepad';
+  const isNotepadEditor = location.pathname.startsWith('/notepad/notes');
+  const isNotepadAny = isNotepadLanding || isNotepadEditor;
   const isLoginPage = location.pathname === '/login';
   const isProfilePage = location.pathname === '/profile';
   const isWelcomePage = location.pathname === '/welcome';
   const isCommunityPage = location.pathname === '/community';
   const isContactPage = location.pathname === '/contact';
-  const hideFooter = isDetailPage || isPurposePage || isNotepadPage || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage;
+  const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage;
 
   const handleProjectClick = useCallback(
     (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
@@ -118,7 +121,7 @@ function App() {
       <>
         <div className="relative min-h-screen" style={{ background: 'var(--app-bg)', zIndex: 1 }}>
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadPage && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
+          {!isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
 
           <Routes>
             <Route
@@ -139,7 +142,8 @@ function App() {
                 </main>
               }
             />
-            <Route path="/notepad" element={<Notepad />} />
+            <Route path="/notepad" element={<NotepadLanding />} />
+            <Route path="/notepad/notes" element={<Notepad />} />
             <Route path="/community" element={<CommunityComingSoon />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<LoginPage />} />
