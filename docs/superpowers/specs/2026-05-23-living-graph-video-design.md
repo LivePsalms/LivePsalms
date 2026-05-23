@@ -13,10 +13,15 @@ Source: `reference/Graph_video.mov` (2260×1278, 20.5s, ~60 MB, .mov).
 
 - `src/notepad-landing/sections/garden-scene/stations/02-living-graph.tsx` — add the video element next to the existing text.
 - `src/notepad-landing/styles/landing.css` — new styles for the video, the 50/50 layout, mobile stack, edge feathering.
-- `public/garden/graph-video.mp4` — new, transcoded MP4 (H.264).
-- `public/garden/graph-video.webm` — new, transcoded WebM (VP9).
-- `public/garden/graph-poster.jpg` — new, poster still.
-- `scripts/transcode-graph-video.sh` — one-shot transcoding script committed for repeatability.
+- `src/notepad-landing/sections/garden-scene/garden-scene.test.tsx` (or sibling) — extend with assertions for the new video element behavior.
+
+**Reused (no work):**
+
+- `public/notepad-landing/graph.mp4` — already transcoded (H.264, 1920×1086, ~1.7 MB, 20.5s) from the same reference source.
+- `public/notepad-landing/graph.webm` — already transcoded (VP9, ~1.8 MB).
+- `public/notepad-landing/graph-poster.jpg` — already present (~217 KB).
+
+These assets are already used by the PRM-fallback `LivingGraph` component at `src/notepad-landing/sections/03-living-graph.tsx`. The active-garden station references the same files so we ship one set of bytes.
 
 ## Layout
 
@@ -93,15 +98,15 @@ useEffect(() => {
 <video
   ref={videoRef}
   className="living-graph-video"
-  poster="/garden/graph-poster.jpg"
+  poster="/notepad-landing/graph-poster.jpg"
   preload="metadata"
   muted
   loop
   playsInline
   aria-label="The Notepad Living Graph in motion — nodes representing scriptures and notes connect as the user navigates them."
 >
-  <source src="/garden/graph-video.webm" type="video/webm" />
-  <source src="/garden/graph-video.mp4"  type="video/mp4"  />
+  <source src="/notepad-landing/graph.webm" type="video/webm" />
+  <source src="/notepad-landing/graph.mp4"  type="video/mp4"  />
 </video>
 ```
 
@@ -133,62 +138,19 @@ useEffect(() => {
 }, [isActive, prefersReducedMotion]);
 ```
 
-## Assets — transcoding
+## Assets — reusing existing transcodes
 
-Run once and commit the outputs. Script: `scripts/transcode-graph-video.sh`. It is idempotent and safe to re-run.
+The reference video (`reference/Graph_video.mov`, 2260×1278, 20.5s, 60 MB) has already been transcoded for the PRM-fallback `LivingGraph` component:
 
-### Targets
+| File | Codec | Resolution | Actual size |
+|------|-------|------------|-------------|
+| `public/notepad-landing/graph.mp4` | H.264 | 1920×1086 | ~1.7 MB |
+| `public/notepad-landing/graph.webm` | VP9 | 1920×1086 | ~1.8 MB |
+| `public/notepad-landing/graph-poster.jpg` | JPEG | (poster) | ~217 KB |
 
-| File | Codec | Resolution | Target size | Notes |
-|------|-------|------------|-------------|-------|
-| `public/garden/graph-video.mp4` | H.264 (libx264) | 1280×720 | ~1.5–2.0 MB | Universal baseline. CRF 28, slow preset. `+faststart` for streaming start. |
-| `public/garden/graph-video.webm` | VP9 (libvpx-vp9) | 1280×720 | ~1.0–1.5 MB | Modern browsers prefer this. CRF 34, `-b:v 0`. |
-| `public/garden/graph-poster.jpg` | JPEG (mozjpeg via ffmpeg) | 1280×720 | ~60–100 KB | Single representative frame, taken at ~5s in. |
+The active-garden station points at these same paths. No new transcoding is needed and we don't ship a second copy of the same bytes.
 
-Source is 2260×1278. We display at most ~640px wide on desktop, so 1280×720 is 2× retina coverage and sufficient. Audio is stripped (`-an`) since the video is muted.
-
-### Script
-
-`scripts/transcode-graph-video.sh`:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-SRC="reference/Graph_video.mov"
-OUT_DIR="public/garden"
-mkdir -p "$OUT_DIR"
-
-# MP4 (H.264) — universal
-ffmpeg -y -i "$SRC" \
-  -vf "scale=1280:-2,format=yuv420p" \
-  -c:v libx264 -preset slow -crf 28 -movflags +faststart \
-  -an \
-  "$OUT_DIR/graph-video.mp4"
-
-# WebM (VP9) — smaller for modern browsers
-ffmpeg -y -i "$SRC" \
-  -vf "scale=1280:-2" \
-  -c:v libvpx-vp9 -b:v 0 -crf 34 -row-mt 1 \
-  -an \
-  "$OUT_DIR/graph-video.webm"
-
-# Poster JPEG
-ffmpeg -y -ss 5 -i "$SRC" \
-  -frames:v 1 \
-  -vf "scale=1280:-2" \
-  -q:v 4 \
-  "$OUT_DIR/graph-poster.jpg"
-
-echo "Done. Sizes:"
-du -h "$OUT_DIR"/graph-video.mp4 "$OUT_DIR"/graph-video.webm "$OUT_DIR"/graph-poster.jpg
-```
-
-The script requires `ffmpeg` (already installed; verified via `ffprobe` during brainstorming). If the resulting files are over ~2.5 MB each, raise CRF by 2 and re-run. If under ~1 MB and quality is suffering, lower CRF by 2.
-
-### Loop quality
-
-If the source has dead frames at the start or end that make the loop jarring, trim with `-ss <start> -to <end>` on both encodes before shipping. Watch the loop boundary once after generating to decide.
+If the loop ever looks jarring at the boundary or the file size needs trimming, re-transcode separately — out of scope for this spec.
 
 ## Component changes
 
@@ -236,15 +198,15 @@ export function StationLivingGraph({ isActive }: Props) {
           <video
             ref={videoRef}
             className="living-graph-video"
-            poster="/garden/graph-poster.jpg"
+            poster="/notepad-landing/graph-poster.jpg"
             preload="metadata"
             muted
             loop
             playsInline
             aria-label="The Notepad Living Graph in motion — nodes representing scriptures and notes connect as the user navigates them."
           >
-            <source src="/garden/graph-video.webm" type="video/webm" />
-            <source src="/garden/graph-video.mp4"  type="video/mp4"  />
+            <source src="/notepad-landing/graph.webm" type="video/webm" />
+            <source src="/notepad-landing/graph.mp4"  type="video/mp4"  />
           </video>
         </div>
       </div>
