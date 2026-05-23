@@ -579,3 +579,253 @@
 .closing-cta-secondary:hover {
   color: #c4b5a0;
 }
+
+/* ─── Garden Scene (Sections 02–08 replacement) ──────────────── */
+
+.notepad-landing .garden-scene {
+  position: relative;
+  z-index: 1;
+}
+
+/* When PRM, the fallback stack should render with no special wrapper styling. */
+.notepad-landing .garden-scene--fallback {
+  position: static;
+}
+
+.notepad-landing .garden-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  display: block;
+}
+
+.notepad-landing .garden-paper-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+}
+
+.notepad-landing .garden-content-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.notepad-landing .garden-station {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.8s var(--np-ease);
+  pointer-events: none;
+  padding: 0 24px;
+}
+
+.notepad-landing .garden-station.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notepad-landing .garden-station-content {
+  max-width: 640px;
+}
+
+.notepad-landing .garden-station-content--center { margin: 0 auto; text-align: center; }
+.notepad-landing .garden-station-content--left   { margin-left: 10%; }
+.notepad-landing .garden-station-content--right  { margin-left: auto; margin-right: 10%; }
+
+.notepad-landing .garden-station .eyebrow {
+  font-family: var(--np-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--np-ink-warm);
+  margin-bottom: 24px;
+}
+
+.notepad-landing .garden-station h2 {
+  font-family: var(--np-display);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 400;
+  line-height: 1.25;
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+
+.notepad-landing .garden-station h3 {
+  font-family: var(--np-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.notepad-landing .garden-station p.body {
+  font-family: var(--np-body);
+  font-size: clamp(16px, 1.8vw, 20px);
+  line-height: 1.75;
+  color: var(--np-ink-mid);
+  margin-bottom: 20px;
+}
+
+.notepad-landing .garden-station p.supporting,
+.notepad-landing .garden-station p.caption,
+.notepad-landing .garden-station p.trust {
+  font-family: var(--np-body);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--np-ink-warm);
+  line-height: 1.7;
+}
+
+.notepad-landing .lamplight-cards {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.notepad-landing .seven-papers-list,
+.notepad-landing .tier-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 480px;
+}
+
+.notepad-landing .seven-papers-item,
+.notepad-landing .tier-item {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s var(--np-ease), transform 0.6s var(--np-ease);
+}
+
+.notepad-landing .seven-papers-item.revealed,
+.notepad-landing .tier-item.revealed {
+  opacity: 1;
+  transform: none;
+}
+
+.notepad-landing .seven-papers-link {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--np-ink);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--np-ink-soft);
+}
+
+.notepad-landing .seven-papers-name {
+  font-family: var(--np-display);
+  font-style: italic;
+  font-size: 18px;
+}
+
+.notepad-landing .seven-papers-blurb {
+  font-family: var(--np-body);
+  font-size: 13px;
+  color: var(--np-ink-warm);
+}
+
+.notepad-landing .tier-item {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--np-ink-soft);
+}
+
+.notepad-landing .tier-numeral {
+  font-family: var(--np-mono);
+  font-size: 11px;
+  color: var(--np-ink-warm);
+  letter-spacing: 0.1em;
+  width: 28px;
+}
+
+.notepad-landing .tier-name {
+  font-family: var(--np-display);
+  font-size: 18px;
+}
+
+.notepad-landing .tier-pullquote {
+  font-family: var(--np-display);
+  font-style: italic;
+  font-size: clamp(18px, 2vw, 22px);
+  border-left: 2px solid var(--np-ink-soft);
+  padding-left: 16px;
+  margin: 24px 0;
+  color: var(--np-ink-mid);
+}
+
+.notepad-landing .trust-lines {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  margin: 24px auto;
+  max-width: 520px;
+}
+
+.notepad-landing .trust-lines li {
+  font-family: var(--np-body);
+  font-size: 16px;
+  color: var(--np-ink-mid);
+  line-height: 1.6;
+}
+
+.notepad-landing .garden-progress {
+  position: fixed;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+}
+
+.notepad-landing .garden-progress-item {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--np-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--np-ink-soft);
+  transition: color 0.3s, transform 0.3s;
+}
+
+.notepad-landing .garden-progress-item:hover {
+  color: var(--np-ink-mid);
+}
+
+.notepad-landing .garden-progress-item.active {
+  color: var(--np-ink);
+  transform: scale(1.25);
+}
+
+@media (max-width: 768px) {
+  .notepad-landing .garden-station-content--left,
+  .notepad-landing .garden-station-content--right {
+    margin-left: 24px;
+    margin-right: 24px;
+  }
+  .notepad-landing .garden-progress { right: 14px; gap: 12px; }
+  .notepad-landing .garden-progress-item { font-size: 14px; }
+}
