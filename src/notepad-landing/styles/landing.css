@@ -804,7 +804,7 @@
   inset: auto;
   height: auto;
   z-index: auto;
-  object-fit: initial;
+  object-fit: cover;
 
   width: 100%;
   aspect-ratio: 16 / 9;
