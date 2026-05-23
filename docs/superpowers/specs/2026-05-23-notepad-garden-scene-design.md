@@ -1,9 +1,19 @@
 # Notepad Landing — Ink Garden Scene (Sections 02–08 Replacement)
 
-**Status:** design · awaiting user review
+**Status:** approved · ready for plan
 **Date:** 2026-05-23
 **Branch:** `deepen-architecture`
 **Scope:** Replace Sections 02–08 of the notepad landing page with one pinned, scroll-jacked Three.js "ink garden" scene patterned on `reference/remix-landscape-design/index.html`. Hero (Section 01) and Closing CTA (Section 09) are untouched.
+
+---
+
+## 0. Errata (added 2026-05-23, post-approval)
+
+Three corrections surfaced during plan drafting from reading the existing codebase. They tighten the spec to the project's actual conventions; no creative decisions changed.
+
+- **Palette is the project's existing notepad tokens**, not the reference's hex values. Use `var(--np-bg-paper)` (`#f6f0e6`), `var(--np-ink)` (`#432c29`), `var(--np-ink-mid)`, `var(--np-ink-warm)`, `var(--np-ink-soft)`, `var(--np-display)` (Cormorant Garamond), `var(--np-body)` (Source Serif Pro), `var(--np-mono)` (JetBrains Mono). Three.js scene reads numeric versions of `--np-bg-paper` (`0xf6f0e6`) and `--np-ink` (`0x432c29`). The reference's `#F5F0E8` / `#1a1714` were original-site brand values that do not survive into this port.
+- **`usePrefersReducedMotion` does subscribe to changes.** §6 of this spec said it did not. It does (see `src/notepad-landing/hooks/use-prefers-reduced-motion.ts:14-23`). Implication: a user toggling OS-level reduced motion mid-session triggers a `setReduced` → React re-render → `<GardenScene>` swaps between scene-mode and fallback-mode. The Three.js `cleanup()` returned by `mountGarden` must therefore be idempotent and complete; canvas must be removed from DOM via React unmount.
+- **Hero CTA anchor:** `src/notepad-landing/sections/01-particle-hero.tsx:42` has `<a href="#section-02">`. The first station's container must carry `id="section-02"` (or `<GardenScene>` wrapper carries it) so the existing hero CTA continues to scroll the user into the garden.
 
 ---
 
@@ -348,7 +358,7 @@ The existing `particle-system.ts` lazy-load (commit `cc3b324`) is unchanged. `mo
 | `no-preference`          | Pinned garden scene: camera glides, plants sway, doves flap, particles drift, paper overlay applied, ~950vh spacer.                                                                                          |
 | `reduce`                 | `GardenScene` short-circuits to `FallbackStack`. Existing `<ThreeVoices/>`…`<TrustImport/>` render as normal scrolling sections. No Three.js mount, no canvas in the DOM, no scroll spacer, no fixed layers. |
 
-PRM is read at mount time. We do not subscribe to changes mid-session (matches the existing convention in `usePrefersReducedMotion`). The cost of mistakenly mounting both paths is avoided by the conditional render at the top of `GardenScene`.
+PRM is read via `usePrefersReducedMotion()`, which DOES subscribe to OS-level changes (see Errata §0). If the user toggles reduced-motion mid-session, the hook fires `setReduced` → React re-renders `<GardenScene>` → conditional render swaps between scene-mode and fallback-mode. The Three.js `cleanup()` returned by `mountGarden` must therefore be safe to call mid-session: dispose all geometries/materials, remove canvas from DOM (React handles this via unmount), and cancel the RAF loop. The two paths never run simultaneously because the conditional render is at the top of `<GardenScene>`.
 
 ---
 
@@ -391,16 +401,9 @@ Three layers of test (matches existing project conventions — there's already a
   - Scrolling to station boundary commits `currentStation` to React state and applies `.active` to the matching station div.
   - Clicking a progress indicator button calls `window.scrollTo` with the right `top`.
 
-### 9.3 Browser smoke tests (Playwright)
+### 9.3 Browser smoke tests
 
-One e2e per behavior — kept short.
-
-- `garden-scene.spec.ts`:
-  - Page loads at notepad route, canvas is present, paper overlay is present.
-  - Scroll-jacking works: scrolling the page progresses through 7 station copy blocks without the URL changing.
-  - List stations: scrolling within station 5 reveals all 7 paper names; within station 6 reveals all 8 tier names.
-  - With `prefersReducedMotion: 'reduce'` set in browser context, canvas is absent, all 7 section components render as normal scrolling cards.
-  - Progress indicator: clicking "IV" scrolls to station 4 within 1.5s, station 4 copy becomes `aria-current`.
+**Dropped from spec.** Project does not have Playwright as a dependency (`package.json` checked at plan time). Adding Playwright is out of scope for this feature. The acceptance criteria in §12 that require real-browser behavior (scroll-jacking under real native scroll, `mix-blend-mode: multiply` rendering, WebGL canvas pixels) will be verified manually by running `npm run dev` and exercising the route. The vitest+jsdom integration tests in §9.2 cover everything testable in jsdom (DOM structure, hook behavior, event handlers).
 
 ---
 
