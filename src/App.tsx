@@ -12,7 +12,7 @@ import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
 import { PurposeStack } from '@/components/sections/PurposeStack';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
 import { Notepad } from '@/components/sections/Notepad';
-import { NotepadLanding } from './notepad-landing';
+import { NotepadLanding } from '@/notepad-landing';
 import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
 import { Contact } from '@/components/sections/Contact';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';

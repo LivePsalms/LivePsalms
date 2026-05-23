@@ -2,9 +2,9 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, afterEach } from 'vitest';
+import { NotepadLanding } from './index';
 
 afterEach(cleanup);
-import { NotepadLanding } from './index';
 
 describe('NotepadLanding (stub)', () => {
   it('renders the locked hero H1', () => {
