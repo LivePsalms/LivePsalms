@@ -797,6 +797,15 @@
 }
 
 .notepad-landing .living-graph-video {
+  /* Reset properties inherited from the unscoped .living-graph-video rule
+     used by the PRM-fallback hero layout above; the active garden station
+     places this video as a flow element inside the grid pair. */
+  position: static;
+  inset: auto;
+  height: auto;
+  z-index: auto;
+  object-fit: initial;
+
   width: 100%;
   aspect-ratio: 16 / 9;
   display: block;
