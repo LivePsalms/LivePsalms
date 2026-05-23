@@ -5,6 +5,8 @@ import { ThreeVoices } from './sections/02-three-voices';
 import { LivingGraph } from './sections/03-living-graph';
 import { Lamplight } from './sections/04-lamplight';
 import { ScriptureMargin } from './sections/05-scripture-margin';
+import { SevenPapers } from './sections/06-seven-papers';
+import { TierPath } from './sections/07-tier-path';
 
 export function NotepadLanding() {
   const prm = usePrefersReducedMotion();
@@ -15,6 +17,8 @@ export function NotepadLanding() {
       <LivingGraph prm={prm} />
       <Lamplight prm={prm} />
       <ScriptureMargin prm={prm} />
+      <SevenPapers prm={prm} />
+      <TierPath />
     </div>
   );
 }
