@@ -1,0 +1,62 @@
+// src/notepad-landing/sections/garden-scene/garden-scene.tsx
+import { useCallback, useEffect, useState } from 'react';
+import { useGardenScroll } from './use-garden-scroll';
+import { GardenCanvas } from './garden-canvas';
+import { PaperOverlay } from './paper-overlay';
+import { GardenContentLayer } from './garden-content-layer';
+import { GardenProgress } from './garden-progress';
+import { FallbackStack } from './fallback-stack';
+import { TOTAL_SPACER_VH } from './station-meta';
+
+interface GardenSceneProps { prm: boolean }
+
+export function GardenScene({ prm }: GardenSceneProps) {
+  if (prm) {
+    return (
+      <div className="garden-scene garden-scene--fallback">
+        <FallbackStack prm={prm} />
+      </div>
+    );
+  }
+  return <ActiveGardenScene />;
+}
+
+// Split into its own component so hooks aren't called conditionally
+// in <GardenScene/>.
+function ActiveGardenScene() {
+  const { scrollProgress, currentStation, jumpTo } = useGardenScroll();
+
+  // Force a re-render at ~60Hz only while we are inside a list station
+  // (4 = Seven Papers, 5 = Tier Path). Outside those stations re-rendering
+  // is driven solely by currentStation changes — nearly zero per-frame work.
+  const [renderTick, setRenderTick] = useState(0);
+  useEffect(() => {
+    const isList = currentStation === 4 || currentStation === 5;
+    if (!isList) return;
+    let raf = 0;
+    const loop = () => {
+      setRenderTick((t) => (t + 1) % 1024);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [currentStation]);
+
+  const onStationChange = useCallback((_i: number) => {
+    // currentStation already drives React state through useGardenScroll;
+    // this callback exists so mount-garden can report station changes if
+    // we ever want them for analytics. Intentionally a noop.
+  }, []);
+
+  return (
+    <div className="garden-scene">
+      <GardenCanvas scrollProgress={scrollProgress} onStationChange={onStationChange} />
+      <PaperOverlay />
+      <GardenContentLayer currentStation={currentStation} scrollProgress={scrollProgress} />
+      <GardenProgress current={currentStation} onJump={jumpTo} />
+      <div id="garden-spacer" style={{ height: `${TOTAL_SPACER_VH}vh`, pointerEvents: 'none' }} aria-hidden="true" />
+      {/* renderTick used only as a re-render trigger for list-station item reveals */}
+      <span style={{ display: 'none' }} aria-hidden="true">{renderTick}</span>
+    </div>
+  );
+}
