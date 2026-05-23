@@ -37,8 +37,10 @@ export function ClosingCTA({ prm }: ClosingCTAProps) {
     >
       <canvas ref={canvasRef} className="closing-canvas" aria-hidden="true" />
       <div className="closing-content">
-        <h2 id="sec09-h2">{h2}</h2>
-        <p className="closing-sub">{sub}</p>
+        <div className="closing-text-block">
+          <h2 id="sec09-h2">{h2}</h2>
+          <p className="closing-sub">{sub}</p>
+        </div>
         <Link to="/notepad/notes" className="cta-primary closing-cta-primary">{ctaPrimary}</Link>
         <Link to="/login" className="closing-cta-secondary">{ctaSecondary}</Link>
       </div>
