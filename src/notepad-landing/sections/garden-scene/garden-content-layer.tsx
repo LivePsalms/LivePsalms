@@ -24,7 +24,7 @@ export function GardenContentLayer({
       <StationLivingGraph       isActive={currentStation === 1} />
       <StationLamplight         isActive={currentStation === 2} />
       <StationScriptureMargin   isActive={currentStation === 3} />
-      <StationSevenPapers       isActive={currentStation === 4} itemIndex={itemIndex} />
+      <StationSevenPapers       isActive={currentStation === 4} />
       <StationTierPath          isActive={currentStation === 5} itemIndex={itemIndex} />
       <StationTrustImport       isActive={currentStation === 6} />
     </div>
