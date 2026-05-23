@@ -94,3 +94,15 @@ describe('<GardenScene /> — Living Graph station layout', () => {
     expect(srcs).toContain('/notepad-landing/graph.mp4');
   });
 });
+
+describe('<GardenScene /> — Scripture Margin station layout', () => {
+  it('wraps the Scripture Margin text and (future) video slot in a .garden-station-pair grid', () => {
+    renderScene(false);
+    const station = document.querySelector('.garden-station--scripture-margin');
+    expect(station).not.toBeNull();
+    const pair = station?.querySelector('.garden-station-pair');
+    expect(pair).not.toBeNull();
+    expect(pair?.querySelector('.garden-station-content--right')).not.toBeNull();
+    expect(pair?.querySelector('.scripture-margin-video-wrap')).not.toBeNull();
+  });
+});

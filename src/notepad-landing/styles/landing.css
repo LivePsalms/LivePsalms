@@ -814,6 +814,30 @@
           mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
 }
 
+/* Scripture Margin two-column pair (mirror of Living Graph; video on the left) */
+.notepad-landing .garden-station--scripture-margin .garden-station-pair {
+  width: 100%;
+  max-width: min(1280px, 90vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+}
+
+.notepad-landing .garden-station--scripture-margin .garden-station-content--right {
+  margin-right: 0;
+  max-width: 640px;
+  justify-self: start;
+  grid-column: 2; /* visually on the right; first in DOM for a11y */
+}
+
+.notepad-landing .scripture-margin-video-wrap {
+  width: 100%;
+  max-width: 540px;
+  justify-self: end;
+  grid-column: 1; /* visually on the left */
+}
+
 .notepad-landing .garden-station .eyebrow {
   font-family: var(--np-mono);
   font-size: 10px;
@@ -1052,5 +1076,19 @@
   .notepad-landing .living-graph-video-wrap {
     justify-self: center;
     max-width: 90vw;
+  }
+  .notepad-landing .garden-station--scripture-margin .garden-station-pair {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .notepad-landing .garden-station--scripture-margin .garden-station-content--right {
+    justify-self: center;
+    max-width: 90vw;
+    grid-column: auto;
+  }
+  .notepad-landing .scripture-margin-video-wrap {
+    justify-self: center;
+    max-width: 90vw;
+    grid-column: auto;
   }
 }

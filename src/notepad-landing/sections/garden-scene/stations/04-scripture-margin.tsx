@@ -11,11 +11,16 @@ export function StationScriptureMargin({ isActive }: Props) {
       className={`garden-station garden-station--scripture-margin${isActive ? ' active' : ''}`}
       aria-hidden={isActive ? undefined : 'true'}
     >
-      <div className="garden-station-content garden-station-content--right">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{h2}</h2>
-        <p className="body">{body}</p>
-        <p className="supporting">{supporting}</p>
+      <div className="garden-station-pair">
+        <div className="garden-station-content garden-station-content--right">
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{h2}</h2>
+          <p className="body">{body}</p>
+          <p className="supporting">{supporting}</p>
+        </div>
+        <div className="scripture-margin-video-wrap">
+          {/* video element added in Task 2 */}
+        </div>
       </div>
     </article>
   );
