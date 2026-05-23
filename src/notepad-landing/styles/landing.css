@@ -796,6 +796,15 @@
   justify-self: start;
 }
 
+.notepad-landing .living-graph-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  background: transparent;
+  -webkit-mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
+          mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
+}
+
 .notepad-landing .garden-station .eyebrow {
   font-family: var(--np-mono);
   font-size: 10px;
