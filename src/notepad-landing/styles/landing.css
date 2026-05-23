@@ -582,7 +582,7 @@
 .closing-cta-secondary::before {
   content: '';
   position: absolute;
-  inset: -0.6rem -1rem;
+  inset: -1rem -1.6rem;
   background: radial-gradient(
     ellipse 75% 70% at 50% 50%,
     rgba(8, 8, 10, 0.72),
