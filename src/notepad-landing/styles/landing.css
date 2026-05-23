@@ -567,6 +567,7 @@
 .closing-cta-secondary {
   display: inline-block;
   margin-top: 1.2rem;
+  margin-left: 1.8rem;
   font-family: var(--np-mono);
   font-size: 0.65rem;
   letter-spacing: 0.15em;
@@ -574,6 +575,33 @@
   color: #8d8478;
   text-decoration: none;
   transition: color 0.3s var(--np-ease);
+  position: relative;
+  isolation: isolate;
+}
+
+.closing-cta-secondary::before {
+  content: '';
+  position: absolute;
+  inset: -0.6rem -1rem;
+  background: radial-gradient(
+    ellipse 75% 70% at 50% 50%,
+    rgba(8, 8, 10, 0.72),
+    rgba(8, 8, 10, 0) 75%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-mask: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  mask: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    #000 35%,
+    transparent 80%
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
 .closing-cta-secondary:hover {
