@@ -774,6 +774,28 @@
 .notepad-landing .garden-station-content--left   { margin-left: 10%; }
 .notepad-landing .garden-station-content--right  { margin-left: auto; margin-right: 10%; }
 
+/* Living Graph two-column pair */
+.notepad-landing .garden-station--living-graph .garden-station-pair {
+  width: 100%;
+  max-width: min(1280px, 90vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+}
+
+.notepad-landing .garden-station--living-graph .garden-station-content--left {
+  margin-left: 0;
+  max-width: 640px;
+  justify-self: end;
+}
+
+.notepad-landing .living-graph-video-wrap {
+  width: 100%;
+  max-width: 640px;
+  justify-self: start;
+}
+
 .notepad-landing .garden-station .eyebrow {
   font-family: var(--np-mono);
   font-size: 10px;
@@ -1001,4 +1023,16 @@
   }
   .notepad-landing .garden-progress { right: 14px; gap: 12px; }
   .notepad-landing .garden-progress-item { font-size: 14px; }
+  .notepad-landing .garden-station--living-graph .garden-station-pair {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .notepad-landing .garden-station--living-graph .garden-station-content--left {
+    justify-self: center;
+    max-width: 90vw;
+  }
+  .notepad-landing .living-graph-video-wrap {
+    justify-self: center;
+    max-width: 90vw;
+  }
 }

@@ -66,3 +66,15 @@ describe('<GardenScene /> — PRM mode (prm=true)', () => {
     expect(screen.getByRole('heading', { name: /private\. cited\. yours\./i })).toBeInTheDocument();
   });
 });
+
+describe('<GardenScene /> — Living Graph station layout', () => {
+  it('wraps the Living Graph text and (future) video slot in a .garden-station-pair grid', () => {
+    renderScene(false);
+    const station = document.querySelector('.garden-station--living-graph');
+    expect(station).not.toBeNull();
+    const pair = station?.querySelector('.garden-station-pair');
+    expect(pair).not.toBeNull();
+    expect(pair?.querySelector('.garden-station-content--left')).not.toBeNull();
+    expect(pair?.querySelector('.living-graph-video-wrap')).not.toBeNull();
+  });
+});

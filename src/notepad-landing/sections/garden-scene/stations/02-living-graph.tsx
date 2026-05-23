@@ -11,12 +11,17 @@ export function StationLivingGraph({ isActive }: Props) {
       className={`garden-station garden-station--living-graph${isActive ? ' active' : ''}`}
       aria-hidden={isActive ? undefined : 'true'}
     >
-      <div className="garden-station-content garden-station-content--left">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{h2}</h2>
-        <p className="body">{body}</p>
-        <p className="supporting">{supporting}</p>
-        <p className="caption">{caption}</p>
+      <div className="garden-station-pair">
+        <div className="garden-station-content garden-station-content--left">
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{h2}</h2>
+          <p className="body">{body}</p>
+          <p className="supporting">{supporting}</p>
+          <p className="caption">{caption}</p>
+        </div>
+        <div className="living-graph-video-wrap">
+          {/* video element added in Task 2 */}
+        </div>
       </div>
     </article>
   );
