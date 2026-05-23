@@ -54,6 +54,7 @@ function ActiveGardenScene() {
       {/* Sticky viewport — pins at top:0 while the container is in view,
           then releases naturally past the bottom into the closing CTA. */}
       <div className="garden-scene-viewport">
+        <p className="garden-scene-label" aria-hidden="true">Garden of Psalms</p>
         <GardenCanvas scrollProgress={scrollProgress} onStationChange={onStationChange} />
         <PaperOverlay />
         <GardenContentLayer currentStation={currentStation} />

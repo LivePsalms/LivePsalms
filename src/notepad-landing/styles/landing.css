@@ -917,6 +917,22 @@
   line-height: 1.6;
 }
 
+.notepad-landing .garden-scene-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  margin: 0;
+  font-family: var(--np-display);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--np-ink-warm);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .notepad-landing .garden-progress {
   position: absolute;
   right: 28px;
