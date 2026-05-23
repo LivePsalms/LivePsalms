@@ -43,7 +43,7 @@ export function LoginPage() {
 
   // Redirect if already logged in
   if (user) {
-    navigate('/notepad');
+    navigate('/notepad/notes');
     return null;
   }
 
@@ -64,7 +64,7 @@ export function LoginPage() {
         setSuccess('Check your email to verify your account.');
       } else {
         await session.signIn(email, password);
-        navigate('/notepad');
+        navigate('/notepad/notes');
       }
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -173,7 +173,7 @@ export function LoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="auth-form flex flex-col gap-3">
           {mode === 'signup' && (
             <input
               type="text"

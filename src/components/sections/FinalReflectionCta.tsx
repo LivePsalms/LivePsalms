@@ -214,7 +214,7 @@ export function FinalReflectionCta() {
                     style={{
                       fontFamily: 'Inter, system-ui, sans-serif',
                       fontSize: '13px',
-                      color: 'hsl(var(--mersi-dark))',
+                      color: 'hsl(var(--mersi-dark) / 0.85)',
                     }}
                   />
                   <button
