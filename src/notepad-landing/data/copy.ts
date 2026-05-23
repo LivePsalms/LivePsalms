@@ -11,7 +11,7 @@ export const copy = {
   section02: {
     eyebrow: '— ONE NOTEPAD —',
     h2: 'Three voices. One quiet place.',
-    body: 'The devotion you wrote this morning. The sermon you scribbled Sunday. The theme you’ve been walking with since March. They were never separate — only stored that way.',
+    body: 'The devotion you wrote this morning. The sermon you jotted down Sunday. The emotions you’ve been walking with for months. They were never separate, only stored that way.',
     supporting:
       'Each note knows which kind of writing it is. The Notepad threads them together by what they share — a verse, a word, an unanswered question.',
   },
