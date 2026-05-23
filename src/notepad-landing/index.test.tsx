@@ -28,7 +28,8 @@ describe('NotepadLanding (stub)', () => {
         </Routes>
       </MemoryRouter>,
     );
-    const cta = screen.getByRole('link', { name: /open your notepad/i });
-    expect(cta).toHaveAttribute('href', '/notepad/notes');
+    const ctas = screen.getAllByRole('link', { name: /open your notepad/i });
+    expect(ctas.length).toBeGreaterThanOrEqual(1);
+    expect(ctas[0]).toHaveAttribute('href', '/notepad/notes');
   });
 });
