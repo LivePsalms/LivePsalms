@@ -6,7 +6,6 @@ import { PaperOverlay } from './paper-overlay';
 import { GardenContentLayer } from './garden-content-layer';
 import { GardenProgress } from './garden-progress';
 import { FallbackStack } from './fallback-stack';
-import { TOTAL_SPACER_VH } from './station-meta';
 
 interface GardenSceneProps { prm: boolean }
 
@@ -48,12 +47,18 @@ function ActiveGardenScene() {
   const onStationChange = useCallback(() => {}, []);
 
   return (
-    <div className="garden-scene">
-      <GardenCanvas scrollProgress={scrollProgress} onStationChange={onStationChange} />
-      <PaperOverlay />
-      <GardenContentLayer currentStation={currentStation} scrollProgress={scrollProgress} />
-      <GardenProgress current={currentStation} onJump={jumpTo} />
-      <div id="garden-spacer" style={{ height: `${TOTAL_SPACER_VH}vh`, pointerEvents: 'none' }} aria-hidden="true" />
+    // The outer container's height (set in CSS to 950vh) provides the
+    // scroll runway. id="garden-spacer" is the scroll measurement anchor
+    // that useGardenScroll reads.
+    <div className="garden-scene" id="garden-spacer">
+      {/* Sticky viewport — pins at top:0 while the container is in view,
+          then releases naturally past the bottom into the closing CTA. */}
+      <div className="garden-scene-viewport">
+        <GardenCanvas scrollProgress={scrollProgress} onStationChange={onStationChange} />
+        <PaperOverlay />
+        <GardenContentLayer currentStation={currentStation} scrollProgress={scrollProgress} />
+        <GardenProgress current={currentStation} onJump={jumpTo} />
+      </div>
       {/* renderTick used only as a re-render trigger for list-station item reveals */}
       <span style={{ display: 'none' }} aria-hidden="true">{renderTick}</span>
     </div>

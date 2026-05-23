@@ -582,27 +582,42 @@
 
 /* ─── Garden Scene (Sections 02–08 replacement) ──────────────── */
 
+/* The container reserves the scroll height; the inner viewport wrapper
+   sticks at top:0 while the container is in viewport, then releases past
+   the bottom — revealing the closing CTA below in normal flow. */
 .notepad-landing .garden-scene {
   position: relative;
   z-index: 1;
+  height: 950vh;
 }
 
 /* When PRM, the fallback stack should render with no special wrapper styling. */
 .notepad-landing .garden-scene--fallback {
   position: static;
+  height: auto;
+}
+
+.notepad-landing .garden-scene-viewport {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none; /* children opt back in */
 }
 
 .notepad-landing .garden-canvas {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw;
-  height: 100vh;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
   display: block;
 }
 
 .notepad-landing .garden-paper-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
@@ -611,7 +626,7 @@
 }
 
 .notepad-landing .garden-content-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
@@ -787,7 +802,7 @@
 }
 
 .notepad-landing .garden-progress {
-  position: fixed;
+  position: absolute;
   right: 28px;
   top: 50%;
   transform: translateY(-50%);
@@ -796,6 +811,7 @@
   flex-direction: column;
   gap: 18px;
   align-items: center;
+  pointer-events: auto;
 }
 
 .notepad-landing .garden-progress-item {

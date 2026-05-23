@@ -16,10 +16,23 @@ function clamp01(n: number): number {
   return n;
 }
 
-function readMaxScroll(): number {
+// Progress is 0 while the spacer's top is at or below viewport top, and 1
+// once the user has scrolled (spacerHeight - viewportHeight) past it.
+// We measure via getBoundingClientRect so the hook works regardless of
+// what comes above the garden in the document (hero, nav, etc.).
+function readProgress(): number {
   const spacer = document.getElementById(SPACER_ID);
   if (!spacer) return 0;
-  return Math.max(0, spacer.offsetHeight - window.innerHeight);
+  const rect = spacer.getBoundingClientRect();
+  const range = spacer.offsetHeight - window.innerHeight;
+  if (range <= 0) return 0;
+  return clamp01(-rect.top / range);
+}
+
+function readSpacerTopAbsolute(): number {
+  const spacer = document.getElementById(SPACER_ID);
+  if (!spacer) return 0;
+  return spacer.getBoundingClientRect().top + window.scrollY;
 }
 
 export function useGardenScroll(): GardenScrollState {
@@ -29,8 +42,7 @@ export function useGardenScroll(): GardenScrollState {
   useEffect(() => {
     const lastIndex = STATION_META.length - 1; // 6
     function handleScroll() {
-      const max = readMaxScroll();
-      const p = max > 0 ? clamp01(window.scrollY / max) : 0;
+      const p = readProgress();
       scrollProgress.current = p;
       const next = Math.round(p * lastIndex);
       setCurrentStation((prev) => (prev === next ? prev : next));
@@ -45,9 +57,11 @@ export function useGardenScroll(): GardenScrollState {
   }, []);
 
   const jumpTo = useCallback((i: number) => {
-    const max = readMaxScroll();
+    const spacer = document.getElementById(SPACER_ID);
+    if (!spacer) return;
+    const range = Math.max(0, spacer.offsetHeight - window.innerHeight);
     const lastIndex = STATION_META.length - 1;
-    const top = (i / lastIndex) * max;
+    const top = readSpacerTopAbsolute() + (i / lastIndex) * range;
     window.scrollTo({ top, behavior: 'smooth' });
   }, []);
 
