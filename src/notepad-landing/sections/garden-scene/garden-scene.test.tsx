@@ -105,4 +105,19 @@ describe('<GardenScene /> — Scripture Margin station layout', () => {
     expect(pair?.querySelector('.garden-station-content--right')).not.toBeNull();
     expect(pair?.querySelector('.scripture-margin-video-wrap')).not.toBeNull();
   });
+
+  it('renders a muted, looping, playsInline video pointing at the verses assets', () => {
+    renderScene(false);
+    const video = document.querySelector<HTMLVideoElement>('.scripture-margin-video');
+    expect(video).not.toBeNull();
+    expect(video?.muted).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.getAttribute('playsinline')).not.toBeNull();
+    expect(video?.getAttribute('preload')).toBe('metadata');
+    expect(video?.getAttribute('poster')).toBe('/notepad-landing/verses-poster.jpg');
+    const sources = Array.from(video?.querySelectorAll('source') ?? []);
+    const srcs = sources.map((s) => s.getAttribute('src'));
+    expect(srcs).toContain('/notepad-landing/verses.webm');
+    expect(srcs).toContain('/notepad-landing/verses.mp4');
+  });
 });

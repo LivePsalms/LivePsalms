@@ -19,7 +19,18 @@ export function StationScriptureMargin({ isActive }: Props) {
           <p className="supporting">{supporting}</p>
         </div>
         <div className="scripture-margin-video-wrap">
-          {/* video element added in Task 2 */}
+          <video
+            className="scripture-margin-video"
+            poster="/notepad-landing/verses-poster.jpg"
+            preload="metadata"
+            muted
+            loop
+            playsInline
+            aria-label="The Notepad with inline scripture references — typing a verse reference makes it a live, clickable link inside the prose."
+          >
+            <source src="/notepad-landing/verses.webm" type="video/webm" />
+            <source src="/notepad-landing/verses.mp4"  type="video/mp4"  />
+          </video>
         </div>
       </div>
     </article>
