@@ -9,6 +9,7 @@ import {
   setNavCollapseProgress,
   getNavCollapseProgress,
 } from '@/lib/nav-collapse-progress';
+import { subscribeNavTheme, getNavTheme, type NavTheme } from '@/lib/nav-theme';
 import {
   TextStaggerHover,
   TextStaggerHoverActive,
@@ -171,12 +172,20 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
     tweenProgressTo(0, 0.5);
   };
 
+  // Adaptive nav-theme override — pages like the notepad landing publish a
+  // 'dark' or 'light' value as the user scrolls past sections with different
+  // backgrounds. When set, it wins over the static darkText prop so the nav
+  // stays legible against whatever sits behind it.
+  const [themeOverride, setThemeOverride] = useState<NavTheme>(() => getNavTheme());
+  useEffect(() => subscribeNavTheme(setThemeOverride), []);
+
   // Soft-translucent text — paired with the glass text-shadow in
-  // .psalms-nav-link (index.css). Constant across scroll; only flips to
-  // the light variant when the page itself declares a dark theme via the
-  // darkText prop (e.g. detail pages with colored backgrounds).
-  const textColor = darkText ? 'rgba(255, 255, 255, 0.72)' : 'rgba(0, 0, 0, 0.65)';
-  const hoverColor = darkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)';
+  // .psalms-nav-link (index.css). Flips to the light variant when the bg
+  // behind the nav is dark (either via the per-route darkText prop or the
+  // scroll-driven themeOverride).
+  const isDarkBg = themeOverride !== null ? themeOverride === 'dark' : darkText;
+  const textColor = isDarkBg ? 'rgba(255, 255, 255, 0.72)' : 'rgba(0, 0, 0, 0.65)';
+  const hoverColor = isDarkBg ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)';
 
   useEffect(() => {
     const handleScroll = () => {
