@@ -7,6 +7,8 @@ import { Lamplight } from './sections/04-lamplight';
 import { ScriptureMargin } from './sections/05-scripture-margin';
 import { SevenPapers } from './sections/06-seven-papers';
 import { TierPath } from './sections/07-tier-path';
+import { TrustImport } from './sections/08-trust-import';
+import { ClosingCTA } from './sections/09-closing-cta';
 
 export function NotepadLanding() {
   const prm = usePrefersReducedMotion();
@@ -19,6 +21,8 @@ export function NotepadLanding() {
       <ScriptureMargin prm={prm} />
       <SevenPapers prm={prm} />
       <TierPath />
+      <TrustImport />
+      <ClosingCTA prm={prm} />
     </div>
   );
 }

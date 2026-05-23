@@ -470,3 +470,112 @@
   padding-left: 2rem;
   border: none;
 }
+
+/* ─── Section 08: Trust / Import ─────────────────────────────────── */
+
+.trust-import {
+  background: var(--np-bg-paper);
+}
+
+.trust-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.trust-triptych {
+  list-style: none;
+  padding: 0;
+  margin: 2.4rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.trust-triptych li {
+  font-family: var(--np-display);
+  font-style: italic;
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--np-ink-mid);
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(102, 84, 79, 0.18);
+}
+
+@media (max-width: 768px) {
+  .trust-triptych {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Section 09: Closing CTA ────────────────────────────────────── */
+
+.closing-cta {
+  position: relative;
+  background: var(--np-bg-dark);
+  color: #efedee;
+  text-align: center;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.closing-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.closing-content {
+  position: relative;
+  z-index: 1;
+  max-width: 560px;
+  padding: 0 1.5rem;
+}
+
+.closing-content h2 {
+  font-family: var(--np-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  color: #f4f0e8;
+  font-style: italic;
+  margin-bottom: 1.2rem;
+}
+
+.closing-sub {
+  font-family: var(--np-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #b7ada0;
+  margin-bottom: 2rem;
+}
+
+.closing-cta-primary {
+  background: transparent;
+  border: 1.5px solid #c4b5a0;
+  color: #f4f0e8;
+}
+
+.closing-cta-primary:hover {
+  background: #c4b5a0;
+  color: #0e0e0e;
+}
+
+.closing-cta-secondary {
+  display: inline-block;
+  margin-top: 1.2rem;
+  font-family: var(--np-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #8d8478;
+  text-decoration: none;
+  transition: color 0.3s var(--np-ease);
+}
+
+.closing-cta-secondary:hover {
+  color: #c4b5a0;
+}
