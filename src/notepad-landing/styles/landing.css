@@ -580,6 +580,40 @@
   color: #c4b5a0;
 }
 
+.closing-text-block {
+  position: relative;
+}
+
+.closing-text-block::before {
+  content: '';
+  position: absolute;
+  inset: -2rem -3rem;
+  background: radial-gradient(
+    ellipse 60% 45% at 50% 50%,
+    rgba(8, 8, 10, 0.72),
+    rgba(8, 8, 10, 0) 70%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-mask: radial-gradient(
+    ellipse 55% 42% at 50% 50%,
+    #000 35%,
+    transparent 75%
+  );
+  mask: radial-gradient(
+    ellipse 55% 42% at 50% 50%,
+    #000 35%,
+    transparent 75%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+.closing-text-block > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* ─── Garden Scene (Sections 02–08 replacement) ──────────────── */
 
 /* The container reserves the scroll height; the inner viewport wrapper
