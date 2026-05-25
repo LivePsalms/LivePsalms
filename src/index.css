@@ -865,8 +865,8 @@ img {
   box-shadow: 0 0 0 1px hsl(var(--mersi-dark) / 0.40);
 }
 
-/* FinalReflectionCta — placeholder color, more legible than browser default */
-.final-reflection-form input::placeholder {
-  color: hsl(var(--mersi-dark) / 0.6);
-  opacity: 1; /* Firefox lowers placeholder opacity by default; pin it */
+/* Global — darker, more legible placeholder for all email inputs across the app */
+input[type="email"]::placeholder {
+  color: currentColor;
+  opacity: 0.75; /* Firefox lowers placeholder opacity by default; pin it explicitly */
 }

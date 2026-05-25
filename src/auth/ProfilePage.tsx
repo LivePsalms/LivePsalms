@@ -210,7 +210,13 @@ export function ProfilePage() {
             >
               {profile?.fullName}
             </p>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+            <p
+              className="text-xs"
+              style={{
+                color: 'rgba(var(--deep-umber-rgb), 0.8)',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
               {user?.email}
             </p>
           </div>

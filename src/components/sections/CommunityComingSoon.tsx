@@ -68,7 +68,7 @@ export function CommunityComingSoon() {
             margin: '0 0 20px',
           }}
         >
-          Community Feature Coming Soon
+          Coming Soon
         </h1>
         <p
           style={{

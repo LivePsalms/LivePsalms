@@ -609,23 +609,24 @@
 .closing-cta-secondary::before {
   content: '';
   position: absolute;
-  inset: -1rem -1.6rem;
+  inset: -1.15rem -1.8rem;
   background: radial-gradient(
-    ellipse 75% 70% at 50% 50%,
-    rgba(8, 8, 10, 0.72),
-    rgba(8, 8, 10, 0) 75%
+    ellipse 75% 75% at 50% 50%,
+    rgba(8, 8, 10, 0.92),
+    rgba(8, 8, 10, 0.5) 55%,
+    rgba(8, 8, 10, 0) 85%
   );
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   -webkit-mask: radial-gradient(
-    ellipse 70% 65% at 50% 50%,
-    #000 35%,
-    transparent 80%
+    ellipse 72% 62% at 50% 50%,
+    #000 45%,
+    transparent 90%
   );
   mask: radial-gradient(
-    ellipse 70% 65% at 50% 50%,
-    #000 35%,
-    transparent 80%
+    ellipse 72% 62% at 50% 50%,
+    #000 45%,
+    transparent 90%
   );
   z-index: -1;
   pointer-events: none;
