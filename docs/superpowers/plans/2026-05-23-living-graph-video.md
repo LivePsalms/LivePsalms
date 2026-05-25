@@ -15,7 +15,7 @@
 ## File map
 
 - **Modify** `src/notepad-landing/sections/garden-scene/stations/02-living-graph.tsx` — wrap text in a grid pair, add `<video>` element, add `useRef` + `useEffect` to gate playback on `isActive` and `prefersReducedMotion`.
-- **Modify** `src/notepad-landing/styles/landing.css` — add `.garden-station--living-graph .garden-station-pair` grid rules, `.living-graph-video-wrap` sizing, `.living-graph-video` styling + radial mask, mobile stack inside the existing `@media (max-width: 860px)` block.
+- **Modify** `src/notepad-landing/styles/landing.css` — add `.garden-station--living-graph .garden-station-pair` grid rules, `.living-graph-video-wrap` sizing, `.living-graph-video` styling + radial mask, mobile stack inside the existing `@media (max-width: 768px)` block.
 - **Modify** `src/notepad-landing/sections/garden-scene/garden-scene.test.tsx` — add a `describe` block for the Living Graph station's video element.
 
 No new files. No package changes. No new assets.
@@ -117,7 +117,7 @@ In `src/notepad-landing/styles/landing.css`, insert the desktop block immediatel
 }
 ```
 
-Then, inside the existing `@media (max-width: 860px)` block (around line 996-999 where `--left` and `--right` are flattened), append:
+Then, inside the existing `@media (max-width: 768px)` block (around line 996-999 where `--left` and `--right` are flattened), append:
 
 ```css
   .notepad-landing .garden-station--living-graph .garden-station-pair {
@@ -427,7 +427,7 @@ Open the printed URL. Scroll into the Garden of Psalms section until you reach t
 - Video edges fade softly into the garden background (no hard rectangle).
 - Video plays only while the station is the active one (the active fade-in matches the play start).
 - Scrolling past the station pauses the video.
-- Resize the window narrower than ~860px: layout collapses to a single column with text first, then video.
+- Resize the window narrower than ~768px: layout collapses to a single column with text first, then video.
 
 If anything looks wrong, fix in this task before committing.
 

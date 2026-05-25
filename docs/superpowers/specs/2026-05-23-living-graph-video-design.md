@@ -46,9 +46,9 @@ The existing station has `display: flex; align-items: center; justify-content: c
 - Gap between columns: ~5vw, capped at 64px.
 - Total content width: capped at `min(1280px, 90vw)` so the pair stays balanced on ultra-wide screens.
 
-### Mobile (<860px)
+### Mobile (<768px)
 
-Single column. Text first (eyebrow → h2 → body → supporting → caption), then the video below it with `margin-top: 24px`. Re-uses the existing breakpoint at ~860px that already handles `--left` / `--right` flattening (`landing.css:997`).
+Single column. Text first (eyebrow → h2 → body → supporting → caption), then the video below it with `margin-top: 24px`. Re-uses the existing breakpoint at ~768px that already handles `--left` / `--right` flattening (`landing.css:997`).
 
 The station's `baseVh: 125` in `station-meta.ts` is preserved. On mobile the video must fit inside the same allotment without overflow — at 90vw width and 16:9, the video is ~50.6vh tall, which leaves room for the text inside a 125vh pinned section. No change to `STATION_META` or scroll math.
 
@@ -249,7 +249,7 @@ export function StationLivingGraph({ isActive }: Props) {
   background: transparent;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 768px) {
   .notepad-landing .garden-station--living-graph .garden-station-pair {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -284,7 +284,7 @@ The existing `.garden-station-content::before` halo continues to work because th
 
 Run: `npm test`.
 
-Visual verification: start dev server, scroll to the Living Graph station, confirm the video plays muted on entry and pauses on exit, and that mobile (≤860px) stacks correctly.
+Visual verification: start dev server, scroll to the Living Graph station, confirm the video plays muted on entry and pauses on exit, and that mobile (≤768px) stacks correctly.
 
 ## Out of scope
 
