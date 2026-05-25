@@ -848,6 +848,38 @@
   display: block;
 }
 
+/* Seven Papers two-column pair (same shape as Living Graph; cinematic 16:9, feathered) */
+.notepad-landing .garden-station--seven-papers .garden-station-pair {
+  width: 100%;
+  max-width: min(1280px, 90vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+}
+
+.notepad-landing .garden-station--seven-papers .garden-station-content--left {
+  margin-left: 0;
+  max-width: 640px;
+  justify-self: end;
+}
+
+.notepad-landing .seven-papers-video-wrap {
+  width: 100%;
+  max-width: 640px;
+  justify-self: start;
+}
+
+.notepad-landing .seven-papers-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  object-fit: cover;
+  background: transparent;
+  -webkit-mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
+          mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
+}
+
 .notepad-landing .garden-station .eyebrow {
   font-family: var(--np-mono);
   font-size: 10px;
@@ -1100,6 +1132,18 @@
     max-width: 90vw;
   }
   .notepad-landing .scripture-margin-video-wrap {
+    justify-self: center;
+    max-width: 90vw;
+  }
+  .notepad-landing .garden-station--seven-papers .garden-station-pair {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .notepad-landing .garden-station--seven-papers .garden-station-content--left {
+    justify-self: center;
+    max-width: 90vw;
+  }
+  .notepad-landing .seven-papers-video-wrap {
     justify-self: center;
     max-width: 90vw;
   }
