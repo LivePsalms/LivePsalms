@@ -846,9 +846,6 @@
   width: 100%;
   aspect-ratio: 1 / 1;
   display: block;
-  background: transparent;
-  -webkit-mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
-          mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
 }
 
 .notepad-landing .garden-station .eyebrow {
