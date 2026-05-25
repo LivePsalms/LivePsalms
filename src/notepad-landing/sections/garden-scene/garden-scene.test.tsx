@@ -121,3 +121,30 @@ describe('<GardenScene /> — Scripture Margin station layout', () => {
     expect(srcs).toContain('/notepad-landing/verses.mp4');
   });
 });
+
+describe('<GardenScene /> — Seven Papers station layout', () => {
+  it('wraps the Seven Papers text and video in a .garden-station-pair grid', () => {
+    renderScene(false);
+    const station = document.querySelector('.garden-station--seven-papers');
+    expect(station).not.toBeNull();
+    const pair = station?.querySelector('.garden-station-pair');
+    expect(pair).not.toBeNull();
+    expect(pair?.querySelector('.garden-station-content--left')).not.toBeNull();
+    expect(pair?.querySelector('.seven-papers-video-wrap')).not.toBeNull();
+  });
+
+  it('renders a muted, looping, playsInline video pointing at the templates assets', () => {
+    renderScene(false);
+    const video = document.querySelector<HTMLVideoElement>('.seven-papers-video');
+    expect(video).not.toBeNull();
+    expect(video?.muted).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.getAttribute('playsinline')).not.toBeNull();
+    expect(video?.getAttribute('preload')).toBe('metadata');
+    expect(video?.getAttribute('poster')).toBe('/notepad-landing/templates-poster.jpg');
+    const sources = Array.from(video?.querySelectorAll('source') ?? []);
+    const srcs = sources.map((s) => s.getAttribute('src'));
+    expect(srcs).toContain('/notepad-landing/templates.webm');
+    expect(srcs).toContain('/notepad-landing/templates.mp4');
+  });
+});
