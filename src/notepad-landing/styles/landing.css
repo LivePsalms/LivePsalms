@@ -880,6 +880,39 @@
           mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
 }
 
+/* Tier Path two-column pair — image left, copy right.
+   Verse echo: the image's anchor verse (Psalm 27:1) sits across the gap
+   from the section's pullquote (Zechariah 4:10). */
+.notepad-landing .garden-station--tier-path .garden-station-pair {
+  width: 100%;
+  max-width: min(1280px, 90vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+}
+
+.notepad-landing .garden-station--tier-path .garden-station-content--right {
+  margin: 0;
+  max-width: 560px;
+  justify-self: start;
+  text-align: left;
+}
+
+.notepad-landing .tier-path-image-wrap {
+  width: 100%;
+  max-width: 460px;
+  justify-self: end;
+}
+
+.notepad-landing .tier-path-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  -webkit-mask-image: radial-gradient(ellipse 96% 94% at 50% 50%, #000 65%, transparent 100%);
+          mask-image: radial-gradient(ellipse 96% 94% at 50% 50%, #000 65%, transparent 100%);
+}
+
 .notepad-landing .garden-station .eyebrow {
   font-family: var(--np-mono);
   font-size: 10px;
@@ -1146,5 +1179,21 @@
   .notepad-landing .seven-papers-video-wrap {
     justify-self: center;
     max-width: 90vw;
+  }
+  .notepad-landing .garden-station--tier-path .garden-station-pair {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .notepad-landing .garden-station--tier-path .garden-station-content--right {
+    justify-self: center;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .notepad-landing .garden-station--tier-path .tier-pullquote {
+    text-align: left;
+  }
+  .notepad-landing .tier-path-image-wrap {
+    justify-self: center;
+    max-width: min(360px, 80vw);
   }
 }
