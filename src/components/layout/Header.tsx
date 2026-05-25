@@ -310,6 +310,10 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
             src="/logo-icon.png"
             alt="LivePsalms"
             className="h-8 md:h-10 w-auto object-contain"
+            style={{
+              filter: isDarkBg ? 'invert(1)' : 'invert(0)',
+              transition: 'filter 300ms ease',
+            }}
           />
         </a>
 
