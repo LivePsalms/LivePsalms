@@ -7,8 +7,9 @@
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... VOYAGE_AI_KEY=... \
 //     npx tsx scripts/ingest-bsb.ts
 //
-// Source: https://bereanbible.com/bsb.json (public domain). Cached locally at
-// scripts/data/bsb.json so re-runs are offline.
+// Source: https://bereanbible.com/bsb.txt (public domain TSV — one verse per
+// line as `<Book> <Chapter>:<Verse>\t<Text>`, preceded by a 3-line preamble).
+// Cached locally at scripts/data/bsb.txt so re-runs are offline.
 
 import { createClient } from '@supabase/supabase-js';
 import { sha256 } from 'js-sha256';
@@ -16,9 +17,37 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { embedDocuments } from '../supabase/functions/_shared/voyage';
 
-const BSB_URL = 'https://bereanbible.com/bsb.json';
-const CACHE_PATH = 'scripts/data/bsb.json';
+const BSB_URL = 'https://bereanbible.com/bsb.txt';
+const CACHE_PATH = 'scripts/data/bsb.txt';
 const BATCH = 64;
+
+// Full book name → OSIS-style 3-letter abbreviation. 66 canonical books.
+// The BSB TSV uses "Psalm" (singular) and "Song of Solomon" (not "Song of Songs").
+const BOOK_ABBREV: Record<string, string> = {
+  // Old Testament
+  'Genesis': 'gen', 'Exodus': 'exo', 'Leviticus': 'lev', 'Numbers': 'num',
+  'Deuteronomy': 'deu', 'Joshua': 'jos', 'Judges': 'jdg', 'Ruth': 'rut',
+  '1 Samuel': '1sa', '2 Samuel': '2sa', '1 Kings': '1ki', '2 Kings': '2ki',
+  '1 Chronicles': '1ch', '2 Chronicles': '2ch', 'Ezra': 'ezr', 'Nehemiah': 'neh',
+  'Esther': 'est', 'Job': 'job', 'Psalm': 'psa', 'Proverbs': 'pro',
+  'Ecclesiastes': 'ecc', 'Song of Solomon': 'sng', 'Isaiah': 'isa', 'Jeremiah': 'jer',
+  'Lamentations': 'lam', 'Ezekiel': 'ezk', 'Daniel': 'dan', 'Hosea': 'hos',
+  'Joel': 'jol', 'Amos': 'amo', 'Obadiah': 'oba', 'Jonah': 'jon',
+  'Micah': 'mic', 'Nahum': 'nam', 'Habakkuk': 'hab', 'Zephaniah': 'zep',
+  'Haggai': 'hag', 'Zechariah': 'zec', 'Malachi': 'mal',
+  // New Testament
+  'Matthew': 'mat', 'Mark': 'mrk', 'Luke': 'luk', 'John': 'jhn',
+  'Acts': 'act', 'Romans': 'rom', '1 Corinthians': '1co', '2 Corinthians': '2co',
+  'Galatians': 'gal', 'Ephesians': 'eph', 'Philippians': 'php', 'Colossians': 'col',
+  '1 Thessalonians': '1th', '2 Thessalonians': '2th', '1 Timothy': '1ti', '2 Timothy': '2ti',
+  'Titus': 'tit', 'Philemon': 'phm', 'Hebrews': 'heb', 'James': 'jas',
+  '1 Peter': '1pe', '2 Peter': '2pe', '1 John': '1jn', '2 John': '2jn',
+  '3 John': '3jn', 'Jude': 'jud', 'Revelation': 'rev',
+};
+
+// Captures: book name (may include leading digit + space), chapter, verse.
+// Examples: "Genesis 1:1", "1 Samuel 5:3", "Song of Solomon 8:14".
+const REF_RE = /^(.+) (\d+):(\d+)$/;
 
 export interface BsbVerse { number: number; text: string }
 export interface BsbChapter { number: number; verses: BsbVerse[] }
@@ -72,15 +101,69 @@ export function parseBsbToRows(corpus: BsbCorpus): { verses: PassageRow[]; peric
 }
 
 async function loadCorpus(): Promise<BsbCorpus> {
+  let text: string;
   if (existsSync(CACHE_PATH)) {
-    return JSON.parse(await readFile(CACHE_PATH, 'utf8'));
+    text = await readFile(CACHE_PATH, 'utf8');
+  } else {
+    await mkdir('scripts/data', { recursive: true });
+    const res = await fetch(BSB_URL);
+    if (!res.ok) throw new Error(`fetch ${BSB_URL}: ${res.status}`);
+    text = await res.text();
+    await writeFile(CACHE_PATH, text);
   }
-  await mkdir('scripts/data', { recursive: true });
-  const res = await fetch(BSB_URL);
-  if (!res.ok) throw new Error(`fetch ${BSB_URL}: ${res.status}`);
-  const text = await res.text();
-  await writeFile(CACHE_PATH, text);
-  return JSON.parse(text);
+  return parseBsbText(text);
+}
+
+// Parse the BSB TSV ("<Book> <Chapter>:<Verse>\t<Text>" lines) into the
+// in-memory BsbCorpus structure that parseBsbToRows expects. Preserves the
+// canonical book order encountered in the file. Skips preamble lines and
+// the column header. Exported for testability.
+export function parseBsbText(raw: string): BsbCorpus {
+  // Strip BOM if present.
+  const text = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
+  const lines = text.split(/\r?\n/);
+
+  const books: BsbBook[] = [];
+  const bookIndex = new Map<string, number>();
+  const chapterIndex = new Map<string, number>(); // key: `${bookIdx}.${chapterNumber}`
+
+  for (const line of lines) {
+    if (!line) continue;
+    const tab = line.indexOf('\t');
+    if (tab < 0) continue;                          // preamble row
+    const ref = line.slice(0, tab).trim();
+    const verseText = line.slice(tab + 1).trim();
+    if (ref === 'Verse' || !verseText) continue;    // header / blank
+
+    const m = REF_RE.exec(ref);
+    if (!m) continue;                                // unexpected shape — skip silently
+    const [, bookName, chapterStr, verseStr] = m;
+    const abbrev = BOOK_ABBREV[bookName];
+    if (!abbrev) {
+      throw new Error(`unknown BSB book name: "${bookName}"`);
+    }
+    const chapter = Number(chapterStr);
+    const verseNum = Number(verseStr);
+
+    let bIdx = bookIndex.get(abbrev);
+    if (bIdx === undefined) {
+      bIdx = books.length;
+      bookIndex.set(abbrev, bIdx);
+      books.push({ name: bookName, abbrev, chapters: [] });
+    }
+
+    const chKey = `${bIdx}.${chapter}`;
+    let cIdx = chapterIndex.get(chKey);
+    if (cIdx === undefined) {
+      cIdx = books[bIdx].chapters.length;
+      chapterIndex.set(chKey, cIdx);
+      books[bIdx].chapters.push({ number: chapter, verses: [] });
+    }
+
+    books[bIdx].chapters[cIdx].verses.push({ number: verseNum, text: verseText });
+  }
+
+  return { books };
 }
 
 async function main() {
