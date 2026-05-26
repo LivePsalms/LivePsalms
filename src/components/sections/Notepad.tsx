@@ -15,6 +15,8 @@ import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
 import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
 import { LamplightTabPanel } from '@/notepad/components/lamplight/LamplightTabPanel';
 import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
+import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
+import { useLamplightEmbeddingTrigger } from '@/notepad/hooks/useLamplightEmbeddingTrigger';
 import { supabase } from '@/lib/supabase';
 
 function NotepadWorkspace() {
@@ -28,6 +30,25 @@ function NotepadWorkspace() {
     () => (supabase ? new SupabaseLamplightAdapter(supabase) : null),
     []
   );
+
+  // useLamplightSettings requires a non-null adapter. When Supabase is not
+  // configured, lamplightAdapter is null — pass userId=null to skip the fetch.
+  const { settings: lamplightSettings } = useLamplightSettings({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adapter: lamplightAdapter as any,
+    userId: lamplightAdapter ? (user?.id ?? null) : null,
+  });
+
+  // useLamplightEmbeddingTrigger also requires a non-null adapter. Guard enabled
+  // so that when Supabase/adapter is absent the returned callback is always a no-op.
+  const onAfterSave = useLamplightEmbeddingTrigger({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adapter: lamplightAdapter as any,
+    enabled: !!(lamplightAdapter && lamplightSettings?.enabled),
+    userId: lamplightAdapter ? (user?.id ?? null) : null,
+    invoke: (name, options) => supabase!.functions.invoke(name, options),
+  });
+
   const actions = useNotepadActions();
   const refresh = useCallback(() => actions.init(), [actions]);
   const { showMigration, dismissMigration } = useNotepadFirstLoad();
@@ -174,7 +195,7 @@ function NotepadWorkspace() {
           </div>
 
           {/* Tab Content */}
-          {activeTab === 'content' && <NotepadEditor />}
+          {activeTab === 'content' && <NotepadEditor onAfterSave={onAfterSave} />}
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (

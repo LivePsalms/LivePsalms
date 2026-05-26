@@ -25,8 +25,12 @@ import { useVerseTooltip } from '../editor/use-verse-tooltip';
 import { useJournalTheme } from '../hooks/use-journal-theme';
 import { formatTag } from '../utils/tags';
 import { JOURNAL_THEMES } from '../types';
-import type { JournalTheme } from '../types';
+import type { JournalTheme, Note } from '../types';
 import '../journal-themes.css';
+
+export interface NotepadEditorProps {
+  onAfterSave?: (note: Note) => void;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,7 +49,7 @@ function formatDate(iso: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function NotepadEditor() {
+export function NotepadEditor({ onAfterSave }: NotepadEditorProps = {}) {
   const { notes, activeNote, collection } = useNoteCollection();
   const actions = useNotepadActions();
   const { graph } = useReferenceGraph();
@@ -54,7 +58,7 @@ export function NotepadEditor() {
   const [journalTheme, setJournalTheme] = useJournalTheme();
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
-  const { editor } = useNoteEditor({ activeNote, updateNote });
+  const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
   const {
