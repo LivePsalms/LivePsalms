@@ -28,9 +28,12 @@ alter table public.lamplight_embeddings
 drop index if exists public.lamplight_embeddings_ivfflat;
 drop index if exists public.lamplight_embeddings_user_source;
 
-create index lamplight_embeddings_embedding_hnsw
+-- On Supabase, pgvector is installed in the `extensions` schema, so we
+-- fully-qualify the operator class to avoid "does not exist for access method
+-- hnsw" errors caused by the migration session's restricted search_path.
+create index if not exists lamplight_embeddings_embedding_hnsw
   on public.lamplight_embeddings
-  using hnsw (embedding vector_cosine_ops)
+  using hnsw (embedding extensions.vector_cosine_ops)
   with (m = 16, ef_construction = 64);
 
 alter table public.lamplight_embeddings
