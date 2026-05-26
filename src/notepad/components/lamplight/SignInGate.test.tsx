@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SignInGate } from './SignInGate';
+
+afterEach(cleanup);
 
 describe('SignInGate', () => {
   it('renders the waiting line, sign-in + sign-up CTAs, and a Why-sign-in link', () => {
