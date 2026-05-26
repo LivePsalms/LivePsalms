@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, LogOut, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,12 +17,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { LamplightSettingsSection } from './components/LamplightSettingsSection';
+import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, loading, session } = useAuthSession();
   const { profile, account } = useAccountProfile();
   const accountActions = useAccountActions();
+  const lamplightAdapter = useMemo(
+    () => (supabaseClient ? new SupabaseLamplightAdapter(supabaseClient) : null),
+    []
+  );
 
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(profile?.dateOfBirth ?? '');
@@ -324,6 +331,11 @@ export function ProfilePage() {
             </p>
           </div>
         </div>
+
+        {/* Lamplight */}
+        {user && lamplightAdapter && (
+          <LamplightSettingsSection adapter={lamplightAdapter} userId={user.id} />
+        )}
 
         {/* Account Actions */}
         <div style={sectionStyle}>
