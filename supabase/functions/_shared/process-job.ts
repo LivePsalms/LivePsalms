@@ -1,5 +1,5 @@
 // supabase/functions/_shared/process-job.ts
-import { extractTextFromNoteContent } from './tiptap-text';
+import { extractTextFromNoteContent } from './tiptap-text.ts';
 
 export interface Job {
   id: string;
