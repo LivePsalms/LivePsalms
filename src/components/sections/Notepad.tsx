@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuthSession } from '@/auth/context/useAuthSession';
@@ -13,14 +13,21 @@ import { MigrationDialog } from '@/notepad/components/MigrationDialog';
 import { GraphPane } from './notepad/GraphPane';
 import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
 import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
+import { LamplightTabPanel } from '@/notepad/components/lamplight/LamplightTabPanel';
+import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
+import { supabase } from '@/lib/supabase';
 
 function NotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [graphOpen, setGraphOpen] = useState(true);
   const [graphExpanded, setGraphExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info' | 'lamplight'>('content');
 
   const { user, adapter } = useAuthSession();
+  const lamplightAdapter = useMemo(
+    () => (supabase ? new SupabaseLamplightAdapter(supabase) : null),
+    []
+  );
   const actions = useNotepadActions();
   const refresh = useCallback(() => actions.init(), [actions]);
   const { showMigration, dismissMigration } = useNotepadFirstLoad();
@@ -118,7 +125,10 @@ function NotepadWorkspace() {
           }}
         >
           {/* Tab Bar */}
-          <div className="flex items-center gap-0 border-b shrink-0" style={{ borderColor: 'var(--pale-stone)' }}>
+          <div
+            className="flex items-center gap-0 border-b shrink-0"
+            style={{ borderColor: 'var(--pale-stone)' }}
+          >
             {(['content', 'backlinks', 'info'] as const).map((tab) => (
               <button
                 key={tab}
@@ -131,16 +141,55 @@ function NotepadWorkspace() {
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {activeTab === tab && (
-                  <div className="absolute bottom-0 left-5 right-5 h-px" style={{ background: 'var(--deep-umber)' }} />
+                  <div
+                    className="absolute bottom-0 left-5 right-5 h-px"
+                    style={{ background: 'var(--deep-umber)' }}
+                  />
                 )}
               </button>
             ))}
+            <span
+              aria-hidden
+              className="mx-2"
+              style={{ color: 'var(--silica)', opacity: 0.3 }}
+            >
+              |
+            </span>
+            <button
+              onClick={() => setActiveTab('lamplight')}
+              className="px-5 py-3 text-[11px] font-medium tracking-wider transition-colors relative"
+              style={{
+                color: activeTab === 'lamplight' ? 'var(--deep-umber)' : '#b8843a',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              🕯 Lamplight
+              {activeTab === 'lamplight' && (
+                <div
+                  className="absolute bottom-0 left-5 right-5 h-px"
+                  style={{ background: 'var(--deep-umber)' }}
+                />
+              )}
+            </button>
           </div>
 
           {/* Tab Content */}
           {activeTab === 'content' && <NotepadEditor />}
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
+          {activeTab === 'lamplight' && lamplightAdapter && (
+            <LamplightTabPanel lamplightAdapter={lamplightAdapter} />
+          )}
+          {activeTab === 'lamplight' && !lamplightAdapter && (
+            <div
+              className="flex items-center justify-center min-h-[420px]"
+              style={{ background: 'var(--alabaster)' }}
+            >
+              <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+                Lamplight unavailable — Supabase not configured.
+              </p>
+            </div>
+          )}
         </main>
 
         {/* Graph Pane (static placeholder — functionality deferred) */}
