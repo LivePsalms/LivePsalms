@@ -237,4 +237,9 @@ describe('SupabaseLamplightAdapter — entitlement + promo', () => {
     backend.config.push({ key: 'lamplight_promo_ends_at', value: null });
     expect(await adapter.getPromoConfig()).toEqual({ promoActive: true, promoEndsAt: null });
   });
+
+  it('does NOT treat JSON string "false" as promoActive=true', async () => {
+    backend.config.push({ key: 'lamplight_promo_active', value: 'false' });
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: false, promoEndsAt: null });
+  });
 });

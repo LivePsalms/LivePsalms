@@ -86,8 +86,8 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
     const promoRow = rows.find((r) => r.key === 'lamplight_promo_active');
     const endsRow = rows.find((r) => r.key === 'lamplight_promo_ends_at');
     return {
-      promoActive: promoRow ? Boolean(promoRow.value) : false,
-      promoEndsAt: endsRow && endsRow.value ? String(endsRow.value) : null,
+      promoActive: promoRow?.value === true,
+      promoEndsAt: typeof endsRow?.value === 'string' ? endsRow.value : null,
     };
   }
 
