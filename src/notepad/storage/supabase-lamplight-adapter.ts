@@ -10,15 +10,21 @@ import type {
   LamplightEntitlementSource,
 } from './lamplight-adapter';
 
-const LAMPLIGHT_USER_TABLES = [
+// Tables with a `user_id` column — deletable via `eq('user_id', userId)`.
+const LAMPLIGHT_USER_ID_TABLES = [
   'lamplight_settings',
   'lamplight_entitlements',
   'lamplight_embeddings',
   'lamplight_artifacts',
   'lamplight_jobs',
   'lamplight_suggestions_log',
-  'lamplight_connections',
 ] as const;
+
+// `lamplight_connections` has no `user_id` column — it's scoped to a user via
+// EXISTS-against-notes in its RLS policy. The deleteAllUserData flow uses a
+// tautology predicate (`note_id IS NOT NULL`) to satisfy Supabase JS's
+// "delete needs a filter" guard; RLS itself does the user scoping.
+const LAMPLIGHT_CONNECTIONS_TABLE = 'lamplight_connections';
 
 export class SupabaseLamplightAdapter implements LamplightAdapter {
   #client: SupabaseClient;
@@ -60,10 +66,18 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
   }
 
   async deleteAllUserData(userId: string): Promise<void> {
-    for (const table of LAMPLIGHT_USER_TABLES) {
+    for (const table of LAMPLIGHT_USER_ID_TABLES) {
       const { error } = await this.#client.from(table).delete().eq('user_id', userId);
       if (error) throw error;
     }
+    // lamplight_connections has no user_id column. RLS filters to the current
+    // user's notes; the tautology predicate just satisfies Supabase JS's
+    // "delete requires a filter" safety guard.
+    const { error } = await this.#client
+      .from(LAMPLIGHT_CONNECTIONS_TABLE)
+      .delete()
+      .not('note_id', 'is', null);
+    if (error) throw error;
   }
 
   async getEntitlement(userId: string): Promise<LamplightEntitlement | null> {

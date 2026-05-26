@@ -110,6 +110,11 @@ function makeClient(backend: Backend): SupabaseClient {
               if (table === 'lamplight_entitlements') backend.entitlements = backend.entitlements.filter((r) => r.user_id !== val);
               return { error: null };
             },
+            // lamplight_connections has no user_id; delete via tautology predicate.
+            async not(_col: string, _op: string, _val: unknown) {
+              backend.deletes.push({ table, userId: '<rls-scoped>' });
+              return { error: null };
+            },
           };
         },
       };
