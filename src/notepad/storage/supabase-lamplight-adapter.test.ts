@@ -199,3 +199,42 @@ describe('SupabaseLamplightAdapter — settings', () => {
     ]);
   });
 });
+
+describe('SupabaseLamplightAdapter — entitlement + promo', () => {
+  let backend: Backend;
+  let adapter: SupabaseLamplightAdapter;
+
+  beforeEach(() => {
+    backend = { settings: [], entitlements: [], config: [], deletes: [] };
+    adapter = new SupabaseLamplightAdapter(makeClient(backend));
+  });
+
+  it('returns null when no entitlement row exists', async () => {
+    expect(await adapter.getEntitlement('user-1')).toBeNull();
+  });
+
+  it('returns mapped entitlement when a row exists', async () => {
+    backend.entitlements.push({
+      user_id: 'user-1', tier: 'plus', source: 'grant',
+      granted_at: '2026-05-25T00:00:00Z', expires_at: null,
+    });
+    const e = await adapter.getEntitlement('user-1');
+    expect(e).toEqual({
+      userId: 'user-1',
+      tier: 'plus',
+      source: 'grant',
+      grantedAt: '2026-05-25T00:00:00Z',
+      expiresAt: null,
+    });
+  });
+
+  it('returns { promoActive: false, promoEndsAt: null } when config rows are absent', async () => {
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: false, promoEndsAt: null });
+  });
+
+  it('returns promo config values from app_config', async () => {
+    backend.config.push({ key: 'lamplight_promo_active', value: true });
+    backend.config.push({ key: 'lamplight_promo_ends_at', value: null });
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: true, promoEndsAt: null });
+  });
+});

@@ -6,6 +6,8 @@ import type {
   PromoConfig,
   LamplightVoice,
   LamplightTradition,
+  LamplightTier,
+  LamplightEntitlementSource,
 } from './lamplight-adapter';
 
 const LAMPLIGHT_USER_TABLES = [
@@ -65,11 +67,28 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
   }
 
   async getEntitlement(userId: string): Promise<LamplightEntitlement | null> {
-    throw new Error(`not implemented yet: ${userId}`);
+    const { data, error } = await this.#client
+      .from('lamplight_entitlements')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? this.#mapEntitlement(data) : null;
   }
 
   async getPromoConfig(): Promise<PromoConfig> {
-    throw new Error('not implemented yet');
+    const { data, error } = await this.#client
+      .from('app_config')
+      .select('key,value')
+      .in('key', ['lamplight_promo_active', 'lamplight_promo_ends_at']);
+    if (error) throw error;
+    const rows = (data ?? []) as Array<{ key: string; value: unknown }>;
+    const promoRow = rows.find((r) => r.key === 'lamplight_promo_active');
+    const endsRow = rows.find((r) => r.key === 'lamplight_promo_ends_at');
+    return {
+      promoActive: promoRow ? Boolean(promoRow.value) : false,
+      promoEndsAt: endsRow && endsRow.value ? String(endsRow.value) : null,
+    };
   }
 
   #mapSettings(row: Record<string, unknown>): LamplightSettings {
@@ -84,6 +103,16 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       consentDecidedAt: (row.consent_decided_at as string) ?? null,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
+    };
+  }
+
+  #mapEntitlement(row: Record<string, unknown>): LamplightEntitlement {
+    return {
+      userId: row.user_id as string,
+      tier: row.tier as LamplightTier,
+      source: (row.source as LamplightEntitlementSource) ?? null,
+      grantedAt: (row.granted_at as string) ?? null,
+      expiresAt: (row.expires_at as string) ?? null,
     };
   }
 }
