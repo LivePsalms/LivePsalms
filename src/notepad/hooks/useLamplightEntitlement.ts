@@ -24,8 +24,15 @@ export function useLamplightEntitlement({
   const [isLoading, setIsLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  // Re-arm on every mount so React Strict Mode's mount → unmount → re-mount
+  // dance doesn't leave mountedRef stuck at false (which would cause the
+  // setState calls below to be silently skipped, hanging the panel on
+  // isLoading=true forever in dev).
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {

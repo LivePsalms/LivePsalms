@@ -22,8 +22,15 @@ export function useLamplightSettings({
   const [isLoading, setIsLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  // Re-arm on every mount so React Strict Mode's mount → unmount → re-mount
+  // dance doesn't leave mountedRef stuck at false. Without the re-arm, the
+  // async load's setIsLoading(false) is silently skipped and the panel hangs
+  // on "Loading…" forever in dev.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
