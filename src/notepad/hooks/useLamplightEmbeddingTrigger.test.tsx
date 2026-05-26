@@ -2,8 +2,7 @@
 // src/notepad/hooks/useLamplightEmbeddingTrigger.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import React from 'react';
-import { useLamplightEmbeddingTrigger } from './useLamplightEmbeddingTrigger';
+import { useLamplightEmbeddingTrigger, type InvokeFn } from './useLamplightEmbeddingTrigger';
 import { FakeLamplightAdapter } from '../storage/fake-lamplight-adapter';
 import type { Note } from '../types';
 
@@ -16,7 +15,7 @@ const docWithText = (txt: string) =>
 
 describe('useLamplightEmbeddingTrigger', () => {
   let adapter: FakeLamplightAdapter;
-  let invokeMock: ReturnType<typeof vi.fn>;
+  let invokeMock: ReturnType<typeof vi.fn> & { mock: { calls: unknown[][] } };
 
   beforeEach(() => {
     adapter = new FakeLamplightAdapter();
@@ -25,7 +24,7 @@ describe('useLamplightEmbeddingTrigger', () => {
 
   it('does nothing when settings.enabled is false', async () => {
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: false, userId: 'u1', invoke: invokeMock,
+      adapter, enabled: false, userId: 'u1', invoke: invokeMock as unknown as InvokeFn,
     }));
     await result.current(note('n1', docWithText('hi')));
     expect(adapter.enqueueCalls).toEqual([]);
@@ -34,7 +33,7 @@ describe('useLamplightEmbeddingTrigger', () => {
 
   it('does nothing when userId is null', async () => {
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: true, userId: null, invoke: invokeMock,
+      adapter, enabled: true, userId: null, invoke: invokeMock as unknown as InvokeFn,
     }));
     await result.current(note('n1', docWithText('hi')));
     expect(adapter.enqueueCalls).toEqual([]);
@@ -43,7 +42,7 @@ describe('useLamplightEmbeddingTrigger', () => {
 
   it('skips notes whose plaintext is empty', async () => {
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: true, userId: 'u1', invoke: invokeMock,
+      adapter, enabled: true, userId: 'u1', invoke: invokeMock as unknown as InvokeFn,
     }));
     await result.current(note('n1', JSON.stringify({ type: 'doc', content: [] })));
     expect(adapter.enqueueCalls).toEqual([]);
@@ -52,7 +51,7 @@ describe('useLamplightEmbeddingTrigger', () => {
 
   it('enqueues + invokes when text is present and adapter returns a job id', async () => {
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: true, userId: 'u1', invoke: invokeMock,
+      adapter, enabled: true, userId: 'u1', invoke: invokeMock as unknown as InvokeFn,
     }));
     await result.current(note('n1', docWithText('hello world')));
     expect(adapter.enqueueCalls.length).toBe(1);
@@ -66,7 +65,7 @@ describe('useLamplightEmbeddingTrigger', () => {
 
   it('does not invoke when RPC returns null (no-op enqueue)', async () => {
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: true, userId: 'u1', invoke: invokeMock,
+      adapter, enabled: true, userId: 'u1', invoke: invokeMock as unknown as InvokeFn,
     }));
     await result.current(note('n1', docWithText('hello')));
     await result.current(note('n1', docWithText('hello'))); // same hash → RPC returns null
@@ -77,7 +76,7 @@ describe('useLamplightEmbeddingTrigger', () => {
   it('swallows invoke errors (cron will pick up the job)', async () => {
     const erroringInvoke = vi.fn(async () => { throw new Error('network'); });
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter, enabled: true, userId: 'u1', invoke: erroringInvoke,
+      adapter, enabled: true, userId: 'u1', invoke: erroringInvoke as unknown as InvokeFn,
     }));
     await expect(result.current(note('n1', docWithText('x')))).resolves.not.toThrow();
   });
@@ -86,7 +85,7 @@ describe('useLamplightEmbeddingTrigger', () => {
     const errAdapter = new FakeLamplightAdapter();
     errAdapter.enqueueEmbedding = vi.fn(async () => { throw new Error('rpc fail'); }) as never;
     const { result } = renderHook(() => useLamplightEmbeddingTrigger({
-      adapter: errAdapter, enabled: true, userId: 'u1', invoke: invokeMock,
+      adapter: errAdapter, enabled: true, userId: 'u1', invoke: invokeMock as unknown as InvokeFn,
     }));
     await expect(result.current(note('n1', docWithText('x')))).resolves.not.toThrow();
     expect(invokeMock).not.toHaveBeenCalled();

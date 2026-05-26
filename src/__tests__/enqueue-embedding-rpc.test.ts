@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+declare const process: { env: Record<string, string | undefined> };
+
 const URL  = process.env.SUPABASE_TEST_URL;
 const ANON = process.env.SUPABASE_TEST_ANON_KEY;
 const SERVICE = process.env.SUPABASE_TEST_SERVICE_KEY;

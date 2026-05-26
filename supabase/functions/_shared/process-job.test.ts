@@ -1,6 +1,6 @@
 // supabase/functions/_shared/process-job.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { processJobs, claimAndRun, MAX_ATTEMPTS, type ClaimFn, type EmbedFn, type DbOps } from './process-job';
+import { processJobs, type EmbedFn, type DbOps, type EmbeddingRow, type Job } from './process-job';
 
 function makeOps(initial: Partial<{
   note: { id: string; user_id: string; content: string } | null;
@@ -10,20 +10,24 @@ function makeOps(initial: Partial<{
   markedDone: string[];
   markedFailed: Array<{ id: string; err: string; status: string; attempts: number }>;
 } {
-  const upserts: any[] = [];
+  const upserts: EmbeddingRow[] = [];
   const markedDone: string[] = [];
-  const markedFailed: any[] = [];
+  const markedFailed: Array<{ id: string; err: string; status: string; attempts: number }> = [];
   return {
     upserts, markedDone, markedFailed,
-    async loadNote(noteId) { return initial.note ?? null; },
-    async loadExistingHash(userId, noteId) { return initial.existingHash ?? null; },
-    async upsertEmbedding(row) { upserts.push(row); },
-    async markDone(jobId) { markedDone.push(jobId); },
-    async markFailedOrRetry(job, err, attempts) {
+    async loadNote() { return initial.note ?? null; },
+    async loadExistingHash() { return initial.existingHash ?? null; },
+    async upsertEmbedding(row: EmbeddingRow) { upserts.push(row); },
+    async markDone(jobId: string) { markedDone.push(jobId); },
+    async markFailedOrRetry(job: Job, err: unknown, attempts: number) {
       const status = attempts >= 3 ? 'failed' : 'queued';
       markedFailed.push({ id: job.id, err: String(err), status, attempts });
     },
-  } as any;
+  } as unknown as DbOps & {
+    upserts: EmbeddingRow[];
+    markedDone: string[];
+    markedFailed: Array<{ id: string; err: string; status: string; attempts: number }>;
+  };
 }
 
 describe('processJobs', () => {
