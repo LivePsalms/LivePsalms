@@ -102,3 +102,24 @@ end;
 $$;
 
 grant execute on function public.enqueue_lamplight_embedding(uuid, text) to authenticated;
+
+-- ── 4. pg_cron sweep — drains orphaned queued jobs every minute ──────────
+-- The two settings (`app.settings.embed_fn_url`, `app.settings.service_role_key`)
+-- are provisioned out-of-band — see docs/lamplight/post-deploy-signal-layer.md.
+-- The `current_setting(..., true)` form returns NULL on a fresh DB without the
+-- secrets, so the cron call no-ops gracefully in local dev.
+select cron.schedule(
+  'lamplight_embed_sweep',
+  '* * * * *',
+  $cron$
+  select net.http_post(
+    url := current_setting('app.settings.embed_fn_url', true),
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
+      'Content-Type', 'application/json'
+    ),
+    body := '{"sweep": true}'::jsonb
+  )
+  where current_setting('app.settings.embed_fn_url', true) is not null;
+  $cron$
+);
