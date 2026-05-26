@@ -22,11 +22,8 @@ export function useLamplightSettings({
   const [isLoading, setIsLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+  useEffect(() => () => {
+    mountedRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -39,10 +36,17 @@ export function useLamplightSettings({
         }
         return;
       }
-      const row = await adapter.getSettings(userId);
-      if (cancelled || !mountedRef.current) return;
-      setSettings(row);
-      setIsLoading(false);
+      try {
+        const row = await adapter.getSettings(userId);
+        if (cancelled || !mountedRef.current) return;
+        setSettings(row);
+      } catch (err) {
+        console.error('[lamplight] getSettings failed', err);
+        if (cancelled || !mountedRef.current) return;
+        // Leave settings at its current value (null on first load, or stale on refetch).
+      } finally {
+        if (!cancelled && mountedRef.current) setIsLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -56,26 +60,40 @@ export function useLamplightSettings({
       return;
     }
     setIsLoading(true);
-    const row = await adapter.getSettings(userId);
-    if (mountedRef.current) {
-      setSettings(row);
-      setIsLoading(false);
+    try {
+      const row = await adapter.getSettings(userId);
+      if (mountedRef.current) setSettings(row);
+    } catch (err) {
+      console.error('[lamplight] getSettings failed', err);
+      // Leave settings at its current value (null on first load, or stale on refetch).
+    } finally {
+      if (mountedRef.current) setIsLoading(false);
     }
   }, [adapter, userId]);
 
   const upsert = useCallback(
     async (patch: Partial<Omit<LamplightSettings, 'userId' | 'createdAt' | 'updatedAt'>>) => {
       if (!userId) return;
-      const next = await adapter.upsertSettings(userId, patch);
-      if (mountedRef.current) setSettings(next);
+      try {
+        const next = await adapter.upsertSettings(userId, patch);
+        if (mountedRef.current) setSettings(next);
+      } catch (err) {
+        console.error('[lamplight] upsertSettings failed', err);
+        throw err;
+      }
     },
     [adapter, userId]
   );
 
   const deleteAll = useCallback(async () => {
     if (!userId) return;
-    await adapter.deleteAllUserData(userId);
-    if (mountedRef.current) setSettings(null);
+    try {
+      await adapter.deleteAllUserData(userId);
+      if (mountedRef.current) setSettings(null);
+    } catch (err) {
+      console.error('[lamplight] deleteAllUserData failed', err);
+      throw err;
+    }
   }, [adapter, userId]);
 
   return { isLoading, settings, refetch, upsert, deleteAll };

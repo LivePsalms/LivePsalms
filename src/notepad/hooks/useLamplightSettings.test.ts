@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { FakeLamplightAdapter } from '../storage/fake-lamplight-adapter';
 import { useLamplightSettings } from './useLamplightSettings';
@@ -52,5 +52,28 @@ describe('useLamplightSettings', () => {
     const { result } = renderHook(() => useLamplightSettings({ adapter, userId: null }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.settings).toBeNull();
+  });
+
+  it('settles isLoading=false even when getSettings throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Patch the fake to throw once.
+    const original = adapter.getSettings.bind(adapter);
+    adapter.getSettings = async () => { throw new Error('boom'); };
+    const { result } = renderHook(() => useLamplightSettings({ adapter, userId: 'user-1' }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.settings).toBeNull();
+    // Restore for other tests (each `it` gets a fresh adapter via beforeEach, but be safe).
+    adapter.getSettings = original;
+    errorSpy.mockRestore();
+  });
+
+  it('upsert rethrows adapter errors and leaves state untouched', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useLamplightSettings({ adapter, userId: 'user-1' }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    adapter.upsertSettings = async () => { throw new Error('boom'); };
+    await expect(result.current.upsert({ enabled: true })).rejects.toThrow('boom');
+    expect(result.current.settings).toBeNull();
+    errorSpy.mockRestore();
   });
 });
