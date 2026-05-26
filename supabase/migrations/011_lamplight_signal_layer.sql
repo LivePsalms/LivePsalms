@@ -124,3 +124,50 @@ select cron.schedule(
     and current_setting('app.settings.service_role_key', true) is not null;
   $cron$
 );
+
+-- ── 5. Claim RPCs — atomic FOR UPDATE SKIP LOCKED dequeue ────────────────
+create or replace function public.claim_lamplight_jobs(p_limit int)
+returns setof public.lamplight_jobs
+language sql
+security definer
+set search_path = public
+as $$
+  update lamplight_jobs
+     set status = 'running', started_at = now()
+   where id in (
+     select id from lamplight_jobs
+      where status = 'queued'
+        and scheduled_at <= now()
+        and kind = 'embedding_refresh'
+      order by scheduled_at
+      limit p_limit
+      for update skip locked
+   )
+   returning *;
+$$;
+
+create or replace function public.claim_lamplight_job_by_id(p_job_id uuid)
+returns setof public.lamplight_jobs
+language sql
+security definer
+set search_path = public
+as $$
+  update lamplight_jobs
+     set status = 'running', started_at = now()
+   where id = p_job_id
+     and status = 'queued'
+   returning *;
+$$;
+
+revoke execute on function public.claim_lamplight_jobs(int)      from public, anon, authenticated;
+revoke execute on function public.claim_lamplight_job_by_id(uuid) from public, anon, authenticated;
+-- service_role bypasses the revoke; only it (and supabase_admin) can call these.
+
+-- ── 6. Race protection: prevent duplicate queued jobs for the same note ──
+-- Defense in depth — the enqueue_lamplight_embedding RPC's coalesce SELECT is
+-- not atomic with the subsequent INSERT, so two concurrent calls could both
+-- miss the SELECT and both INSERT. This partial unique index guarantees only
+-- one queued embedding_refresh row per (user_id, note_id) can exist at a time.
+create unique index if not exists lamplight_jobs_embedding_refresh_queued_uq
+  on public.lamplight_jobs (user_id, (payload->>'note_id'))
+  where kind = 'embedding_refresh' and status = 'queued';
