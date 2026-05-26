@@ -36,3 +36,69 @@ create index lamplight_embeddings_embedding_hnsw
 alter table public.lamplight_embeddings
   add constraint lamplight_embeddings_source_uq
   unique nulls not distinct (user_id, source_type, source_id);
+
+-- ── 3. enqueue_lamplight_embedding ───────────────────────────────────────
+-- SECURITY DEFINER: every branch must check auth.uid() before touching tables.
+-- A definer function that forgets the check is an RLS bypass. Do not optimize
+-- away the explicit checks below.
+create or replace function public.enqueue_lamplight_embedding(
+  p_note_id uuid,
+  p_content_hash text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_existing_hash text;
+  v_job_id uuid;
+begin
+  if not exists (
+    select 1 from notes where id = p_note_id and user_id = auth.uid()
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  if not exists (
+    select 1 from lamplight_settings
+    where user_id = auth.uid() and enabled = true
+  ) then
+    return null;
+  end if;
+
+  select content_hash into v_existing_hash
+  from lamplight_embeddings
+  where user_id = auth.uid()
+    and source_type = 'note'
+    and source_id = p_note_id::text;
+
+  if v_existing_hash = p_content_hash then
+    return null;
+  end if;
+
+  select id into v_job_id
+  from lamplight_jobs
+  where user_id = auth.uid()
+    and kind = 'embedding_refresh'
+    and status = 'queued'
+    and payload->>'note_id' = p_note_id::text;
+
+  if v_job_id is not null then
+    return v_job_id;
+  end if;
+
+  insert into lamplight_jobs (user_id, kind, status, payload, scheduled_at)
+  values (
+    auth.uid(),
+    'embedding_refresh',
+    'queued',
+    jsonb_build_object('note_id', p_note_id, 'content_hash', p_content_hash),
+    now()
+  )
+  returning id into v_job_id;
+
+  return v_job_id;
+end;
+$$;
+
+grant execute on function public.enqueue_lamplight_embedding(uuid, text) to authenticated;
