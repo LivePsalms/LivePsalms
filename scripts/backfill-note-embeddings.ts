@@ -43,6 +43,9 @@ async function main() {
   const key = required('SUPABASE_SERVICE_ROLE_KEY');
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
+  // Supabase JS v2 caps single-query responses around 1000 rows;
+  // 500 keeps payload sizes predictable while not requiring many pages
+  // for typical user-note counts.
   const PAGE = 500;
   let from = 0;
   let totalEnqueued = 0;

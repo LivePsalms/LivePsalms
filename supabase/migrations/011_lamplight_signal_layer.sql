@@ -87,15 +87,26 @@ begin
     return v_job_id;
   end if;
 
-  insert into lamplight_jobs (user_id, kind, status, payload, scheduled_at)
-  values (
-    auth.uid(),
-    'embedding_refresh',
-    'queued',
-    jsonb_build_object('note_id', p_note_id, 'content_hash', p_content_hash),
-    now()
-  )
-  returning id into v_job_id;
+  begin
+    insert into lamplight_jobs (user_id, kind, status, payload, scheduled_at)
+    values (
+      auth.uid(),
+      'embedding_refresh',
+      'queued',
+      jsonb_build_object('note_id', p_note_id, 'content_hash', p_content_hash),
+      now()
+    )
+    returning id into v_job_id;
+  exception when unique_violation then
+    -- Concurrent caller raced us. Return the now-existing queued job's id.
+    select id into v_job_id
+    from lamplight_jobs
+    where user_id = auth.uid()
+      and kind = 'embedding_refresh'
+      and status = 'queued'
+      and payload->>'note_id' = p_note_id::text
+    limit 1;
+  end;
 
   return v_job_id;
 end;

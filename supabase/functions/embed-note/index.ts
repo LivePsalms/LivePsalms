@@ -6,6 +6,16 @@
 //
 // All real-DB / real-Voyage wiring is here; the orchestration loop lives in
 // _shared/process-job.ts so it can be unit-tested without Deno or network.
+//
+// Trust model: the function is deployed with JWT verification enabled at the
+// platform level (default; do NOT pass --no-verify-jwt). Anyone calling this
+// endpoint must hold a valid Supabase JWT. The handler itself does NOT inspect
+// the JWT or verify the caller "owns" the supplied job_id — instead, the
+// claim_lamplight_job_by_id RPC only succeeds when the job is still 'queued',
+// so a malicious authenticated user can at worst observe `{ processed: 0 }`
+// for arbitrary UUIDs. No embedding data is read or written by the function
+// on behalf of the calling user; service-role inside the function does the
+// actual reads/writes, gated by lamplight_jobs.status transitions.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { serviceClient } from '../_shared/supabase.ts';
@@ -15,6 +25,9 @@ import {
   type Job, type DbOps, type ClaimFn, type EmbedFn,
 } from '../_shared/process-job.ts';
 
+// CLAIM_LIMIT is the max jobs drained per Edge Function invocation. With pg_cron
+// firing the sweep every minute and a typical embed latency of 1-2s per job,
+// 5 keeps each invocation under ~15s while preventing queue runaway.
 const CLAIM_LIMIT = 5;
 
 serve(async (req) => {

@@ -1,9 +1,11 @@
 import { sha256 } from 'js-sha256';
 
 // Deterministic content hash used to decide whether a note needs re-embedding.
-// MUST stay byte-identical to what the Edge Function computes server-side,
-// otherwise we re-embed on every save. The Edge Function uses the Deno
-// `crypto.subtle` SHA-256 implementation in `_shared/sha256.ts`.
+// The hash is computed client-side and passed to the enqueue_lamplight_embedding
+// RPC, which compares it against the stored content_hash on the existing
+// lamplight_embeddings row to decide whether a Voyage call is needed.
+// The backfill script uses the same js-sha256 implementation against extracted
+// plaintext, so client + backfill hashes always agree.
 export function lamplightContentHash(plaintext: string): string {
   return sha256(plaintext);
 }
