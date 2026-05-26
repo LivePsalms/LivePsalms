@@ -17,21 +17,33 @@ supabase functions deploy embed-note --no-verify-jwt=false
 Capture the deployed URL — it has the form
 `https://<project-ref>.functions.supabase.co/embed-note`.
 
-## 3. Provision pg_cron settings
+## 3. Provision pg_cron secrets via Supabase Vault
 
-Open the SQL editor for the production database (NOT a migration file —
-the service role key must not be committed) and run:
+Supabase's SQL editor role lacks `ALTER DATABASE` privilege, so we use the
+Vault extension (encrypted secret storage) instead of database parameters.
+Open the SQL editor and run:
 
 ```sql
-alter database postgres
-  set app.settings.embed_fn_url = 'https://<project-ref>.functions.supabase.co/embed-note';
+select vault.create_secret(
+  'https://<project-ref>.functions.supabase.co/embed-note',
+  'embed_fn_url'
+);
 
-alter database postgres
-  set app.settings.service_role_key = '<service-role-jwt>';
+select vault.create_secret(
+  '<service-role-jwt>',
+  'service_role_key'
+);
 ```
 
-These are read by `cron.schedule('lamplight_embed_sweep', …)` registered in
-migration 011. Until they are set, the sweep is a no-op.
+These are read by `cron.schedule('lamplight_embed_sweep', …)` from
+`vault.decrypted_secrets` at run time. Until both exist, the sweep is a no-op.
+
+**To rotate the service role key later:** update the existing secret rather
+than re-creating it, so the cron job's reference keeps resolving:
+
+```sql
+update vault.secrets set secret = '<new-jwt>' where name = 'service_role_key';
+```
 
 ## 4. Run BSB ingest
 

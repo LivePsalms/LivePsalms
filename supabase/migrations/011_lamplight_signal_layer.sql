@@ -118,24 +118,34 @@ $$;
 grant execute on function public.enqueue_lamplight_embedding(uuid, text) to authenticated;
 
 -- ── 4. pg_cron sweep — drains orphaned queued jobs every minute ──────────
--- The two settings (`app.settings.embed_fn_url`, `app.settings.service_role_key`)
--- are provisioned out-of-band — see docs/lamplight/post-deploy-signal-layer.md.
--- The `current_setting(..., true)` form returns NULL on a fresh DB without the
--- secrets, so the cron call no-ops gracefully in local dev.
+-- The two values (Edge Function URL + service role JWT) are read from
+-- Supabase Vault at run time. Provision them via SQL editor as a post-deploy
+-- step (see docs/lamplight/post-deploy-signal-layer.md). We use Vault rather
+-- than `ALTER DATABASE ... SET app.settings.*` because Supabase's SQL editor
+-- role lacks the `ALTER DATABASE` privilege — vault.create_secret is the
+-- supported pattern.
+--
+-- The `where url is not null and key is not null` guard makes this cron a
+-- no-op until both secrets are created, so a fresh DB doesn't blow up.
 select cron.schedule(
   'lamplight_embed_sweep',
   '* * * * *',
   $cron$
+  with config as (
+    select
+      (select decrypted_secret from vault.decrypted_secrets where name = 'embed_fn_url')      as url,
+      (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')  as key
+  )
   select net.http_post(
-    url := current_setting('app.settings.embed_fn_url', true),
+    url := config.url,
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
+      'Authorization', 'Bearer ' || config.key,
       'Content-Type', 'application/json'
     ),
     body := '{"sweep": true}'::jsonb
   )
-  where current_setting('app.settings.embed_fn_url', true) is not null
-    and current_setting('app.settings.service_role_key', true) is not null;
+  from config
+  where config.url is not null and config.key is not null;
   $cron$
 );
 
