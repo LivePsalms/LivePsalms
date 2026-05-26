@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'supabase/functions/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'supabase/functions/**/*.test.ts', 'scripts/**/*.test.ts'],
     setupFiles: ['./src/test-setup.ts'],
   },
   resolve: {
