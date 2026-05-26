@@ -120,6 +120,7 @@ select cron.schedule(
     ),
     body := '{"sweep": true}'::jsonb
   )
-  where current_setting('app.settings.embed_fn_url', true) is not null;
+  where current_setting('app.settings.embed_fn_url', true) is not null
+    and current_setting('app.settings.service_role_key', true) is not null;
   $cron$
 );
