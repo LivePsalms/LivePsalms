@@ -1,6 +1,6 @@
 // supabase/functions/_shared/process-job.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { processJobs, claimAndRun, type ClaimFn, type EmbedFn, type DbOps } from './process-job';
+import { processJobs, claimAndRun, MAX_ATTEMPTS, type ClaimFn, type EmbedFn, type DbOps } from './process-job';
 
 function makeOps(initial: Partial<{
   note: { id: string; user_id: string; content: string } | null;
@@ -106,5 +106,16 @@ describe('processJobs', () => {
     }], ops, embed);
     expect(embed).not.toHaveBeenCalled();
     expect(ops.markedDone).toEqual(['j6']);
+  });
+
+  it('marks unknown-kind jobs failed immediately (no retry)', async () => {
+    const ops = makeOps();
+    const embed: EmbedFn = vi.fn();
+    await processJobs([{
+      id: 'j7', user_id: 'u1', kind: 'bogus',
+      payload: {}, attempts: 0,
+    }], ops, embed);
+    expect(embed).not.toHaveBeenCalled();
+    expect(ops.markedFailed[0]).toMatchObject({ id: 'j7', status: 'failed', attempts: 3 });
   });
 });
