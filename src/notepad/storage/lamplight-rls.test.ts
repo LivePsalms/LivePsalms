@@ -53,4 +53,50 @@ maybeDescribe('Lamplight RLS isolation (integration)', () => {
     const promo = await adapterB.getPromoConfig();
     expect(typeof promo.promoActive).toBe('boolean');
   });
+
+  it("user B cannot read user A's lamplight_embeddings", async () => {
+    // userA inserts an embedding via their own client (1024-dim zero vector).
+    const sourceId = `rls-test-${Date.now()}`;
+    const { error: insErr } = await userA.client.from('lamplight_embeddings').insert({
+      user_id: userA.userId,
+      source_type: 'note',
+      source_id: sourceId,
+      content_hash: 'h',
+      embedding: new Array(1024).fill(0),
+    });
+    expect(insErr).toBeNull();
+
+    // userB cannot see it.
+    const { data, error } = await userB.client
+      .from('lamplight_embeddings')
+      .select('source_id')
+      .eq('source_id', sourceId);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+
+    // Cleanup — userA deletes their own row.
+    await userA.client.from('lamplight_embeddings').delete().eq('source_id', sourceId);
+  });
+
+  it("user B cannot insert a lamplight_embeddings row impersonating user A", async () => {
+    const { error } = await userB.client.from('lamplight_embeddings').insert({
+      user_id: userA.userId,
+      source_type: 'note',
+      source_id: `rls-impersonate-${Date.now()}`,
+      content_hash: 'h',
+      embedding: new Array(1024).fill(0),
+    });
+    expect(error).not.toBeNull(); // RLS rejects
+  });
+
+  it("authenticated users cannot see Bible rows (user_id IS NULL)", async () => {
+    // RLS policy `auth.uid() = user_id` evaluates to NULL → false for NULL-owner rows,
+    // so authenticated clients see zero of them regardless of whether any exist.
+    const { data, error } = await userB.client
+      .from('lamplight_embeddings')
+      .select('source_id, user_id')
+      .is('user_id', null);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
 });
