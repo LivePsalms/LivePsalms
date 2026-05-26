@@ -48,6 +48,15 @@ export interface LamplightAdapter {
     patch: Partial<Omit<LamplightSettings, 'userId' | 'createdAt' | 'updatedAt'>>
   ): Promise<LamplightSettings>;
   deleteAllUserData(userId: string): Promise<void>;
+  /**
+   * Enqueue an embedding refresh for the given note. Calls the
+   * `enqueue_lamplight_embedding` RPC, which is a no-op (returns null) when:
+   *   - the user is opted out (`lamplight_settings.enabled = false`)
+   *   - the supplied `contentHash` matches the existing embedding's hash
+   *   - a queued job for the same note already exists (returns its id)
+   * Returns the job id, or null when the RPC was a no-op.
+   */
+  enqueueEmbedding(noteId: string, contentHash: string): Promise<string | null>;
   getEntitlement(userId: string): Promise<LamplightEntitlement | null>;
   getPromoConfig(): Promise<PromoConfig>;
 }

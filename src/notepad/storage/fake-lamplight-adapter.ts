@@ -14,6 +14,10 @@ export class FakeLamplightAdapter implements LamplightAdapter {
   entitlements = new Map<string, LamplightEntitlement>();
   promo: PromoConfig = { promoActive: true, promoEndsAt: null };
   deleteAllUserDataCalls: string[] = [];
+  // Track every enqueueEmbedding call for assertions.
+  public enqueueCalls: Array<{ noteId: string; contentHash: string }> = [];
+  // Map note_id → last accepted hash (returns null on duplicate).
+  private enqueuedHash = new Map<string, string>();
 
   async getSettings(userId: string): Promise<LamplightSettings | null> {
     return this.settings.get(userId) ?? null;
@@ -41,6 +45,13 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     };
     this.settings.set(userId, merged);
     return { ...merged };
+  }
+
+  async enqueueEmbedding(noteId: string, contentHash: string): Promise<string | null> {
+    this.enqueueCalls.push({ noteId, contentHash });
+    if (this.enqueuedHash.get(noteId) === contentHash) return null;
+    this.enqueuedHash.set(noteId, contentHash);
+    return `job-${noteId}-${contentHash.slice(0, 8)}`;
   }
 
   async deleteAllUserData(userId: string): Promise<void> {

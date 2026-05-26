@@ -65,6 +65,15 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
     return this.#mapSettings(data);
   }
 
+  async enqueueEmbedding(noteId: string, contentHash: string): Promise<string | null> {
+    const { data, error } = await this.#client.rpc('enqueue_lamplight_embedding', {
+      p_note_id: noteId,
+      p_content_hash: contentHash,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  }
+
   async deleteAllUserData(userId: string): Promise<void> {
     for (const table of LAMPLIGHT_USER_ID_TABLES) {
       const { error } = await this.#client.from(table).delete().eq('user_id', userId);
