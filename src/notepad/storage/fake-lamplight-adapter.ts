@@ -26,7 +26,6 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     const now = new Date().toISOString();
     const existing = this.settings.get(userId);
     const merged: LamplightSettings = {
-      userId,
       enabled: false,
       quietMode: false,
       voicePreference: 'Lord',
@@ -35,9 +34,10 @@ export class FakeLamplightAdapter implements LamplightAdapter {
       weeklyEmail: false,
       consentDecidedAt: null,
       createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
       ...existing,
       ...patch,
+      userId,
+      updatedAt: now,
     };
     this.settings.set(userId, merged);
     return { ...merged };
