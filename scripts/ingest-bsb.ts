@@ -196,7 +196,13 @@ async function main() {
   const toEmbed = all.filter(p => existingMap.get(p.id) !== sha256(p.text));
   console.log(`${toEmbed.length} rows need (re-)embedding`);
 
-  // 3. Embed + upsert in batches.
+  // 3. Embed + upsert in batches. We Voyage-batch at BATCH (64) but write to
+  // lamplight_embeddings in smaller UPSERT_CHUNK slices, because HNSW index
+  // maintenance is O(M·log N) per row and a 64-row upsert can blow past
+  // Supabase's per-statement timeout (~8s on most plans) once the index has
+  // tens of thousands of nodes. Smaller chunks + retry-on-timeout keep us
+  // under the limit and resumable.
+  const UPSERT_CHUNK = 8;
   for (let i = 0; i < toEmbed.length; i += BATCH) {
     const batch = toEmbed.slice(i, i + BATCH);
     const vectors = await embedDocuments(batch.map(p => p.text), { apiKey: voyageKey, fetch });
@@ -212,13 +218,40 @@ async function main() {
         translation: p.translation, pericope_id: p.pericope_id,
       },
     }));
-    const { error } = await supabase.from('lamplight_embeddings').upsert(rows, {
-      onConflict: 'user_id,source_type,source_id',
-    });
-    if (error) throw error;
+    for (let j = 0; j < rows.length; j += UPSERT_CHUNK) {
+      const chunk = rows.slice(j, j + UPSERT_CHUNK);
+      await upsertWithRetry(supabase, chunk);
+    }
     if ((i / BATCH) % 10 === 0) console.log(`  embedded ${Math.min(i + BATCH, toEmbed.length)}/${toEmbed.length}`);
   }
   console.log('done');
+}
+
+// Retries an upsert on Postgres statement timeout (SQLSTATE 57014) by
+// halving the chunk until it fits. Idempotent on conflict, so partial-write
+// retries are safe — they just no-op the rows that already landed.
+async function upsertWithRetry(
+  supabase: ReturnType<typeof createClient>,
+  rows: Array<Record<string, unknown>>,
+  attempt = 0,
+): Promise<void> {
+  const { error } = await supabase.from('lamplight_embeddings').upsert(rows, {
+    onConflict: 'user_id,source_type,source_id',
+  });
+  if (!error) return;
+  const isTimeout = (error as { code?: string }).code === '57014';
+  if (isTimeout && rows.length > 1 && attempt < 4) {
+    const mid = Math.ceil(rows.length / 2);
+    await upsertWithRetry(supabase, rows.slice(0, mid), attempt + 1);
+    await upsertWithRetry(supabase, rows.slice(mid), attempt + 1);
+    return;
+  }
+  if (isTimeout && rows.length === 1 && attempt < 4) {
+    // Single-row timeout — back off and retry once.
+    await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    return upsertWithRetry(supabase, rows, attempt + 1);
+  }
+  throw error;
 }
 
 function required(name: string): string {
