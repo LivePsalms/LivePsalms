@@ -3,23 +3,23 @@
 // race-handling branches are added in subsequent tasks.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { LLMAdapter } from '../_shared/anthropic';
-import type { DailyDevotion } from '../_shared/artifacts';
+import type { LLMAdapter } from '../_shared/anthropic.ts';
+import type { DailyDevotion } from '../_shared/artifacts.ts';
 import {
   LAMPLIGHT_SYSTEM_FRAGMENT,
   BANNED_PHRASES,
   CONTESTED_PASSAGES,
   GROWTH_BANNED_PHRASES,
   composeSystem,
-} from '../_shared/voice';
+} from '../_shared/voice.ts';
 import {
   validateDailyDevotionCitations,
   applyContentRules,
   flattenDailyDevotionText,
   type CitationViolation,
   type ContentRuleViolation,
-} from '../_shared/validators';
-import { DAILY_DEVOTION_PROMPT } from './prompts/daily-devotion';
+} from '../_shared/validators.ts';
+import { DAILY_DEVOTION_PROMPT } from './prompts/daily-devotion.ts';
 
 export interface DailyDevotionPassage {
   source_id: string;

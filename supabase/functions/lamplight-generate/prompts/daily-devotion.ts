@@ -4,7 +4,7 @@
 
 // type-only import — no runtime cycle. DailyDevotionContext lives in the
 // pipeline so buildMessages can be fully typed without re-declaring it here.
-import type { DailyDevotionContext } from '../daily-devotion-pipeline';
+import type { DailyDevotionContext } from '../daily-devotion-pipeline.ts';
 
 export const DAILY_DEVOTION_PROMPT = {
   promptVersion: 'daily-devotion-2026-05-27-v1',

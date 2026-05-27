@@ -162,7 +162,7 @@ export function flattenArtifactText(artifact: ArtifactLike): string {
 // than the smoke-test artifact's sections[]. Validators are a sibling, not an
 // overload, so each artifact type has its own clear shape walker.
 
-import type { DailyDevotion } from './artifacts';
+import type { DailyDevotion } from './artifacts.ts';
 
 export function validateDailyDevotionCitations(
   artifact: DailyDevotion,
