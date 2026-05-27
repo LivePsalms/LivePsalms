@@ -4,7 +4,7 @@ import { searchNeighbors, searchBible } from './retrieval';
 type RpcRow = { id: string; source_id: string; similarity: number; metadata: Record<string, unknown> };
 
 function makeSupabaseStub(rpcRows: Record<string, RpcRow[]>, embeddingRowForNote?: { embedding: number[] }) {
-  const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => {
+  const rpc = vi.fn(async (name: string) => {
     return { data: rpcRows[name] ?? [], error: null };
   });
   const from = vi.fn((table: string) => {
