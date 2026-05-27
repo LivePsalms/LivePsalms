@@ -119,4 +119,31 @@ maybeDescribe('Lamplight RLS isolation (integration)', () => {
     });
     expect(error).not.toBeNull();
   });
+
+  it("user A cannot read user B's daily_devotion artifact via the adapter", async () => {
+    const periodKey = `rls-${Date.now()}`;
+    const { error: insErr } = await userB.client.from('lamplight_artifacts').insert({
+      user_id: userB.userId,
+      type: 'daily_devotion',
+      period_key: periodKey,
+      title: '',
+      body: {
+        opening: 'op',
+        scripture: { ref: 'Psalm 23:4', text: 't' },
+        reflection: 'r',
+        prompt: 'p',
+        note_citations: [{ note_id: 'n', reason: 'r' }],
+      },
+      source_note_ids: [],
+      source_verses: ['Psalm 23:4'],
+      model_used: 'claude-sonnet-4-6',
+      prompt_version: 'daily-devotion-2026-05-27-v1',
+    });
+    expect(insErr).toBeNull();
+
+    const adapterA = new SupabaseLamplightAdapter(userA.client);
+    expect(await adapterA.getDailyDevotion(userB.userId, periodKey)).toBeNull();
+
+    await userB.client.from('lamplight_artifacts').delete().eq('period_key', periodKey);
+  });
 });
