@@ -122,7 +122,7 @@ function Devotion(props: {
   );
 }
 
-function formatLocalDate(localDate: string): string {
+export function formatLocalDate(localDate: string): string {
   const [y, m, d] = localDate.split('-').map(s => Number.parseInt(s, 10));
   const date = new Date(Date.UTC(y, m - 1, d));
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });

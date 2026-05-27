@@ -2,6 +2,8 @@
 // composeSystem; banned/contested/growth lists from voice.ts are inherited.
 // promptVersion is persisted on lamplight_artifacts.prompt_version.
 
+// type-only import — no runtime cycle. DailyDevotionContext lives in the
+// pipeline so buildMessages can be fully typed without re-declaring it here.
 import type { DailyDevotionContext } from '../daily-devotion-pipeline';
 
 export const DAILY_DEVOTION_PROMPT = {

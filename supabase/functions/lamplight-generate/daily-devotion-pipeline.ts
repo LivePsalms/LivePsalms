@@ -113,6 +113,8 @@ export async function runDailyDevotionPipeline(args: {
       model: 'sonnet',
       system,
       messages: DAILY_DEVOTION_PROMPT.buildMessages(ctx),
+      // `as const` on the nested schema produces literal types narrower than
+      // ToolSchema.input_schema (Record<string, unknown>); cast is type-only.
       tool: DAILY_DEVOTION_PROMPT.tool as unknown as Parameters<LLMAdapter['generate']>[0]['tool'],
       maxTokens: 2048,
     });

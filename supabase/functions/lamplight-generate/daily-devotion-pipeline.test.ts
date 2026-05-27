@@ -169,6 +169,43 @@ describe('runDailyDevotionPipeline', () => {
     });
   });
 
+  it('composed system prompt: LAMPLIGHT_SYSTEM_FRAGMENT first, artifact stance second, {{local_date}} substituted, stricter suffix only on retry', async () => {
+    const dirty: DailyDevotion = {
+      ...cleanArtifact,
+      scripture: { ref: 'Made Up 1:1', text: 'fake passage' },
+    };
+    const { supabase } = makeSupabaseMock();
+    const capturedSystems: string[] = [];
+    const llm: LLMAdapter = {
+      async generate<U>(input: Parameters<LLMAdapter['generate']>[0]): Promise<GenerateOutput<U>> {
+        capturedSystems.push(input.system);
+        const next = capturedSystems.length === 1 ? dirty : cleanArtifact;
+        return { parsed: next as unknown as U, modelUsed: 'claude-sonnet-4-6', promptTokens: 1, completionTokens: 1 };
+      },
+    };
+    await runDailyDevotionPipeline({
+      llm,
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+
+    expect(capturedSystems).toHaveLength(2);
+    // Voice fragment composed first.
+    expect(capturedSystems[0]).toMatch(/You are Lamplight/);
+    expect(capturedSystems[0]).toMatch(/possibility, not pronouncement/);
+    // Artifact stance composed second.
+    expect(capturedSystems[0]).toMatch(/Write a brief daily devotion/);
+    // {{local_date}} substituted, not left as a placeholder.
+    expect(capturedSystems[0]).toContain('Today is 2026-05-27.');
+    expect(capturedSystems[0]).not.toContain('{{local_date}}');
+    // No stricter suffix on first attempt.
+    expect(capturedSystems[0]).not.toMatch(/On retry:/);
+    // Stricter suffix present on retry.
+    expect(capturedSystems[1]).toMatch(/On retry:/);
+  });
+
   it('validator-fail-then-retry: first attempt has unknown verse ref, second is clean, ok:true attempts:2', async () => {
     const dirty: DailyDevotion = {
       ...cleanArtifact,

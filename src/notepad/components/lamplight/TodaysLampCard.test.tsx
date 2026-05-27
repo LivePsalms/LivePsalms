@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { TodaysLampCard } from './TodaysLampCard';
+import { TodaysLampCard, formatLocalDate } from './TodaysLampCard';
 import { FakeLamplightAdapter } from '../../storage/fake-lamplight-adapter';
 import type { DailyDevotion } from '../../storage/lamplight-artifacts';
 
@@ -55,6 +55,12 @@ describe('TodaysLampCard', () => {
     expect(screen.getByText(/Voice: Lord/)).toBeInTheDocument();
     expect(screen.getByText(/Tradition: unspecified/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Edit preferences/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('formatLocalDate is timezone-safe across boundary months', () => {
+    expect(formatLocalDate('2026-05-27')).toBe('May 27');
+    expect(formatLocalDate('2026-12-31')).toBe('December 31');
+    expect(formatLocalDate('2026-01-01')).toBe('January 1');
   });
 
   it('shows the error state with retry when generation fails', async () => {

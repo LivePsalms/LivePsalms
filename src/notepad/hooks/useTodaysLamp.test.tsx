@@ -74,6 +74,43 @@ describe('useTodaysLamp', () => {
     }
   });
 
+  it('unmount during in-flight generate does not setState after teardown', async () => {
+    const adapter = new FakeLamplightAdapter();
+    let resolveGenerate: ((v: { ok: false; reason: 'network' }) => void) | undefined;
+    adapter.generateDailyDevotion = (() =>
+      new Promise<{ ok: false; reason: 'network' }>(resolve => { resolveGenerate = resolve; })) as typeof adapter.generateDailyDevotion;
+
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { unmount } = renderHook(() =>
+      useTodaysLamp({ adapter, userId: 'user-1', localDate: '2026-05-27', loadingStepIntervalMs: 10 }),
+    );
+    unmount();
+    resolveGenerate?.({ ok: false, reason: 'network' });
+    await new Promise(r => setTimeout(r, 20));
+
+    // React would have logged a "setState on unmounted component" warning if
+    // the cancelledRef guard didn't catch the resolution.
+    const calls = consoleError.mock.calls.map(c => String(c[0] ?? ''));
+    expect(calls.some(m => m.includes('unmounted'))).toBe(false);
+    consoleError.mockRestore();
+  });
+
+  it('does not regenerate when re-rendered with the same props', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__queueGenerateResult({ ok: true, artifact: devotion, cached: false });
+    const generateSpy = vi.spyOn(adapter, 'generateDailyDevotion');
+    const { result, rerender } = renderHook(
+      (props: { localDate: string }) =>
+        useTodaysLamp({ adapter, userId: 'user-1', localDate: props.localDate, loadingStepIntervalMs: 10 }),
+      { initialProps: { localDate: '2026-05-27' } },
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('ready'));
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+    rerender({ localDate: '2026-05-27' });
+    await new Promise(r => setTimeout(r, 30));
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('retry re-runs the fetch-or-generate flow', async () => {
     const adapter = new FakeLamplightAdapter();
     adapter.__queueGenerateResult({ ok: false, reason: 'network' });
