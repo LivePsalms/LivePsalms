@@ -297,3 +297,58 @@ describe('SupabaseLamplightAdapter.getDailyDevotion', () => {
     expect(await adapter.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
   });
 });
+
+describe('SupabaseLamplightAdapter.generateDailyDevotion', () => {
+  const devotion: DailyDevotion = {
+    opening: 'op', scripture: { ref: 'Psalm 23:4', text: 't' },
+    reflection: 'r', prompt: 'p',
+    note_citations: [{ note_id: 'n1', reason: 'rest' }],
+  };
+
+  it('returns ok:true with artifact and cached flag from the function response', async () => {
+    const client = {
+      functions: {
+        async invoke(name: string, opts: { body: unknown }) {
+          expect(name).toBe('lamplight-generate');
+          expect(opts.body).toEqual({ kind: 'daily_devotion', user_id: 'user-1', local_date: '2026-05-27' });
+          return { data: { ok: true, artifact: devotion, cached: false }, error: null };
+        },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateDailyDevotion('user-1', '2026-05-27');
+    expect(result).toEqual({ ok: true, artifact: devotion, cached: false });
+  });
+
+  it('maps ok:false reasons through unchanged', async () => {
+    for (const reason of ['no_notes', 'validators_failed'] as const) {
+      const client = {
+        functions: {
+          async invoke() { return { data: { ok: false, reason }, error: null }; },
+        },
+      };
+      const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+      expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason });
+    }
+  });
+
+  it('returns network reason on functions.invoke error', async () => {
+    const client = {
+      functions: {
+        async invoke() { return { data: null, error: { message: 'transport' } }; },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason: 'network' });
+  });
+
+  it('returns network reason on thrown error', async () => {
+    const client = {
+      functions: {
+        async invoke() { throw new Error('boom'); },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason: 'network' });
+  });
+});

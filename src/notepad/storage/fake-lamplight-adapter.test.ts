@@ -59,3 +59,33 @@ describe('FakeLamplightAdapter.getDailyDevotion', () => {
     expect(await fake.getDailyDevotion('user-2', '2026-05-27')).toEqual(devotion);
   });
 });
+
+describe('FakeLamplightAdapter.generateDailyDevotion', () => {
+  const devotion: DailyDevotion = {
+    opening: 'op', scripture: { ref: 'Psalm 23:4', text: 't' },
+    reflection: 'r', prompt: 'p',
+    note_citations: [{ note_id: 'n1', reason: 'rest' }],
+  };
+
+  it('returns the next queued result and persists artifact to the read store on success', async () => {
+    const fake = new FakeLamplightAdapter();
+    fake.__queueGenerateResult({ ok: true, artifact: devotion, cached: false });
+    const result = await fake.generateDailyDevotion('user-1', '2026-05-27');
+    expect(result).toEqual({ ok: true, artifact: devotion, cached: false });
+    expect(await fake.getDailyDevotion('user-1', '2026-05-27')).toEqual(devotion);
+  });
+
+  it('returns the queued failure result without persisting', async () => {
+    const fake = new FakeLamplightAdapter();
+    fake.__queueGenerateResult({ ok: false, reason: 'no_notes' });
+    const result = await fake.generateDailyDevotion('user-1', '2026-05-27');
+    expect(result).toEqual({ ok: false, reason: 'no_notes' });
+    expect(await fake.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
+  });
+
+  it('defaults to network failure when no result is queued', async () => {
+    const fake = new FakeLamplightAdapter();
+    const result = await fake.generateDailyDevotion('user-1', '2026-05-27');
+    expect(result).toEqual({ ok: false, reason: 'network' });
+  });
+});

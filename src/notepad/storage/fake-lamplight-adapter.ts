@@ -3,6 +3,7 @@ import type {
   LamplightSettings,
   LamplightEntitlement,
   PromoConfig,
+  DailyDevotionGenerateResult,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
 
@@ -78,8 +79,19 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     return this.entitlements.get(userId) ?? null;
   }
 
-  async generateDailyDevotion(_userId: string, _localDate: string) {
-    return { ok: false as const, reason: 'network' as const };
+  private queuedGenerateResults: DailyDevotionGenerateResult[] = [];
+
+  __queueGenerateResult(result: DailyDevotionGenerateResult): void {
+    this.queuedGenerateResults.push(result);
+  }
+
+  async generateDailyDevotion(userId: string, localDate: string): Promise<DailyDevotionGenerateResult> {
+    const next = this.queuedGenerateResults.shift();
+    if (!next) return { ok: false, reason: 'network' };
+    if (next.ok) {
+      this.dailyDevotions.set(`${userId}:${localDate}`, next.artifact);
+    }
+    return next;
   }
 
   async getPromoConfig(): Promise<PromoConfig> {
