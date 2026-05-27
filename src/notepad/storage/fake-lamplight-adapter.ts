@@ -4,6 +4,7 @@ import type {
   LamplightEntitlement,
   PromoConfig,
 } from './lamplight-adapter';
+import type { DailyDevotion } from './lamplight-artifacts';
 
 /**
  * In-memory LamplightAdapter for unit tests. Mirrors the Supabase
@@ -18,6 +19,16 @@ export class FakeLamplightAdapter implements LamplightAdapter {
   public enqueueCalls: Array<{ noteId: string; contentHash: string }> = [];
   // Map note_id → last accepted hash (returns null on duplicate).
   private enqueuedHash = new Map<string, string>();
+  // Daily devotion store: key = `${userId}:${periodKey}`.
+  dailyDevotions = new Map<string, DailyDevotion>();
+
+  __seedDailyDevotion(userId: string, periodKey: string, artifact: DailyDevotion): void {
+    this.dailyDevotions.set(`${userId}:${periodKey}`, artifact);
+  }
+
+  async getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null> {
+    return this.dailyDevotions.get(`${userId}:${periodKey}`) ?? null;
+  }
 
   async getSettings(userId: string): Promise<LamplightSettings | null> {
     return this.settings.get(userId) ?? null;
@@ -58,10 +69,17 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     this.deleteAllUserDataCalls.push(userId);
     this.settings.delete(userId);
     this.entitlements.delete(userId);
+    for (const key of [...this.dailyDevotions.keys()]) {
+      if (key.startsWith(`${userId}:`)) this.dailyDevotions.delete(key);
+    }
   }
 
   async getEntitlement(userId: string): Promise<LamplightEntitlement | null> {
     return this.entitlements.get(userId) ?? null;
+  }
+
+  async generateDailyDevotion(_userId: string, _localDate: string) {
+    return { ok: false as const, reason: 'network' as const };
   }
 
   async getPromoConfig(): Promise<PromoConfig> {

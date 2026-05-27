@@ -25,3 +25,37 @@ describe('FakeLamplightAdapter.enqueueEmbedding', () => {
     expect(a2).toBe('job-n1-h2');
   });
 });
+
+import type { DailyDevotion } from './lamplight-artifacts';
+
+describe('FakeLamplightAdapter.getDailyDevotion', () => {
+  const devotion: DailyDevotion = {
+    opening: 'opening',
+    scripture: { ref: 'Psalm 23:4', text: 't' },
+    reflection: 'r',
+    prompt: 'p',
+    note_citations: [{ note_id: 'n1', reason: 'rest' }],
+  };
+
+  it('returns null when nothing is seeded', async () => {
+    const fake = new FakeLamplightAdapter();
+    expect(await fake.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
+  });
+
+  it('returns the seeded artifact for matching (userId, periodKey)', async () => {
+    const fake = new FakeLamplightAdapter();
+    fake.__seedDailyDevotion('user-1', '2026-05-27', devotion);
+    expect(await fake.getDailyDevotion('user-1', '2026-05-27')).toEqual(devotion);
+    expect(await fake.getDailyDevotion('user-2', '2026-05-27')).toBeNull();
+    expect(await fake.getDailyDevotion('user-1', '2026-05-28')).toBeNull();
+  });
+
+  it('deleteAllUserData clears that user\'s daily devotions only', async () => {
+    const fake = new FakeLamplightAdapter();
+    fake.__seedDailyDevotion('user-1', '2026-05-27', devotion);
+    fake.__seedDailyDevotion('user-2', '2026-05-27', devotion);
+    await fake.deleteAllUserData('user-1');
+    expect(await fake.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
+    expect(await fake.getDailyDevotion('user-2', '2026-05-27')).toEqual(devotion);
+  });
+});

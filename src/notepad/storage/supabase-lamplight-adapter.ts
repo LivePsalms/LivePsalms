@@ -8,7 +8,9 @@ import type {
   LamplightTradition,
   LamplightTier,
   LamplightEntitlementSource,
+  DailyDevotionGenerateResult,
 } from './lamplight-adapter';
+import type { DailyDevotion } from './lamplight-artifacts';
 
 // Tables with a `user_id` column — deletable via `eq('user_id', userId)`.
 const LAMPLIGHT_USER_ID_TABLES = [
@@ -97,6 +99,38 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       .maybeSingle();
     if (error) throw error;
     return data ? this.#mapEntitlement(data) : null;
+  }
+
+  async getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null> {
+    const { data, error } = await this.#client
+      .from('lamplight_artifacts')
+      .select('body')
+      .eq('user_id', userId)
+      .eq('type', 'daily_devotion')
+      .eq('period_key', periodKey)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? (data.body as DailyDevotion) : null;
+  }
+
+  async generateDailyDevotion(userId: string, localDate: string): Promise<DailyDevotionGenerateResult> {
+    try {
+      const { data, error } = await this.#client.functions.invoke('lamplight-generate', {
+        body: { kind: 'daily_devotion', user_id: userId, local_date: localDate },
+      });
+      if (error) return { ok: false, reason: 'network' };
+      if (!data || typeof data !== 'object') return { ok: false, reason: 'network' };
+      const d = data as { ok?: boolean; artifact?: DailyDevotion; cached?: boolean; reason?: string };
+      if (d.ok === true && d.artifact) {
+        return { ok: true, artifact: d.artifact, cached: !!d.cached };
+      }
+      if (d.ok === false && (d.reason === 'no_notes' || d.reason === 'validators_failed')) {
+        return { ok: false, reason: d.reason };
+      }
+      return { ok: false, reason: 'network' };
+    } catch {
+      return { ok: false, reason: 'network' };
+    }
   }
 
   async getPromoConfig(): Promise<PromoConfig> {

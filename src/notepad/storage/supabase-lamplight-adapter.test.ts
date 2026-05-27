@@ -248,3 +248,52 @@ describe('SupabaseLamplightAdapter — entitlement + promo', () => {
     expect(await adapter.getPromoConfig()).toEqual({ promoActive: false, promoEndsAt: null });
   });
 });
+
+import type { DailyDevotion } from './lamplight-artifacts';
+
+describe('SupabaseLamplightAdapter.getDailyDevotion', () => {
+  it('returns the body field from the matching row', async () => {
+    const devotion: DailyDevotion = {
+      opening: 'opening', scripture: { ref: 'Psalm 23:4', text: 't' },
+      reflection: 'r', prompt: 'p',
+      note_citations: [{ note_id: 'n1', reason: 'rest' }],
+    };
+    const client = {
+      from(table: string) {
+        expect(table).toBe('lamplight_artifacts');
+        return {
+          select: (cols: string) => {
+            expect(cols).toBe('body');
+            return {
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    async maybeSingle() {
+                      return { data: { body: devotion }, error: null };
+                    },
+                  }),
+                }),
+              }),
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.getDailyDevotion('user-1', '2026-05-27')).toEqual(devotion);
+  });
+
+  it('returns null when no row exists', async () => {
+    const client = {
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ eq: () => ({ async maybeSingle() { return { data: null, error: null }; } }) }) }),
+          }),
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
+  });
+});
