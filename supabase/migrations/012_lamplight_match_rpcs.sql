@@ -8,10 +8,15 @@
 -- resolves inside the function body. This mirrors how migration 011 had to
 -- fully-qualify `extensions.vector_cosine_ops` in the HNSW index — operators
 -- and operator classes need the extensions schema visible.
+--
+-- The parameter type must be fully-qualified as `extensions.vector(1024)`:
+-- the function's `set search_path` clause applies only at runtime, not at
+-- CREATE FUNCTION parse time, so an unqualified `vector(1024)` in the
+-- signature fails with "type vector does not exist".
 
 create or replace function public.match_user_note_embeddings(
   p_user_id uuid,
-  p_query_vector vector(1024),
+  p_query_vector extensions.vector(1024),
   p_exclude_source_id text,
   p_limit int default 50
 )
@@ -39,7 +44,7 @@ as $$
 $$;
 
 create or replace function public.match_bible_embeddings(
-  p_query_vector vector(1024),
+  p_query_vector extensions.vector(1024),
   p_limit int default 50
 )
 returns table (
@@ -64,5 +69,5 @@ as $$
    limit p_limit
 $$;
 
-revoke execute on function public.match_user_note_embeddings(uuid, vector(1024), text, int) from public, authenticated;
-revoke execute on function public.match_bible_embeddings(vector(1024), int) from public, authenticated;
+revoke execute on function public.match_user_note_embeddings(uuid, extensions.vector(1024), text, int) from public, authenticated;
+revoke execute on function public.match_bible_embeddings(extensions.vector(1024), int) from public, authenticated;
