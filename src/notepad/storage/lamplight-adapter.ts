@@ -47,6 +47,15 @@ export type DailyDevotionGenerateResult =
   | { ok: true; artifact: DailyDevotion; cached: boolean }
   | { ok: false; reason: 'no_notes' | 'validators_failed' | 'network' };
 
+export interface ConnectionNeighbor {
+  relatedNoteId: string;
+  similarity: number;
+}
+
+export type ConnectionWhyResult =
+  | { ok: true; why: string; cached: boolean }
+  | { ok: false; reason: 'no_embedding' | 'validators_failed' | 'not_neighbor' | 'network' };
+
 export interface LamplightAdapter {
   getSettings(userId: string): Promise<LamplightSettings | null>;
   upsertSettings(
@@ -69,4 +78,10 @@ export interface LamplightAdapter {
   getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null>;
   /** Invokes lamplight-generate Edge Function with kind='daily_devotion'. */
   generateDailyDevotion(userId: string, localDate: string): Promise<DailyDevotionGenerateResult>;
+  /** Returns neighboring notes with similarity scores using the `match_my_note_neighbors` RPC. */
+  getConnectionNeighbors(sourceNoteId: string, k?: number): Promise<ConnectionNeighbor[]>;
+  /** Returns true if the given note has an embedding. */
+  hasNoteEmbedding(noteId: string): Promise<boolean>;
+  /** Invokes lamplight-generate Edge Function with kind='connection_card_why'. */
+  generateConnectionWhy(sourceNoteId: string, relatedNoteId: string): Promise<ConnectionWhyResult>;
 }
