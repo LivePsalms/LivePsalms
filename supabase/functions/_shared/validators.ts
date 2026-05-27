@@ -156,3 +156,56 @@ export function flattenArtifactText(artifact: ArtifactLike): string {
   }
   return parts.join('\n\n');
 }
+
+// ── Daily devotion validators (sub-project 4) ──────────────────────────────
+// The DailyDevotion shape has scripture{ref,text} + note_citations[] rather
+// than the smoke-test artifact's sections[]. Validators are a sibling, not an
+// overload, so each artifact type has its own clear shape walker.
+
+import type { DailyDevotion } from './artifacts';
+
+export function validateDailyDevotionCitations(
+  artifact: DailyDevotion,
+  allowed: { allowedNoteIds: Set<string>; allowedVerseRefs: Set<string> },
+): CitationCheckResult {
+  const violations: CitationViolation[] = [];
+  const verseRefsLower = new Set<string>();
+  for (const r of allowed.allowedVerseRefs) verseRefsLower.add(r.toLowerCase());
+
+  if (!verseRefsLower.has(artifact.scripture.ref.toLowerCase())) {
+    violations.push({
+      section_index: 0,
+      reason: 'unknown_verse',
+      detail: `anchor verse "${artifact.scripture.ref}" is not in the retrieved passages`,
+    });
+  }
+
+  if (!artifact.note_citations || artifact.note_citations.length === 0) {
+    violations.push({
+      section_index: 0,
+      reason: 'no_citations',
+      detail: 'daily devotion has zero note_citations',
+    });
+  } else {
+    artifact.note_citations.forEach((cite, idx) => {
+      if (!allowed.allowedNoteIds.has(cite.note_id)) {
+        violations.push({
+          section_index: idx,
+          reason: 'unknown_note',
+          detail: `cited note "${cite.note_id}" is not in the user's context`,
+        });
+      }
+    });
+  }
+
+  return { ok: violations.length === 0, violations };
+}
+
+export function flattenDailyDevotionText(artifact: DailyDevotion): string {
+  return [
+    artifact.opening,
+    artifact.scripture.text,
+    artifact.reflection,
+    artifact.prompt,
+  ].join('\n\n');
+}

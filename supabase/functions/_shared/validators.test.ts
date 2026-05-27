@@ -173,3 +173,76 @@ describe('applyContentRules', () => {
     expect(r.violations[0].rule).toBe('classifier-rule');
   });
 });
+
+import { validateDailyDevotionCitations, flattenDailyDevotionText } from './validators';
+import type { DailyDevotion } from './artifacts';
+
+function makeDevotion(overrides: Partial<DailyDevotion> = {}): DailyDevotion {
+  return {
+    opening: 'A quiet greeting.',
+    scripture: { ref: 'Psalm 23:4', text: 'Even though I walk through the valley…' },
+    reflection: 'This passage may speak to weariness.',
+    prompt: 'What part of this verse reaches you today?',
+    note_citations: [{ note_id: 'note-1', reason: 'recurrence of rest' }],
+    ...overrides,
+  };
+}
+
+describe('validateDailyDevotionCitations', () => {
+  const allowed = {
+    allowedNoteIds: new Set(['note-1', 'note-2']),
+    allowedVerseRefs: new Set(['Psalm 23:4']),
+  };
+
+  it('passes a clean devotion', () => {
+    const result = validateDailyDevotionCitations(makeDevotion(), allowed);
+    expect(result.ok).toBe(true);
+    expect(result.violations).toHaveLength(0);
+  });
+
+  it('fails when scripture.ref is unknown', () => {
+    const result = validateDailyDevotionCitations(
+      makeDevotion({ scripture: { ref: 'Made Up 1:1', text: 'fake' } }),
+      allowed,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.violations[0].reason).toBe('unknown_verse');
+  });
+
+  it('fails when a note_id is outside allowedNoteIds', () => {
+    const result = validateDailyDevotionCitations(
+      makeDevotion({ note_citations: [{ note_id: 'note-X', reason: 'stranger' }] }),
+      allowed,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.violations[0].reason).toBe('unknown_note');
+  });
+
+  it('fails when note_citations is empty', () => {
+    const result = validateDailyDevotionCitations(
+      makeDevotion({ note_citations: [] }),
+      allowed,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.violations[0].reason).toBe('no_citations');
+  });
+
+  it('is case-insensitive for verse refs', () => {
+    const result = validateDailyDevotionCitations(
+      makeDevotion({ scripture: { ref: 'psalm 23:4', text: 't' } }),
+      allowed,
+    );
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe('flattenDailyDevotionText', () => {
+  it('concatenates opening + scripture.text + reflection + prompt with double newlines', () => {
+    const out = flattenDailyDevotionText(makeDevotion());
+    expect(out).toContain('A quiet greeting.');
+    expect(out).toContain('Even though I walk');
+    expect(out).toContain('This passage may speak');
+    expect(out).toContain('What part of this verse');
+    expect(out.split('\n\n')).toHaveLength(4);
+  });
+});
