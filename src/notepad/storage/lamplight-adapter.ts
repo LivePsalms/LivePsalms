@@ -41,6 +41,12 @@ export interface PromoConfig {
   promoEndsAt: string | null;
 }
 
+import type { DailyDevotion } from './lamplight-artifacts';
+
+export type DailyDevotionGenerateResult =
+  | { ok: true; artifact: DailyDevotion; cached: boolean }
+  | { ok: false; reason: 'no_notes' | 'validators_failed' | 'network' };
+
 export interface LamplightAdapter {
   getSettings(userId: string): Promise<LamplightSettings | null>;
   upsertSettings(
@@ -59,4 +65,8 @@ export interface LamplightAdapter {
   enqueueEmbedding(noteId: string, contentHash: string): Promise<string | null>;
   getEntitlement(userId: string): Promise<LamplightEntitlement | null>;
   getPromoConfig(): Promise<PromoConfig>;
+  /** Returns the persisted daily devotion for (userId, periodKey) if it exists, else null. */
+  getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null>;
+  /** Invokes lamplight-generate Edge Function with kind='daily_devotion'. */
+  generateDailyDevotion(userId: string, localDate: string): Promise<DailyDevotionGenerateResult>;
 }
