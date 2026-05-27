@@ -51,7 +51,7 @@ function makeSupabaseMock(opts: {
   const insertError = opts.insertError ?? null;
   const inserts: Array<Record<string, unknown>> = [];
   const supabase = {
-    from(_table: string) {
+    from() {
       return {
         select: () => ({
           eq: () => ({
@@ -193,7 +193,7 @@ describe('runDailyDevotionPipeline', () => {
   it('race: INSERT conflict triggers re-read; returns cached:true with the existing row', async () => {
     const inserts: Array<Record<string, unknown>> = [];
     const supabase = {
-      from(_table: string) {
+      from() {
         return {
           select: () => ({
             eq: () => ({

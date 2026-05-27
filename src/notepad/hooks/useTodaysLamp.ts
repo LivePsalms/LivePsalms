@@ -34,7 +34,6 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
     cancelledRef.current = false;
     const myGen = generation;
     let step: 0 | 1 | 2 = 0;
-    setState({ phase: 'loading', loadingStep: 0 });
 
     const interval = setInterval(() => {
       if (cancelledRef.current) return;
@@ -43,6 +42,11 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
     }, loadingStepIntervalMs);
 
     (async () => {
+      // Reset to loading before each fetch-or-generate run. Done inside the
+      // async IIFE so the effect body itself does no synchronous setState.
+      setState(prev => prev.phase === 'loading' && prev.loadingStep === 0
+        ? prev
+        : { phase: 'loading', loadingStep: 0 });
       try {
         const existing = await adapter.getDailyDevotion(userId, localDate);
         if (cancelledRef.current || myGen !== generation) return;
