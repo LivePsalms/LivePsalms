@@ -189,4 +189,26 @@ describe('runDailyDevotionPipeline', () => {
     }
     expect(inserts).toHaveLength(1);
   });
+
+  it('hard-fail: both attempts violate → ok:false validators_failed, no row inserted', async () => {
+    const banned: DailyDevotion = {
+      ...cleanArtifact,
+      reflection: 'God is telling you to forgive him. ' + cleanArtifact.reflection,
+    };
+    const { supabase, inserts } = makeSupabaseMock();
+    const result = await runDailyDevotionPipeline({
+      llm: makeAdapter([banned, banned]),
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('validators_failed');
+      expect(result.attempts).toBe(2);
+      expect(result.violations?.content.some(v => v.family === 'banned')).toBe(true);
+    }
+    expect(inserts).toHaveLength(0);
+  });
 });
