@@ -123,4 +123,26 @@ describe('composeSystem', () => {
     });
     expect(out).toBe('BASE\n\nARTIFACT');
   });
+
+  it('substitutes additional {{tokens}} in base and artifact', () => {
+    const out = composeSystem({
+      base: 'Voice: {{voice_preference}}. Today: {{local_date}}.',
+      artifact: 'Date again: {{local_date}}.',
+      voicePreference: 'Lord',
+      tokens: { local_date: '2026-05-27' },
+    });
+    expect(out).toContain('Voice: Lord');
+    expect(out).toContain('Today: 2026-05-27');
+    expect(out).toContain('Date again: 2026-05-27');
+  });
+
+  it('leaves unknown {{tokens}} unsubstituted when tokens omitted', () => {
+    const out = composeSystem({
+      base: 'Voice: {{voice_preference}}. Today: {{local_date}}.',
+      artifact: 'artifact',
+      voicePreference: 'Father',
+    });
+    expect(out).toContain('Voice: Father');
+    expect(out).toContain('Today: {{local_date}}');
+  });
 });

@@ -67,11 +67,17 @@ export interface ComposeSystemInput {
   artifact: string;
   voicePreference: string;
   stricter?: string;
+  tokens?: Record<string, string>;
 }
 
 export function composeSystem(input: ComposeSystemInput): string {
-  const base = input.base.replace(/\{\{voice_preference\}\}/g, input.voicePreference);
-  const parts = [base, input.artifact];
+  const allTokens: Record<string, string> = {
+    voice_preference: input.voicePreference,
+    ...(input.tokens ?? {}),
+  };
+  const substitute = (s: string) =>
+    s.replace(/\{\{(\w+)\}\}/g, (_m, key) => (key in allTokens ? allTokens[key] : `{{${key}}}`));
+  const parts = [substitute(input.base), substitute(input.artifact)];
   if (input.stricter && input.stricter.trim().length > 0) parts.push(input.stricter);
   return parts.join('\n\n');
 }
