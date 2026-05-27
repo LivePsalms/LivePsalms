@@ -91,6 +91,32 @@ function makeSupabaseMock(opts: {
 }
 
 describe('runDailyDevotionPipeline', () => {
+  it('idempotency: returns cached artifact when one already exists, no LLM call', async () => {
+    const { supabase, inserts } = makeSupabaseMock({ existing: cleanArtifact });
+    let llmCalls = 0;
+    const llm: LLMAdapter = {
+      async generate<U>(): Promise<GenerateOutput<U>> {
+        llmCalls++;
+        return { parsed: cleanArtifact as unknown as U, modelUsed: 'm', promptTokens: 0, completionTokens: 0 };
+      },
+    };
+    const result = await runDailyDevotionPipeline({
+      llm,
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.cached).toBe(true);
+      expect(result.attempts).toBe(0);
+      expect(result.artifact_id).toBe('cached-id');
+    }
+    expect(llmCalls).toBe(0);
+    expect(inserts).toHaveLength(0);
+  });
+
   it('happy path: generates, validates, persists, returns ok with artifact_id', async () => {
     const { supabase, inserts } = makeSupabaseMock();
     const result = await runDailyDevotionPipeline({

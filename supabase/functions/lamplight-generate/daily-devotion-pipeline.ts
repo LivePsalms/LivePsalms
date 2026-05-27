@@ -68,6 +68,26 @@ export async function runDailyDevotionPipeline(args: {
 }): Promise<DailyDevotionPipelineResult> {
   const promptVersion = DAILY_DEVOTION_PROMPT.promptVersion;
 
+  // Idempotency: short-circuit if (user, type, period_key) already exists.
+  const existing = await args.supabase
+    .from('lamplight_artifacts')
+    .select('id, body, model_used, prompt_version')
+    .eq('user_id', args.userId)
+    .eq('type', 'daily_devotion')
+    .eq('period_key', args.localDate)
+    .maybeSingle();
+  if (existing.data) {
+    return {
+      ok: true,
+      artifact: existing.data.body as DailyDevotion,
+      artifact_id: existing.data.id as string,
+      model_used: (existing.data.model_used as string) ?? 'claude-sonnet-4-6',
+      prompt_version: (existing.data.prompt_version as string) ?? promptVersion,
+      attempts: 0,
+      cached: true,
+    };
+  }
+
   if (!args.ctx) {
     return { ok: false, reason: 'no_notes', prompt_version: promptVersion, attempts: 0 };
   }
