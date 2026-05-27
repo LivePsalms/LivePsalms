@@ -190,6 +190,63 @@ describe('runDailyDevotionPipeline', () => {
     expect(inserts).toHaveLength(1);
   });
 
+  it('race: INSERT conflict triggers re-read; returns cached:true with the existing row', async () => {
+    const inserts: Array<Record<string, unknown>> = [];
+    const supabase = {
+      from(_table: string) {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  async maybeSingle() {
+                    return { data: null, error: null };
+                  },
+                  async single() {
+                    return {
+                      data: {
+                        id: 'race-id',
+                        body: cleanArtifact,
+                        model_used: 'claude-sonnet-4-6',
+                        prompt_version: 'daily-devotion-2026-05-27-v1',
+                      },
+                      error: null,
+                    };
+                  },
+                }),
+              }),
+            }),
+          }),
+          insert: (row: Record<string, unknown>) => {
+            inserts.push(row);
+            return {
+              select: () => ({
+                async single() {
+                  return { data: null, error: { code: '23505', message: 'unique violation' } };
+                },
+              }),
+            };
+          },
+        };
+      },
+    } as unknown as Parameters<typeof runDailyDevotionPipeline>[0]['supabase'];
+
+    const result = await runDailyDevotionPipeline({
+      llm: makeAdapter([cleanArtifact]),
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.cached).toBe(true);
+      expect(result.artifact_id).toBe('race-id');
+    }
+    expect(inserts).toHaveLength(1);
+  });
+
   it('hard-fail: both attempts violate → ok:false validators_failed, no row inserted', async () => {
     const banned: DailyDevotion = {
       ...cleanArtifact,

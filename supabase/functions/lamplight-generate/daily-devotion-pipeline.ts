@@ -149,7 +149,27 @@ export async function runDailyDevotionPipeline(args: {
         .single();
 
       if (insertRes.error || !insertRes.data) {
-        throw insertRes.error ?? new Error('insert returned no data');
+        // Race: another request inserted between our pre-check and this INSERT.
+        // Re-read the persisted row and return it as cached.
+        const refetch = await args.supabase
+          .from('lamplight_artifacts')
+          .select('id, body, model_used, prompt_version')
+          .eq('user_id', args.userId)
+          .eq('type', 'daily_devotion')
+          .eq('period_key', args.localDate)
+          .single();
+        if (refetch.error || !refetch.data) {
+          throw insertRes.error ?? refetch.error ?? new Error('insert + re-read both failed');
+        }
+        return {
+          ok: true,
+          artifact: refetch.data.body as DailyDevotion,
+          artifact_id: refetch.data.id as string,
+          model_used: (refetch.data.model_used as string) ?? modelUsed,
+          prompt_version: (refetch.data.prompt_version as string) ?? promptVersion,
+          attempts,
+          cached: true,
+        };
       }
 
       return {
