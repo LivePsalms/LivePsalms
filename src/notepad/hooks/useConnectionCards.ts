@@ -73,7 +73,9 @@ export function useConnectionCards(
   // Latest loadNeighborNotes reference — captured via ref so an unstable
   // inline-arrow-fn from a parent doesn't retrigger the run() loop forever.
   const loadNeighborNotesRef = useRef(loadNeighborNotes);
-  loadNeighborNotesRef.current = loadNeighborNotes;
+  useEffect(() => {
+    loadNeighborNotesRef.current = loadNeighborNotes;
+  }, [loadNeighborNotes]);
 
   useEffect(() => {
     cancelledRef.current = false;

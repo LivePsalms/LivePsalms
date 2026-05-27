@@ -4,7 +4,6 @@ import {
   type ConnectionWhyContext,
 } from './connection-why-pipeline';
 import type { LLMAdapter, GenerateOutput } from '../_shared/anthropic';
-import type { ConnectionWhyArtifact } from '../_shared/validators';
 
 function makeCtx(over: Partial<ConnectionWhyContext> = {}): ConnectionWhyContext {
   return {
@@ -58,9 +57,9 @@ function makeSupabase(opts: {
       return {
         select() {
           return {
-            eq(_col1: string, _val1: string) {
+            eq() {
               return {
-                eq(_col2: string, _val2: string) {
+                eq() {
                   return {
                     async maybeSingle(): Promise<MaybeSingleResult> {
                       return { data: opts.cachedRow ?? null, error: null };
@@ -71,7 +70,7 @@ function makeSupabase(opts: {
             },
           };
         },
-        async upsert(payload: Record<string, unknown>, _opts: unknown) {
+        async upsert(payload: Record<string, unknown>) {
           upsertCalls.push(payload);
           return { data: null, error: null };
         },
@@ -89,8 +88,7 @@ describe('runConnectionWhyPipeline', () => {
     });
     const result = await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: supabase as any,
+      supabase: supabase as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -107,8 +105,8 @@ describe('runConnectionWhyPipeline', () => {
     const llm = makeLLM([{ why: 'Both notes return to wilderness.' }]);
     const result = await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: makeSupabase({ upsertCalls }) as any,
+       
+      supabase: makeSupabase({ upsertCalls }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -133,7 +131,7 @@ describe('runConnectionWhyPipeline', () => {
       supabase: makeSupabase({
         cachedRow: { why: 'stale!', content_hash: 'OLD-hash' },
         upsertCalls,
-      }) as any,
+      }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -153,8 +151,8 @@ describe('runConnectionWhyPipeline', () => {
     ]);
     const result = await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: makeSupabase({ upsertCalls }) as any,
+       
+      supabase: makeSupabase({ upsertCalls }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -168,8 +166,8 @@ describe('runConnectionWhyPipeline', () => {
     const llm = makeLLM([{ why: banned }, { why: banned }]);
     const result = await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: makeSupabase({ upsertCalls }) as any,
+       
+      supabase: makeSupabase({ upsertCalls }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(false);
@@ -186,8 +184,8 @@ describe('runConnectionWhyPipeline', () => {
     const llm = makeLLM([{ why: longWhy }, { why: 'short and clean.' }]);
     const result = await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: makeSupabase({ upsertCalls }) as any,
+       
+      supabase: makeSupabase({ upsertCalls }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -199,8 +197,7 @@ describe('runConnectionWhyPipeline', () => {
     const llm = makeLLM([{ why: 'wilderness theme.' }], captured);
     await runConnectionWhyPipeline({
       llm,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: makeSupabase({}) as any,
+      supabase: makeSupabase({}) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx({ voicePreference: 'Father' }),
     });
     const sys = captured[0];
