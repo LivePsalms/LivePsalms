@@ -21,7 +21,20 @@ import {
   type DailyDevotionPassage,
 } from './daily-devotion-pipeline.ts';
 
+// Today's Lamp is invoked from the browser via supabase.functions.invoke, so
+// the function must answer CORS preflights and echo the allow-origin header
+// on every response. embed-note doesn't need this because it's only ever
+// invoked server-to-server (pg_cron + queue RPC).
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS });
+  }
   if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
 
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -74,7 +87,10 @@ serve(async (req) => {
 });
 
 function jsonResp(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+  });
 }
 
 // ── Smoke-test context builder (unchanged from sub-project 3) ────────────
