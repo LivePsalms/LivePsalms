@@ -82,3 +82,59 @@ async function embedOnce(
   const detail = await res.text().catch(() => '');
   throw new Error(`voyage ${res.status}: ${detail.slice(0, 500)}`);
 }
+
+const RERANK_BASE = 'https://api.voyageai.com/v1/rerank';
+const RERANK_MODEL = 'rerank-2.5';
+
+export interface RerankResult {
+  index: number;
+  score: number;
+}
+
+export async function rerank(
+  query: string,
+  documents: string[],
+  topK: number,
+  deps: VoyageDeps,
+): Promise<RerankResult[]> {
+  if (documents.length === 0) return [];
+  return rerankOnce(query, documents, topK, deps, 0);
+}
+
+async function rerankOnce(
+  query: string,
+  documents: string[],
+  topK: number,
+  deps: VoyageDeps,
+  attempt: number,
+): Promise<RerankResult[]> {
+  const sleep = deps.sleep ?? defaultSleep;
+  const res = await deps.fetch(RERANK_BASE, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deps.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: RERANK_MODEL,
+      query,
+      documents,
+      top_k: topK,
+    }),
+  });
+
+  if (res.ok) {
+    const json = await res.json() as { data: Array<{ index: number; relevance_score: number }> };
+    return json.data.map(d => ({ index: d.index, score: d.relevance_score }));
+  }
+
+  const retryable = res.status === 429 || res.status >= 500;
+  if (retryable && attempt < MAX_RETRIES) {
+    const backoffMs = 500 * Math.pow(2, attempt) + Math.random() * 250;
+    await sleep(backoffMs);
+    return rerankOnce(query, documents, topK, deps, attempt + 1);
+  }
+
+  const detail = await res.text().catch(() => '');
+  throw new Error(`voyage rerank ${res.status}: ${detail.slice(0, 500)}`);
+}
