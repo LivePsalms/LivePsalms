@@ -80,3 +80,32 @@ Deno.test('intersectTagsAndVerseRefs dedupes', () => {
     throw new Error(`expected dedupe, got ${JSON.stringify(result.sharedVerseRefs)}`);
   }
 });
+
+Deno.test('parity: known fixture produces stable output across runtimes', () => {
+  const fixture = JSON.stringify({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: 'In Psalm 23 the shepherd theme returns. Compare Romans 8:28-30.',
+          },
+        ],
+      },
+    ],
+  });
+  const refs = extractVerseRefsFromNoteContent(fixture);
+  // The browser-side connection-signals.test.ts hashes the same fixture and
+  // asserts the identical sorted array. Any drift here must be mirrored
+  // on the browser side (and vice versa).
+  const expected = ['Psalm 23', 'Romans 8:28-30'];
+  const sortedRefs = [...refs].sort();
+  const sortedExp = [...expected].sort();
+  if (JSON.stringify(sortedRefs) !== JSON.stringify(sortedExp)) {
+    throw new Error(
+      `parity drift: got ${JSON.stringify(sortedRefs)}, expected ${JSON.stringify(sortedExp)}`,
+    );
+  }
+});
