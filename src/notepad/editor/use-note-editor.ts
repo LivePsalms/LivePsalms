@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
 import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
 import { TagMark } from '../extensions/tag-mark';
@@ -53,7 +52,6 @@ export function useNoteEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Start writing...' }),
-      Underline,
       BibleVerse,
       NoteLink,
       TagMark,
