@@ -209,3 +209,43 @@ export function flattenDailyDevotionText(artifact: DailyDevotion): string {
     artifact.prompt,
   ].join('\n\n');
 }
+
+export interface ConnectionWhyArtifact {
+  why: string;
+}
+
+export interface ConnectionShapeViolation {
+  rule: 'word_count_exceeded' | 'empty' | 'not_string';
+  detail: string;
+}
+
+export interface ConnectionShapeResult {
+  ok: boolean;
+  violations: ConnectionShapeViolation[];
+}
+
+export function validateConnectionWhyShape(
+  artifact: ConnectionWhyArtifact,
+): ConnectionShapeResult {
+  const violations: ConnectionShapeViolation[] = [];
+  if (typeof artifact?.why !== 'string') {
+    violations.push({ rule: 'not_string', detail: 'why is not a string' });
+    return { ok: false, violations };
+  }
+  const trimmed = artifact.why.trim();
+  if (trimmed.length === 0) {
+    violations.push({ rule: 'empty', detail: 'why is empty after trim' });
+  }
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 24) {
+    violations.push({
+      rule: 'word_count_exceeded',
+      detail: `${wordCount} words > 24`,
+    });
+  }
+  return { ok: violations.length === 0, violations };
+}
+
+export function flattenConnectionWhyText(artifact: ConnectionWhyArtifact): string {
+  return artifact.why;
+}

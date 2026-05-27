@@ -246,3 +246,50 @@ describe('flattenDailyDevotionText', () => {
     expect(out.split('\n\n')).toHaveLength(4);
   });
 });
+
+import {
+  validateConnectionWhyShape,
+  flattenConnectionWhyText,
+  type ConnectionWhyArtifact,
+} from './validators';
+
+describe('validateConnectionWhyShape', () => {
+  it('accepts a 24-word string', () => {
+    const artifact: ConnectionWhyArtifact = {
+      why: 'word '.repeat(24).trim(),
+    };
+    const result = validateConnectionWhyShape(artifact);
+    expect(result.ok).toBe(true);
+    expect(result.violations).toEqual([]);
+  });
+
+  it('rejects a 25-word string with word_count_exceeded', () => {
+    const artifact: ConnectionWhyArtifact = {
+      why: 'word '.repeat(25).trim(),
+    };
+    const result = validateConnectionWhyShape(artifact);
+    expect(result.ok).toBe(false);
+    expect(result.violations.some((v) => v.rule === 'word_count_exceeded')).toBe(true);
+  });
+
+  it('rejects an empty/whitespace-only string with empty rule', () => {
+    const artifact: ConnectionWhyArtifact = { why: '   ' };
+    const result = validateConnectionWhyShape(artifact);
+    expect(result.ok).toBe(false);
+    expect(result.violations.some((v) => v.rule === 'empty')).toBe(true);
+  });
+
+  it('rejects non-string why with not_string rule', () => {
+    const artifact = { why: 42 } as unknown as ConnectionWhyArtifact;
+    const result = validateConnectionWhyShape(artifact);
+    expect(result.ok).toBe(false);
+    expect(result.violations.some((v) => v.rule === 'not_string')).toBe(true);
+  });
+});
+
+describe('flattenConnectionWhyText', () => {
+  it('returns the why string verbatim', () => {
+    const artifact: ConnectionWhyArtifact = { why: 'hello world' };
+    expect(flattenConnectionWhyText(artifact)).toBe('hello world');
+  });
+});
