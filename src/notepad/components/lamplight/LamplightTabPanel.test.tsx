@@ -60,7 +60,7 @@ describe('LamplightTabPanel', () => {
     });
   });
 
-  it('shows OptedInPlaceholder for signed-in users with enabled=true while promo is active', async () => {
+  it('shows TodaysLampCard for signed-in users with enabled=true while promo is active', async () => {
     useAuthSessionMock.mockReturnValue({ user: { id: 'user-1' } });
     await adapter.upsertSettings('user-1', {
       enabled: true,
@@ -68,11 +68,20 @@ describe('LamplightTabPanel', () => {
       traditionHint: 'evangelical',
       consentDecidedAt: new Date().toISOString(),
     });
+    const today = new Date().toLocaleDateString('en-CA');
+    adapter.__seedDailyDevotion('user-1', today, {
+      opening: 'A quiet test greeting.',
+      scripture: { ref: 'Psalm 23:4', text: 'Even though I walk through the valley…' },
+      reflection: 'Test reflection.',
+      prompt: 'Test prompt.',
+      note_citations: [{ note_id: 'n1', reason: 'test recurrence' }],
+    });
     renderPanel(adapter);
     await waitFor(() => {
-      expect(screen.getByText(/you're set up/i)).toBeInTheDocument();
-      expect(screen.getByText(/voice: father/i)).toBeInTheDocument();
+      expect(screen.getByText(/A quiet test greeting/)).toBeInTheDocument();
     });
+    expect(screen.getByText(/Voice: Father/)).toBeInTheDocument();
+    expect(screen.getByText(/Tradition: evangelical/)).toBeInTheDocument();
   });
 
   it('shows PaywallCard for opted-in users when promo is off and tier=none', async () => {

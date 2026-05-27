@@ -5,7 +5,7 @@ import { useLamplightEntitlement } from '../../hooks/useLamplightEntitlement';
 import { SignInGate } from './SignInGate';
 import { ConsentCard } from './ConsentCard';
 import { OptedOutCard } from './OptedOutCard';
-import { OptedInPlaceholder } from './OptedInPlaceholder';
+import { TodaysLampCard } from './TodaysLampCard';
 import { PaywallCard } from './PaywallCard';
 
 export interface LamplightTabPanelProps {
@@ -66,8 +66,12 @@ export function LamplightTabPanel({ lamplightAdapter }: LamplightTabPanelProps) 
     return <PaywallCard />;
   }
 
+  const localDate = new Date().toLocaleDateString('en-CA');
   return (
-    <OptedInPlaceholder
+    <TodaysLampCard
+      adapter={lamplightAdapter}
+      userId={user.id}
+      localDate={localDate}
       voicePreference={settingsState.settings.voicePreference}
       traditionHint={settingsState.settings.traditionHint}
     />
