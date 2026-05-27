@@ -101,12 +101,12 @@ async function rerankBibleRows(
 }
 
 async function rerankNoteRows(
-  deps: RetrievalDeps,
+  _deps: RetrievalDeps,
   rows: MatchRow[],
-  _k: number,
+  k: number,
 ): Promise<RetrievedItem[]> {
   // Note-side rerank intentionally a pass-through pending sub-project 5
   // (Connection Cards), which has the call-site context to choose a
   // meaningful query string.
-  return rows.slice(0, _k).map(r => ({ ...r }));
+  return rows.slice(0, k).map(r => ({ ...r }));
 }
