@@ -9,6 +9,8 @@ import type {
   LamplightTier,
   LamplightEntitlementSource,
   DailyDevotionGenerateResult,
+  ConnectionNeighbor,
+  ConnectionWhyResult,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
 
@@ -126,6 +128,72 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       }
       if (d.ok === false && (d.reason === 'no_notes' || d.reason === 'validators_failed')) {
         return { ok: false, reason: d.reason };
+      }
+      return { ok: false, reason: 'network' };
+    } catch {
+      return { ok: false, reason: 'network' };
+    }
+  }
+
+  async getConnectionNeighbors(
+    sourceNoteId: string,
+    k = 5,
+  ): Promise<ConnectionNeighbor[]> {
+    const { data, error } = await this.#client.rpc('match_my_note_neighbors', {
+      p_source_note_id: sourceNoteId,
+      p_k: k,
+    });
+    if (error) throw error;
+    return ((data as Array<{ related_note_id: string; similarity: number }>) ?? []).map(
+      (row) => ({
+        relatedNoteId: row.related_note_id,
+        similarity: row.similarity,
+      }),
+    );
+  }
+
+  async hasNoteEmbedding(noteId: string): Promise<boolean> {
+    const { count, error } = await this.#client
+      .from('lamplight_embeddings')
+      .select('id', { count: 'exact', head: true })
+      .eq('source_type', 'note')
+      .eq('source_id', noteId);
+    if (error) throw error;
+    return (count ?? 0) > 0;
+  }
+
+  async generateConnectionWhy(
+    sourceNoteId: string,
+    relatedNoteId: string,
+  ): Promise<ConnectionWhyResult> {
+    try {
+      const { data: userResp } = await this.#client.auth.getUser();
+      const user = userResp?.user;
+      if (!user) return { ok: false, reason: 'network' };
+      const { data, error } = await this.#client.functions.invoke('lamplight-generate', {
+        body: {
+          kind: 'connection_card_why',
+          user_id: user.id,
+          source_note_id: sourceNoteId,
+          related_note_id: relatedNoteId,
+        },
+      });
+      if (error) return { ok: false, reason: 'network' };
+      if (!data || typeof data !== 'object') return { ok: false, reason: 'network' };
+      const d = data as Record<string, unknown>;
+      if (d.ok === true && typeof d.why === 'string') {
+        return { ok: true, why: d.why, cached: !!d.cached };
+      }
+      if (
+        d.ok === false &&
+        (d.reason === 'no_embedding' ||
+          d.reason === 'validators_failed' ||
+          d.reason === 'not_neighbor')
+      ) {
+        return {
+          ok: false,
+          reason: d.reason as 'no_embedding' | 'validators_failed' | 'not_neighbor',
+        };
       }
       return { ok: false, reason: 'network' };
     } catch {

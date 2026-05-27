@@ -352,3 +352,202 @@ describe('SupabaseLamplightAdapter.generateDailyDevotion', () => {
     expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason: 'network' });
   });
 });
+
+describe('SupabaseLamplightAdapter.getConnectionNeighbors', () => {
+  it('calls match_my_note_neighbors with k and maps rows', async () => {
+    const rpcCalls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      async rpc(name: string, args: unknown) {
+        rpcCalls.push({ name, args });
+        return {
+          data: [
+            { related_note_id: 'note-2', similarity: 0.91 },
+            { related_note_id: 'note-3', similarity: 0.83 },
+          ],
+          error: null,
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.getConnectionNeighbors('note-1', 5);
+    expect(result).toEqual([
+      { relatedNoteId: 'note-2', similarity: 0.91 },
+      { relatedNoteId: 'note-3', similarity: 0.83 },
+    ]);
+    expect(rpcCalls[0]).toEqual({
+      name: 'match_my_note_neighbors',
+      args: { p_source_note_id: 'note-1', p_k: 5 },
+    });
+  });
+
+  it('defaults k=5 when omitted', async () => {
+    const rpcCalls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      async rpc(name: string, args: unknown) {
+        rpcCalls.push({ name, args });
+        return { data: [], error: null };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    await adapter.getConnectionNeighbors('note-1');
+    expect(rpcCalls[0].args).toEqual({ p_source_note_id: 'note-1', p_k: 5 });
+  });
+
+  it('throws on RPC error', async () => {
+    const client = {
+      async rpc() {
+        return { data: null, error: { message: 'not authorized' } };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    await expect(adapter.getConnectionNeighbors('note-1')).rejects.toBeTruthy();
+  });
+});
+
+describe('SupabaseLamplightAdapter.hasNoteEmbedding', () => {
+  it('returns true when count > 0', async () => {
+    const client = {
+      from(_table: string) {
+        return {
+          select(_col: string, _opts: unknown) {
+            return {
+              eq(_col2: string, _val: string) {
+                return {
+                  async eq(_col3: string, _val3: string) {
+                    return { count: 1, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(true);
+  });
+
+  it('returns false when count = 0', async () => {
+    const client = {
+      from(_table: string) {
+        return {
+          select(_col: string, _opts: unknown) {
+            return {
+              eq(_col2: string, _val: string) {
+                return {
+                  async eq(_col3: string, _val3: string) {
+                    return { count: 0, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(false);
+  });
+});
+
+describe('SupabaseLamplightAdapter.generateConnectionWhy', () => {
+  function makeClient(invokeResult: { data: unknown; error: unknown }) {
+    return {
+      auth: {
+        async getUser() {
+          return { data: { user: { id: 'user-1' } } };
+        },
+      },
+      functions: {
+        async invoke(_name: string, _opts: { body: unknown }) {
+          return invokeResult;
+        },
+      },
+    };
+  }
+
+  it('returns ok with cached=false on success', async () => {
+    const client = makeClient({
+      data: { ok: true, why: 'They share a shepherd image.', cached: false },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({ ok: true, why: 'They share a shepherd image.', cached: false });
+  });
+
+  it('returns cached=true when function says so', async () => {
+    const client = makeClient({
+      data: { ok: true, why: 'cached why', cached: true },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({ ok: true, why: 'cached why', cached: true });
+  });
+
+  it('maps no_embedding reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'no_embedding' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'no_embedding',
+    });
+  });
+
+  it('maps not_neighbor reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'not_neighbor' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'not_neighbor',
+    });
+  });
+
+  it('maps validators_failed reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'validators_failed' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'validators_failed',
+    });
+  });
+
+  it('returns network on transport error', async () => {
+    const client = makeClient({ data: null, error: { message: 'boom' } });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'network',
+    });
+  });
+
+  it('returns network when auth.getUser returns null', async () => {
+    const client = {
+      auth: {
+        async getUser() {
+          return { data: { user: null } };
+        },
+      },
+      functions: {
+        async invoke() {
+          return { data: { ok: true, why: 'x' }, error: null };
+        },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'network',
+    });
+  });
+});
