@@ -3,6 +3,7 @@ import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { useNotepadActions } from '@/notepad/context/useNotepadActions';
+import { useNoteCollection } from '@/notepad/context/useNoteCollection';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
 import { NotepadEditor } from '@/notepad/components/Editor';
@@ -50,6 +51,7 @@ function NotepadWorkspace() {
   });
 
   const actions = useNotepadActions();
+  const { notes, activeNote, collection } = useNoteCollection();
   const refresh = useCallback(() => actions.init(), [actions]);
   const { showMigration, dismissMigration } = useNotepadFirstLoad();
 
@@ -199,7 +201,18 @@ function NotepadWorkspace() {
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (
-            <LamplightTabPanel lamplightAdapter={lamplightAdapter} />
+            <LamplightTabPanel
+              lamplightAdapter={lamplightAdapter}
+              activeNote={activeNote}
+              totalNoteCount={notes.length}
+              loadNeighborNotes={async (ids) =>
+                notes.filter((n) => ids.includes(n.id))
+              }
+              onOpenNote={(id) => {
+                collection.openNote(id);
+                setActiveTab('content');
+              }}
+            />
           )}
           {activeTab === 'lamplight' && !lamplightAdapter && (
             <div
