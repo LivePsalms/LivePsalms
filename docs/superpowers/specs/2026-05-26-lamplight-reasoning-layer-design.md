@@ -680,7 +680,7 @@ Reasoning Layer is done when every item below holds.
 
 - `supabase/functions/_shared/voyage.ts` — add `rerank()` (no changes to `embedDocuments` / `embedQuery`).
 - `supabase/functions/_shared/voyage.test.ts` — add rerank cases.
-- `tests/rls-isolation.test.ts` — extend with `match_user_note_embeddings` access checks.
+- `src/notepad/storage/lamplight-rls.test.ts` — extend with `match_user_note_embeddings` access checks.
 - `.env.local.example` — comment that `ANTHROPIC_API_KEY` is also configured via `supabase secrets set` for Edge Function access; note `RERANK_ENABLED` flag (defaults off).
 
 ### Untouched
