@@ -99,4 +99,24 @@ maybeDescribe('Lamplight RLS isolation (integration)', () => {
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
+
+  it("authenticated users cannot execute match_user_note_embeddings", async () => {
+    const zeroVec = new Array(1024).fill(0);
+    const { error } = await userB.client.rpc('match_user_note_embeddings', {
+      p_user_id: userA.userId,
+      p_query_vector: zeroVec,
+      p_exclude_source_id: null,
+      p_limit: 5,
+    });
+    expect(error).not.toBeNull(); // permission denied / function not in schema cache
+  });
+
+  it("authenticated users cannot execute match_bible_embeddings", async () => {
+    const zeroVec = new Array(1024).fill(0);
+    const { error } = await userB.client.rpc('match_bible_embeddings', {
+      p_query_vector: zeroVec,
+      p_limit: 5,
+    });
+    expect(error).not.toBeNull();
+  });
 });
