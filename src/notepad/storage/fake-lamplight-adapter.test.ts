@@ -89,3 +89,64 @@ describe('FakeLamplightAdapter.generateDailyDevotion', () => {
     expect(result).toEqual({ ok: false, reason: 'network' });
   });
 });
+
+describe('FakeLamplightAdapter — Connection Cards', () => {
+  it('getConnectionNeighbors returns seeded neighbors', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.91 },
+      { relatedNoteId: 'note-3', similarity: 0.83 },
+    ]);
+    const result = await adapter.getConnectionNeighbors('note-1', 5);
+    expect(result).toEqual([
+      { relatedNoteId: 'note-2', similarity: 0.91 },
+      { relatedNoteId: 'note-3', similarity: 0.83 },
+    ]);
+  });
+
+  it('getConnectionNeighbors returns [] for unseeded source', async () => {
+    const adapter = new FakeLamplightAdapter();
+    expect(await adapter.getConnectionNeighbors('note-unknown', 5)).toEqual([]);
+  });
+
+  it('hasNoteEmbedding flips from false to true after seed', async () => {
+    const adapter = new FakeLamplightAdapter();
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(false);
+    adapter.__seedNoteEmbedding('note-1');
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(true);
+  });
+
+  it('generateConnectionWhy returns cached why when seeded', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedConnectionWhy('note-1', 'note-2', 'They share a shepherd image.');
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({
+      ok: true,
+      why: 'They share a shepherd image.',
+      cached: true,
+    });
+  });
+
+  it('generateConnectionWhy returns generated why on first call', async () => {
+    const adapter = new FakeLamplightAdapter();
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+    expect(typeof result.why).toBe('string');
+    expect(result.cached).toBe(false);
+  });
+
+  it('generateConnectionWhy honors __failNextGenerateConnectionWhy', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__failNextGenerateConnectionWhy('validators_failed');
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({ ok: false, reason: 'validators_failed' });
+  });
+
+  it('failure flag is consumed and cleared after one call', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__failNextGenerateConnectionWhy('network');
+    await adapter.generateConnectionWhy('note-1', 'note-2');
+    const second = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(second.ok).toBe(true);
+  });
+});

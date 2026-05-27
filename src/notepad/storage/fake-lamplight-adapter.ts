@@ -4,6 +4,8 @@ import type {
   LamplightEntitlement,
   PromoConfig,
   DailyDevotionGenerateResult,
+  ConnectionNeighbor,
+  ConnectionWhyResult,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
 
@@ -96,5 +98,65 @@ export class FakeLamplightAdapter implements LamplightAdapter {
 
   async getPromoConfig(): Promise<PromoConfig> {
     return { ...this.promo };
+  }
+
+  // ── Connection Cards ────────────────────────────────────────────────
+  private connectionNeighbors = new Map<string, ConnectionNeighbor[]>();
+  private noteEmbeddingsPresent = new Set<string>();
+  // Key format: `${sourceNoteId}::${relatedNoteId}`
+  private connectionWhyCache = new Map<string, string>();
+  private nextGenerateConnectionWhyFailure:
+    | 'no_embedding'
+    | 'validators_failed'
+    | 'not_neighbor'
+    | 'network'
+    | null = null;
+
+  __seedConnectionNeighbors(sourceNoteId: string, neighbors: ConnectionNeighbor[]): void {
+    this.connectionNeighbors.set(sourceNoteId, neighbors);
+  }
+
+  __seedNoteEmbedding(noteId: string): void {
+    this.noteEmbeddingsPresent.add(noteId);
+  }
+
+  __seedConnectionWhy(sourceNoteId: string, relatedNoteId: string, why: string): void {
+    this.connectionWhyCache.set(`${sourceNoteId}::${relatedNoteId}`, why);
+  }
+
+  __failNextGenerateConnectionWhy(
+    reason: 'no_embedding' | 'validators_failed' | 'not_neighbor' | 'network',
+  ): void {
+    this.nextGenerateConnectionWhyFailure = reason;
+  }
+
+  async getConnectionNeighbors(
+    sourceNoteId: string,
+    _k = 5,
+  ): Promise<ConnectionNeighbor[]> {
+    return this.connectionNeighbors.get(sourceNoteId) ?? [];
+  }
+
+  async hasNoteEmbedding(noteId: string): Promise<boolean> {
+    return this.noteEmbeddingsPresent.has(noteId);
+  }
+
+  async generateConnectionWhy(
+    sourceNoteId: string,
+    relatedNoteId: string,
+  ): Promise<ConnectionWhyResult> {
+    if (this.nextGenerateConnectionWhyFailure) {
+      const reason = this.nextGenerateConnectionWhyFailure;
+      this.nextGenerateConnectionWhyFailure = null;
+      return { ok: false, reason };
+    }
+    const key = `${sourceNoteId}::${relatedNoteId}`;
+    const cached = this.connectionWhyCache.get(key);
+    if (cached) {
+      return { ok: true, why: cached, cached: true };
+    }
+    const why = `Fake connection between ${sourceNoteId} and ${relatedNoteId}.`;
+    this.connectionWhyCache.set(key, why);
+    return { ok: true, why, cached: false };
   }
 }
