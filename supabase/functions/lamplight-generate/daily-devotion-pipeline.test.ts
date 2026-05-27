@@ -168,4 +168,25 @@ describe('runDailyDevotionPipeline', () => {
       prompt_version: 'daily-devotion-2026-05-27-v1',
     });
   });
+
+  it('validator-fail-then-retry: first attempt has unknown verse ref, second is clean, ok:true attempts:2', async () => {
+    const dirty: DailyDevotion = {
+      ...cleanArtifact,
+      scripture: { ref: 'Made Up 1:1', text: 'fake passage' },
+    };
+    const { supabase, inserts } = makeSupabaseMock();
+    const result = await runDailyDevotionPipeline({
+      llm: makeAdapter([dirty, cleanArtifact]),
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.attempts).toBe(2);
+      expect(result.cached).toBe(false);
+    }
+    expect(inserts).toHaveLength(1);
+  });
 });

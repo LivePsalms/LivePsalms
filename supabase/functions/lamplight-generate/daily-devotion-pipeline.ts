@@ -93,77 +93,121 @@ export async function runDailyDevotionPipeline(args: {
   }
   const ctx = args.ctx;
 
-  const system = composeSystem({
-    base: LAMPLIGHT_SYSTEM_FRAGMENT,
-    artifact: DAILY_DEVOTION_PROMPT.system,
-    voicePreference: ctx.voicePreference,
-    tokens: { local_date: ctx.localDate },
-  });
+  const MAX_ATTEMPTS = 2;
+  let attempts = 0;
+  let lastViolations: { citation: CitationViolation[]; content: ContentRuleViolation[] } | null = null;
+  let lastModelUsed = 'claude-sonnet-4-6';
 
-  const { parsed, modelUsed } = await args.llm.generate<DailyDevotion>({
-    model: 'sonnet',
-    system,
-    messages: DAILY_DEVOTION_PROMPT.buildMessages(ctx),
-    tool: DAILY_DEVOTION_PROMPT.tool as unknown as Parameters<LLMAdapter['generate']>[0]['tool'],
-    maxTokens: 2048,
-  });
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    attempts++;
+    const stricter = attempt === 0 ? '' : formatStricterSuffix(lastViolations!);
+    const system = composeSystem({
+      base: LAMPLIGHT_SYSTEM_FRAGMENT,
+      artifact: DAILY_DEVOTION_PROMPT.system,
+      voicePreference: ctx.voicePreference,
+      stricter,
+      tokens: { local_date: ctx.localDate },
+    });
 
-  const citation = validateDailyDevotionCitations(parsed, {
-    allowedNoteIds: ctx.allowedNoteIds,
-    allowedVerseRefs: ctx.allowedVerseRefs,
-  });
-  const flat = flattenDailyDevotionText(parsed);
-  const content = await applyContentRules(flat, {
-    banned: BANNED_PHRASES,
-    contested: CONTESTED_PASSAGES,
-    growth: GROWTH_BANNED_PHRASES,
-  });
+    const { parsed, modelUsed } = await args.llm.generate<DailyDevotion>({
+      model: 'sonnet',
+      system,
+      messages: DAILY_DEVOTION_PROMPT.buildMessages(ctx),
+      tool: DAILY_DEVOTION_PROMPT.tool as unknown as Parameters<LLMAdapter['generate']>[0]['tool'],
+      maxTokens: 2048,
+    });
+    lastModelUsed = modelUsed;
 
-  if (!citation.ok || !content.ok) {
-    return {
-      ok: false,
-      reason: 'validators_failed',
-      violations: { citation: citation.violations, content: content.violations },
-      model_used: modelUsed,
-      prompt_version: promptVersion,
-      attempts: 1,
-    };
-  }
+    const citation = validateDailyDevotionCitations(parsed, {
+      allowedNoteIds: ctx.allowedNoteIds,
+      allowedVerseRefs: ctx.allowedVerseRefs,
+    });
+    const flat = flattenDailyDevotionText(parsed);
+    const content = await applyContentRules(flat, {
+      banned: BANNED_PHRASES,
+      contested: CONTESTED_PASSAGES,
+      growth: GROWTH_BANNED_PHRASES,
+    });
 
-  const sourceNoteIds = parsed.note_citations.map(c => c.note_id);
-  const sourceVerses = [parsed.scripture.ref];
-  const insertRes = await args.supabase
-    .from('lamplight_artifacts')
-    .insert({
-      user_id: args.userId,
-      type: 'daily_devotion',
-      period_key: args.localDate,
-      title: '',
-      body: parsed,
-      source_note_ids: sourceNoteIds,
-      source_verses: sourceVerses,
-      model_used: modelUsed,
-      prompt_version: promptVersion,
-    })
-    .select('id')
-    .single();
+    if (citation.ok && content.ok) {
+      const sourceNoteIds = parsed.note_citations.map(c => c.note_id);
+      const sourceVerses = [parsed.scripture.ref];
+      const insertRes = await args.supabase
+        .from('lamplight_artifacts')
+        .insert({
+          user_id: args.userId,
+          type: 'daily_devotion',
+          period_key: args.localDate,
+          title: '',
+          body: parsed,
+          source_note_ids: sourceNoteIds,
+          source_verses: sourceVerses,
+          model_used: modelUsed,
+          prompt_version: promptVersion,
+        })
+        .select('id')
+        .single();
 
-  if (insertRes.error || !insertRes.data) {
-    throw insertRes.error ?? new Error('insert returned no data');
+      if (insertRes.error || !insertRes.data) {
+        throw insertRes.error ?? new Error('insert returned no data');
+      }
+
+      return {
+        ok: true,
+        artifact: parsed,
+        artifact_id: insertRes.data.id as string,
+        model_used: modelUsed,
+        prompt_version: promptVersion,
+        attempts,
+        cached: false,
+        retrieval: {
+          note_neighbors: ctx.notes.length,
+          bible_passages: ctx.passages.length,
+          reranked: ctx.rerankUsed,
+        },
+      };
+    }
+
+    lastViolations = { citation: citation.violations, content: content.violations };
   }
 
   return {
-    ok: true,
-    artifact: parsed,
-    artifact_id: insertRes.data.id as string,
-    model_used: modelUsed,
+    ok: false,
+    reason: 'validators_failed',
+    violations: lastViolations!,
+    model_used: lastModelUsed,
     prompt_version: promptVersion,
-    attempts: 1,
-    cached: false,
-    retrieval: {
-      note_neighbors: ctx.notes.length,
-      bible_passages: ctx.passages.length,
-      reranked: ctx.rerankUsed,
-    },
+    attempts,
   };
+}
+
+function formatStricterSuffix(violations: {
+  citation: CitationViolation[];
+  content: ContentRuleViolation[];
+}): string {
+  const parts: string[] = [];
+  if (violations.citation.length > 0) {
+    parts.push(
+      'On retry: every section MUST cite only refs supplied in the user prompt; note_citations MUST reference only the supplied note ids.',
+    );
+  }
+  if (violations.content.length > 0) {
+    const families = new Set(violations.content.map(v => v.family));
+    if (families.has('banned')) {
+      parts.push(
+        'On retry: do not produce prophetic, oracular, or "God is telling you" style language. Speak of Scripture in possibility, not pronouncement.',
+      );
+    }
+    if (families.has('contested')) {
+      parts.push(
+        'On retry: avoid interpreting the contested passages mentioned. Name them gently and defer.',
+      );
+    }
+    if (families.has('growth')) {
+      parts.push(
+        'On retry: do not use streak / "missed yesterday" / "get back on track" / effort-shaming language.',
+      );
+    }
+  }
+  return parts.join(' ');
 }
