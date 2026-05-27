@@ -1,0 +1,120 @@
+import { describe, it, expect } from 'vitest';
+import { runDailyDevotionPipeline, type DailyDevotionContext } from './daily-devotion-pipeline';
+import type { LLMAdapter, GenerateOutput } from '../_shared/anthropic';
+import type { DailyDevotion } from '../_shared/artifacts';
+
+function makeCtx(overrides: Partial<DailyDevotionContext> = {}): DailyDevotionContext {
+  return {
+    notes: [{ id: 'note-1', title: 'On rest', plaintext: 'I have been weary lately.' }],
+    passages: [{
+      source_id: 'psa.23.4',
+      text: 'Even though I walk through the valley of the shadow of death…',
+      ref: 'Psalm 23:4',
+      metadata: { book: 'Psalm', chapter: 23 },
+    }],
+    voicePreference: 'Lord',
+    traditionHint: 'unspecified',
+    localDate: '2026-05-27',
+    allowedNoteIds: new Set(['note-1']),
+    allowedVerseRefs: new Set(['Psalm 23:4']),
+    rerankUsed: false,
+    ...overrides,
+  };
+}
+
+function makeAdapter<T>(responses: T[]): LLMAdapter {
+  let i = 0;
+  return {
+    async generate<U>(): Promise<GenerateOutput<U>> {
+      const parsed = responses[Math.min(i, responses.length - 1)] as unknown as U;
+      i++;
+      return { parsed, modelUsed: 'claude-sonnet-4-6', promptTokens: 10, completionTokens: 20 };
+    },
+  };
+}
+
+const cleanArtifact: DailyDevotion = {
+  opening: 'A quiet greeting. Welcome back; the lamp is lit and the day is yours.',
+  scripture: { ref: 'Psalm 23:4', text: 'Even though I walk through the valley of the shadow of death…' },
+  reflection: 'This passage may speak to weariness. The shepherd does not pull the weary forward but walks beside them through the valley. Scripture suggests that fear, in this verse, is not banished but accompanied. For someone walking through what you have described, this verse often becomes less a promise to be fearless than an invitation to be unalone. The rod and the staff are not weapons against your weariness — they are signs that you have not been left.',
+  prompt: 'What part of being accompanied through the valley reaches you today?',
+  note_citations: [{ note_id: 'note-1', reason: 'recurring weariness across recent notes' }],
+};
+
+function makeSupabaseMock(opts: {
+  existing?: DailyDevotion | null;
+  insertedId?: string;
+  insertError?: { code?: string; message: string } | null;
+} = {}) {
+  const existing = opts.existing ?? null;
+  const insertedId = opts.insertedId ?? 'artifact-1';
+  const insertError = opts.insertError ?? null;
+  const inserts: Array<Record<string, unknown>> = [];
+  const supabase = {
+    from(_table: string) {
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              eq: () => ({
+                async maybeSingle() {
+                  if (existing) {
+                    return { data: { id: 'cached-id', body: existing, model_used: 'claude-sonnet-4-6', prompt_version: 'daily-devotion-2026-05-27-v1' }, error: null };
+                  }
+                  return { data: null, error: null };
+                },
+                async single() {
+                  if (existing) {
+                    return { data: { id: 'cached-id', body: existing, model_used: 'claude-sonnet-4-6', prompt_version: 'daily-devotion-2026-05-27-v1' }, error: null };
+                  }
+                  return { data: null, error: { message: 'no row' } };
+                },
+              }),
+            }),
+          }),
+        }),
+        insert: (row: Record<string, unknown>) => {
+          inserts.push(row);
+          return {
+            select: () => ({
+              async single() {
+                if (insertError) return { data: null, error: insertError };
+                return { data: { id: insertedId }, error: null };
+              },
+            }),
+          };
+        },
+      };
+    },
+  };
+  return { supabase: supabase as unknown as Parameters<typeof runDailyDevotionPipeline>[0]['supabase'], inserts };
+}
+
+describe('runDailyDevotionPipeline', () => {
+  it('happy path: generates, validates, persists, returns ok with artifact_id', async () => {
+    const { supabase, inserts } = makeSupabaseMock();
+    const result = await runDailyDevotionPipeline({
+      llm: makeAdapter([cleanArtifact]),
+      supabase,
+      ctx: makeCtx(),
+      userId: 'user-1',
+      localDate: '2026-05-27',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.artifact_id).toBe('artifact-1');
+      expect(result.attempts).toBe(1);
+      expect(result.cached).toBe(false);
+      expect(result.artifact.scripture.ref).toBe('Psalm 23:4');
+    }
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toMatchObject({
+      user_id: 'user-1',
+      type: 'daily_devotion',
+      period_key: '2026-05-27',
+      source_note_ids: ['note-1'],
+      source_verses: ['Psalm 23:4'],
+      prompt_version: 'daily-devotion-2026-05-27-v1',
+    });
+  });
+});
