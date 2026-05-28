@@ -25,6 +25,7 @@ import { AuthProvider } from '@/auth/context/AuthProvider';
 import { LoginPage } from '@/auth/LoginPage';
 import { ProfilePage } from '@/auth/ProfilePage';
 import { WelcomePage } from '@/auth/WelcomePage';
+import { AdminLamplightPage } from '@/admin/AdminLamplightPage';
 import { useRouteTransition } from '@/transitions/useRouteTransition';
 import './App.css';
 
@@ -149,6 +150,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/admin/lamplight" element={<AdminLamplightPage />} />
             <Route
               path="/purpose"
               element={<PurposeStack projects={projects} />}
