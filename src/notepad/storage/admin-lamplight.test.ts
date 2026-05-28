@@ -144,4 +144,43 @@ maybeDescribe('Lamplight admin RPCs (integration)', () => {
     // Cleanup.
     await svc.from('lamplight_jobs').delete().in('id', [jobId, admOwn!.id]);
   });
+
+  it('admin_list_lamplight_jobs: admin gets rows; non-admin raises', async () => {
+    const svc = serviceClient();
+    const tag = `list-rpc-${Date.now()}`;
+    await svc.from('lamplight_jobs').insert({
+      user_id: userA.userId, kind: 'embedding_refresh', status: 'failed',
+      payload: { note_id: tag, content_hash: 'h' },
+      attempts: 3, error: 'voyage_429',
+      finished_at: new Date().toISOString(),
+    });
+
+    const { data, error } = await admin.client.rpc('admin_list_lamplight_jobs', {
+      p_status: ['failed'], p_user_search: USER_A_EMAIL,
+    });
+    expect(error).toBeNull();
+    expect(Array.isArray(data)).toBe(true);
+    expect((data as Array<{ payload: { note_id: string } }>).some(r => r.payload?.note_id === tag)).toBe(true);
+
+    const { error: nonAdmErr } = await userA.client.rpc('admin_list_lamplight_jobs', {});
+    expect(nonAdmErr).not.toBeNull();
+    expect(nonAdmErr!.message).toMatch(/not authorized/);
+
+    await svc.from('lamplight_jobs').delete().eq('payload->>note_id', tag);
+  });
+
+  it('admin_lamplight_job_counts: returns {queued, running, done, failed, since}', async () => {
+    const { data, error } = await admin.client.rpc('admin_lamplight_job_counts', {});
+    expect(error).toBeNull();
+    const obj = data as Record<string, unknown>;
+    expect(obj).toHaveProperty('queued');
+    expect(obj).toHaveProperty('running');
+    expect(obj).toHaveProperty('done');
+    expect(obj).toHaveProperty('failed');
+    expect(obj).toHaveProperty('since');
+
+    const { error: nonAdmErr } = await userA.client.rpc('admin_lamplight_job_counts', {});
+    expect(nonAdmErr).not.toBeNull();
+    expect(nonAdmErr!.message).toMatch(/not authorized/);
+  });
 });

@@ -57,3 +57,89 @@ create policy "Users can view own lamplight_usage"
 create policy "Admins can view all lamplight_jobs"
   on public.lamplight_jobs for select
   using (public.is_lamplight_admin());
+
+-- ── admin_list_lamplight_jobs ────────────────────────────────────────────
+create or replace function public.admin_list_lamplight_jobs(
+  p_status text[] default array['failed'],
+  p_kind text[] default null,
+  p_user_search text default null,
+  p_since timestamptz default now() - interval '7 days',
+  p_limit int default 200
+)
+returns table (
+  id uuid,
+  user_id uuid,
+  email text,
+  kind text,
+  status text,
+  attempts int,
+  payload jsonb,
+  scheduled_at timestamptz,
+  started_at timestamptz,
+  finished_at timestamptz,
+  error text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_lamplight_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select j.id, j.user_id, u.email::text, j.kind, j.status, j.attempts,
+         j.payload, j.scheduled_at, j.started_at, j.finished_at, j.error
+  from public.lamplight_jobs j
+  left join auth.users u on u.id = j.user_id
+  where j.status = any(p_status)
+    and (p_kind is null or j.kind = any(p_kind))
+    and (
+      p_user_search is null
+      or u.email ilike '%' || p_user_search || '%'
+      or j.user_id::text = p_user_search
+    )
+    and j.scheduled_at >= p_since
+  order by coalesce(j.finished_at, j.scheduled_at) desc
+  limit greatest(1, least(p_limit, 500));
+end;
+$$;
+
+revoke execute on function public.admin_list_lamplight_jobs(text[], text[], text, timestamptz, int) from public, anon;
+grant execute on function public.admin_list_lamplight_jobs(text[], text[], text, timestamptz, int) to authenticated;
+
+-- ── admin_lamplight_job_counts ───────────────────────────────────────────
+create or replace function public.admin_lamplight_job_counts(
+  p_since timestamptz default now() - interval '24 hours'
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_result jsonb;
+begin
+  if not public.is_lamplight_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  select jsonb_build_object(
+    'queued',  count(*) filter (where status = 'queued'),
+    'running', count(*) filter (where status = 'running'),
+    'done',    count(*) filter (where status = 'done'),
+    'failed',  count(*) filter (where status = 'failed'),
+    'since',   p_since
+  ) into v_result
+  from public.lamplight_jobs
+  where scheduled_at >= p_since;
+
+  return v_result;
+end;
+$$;
+
+revoke execute on function public.admin_lamplight_job_counts(timestamptz) from public, anon;
+grant execute on function public.admin_lamplight_job_counts(timestamptz) to authenticated;
