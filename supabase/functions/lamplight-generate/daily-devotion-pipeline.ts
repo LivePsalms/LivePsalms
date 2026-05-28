@@ -15,6 +15,7 @@ import {
 import {
   validateDailyDevotionCitations,
   applyContentRules,
+  applyNameRules,
   flattenDailyDevotionText,
   type CitationViolation,
   type ContentRuleViolation,
@@ -35,6 +36,7 @@ export interface DailyDevotionContext {
   voicePreference: string;
   traditionHint: string;
   localDate: string;
+  firstName: string | null;  // sanitizeFirstName(profiles.full_name)
   allowedNoteIds: Set<string>;
   allowedVerseRefs: Set<string>;
   rerankUsed: boolean;
@@ -131,8 +133,11 @@ export async function runDailyDevotionPipeline(args: {
       contested: CONTESTED_PASSAGES,
       growth: GROWTH_BANNED_PHRASES,
     });
+    const nameViolations = applyNameRules({ artifact: parsed, firstName: ctx.firstName });
+    const allContentViolations = [...content.violations, ...nameViolations];
+    const contentOk = content.ok && nameViolations.length === 0;
 
-    if (citation.ok && content.ok) {
+    if (citation.ok && contentOk) {
       const sourceNoteIds = parsed.note_citations.map(c => c.note_id);
       const sourceVerses = [parsed.scripture.ref];
       const insertRes = await args.supabase
@@ -207,7 +212,7 @@ export async function runDailyDevotionPipeline(args: {
       };
     }
 
-    lastViolations = { citation: citation.violations, content: content.violations };
+    lastViolations = { citation: citation.violations, content: allContentViolations };
   }
 
   void recordLamplightUsage(args.supabase, {
@@ -254,6 +259,11 @@ function formatStricterSuffix(violations: {
     if (families.has('growth')) {
       parts.push(
         'On retry: do not use streak / "missed yesterday" / "get back on track" / effort-shaming language.',
+      );
+    }
+    if (families.has('name')) {
+      parts.push(
+        'On retry: use the supplied first name at most twice total across the artifact, never invent or fabricate a salutation, and never combine the name with a Scripture pronouncement.',
       );
     }
   }

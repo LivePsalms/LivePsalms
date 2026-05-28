@@ -7,7 +7,7 @@
 import type { DailyDevotionContext } from '../daily-devotion-pipeline.ts';
 
 export const DAILY_DEVOTION_PROMPT = {
-  promptVersion: 'daily-devotion-2026-05-27-v1',
+  promptVersion: 'daily-devotion-2026-05-28-v2',
 
   system: `Write a brief daily devotion for someone who has been journaling. The user has shared up to 3 recent notes (or fewer, if their vault is small). You have 3 candidate Scripture passages. Write something glanceable — they will read this in under a minute.
 
@@ -22,7 +22,12 @@ Hard rules (these compound the rules in your system fragment):
 - Cite every Scripture reference using the exact form supplied. Do not invent refs.
 - Quote no more than 25 words verbatim from any note.
 - If you cannot ground a sentence in the supplied notes or passages, do not write it.
-- Today is {{local_date}}. Do not refer to other dates.`,
+- Today is {{local_date}}. Do not refer to other dates.
+
+Personalization (only when First name is provided in the user prompt):
+- Begin the opening with: "<First name> — " (use the exact form supplied; do not modify capitalization or characters).
+- You MAY use the first name at most once more inside the reflection, in a natural place. Never use it more than twice total across the artifact. Never use it in the same sentence as a Scripture pronouncement.
+- If no First name is provided, write the opening without any salutation and never invent or substitute one.`,
 
   tool: {
     name: 'emit_daily_devotion',
@@ -77,11 +82,15 @@ Hard rules (these compound the rules in your system fragment):
       .join('\n\n');
     const refsList = [...ctx.allowedVerseRefs].join(', ');
     const noteIdsList = [...ctx.allowedNoteIds].join(', ');
+    const firstNameLine = ctx.firstName
+      ? `First name: ${ctx.firstName}`
+      : `First name: (not provided)`;
     return [{
       role: 'user',
       content:
         `Today is ${ctx.localDate}. User voice preference: "${ctx.voicePreference}". ` +
-        `User tradition hint: "${ctx.traditionHint}".\n\n` +
+        `User tradition hint: "${ctx.traditionHint}".\n` +
+        `${firstNameLine}\n\n` +
         `User's recent notes:\n${notesBlock}\n\n` +
         `Candidate Scripture passages:\n${passagesBlock}\n\n` +
         `Cite Scripture using exactly one of: ${refsList}. ` +

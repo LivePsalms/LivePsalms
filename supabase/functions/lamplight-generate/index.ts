@@ -15,6 +15,7 @@ import { embedQuery, type VoyageDeps } from '../_shared/voyage.ts';
 import { searchBible } from '../_shared/retrieval.ts';
 import { createAnthropicAdapter } from '../_shared/anthropic.ts';
 import { extractTextFromNoteContent } from '../_shared/tiptap-text.ts';
+import { sanitizeFirstName } from '../_shared/personalization.ts';
 import {
   extractVerseRefsFromNoteContent,
   intersectTagsAndVerseRefs,
@@ -270,6 +271,14 @@ async function buildDailyDevotionContext(
     .filter(n => n.plaintext.trim().length > 0);
   if (notes.length === 0) return null;
 
+  const { data: profile, error: pErr } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', args.userId)
+    .maybeSingle();
+  if (pErr) throw pErr;
+  const firstName = sanitizeFirstName((profile?.full_name as string | undefined) ?? null);
+
   const themeQuery = notes
     .map(n => `${n.title}: ${n.plaintext.slice(0, 200)}`)
     .join('\n\n')
@@ -308,6 +317,7 @@ async function buildDailyDevotionContext(
     voicePreference: args.voicePreference,
     traditionHint: args.traditionHint,
     localDate: args.localDate,
+    firstName,
     allowedNoteIds: new Set(notes.map(n => n.id)),
     allowedVerseRefs: new Set(passages.map(p => p.ref)),
     rerankUsed: args.rerankEnabled && passages.length > 0,

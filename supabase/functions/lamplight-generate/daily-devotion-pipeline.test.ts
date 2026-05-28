@@ -15,6 +15,7 @@ function makeCtx(overrides: Partial<DailyDevotionContext> = {}): DailyDevotionCo
     voicePreference: 'Lord',
     traditionHint: 'unspecified',
     localDate: '2026-05-27',
+    firstName: null,
     allowedNoteIds: new Set(['note-1']),
     allowedVerseRefs: new Set(['Psalm 23:4']),
     rerankUsed: false,
@@ -174,7 +175,7 @@ describe('runDailyDevotionPipeline', () => {
       period_key: '2026-05-27',
       source_note_ids: ['note-1'],
       source_verses: ['Psalm 23:4'],
-      prompt_version: 'daily-devotion-2026-05-27-v1',
+      prompt_version: 'daily-devotion-2026-05-28-v2',
     });
     await Promise.resolve(); // let the fire-and-forget recordUsage microtask drain
     expect(usageInserts).toHaveLength(1);
@@ -262,7 +263,7 @@ describe('runDailyDevotionPipeline', () => {
                         id: 'race-id',
                         body: cleanArtifact,
                         model_used: 'claude-sonnet-4-6',
-                        prompt_version: 'daily-devotion-2026-05-27-v1',
+                        prompt_version: 'daily-devotion-2026-05-28-v2',
                       },
                       error: null,
                     };
