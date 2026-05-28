@@ -329,6 +329,14 @@ describe('nameMentionCount', () => {
     // "Anne-Marie" — hyphen is literal in regex, but verify no crash and correct count.
     expect(nameMentionCount('Anne-Marie waited. Anne-Marie sang.', 'Anne-Marie')).toBe(2);
   });
+
+  it('counts diacritic-ending name across word boundaries', () => {
+    expect(nameMentionCount('José walked. Then José ran.', 'José')).toBe(2);
+  });
+
+  it('does not count partial match on diacritic name', () => {
+    expect(nameMentionCount('Josése went home', 'José')).toBe(0);
+  });
 });
 
 describe('applyNameRules', () => {
@@ -386,5 +394,15 @@ describe('applyNameRules', () => {
       reflection: 'The passage may speak. José, scripture offers…',
     });
     expect(applyNameRules({ artifact, firstName: 'José' })).toEqual([]);
+  });
+
+  it('flags name_overuse for diacritic name appearing more than twice', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'José — a quiet thought.',
+      reflection: 'José, the passage may speak. José, scripture offers…',
+    });
+    const violations = applyNameRules({ artifact, firstName: 'José' });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ family: 'name', rule: 'name_overuse' });
   });
 });

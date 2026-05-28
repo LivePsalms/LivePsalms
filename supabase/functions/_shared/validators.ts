@@ -66,6 +66,14 @@ export function validateCitations<T extends ArtifactLike>(
   return { ok: violations.length === 0, violations };
 }
 
+/**
+ * A violation raised by a content validator.
+ * Families:
+ * - 'banned'    — banned phrase appeared in artifact body.
+ * - 'contested' — contested passage cited inappropriately.
+ * - 'growth'    — streak/effort-shaming language (Lamplight policy).
+ * - 'name'     — first-name misuse (overuse or spurious salutation).
+ */
 export interface ContentRuleViolation {
   family: 'banned' | 'contested' | 'growth' | 'name';
   rule: string;
@@ -259,20 +267,30 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Unicode-aware word boundaries: \b in JavaScript is ASCII-only and fails to
+// boundary names ending in non-ASCII letters (e.g., "José"). Use \p{L}\p{M}
+// negative lookarounds with the u flag instead.
 export function nameMentionCount(text: string, firstName: string): number {
-  const re = new RegExp(`\\b${escapeRegex(firstName)}\\b`, 'g');
+  const re = new RegExp(
+    `(?<![\\p{L}\\p{M}])${escapeRegex(firstName)}(?![\\p{L}\\p{M}])`,
+    'gu',
+  );
   return text.match(re)?.length ?? 0;
 }
 
 // Matches the prescribed shape `<First> — ` and likely-vocative variants.
-// Capital letter + 1-40 name-allowed chars + space + em-dash + space.
-const SPURIOUS_SALUTATION_RE = /^[A-ZÀ-Ý][\p{L}\p{M}'\-]{0,40} — /u;
+// Capital letter (ASCII A-Z + Latin-1 supplement uppercase, excluding × U+00D7)
+// + 0-40 name-allowed chars + space + em-dash + space.
+const SPURIOUS_SALUTATION_RE = /^[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'\-]{0,40} — /u;
 
 export interface NameRulesInput {
   artifact: DailyDevotion;
   firstName: string | null;
 }
 
+// NOTE: flattenDailyDevotionText includes scripture.text, so a name that
+// coincidentally appears inside the quoted verse counts toward the 2-use cap.
+// Acceptable for V1; consider excluding scripture.text if false positives emerge.
 export function applyNameRules({ artifact, firstName }: NameRulesInput): ContentRuleViolation[] {
   const violations: ContentRuleViolation[] = [];
   if (firstName) {
