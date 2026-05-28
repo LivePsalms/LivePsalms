@@ -61,4 +61,45 @@ maybeDescribe('Lamplight admin RPCs (integration)', () => {
     expect(error).toBeNull();
     expect(data).toBe(false);
   });
+
+  it('lamplight_usage: user can read own rows, admin reads all, others blocked', async () => {
+    const svc = serviceClient();
+    const tag = `usage-rls-${Date.now()}`;
+
+    // userA owns a row.
+    const { error: insErr } = await svc.from('lamplight_usage').insert({
+      user_id: userA.userId,
+      model: 'voyage-3-large',
+      artifact_kind: tag,
+      tokens_in: 100, tokens_out: 0,
+      status: 'ok',
+    });
+    expect(insErr).toBeNull();
+
+    // userA sees their row.
+    const { data: ownData, error: ownErr } = await userA.client
+      .from('lamplight_usage').select('id').eq('artifact_kind', tag);
+    expect(ownErr).toBeNull();
+    expect(ownData?.length).toBe(1);
+
+    // admin sees the same row.
+    const { data: admData, error: admErr } = await admin.client
+      .from('lamplight_usage').select('id').eq('artifact_kind', tag);
+    expect(admErr).toBeNull();
+    expect(admData?.length).toBe(1);
+
+    // Direct INSERT from authenticated client is blocked (no INSERT policy).
+    const { error: blockedErr } = await userA.client
+      .from('lamplight_usage').insert({
+        user_id: userA.userId,
+        model: 'voyage-3-large',
+        artifact_kind: `${tag}-blocked`,
+        tokens_in: 0, tokens_out: 0,
+        status: 'ok',
+      });
+    expect(blockedErr).not.toBeNull();
+
+    // Cleanup.
+    await svc.from('lamplight_usage').delete().eq('artifact_kind', tag);
+  });
 });
