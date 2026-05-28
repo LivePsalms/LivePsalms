@@ -9,9 +9,10 @@
 // (split on whitespace, take [0]). Max 40 characters. Returns null on any
 // failure — no salvage, no character stripping.
 
-const FIRST_NAME_ALLOWED = /^[\p{L}\p{M}'\-]+$/u;
+const FIRST_NAME_ALLOWED = /^[\p{L}\p{M}'-]+$/u;
 // Reject any control characters (C0, C1, DEL) in the raw input before trimming.
 // This catches leading/embedded newlines, tabs, NULL bytes, etc.
+// eslint-disable-next-line no-control-regex
 const HAS_CONTROL_CHAR = /[\x00-\x1F\x7F-\x9F]/;
 const MAX_LEN = 40;
 

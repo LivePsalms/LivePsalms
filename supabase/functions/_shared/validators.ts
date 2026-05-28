@@ -281,7 +281,7 @@ export function nameMentionCount(text: string, firstName: string): number {
 // Matches the prescribed shape `<First> — ` and likely-vocative variants.
 // Capital letter (ASCII A-Z + Latin-1 supplement uppercase, excluding × U+00D7)
 // + 0-40 name-allowed chars + space + em-dash + space.
-const SPURIOUS_SALUTATION_RE = /^[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'\-]{0,40} — /u;
+const SPURIOUS_SALUTATION_RE = /^[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'-]{0,40} — /u;
 
 export interface NameRulesInput {
   artifact: DailyDevotion;
