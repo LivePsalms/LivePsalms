@@ -17,3 +17,4 @@ dist
 # HyperFrames render snapshots
 public/Logo-motion/my-video/snapshots/
 .tmp-debug/
+.tmp/
