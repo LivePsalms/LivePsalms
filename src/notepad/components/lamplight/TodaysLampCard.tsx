@@ -11,15 +11,16 @@ export interface TodaysLampCardProps {
   localDate: string;
   voicePreference: LamplightVoice;
   traditionHint: LamplightTradition;
+  firstName: string | null;
 }
 
 export function TodaysLampCard({
-  adapter, userId, localDate, voicePreference, traditionHint,
+  adapter, userId, localDate, voicePreference, traditionHint, firstName,
 }: TodaysLampCardProps) {
   const { state, retry } = useTodaysLamp({ adapter, userId, localDate });
 
-  if (state.phase === 'loading') return <TodaysLampLoading step={state.loadingStep} />;
-  if (state.phase === 'error')   return <TodaysLampError reason={state.reason} onRetry={retry} />;
+  if (state.phase === 'loading') return <TodaysLampLoading step={state.loadingStep} firstName={firstName} />;
+  if (state.phase === 'error')   return <TodaysLampError reason={state.reason} firstName={firstName} onRetry={retry} />;
 
   return (
     <Devotion

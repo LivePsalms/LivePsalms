@@ -7,6 +7,8 @@ import { ConsentCard } from './ConsentCard';
 import { OptedOutCard } from './OptedOutCard';
 import { TodaysLampCard } from './TodaysLampCard';
 import { PaywallCard } from './PaywallCard';
+import { firstNameOf } from '../../first-load/notepad-first-load';
+import { sanitizeFirstName } from '../../utils/personalization';
 
 export interface LamplightTabPanelProps {
   lamplightAdapter: LamplightAdapter;
@@ -67,6 +69,7 @@ export function LamplightTabPanel({ lamplightAdapter }: LamplightTabPanelProps) 
   }
 
   const localDate = new Date().toLocaleDateString('en-CA');
+  const firstName = sanitizeFirstName(firstNameOf(user));
   return (
     <TodaysLampCard
       adapter={lamplightAdapter}
@@ -74,6 +77,7 @@ export function LamplightTabPanel({ lamplightAdapter }: LamplightTabPanelProps) 
       localDate={localDate}
       voicePreference={settingsState.settings.voicePreference}
       traditionHint={settingsState.settings.traditionHint}
+      firstName={firstName}
     />
   );
 }

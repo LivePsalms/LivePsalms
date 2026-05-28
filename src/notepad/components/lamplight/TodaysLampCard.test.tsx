@@ -17,6 +17,7 @@ function renderCard(adapter: FakeLamplightAdapter) {
         localDate="2026-05-27"
         voicePreference="Lord"
         traditionHint="unspecified"
+        firstName={null}
       />
     </MemoryRouter>
   );

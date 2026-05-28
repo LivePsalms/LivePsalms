@@ -1,27 +1,34 @@
+import { emptyStateInsufficientNotes, generationFailedToast } from '../../lamplight/lamplight-copy';
+
 export type TodaysLampErrorReason = 'no_notes' | 'validators_failed' | 'network';
 
 export interface TodaysLampErrorProps {
   reason: TodaysLampErrorReason;
+  firstName: string | null;
   onRetry: () => void;
 }
 
-const ERROR_COPY: Record<TodaysLampErrorReason, { heading: string; body: string }> = {
-  no_notes: {
-    heading: 'Lamplight needs your notes to begin.',
-    body: 'Write a few entries in the notepad and come back. Today’s lamp draws from what you’ve been writing.',
-  },
-  validators_failed: {
-    heading: 'Lamplight had trouble lighting today.',
-    body: 'Something didn’t come together this time. Try again in a moment.',
-  },
-  network: {
+function copyFor(reason: TodaysLampErrorReason, firstName: string | null): { heading: string; body: string } {
+  if (reason === 'no_notes') {
+    return {
+      heading: 'Lamplight needs your notes to begin.',
+      body: emptyStateInsufficientNotes(firstName),
+    };
+  }
+  if (reason === 'validators_failed') {
+    return {
+      heading: 'Lamplight had trouble lighting today.',
+      body: generationFailedToast(firstName),
+    };
+  }
+  return {
     heading: 'Couldn’t reach Lamplight just now.',
-    body: 'Check your connection and try again.',
-  },
-};
+    body: generationFailedToast(firstName),
+  };
+}
 
-export function TodaysLampError({ reason, onRetry }: TodaysLampErrorProps) {
-  const copy = ERROR_COPY[reason];
+export function TodaysLampError({ reason, firstName, onRetry }: TodaysLampErrorProps) {
+  const copy = copyFor(reason, firstName);
   const showRetry = reason !== 'no_notes';
   return (
     <div
