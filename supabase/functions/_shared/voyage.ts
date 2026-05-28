@@ -78,12 +78,14 @@ async function embedOnce(
   });
 
   if (res.ok) {
+    // Real Voyage response shape (object wrappers preserved at every level):
+    //   { data: [{ data: [{ embedding: number[], index }], index }], usage }
     const json = await res.json() as {
-      data: Array<{ embeddings: number[][] }>;
+      data: Array<{ data: Array<{ embedding: number[]; index: number }>; index: number }>;
       usage?: { total_tokens?: number };
     };
     return {
-      vectors: json.data.map(d => d.embeddings),
+      vectors: json.data.map(doc => doc.data.map(chunk => chunk.embedding)),
       totalTokens: json.usage?.total_tokens ?? 0,
     };
   }

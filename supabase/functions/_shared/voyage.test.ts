@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { embedDocuments, embedQuery, rerank } from './voyage';
 
-// Voyage's contextualized endpoint returns: { data: [{ embeddings: number[][] }, ...] }
-// One outer entry per document; inner array is per-chunk vectors.
+// Voyage's contextualized endpoint returns:
+//   { data: [{ data: [{ embedding: number[], index }], index }, ...], usage }
+// Outer data: one entry per document. Inner data: one entry per chunk.
 function mockFetchOk(payloads: Array<{ embeddingsPerDoc: number[][][]; total_tokens?: number }>) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   let i = 0;
@@ -10,7 +11,16 @@ function mockFetchOk(payloads: Array<{ embeddingsPerDoc: number[][][]; total_tok
     calls.push({ url, init });
     const payload = payloads[i++];
     const body = {
-      data: payload.embeddingsPerDoc.map(doc => ({ embeddings: doc })),
+      object: 'list',
+      data: payload.embeddingsPerDoc.map((doc, docIdx) => ({
+        object: 'list',
+        data: doc.map((chunk, chunkIdx) => ({
+          object: 'embedding',
+          embedding: chunk,
+          index: chunkIdx,
+        })),
+        index: docIdx,
+      })),
       usage: { total_tokens: payload.total_tokens ?? 42 },
     };
     return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -64,7 +74,12 @@ describe('voyage embed (contextualized)', () => {
       attempts++;
       if (attempts === 1) return new Response('rate limited', { status: 429 });
       return new Response(JSON.stringify({
-        data: [{ embeddings: [[1]] }],
+        object: 'list',
+        data: [{
+          object: 'list',
+          data: [{ object: 'embedding', embedding: [1], index: 0 }],
+          index: 0,
+        }],
         usage: { total_tokens: 3 },
       }), { status: 200 });
     });

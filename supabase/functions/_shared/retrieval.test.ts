@@ -66,7 +66,14 @@ const voyageDeps = { apiKey: 'k', fetch: vi.fn() };
 describe('searchBible', () => {
   it('embeds the query when no precomputed vector is supplied (512-dim path)', async () => {
     const embedFetch = vi.fn(async () => new Response(
-      JSON.stringify({ data: [{ embeddings: [new Array(512).fill(0.01)] }] }),
+      JSON.stringify({
+        object: 'list',
+        data: [{
+          object: 'list',
+          data: [{ object: 'embedding', embedding: new Array(512).fill(0.01), index: 0 }],
+          index: 0,
+        }],
+      }),
       { status: 200 },
     ));
     const { supabase, rpcCalls } = makeSupabaseStub({
