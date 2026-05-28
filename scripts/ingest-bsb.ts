@@ -205,13 +205,16 @@ async function main() {
   const UPSERT_CHUNK = 8;
   for (let i = 0; i < toEmbed.length; i += BATCH) {
     const batch = toEmbed.slice(i, i + BATCH);
-    const vectors = await embedDocuments(batch.map(p => p.text), { apiKey: voyageKey, fetch });
+    // Each row is a single-chunk document in voyage-context-3's input shape.
+    const { vectors } = await embedDocuments(batch.map(p => [p.text]), { apiKey: voyageKey, fetch });
     const rows = batch.map((p, idx) => ({
       user_id: null,
       source_type: 'bible_passage',
       source_id: p.id,
+      chunk_index: 0,
+      chunk_text: p.text,
       content_hash: sha256(p.text),
-      embedding: vectors[idx],
+      embedding: vectors[idx][0], // unwrap the single-chunk inner array
       metadata: {
         book: p.book, chapter: p.chapter,
         verse_start: p.verse_start, verse_end: p.verse_end,
@@ -236,7 +239,7 @@ async function upsertWithRetry(
   attempt = 0,
 ): Promise<void> {
   const { error } = await supabase.from('lamplight_embeddings').upsert(rows, {
-    onConflict: 'user_id,source_type,source_id',
+    onConflict: 'user_id,source_type,source_id,chunk_index',
   });
   if (!error) return;
   const isTimeout = (error as { code?: string }).code === '57014';
