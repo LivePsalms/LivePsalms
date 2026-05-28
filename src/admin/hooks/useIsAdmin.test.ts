@@ -17,7 +17,7 @@ import { useAuthSession } from '@/auth/context/useAuthSession';
 
 describe('useIsAdmin', () => {
   it('returns null while loading, then true when RPC returns true', async () => {
-    (supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: true, error: null });
+    (supabase!.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: true, error: null });
     const { result } = renderHook(() => useIsAdmin());
     expect(result.current.isAdmin).toBeNull();
     expect(result.current.loading).toBe(true);
@@ -26,7 +26,7 @@ describe('useIsAdmin', () => {
   });
 
   it('returns false on RPC error', async () => {
-    (supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: { message: 'boom' } });
+    (supabase!.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: { message: 'boom' } });
     const { result } = renderHook(() => useIsAdmin());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.isAdmin).toBe(false);
