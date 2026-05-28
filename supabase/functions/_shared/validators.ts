@@ -67,7 +67,7 @@ export function validateCitations<T extends ArtifactLike>(
 }
 
 export interface ContentRuleViolation {
-  family: 'banned' | 'contested' | 'growth';
+  family: 'banned' | 'contested' | 'growth' | 'name';
   rule: string;
   snippet: string;
 }
@@ -248,4 +248,51 @@ export function validateConnectionWhyShape(
 
 export function flattenConnectionWhyText(artifact: ConnectionWhyArtifact): string {
   return artifact.why;
+}
+
+// ── Name-use validators (sub-project 8) ────────────────────────────────────
+// Cap total artifact mentions at 2 across opening + reflection + prompt.
+// When firstName === null, reject openings that start with a vocative
+// salutation pattern (model invented or imitated a salutation).
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function nameMentionCount(text: string, firstName: string): number {
+  const re = new RegExp(`\\b${escapeRegex(firstName)}\\b`, 'g');
+  return text.match(re)?.length ?? 0;
+}
+
+// Matches the prescribed shape `<First> — ` and likely-vocative variants.
+// Capital letter + 1-40 name-allowed chars + space + em-dash + space.
+const SPURIOUS_SALUTATION_RE = /^[A-ZÀ-Ý][\p{L}\p{M}'\-]{0,40} — /u;
+
+export interface NameRulesInput {
+  artifact: DailyDevotion;
+  firstName: string | null;
+}
+
+export function applyNameRules({ artifact, firstName }: NameRulesInput): ContentRuleViolation[] {
+  const violations: ContentRuleViolation[] = [];
+  if (firstName) {
+    const flat = flattenDailyDevotionText(artifact);
+    const count = nameMentionCount(flat, firstName);
+    if (count > 2) {
+      violations.push({
+        family: 'name',
+        rule: 'name_overuse',
+        snippet: `first name "${firstName}" used ${count} times (max 2)`,
+      });
+    }
+  } else {
+    if (SPURIOUS_SALUTATION_RE.test(artifact.opening)) {
+      violations.push({
+        family: 'name',
+        rule: 'spurious_salutation',
+        snippet: artifact.opening.slice(0, 80),
+      });
+    }
+  }
+  return violations;
 }

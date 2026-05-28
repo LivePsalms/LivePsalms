@@ -293,3 +293,98 @@ describe('flattenConnectionWhyText', () => {
     expect(flattenConnectionWhyText(artifact)).toBe('hello world');
   });
 });
+
+import { nameMentionCount, applyNameRules } from './validators';
+
+function makeDailyDevotion(over: Partial<DailyDevotion> = {}): DailyDevotion {
+  return {
+    opening: 'A quiet thought for today, drawn from your recent notes.',
+    scripture: { ref: 'Psalm 23:4', text: 'Even though I walk through the valley…' },
+    reflection: 'The passage may speak to what you have been carrying. It often reads to those walking through grief as…',
+    prompt: 'What is the valley today, and where is the rod?',
+    note_citations: [{ note_id: 'n1', reason: 'recurring grief theme' }],
+    ...over,
+  };
+}
+
+describe('nameMentionCount', () => {
+  it('returns 0 when name not present', () => {
+    expect(nameMentionCount('Hello world.', 'Sarah')).toBe(0);
+  });
+
+  it('returns count of word-boundary matches', () => {
+    expect(nameMentionCount('Sarah said hello. Sarah laughed.', 'Sarah')).toBe(2);
+  });
+
+  it('does not count partial matches', () => {
+    // "Sarahs" should NOT match "Sarah" with \b.
+    expect(nameMentionCount('Sarahs went home', 'Sarah')).toBe(0);
+  });
+
+  it('is case-sensitive (matches "Sarah" but not "sarah")', () => {
+    expect(nameMentionCount('Sarah and sarah.', 'Sarah')).toBe(1);
+  });
+
+  it('escapes regex special chars in name', () => {
+    // "Anne-Marie" — hyphen is literal in regex, but verify no crash and correct count.
+    expect(nameMentionCount('Anne-Marie waited. Anne-Marie sang.', 'Anne-Marie')).toBe(2);
+  });
+});
+
+describe('applyNameRules', () => {
+  it('returns no violations when firstName is null and opening has no salutation', () => {
+    const artifact = makeDailyDevotion({ opening: 'A quiet thought for today.' });
+    expect(applyNameRules({ artifact, firstName: null })).toEqual([]);
+  });
+
+  it('returns no violations when firstName is present and used exactly once in opening', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'Sarah — a quiet thought for today.',
+      reflection: 'The passage may speak to what you have been carrying. It often reads as…',
+    });
+    expect(applyNameRules({ artifact, firstName: 'Sarah' })).toEqual([]);
+  });
+
+  it('returns no violations when firstName is used twice total (opening + reflection)', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'Sarah — a quiet thought for today.',
+      reflection: 'The passage may speak, Sarah, to what you have been carrying.',
+    });
+    expect(applyNameRules({ artifact, firstName: 'Sarah' })).toEqual([]);
+  });
+
+  it('flags name_overuse when firstName appears more than twice', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'Sarah — a quiet thought for today.',
+      reflection: 'Sarah, this passage may speak to you. Sarah, scripture often offers…',
+      prompt: 'Sarah, what is the valley?',
+    });
+    const violations = applyNameRules({ artifact, firstName: 'Sarah' });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ family: 'name', rule: 'name_overuse' });
+  });
+
+  it('flags spurious_salutation when firstName is null and opening begins with a vocative pattern', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'Sarah — a quiet thought for today.',
+    });
+    const violations = applyNameRules({ artifact, firstName: null });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ family: 'name', rule: 'spurious_salutation' });
+  });
+
+  it('does NOT flag spurious_salutation when firstName is null and opening starts naturally', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'A quiet thought for today, drawn from your notes.',
+    });
+    expect(applyNameRules({ artifact, firstName: null })).toEqual([]);
+  });
+
+  it('handles diacritic name correctly', () => {
+    const artifact = makeDailyDevotion({
+      opening: 'José — a quiet thought.',
+      reflection: 'The passage may speak. José, scripture offers…',
+    });
+    expect(applyNameRules({ artifact, firstName: 'José' })).toEqual([]);
+  });
+});
