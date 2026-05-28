@@ -363,6 +363,7 @@ async function buildConnectionWhyContext(
     .eq('user_id', args.userId)
     .eq('source_type', 'note')
     .eq('source_id', args.sourceNoteId)
+    .eq('chunk_index', 0) // post-016: notes have N chunk rows; chunk 0 is the deterministic proxy.
     .maybeSingle();
   if (eErr) throw eErr;
   if (!embRow) return { kind: 'no_embedding' };
