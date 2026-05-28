@@ -7,11 +7,17 @@ import type { Note } from '../../types';
 
 // Stub useAuthSession so tests don't require an AuthProvider in scope.
 // The component renders with no user → firstName = null → why text bare.
+// vi.hoisted ensures the mock variable is available when vi.mock is hoisted.
+const mockUseAuthSession = vi.hoisted(() => vi.fn(() => ({ user: null, loading: false })));
 vi.mock('@/auth/context/useAuthSession', () => ({
-  useAuthSession: () => ({ user: null, loading: false }),
+  useAuthSession: mockUseAuthSession,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mockUseAuthSession.mockReset();
+  mockUseAuthSession.mockImplementation(() => ({ user: null, loading: false }));
+});
 
 function makeContent(text: string): string {
   return JSON.stringify({
@@ -162,6 +168,40 @@ describe('ConnectionCardsStrip', () => {
     fireEvent.click(chipButton);
     await waitFor(() =>
       expect(screen.queryByText('Both notes circle the same wilderness motif.')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('chip click shows why text prefixed with first name when user is authenticated', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockUseAuthSession.mockReturnValue({ user: { user_metadata: { full_name: 'Sarah Mitchell' } }, loading: false } as any);
+
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.95 },
+    ]);
+    adapter.__seedConnectionWhy('note-1', 'note-2', 'Both notes circle the same wilderness motif.');
+    const note = fakeNote({ id: 'note-1' });
+    const loadNeighborNotes = async (ids: string[]) =>
+      ids.map((id) => fakeNote({ id, title: `Note ${id}` }));
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText('Note note-2')).toBeInTheDocument());
+
+    const chipButton = screen.getByRole('button', { name: /show why this connects to Note note-2/i });
+    fireEvent.click(chipButton);
+    await waitFor(() =>
+      expect(
+        screen.getByText('Sarah — Both notes circle the same wilderness motif.'),
+      ).toBeInTheDocument(),
     );
   });
 

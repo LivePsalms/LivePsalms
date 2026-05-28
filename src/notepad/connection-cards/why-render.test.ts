@@ -19,4 +19,12 @@ describe('prefixWhyWithName', () => {
   it('handles empty why string with null name', () => {
     expect(prefixWhyWithName('', null)).toBe('');
   });
+
+  it('handles undefined why with non-null name (returns prefix only)', () => {
+    expect(prefixWhyWithName(undefined, 'Sarah')).toBe('Sarah — ');
+  });
+
+  it('handles undefined why with null name (returns empty string)', () => {
+    expect(prefixWhyWithName(undefined, null)).toBe('');
+  });
 });
