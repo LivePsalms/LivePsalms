@@ -6,10 +6,10 @@
 
 export type InputType = 'document' | 'query';
 
-const VOYAGE_BASE = 'https://api.voyageai.com/v1/embeddings';
-const MODEL = 'voyage-3-large';
-const DIM = 1024;
-const BATCH_MAX = 64;
+const ENDPOINT = 'https://api.voyageai.com/v1/contextualizedembeddings';
+export const MODEL = 'voyage-context-3';
+export const DIM = 512;
+const MAX_DOCS_PER_REQUEST = 64;
 const MAX_RETRIES = 3;
 
 export interface VoyageDeps {
@@ -21,29 +21,33 @@ export interface VoyageDeps {
 const defaultSleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 export interface EmbedDocumentsResult {
-  vectors: number[][];
+  // Outer index = document, inner index = chunk-within-document.
+  vectors: number[][][];
   totalTokens: number;
 }
 
-export async function embedDocuments(texts: string[], deps: VoyageDeps): Promise<EmbedDocumentsResult> {
-  return embedBatched(texts, 'document', deps);
+export async function embedDocuments(
+  chunksPerDoc: string[][],
+  deps: VoyageDeps,
+): Promise<EmbedDocumentsResult> {
+  return embedBatched(chunksPerDoc, 'document', deps);
 }
 
 export async function embedQuery(text: string, deps: VoyageDeps): Promise<number[]> {
-  const { vectors } = await embedBatched([text], 'query', deps);
-  return vectors[0];
+  const { vectors } = await embedBatched([[text]], 'query', deps);
+  return vectors[0][0];
 }
 
 async function embedBatched(
-  texts: string[],
+  chunksPerDoc: string[][],
   inputType: InputType,
   deps: VoyageDeps,
 ): Promise<EmbedDocumentsResult> {
-  if (texts.length === 0) return { vectors: [], totalTokens: 0 };
-  const vectors: number[][] = [];
+  if (chunksPerDoc.length === 0) return { vectors: [], totalTokens: 0 };
+  const vectors: number[][][] = [];
   let totalTokens = 0;
-  for (let i = 0; i < texts.length; i += BATCH_MAX) {
-    const batch = texts.slice(i, i + BATCH_MAX);
+  for (let i = 0; i < chunksPerDoc.length; i += MAX_DOCS_PER_REQUEST) {
+    const batch = chunksPerDoc.slice(i, i + MAX_DOCS_PER_REQUEST);
     const result = await embedOnce(batch, inputType, deps, 0);
     vectors.push(...result.vectors);
     totalTokens += result.totalTokens;
@@ -52,13 +56,13 @@ async function embedBatched(
 }
 
 async function embedOnce(
-  batch: string[],
+  batch: string[][],
   inputType: InputType,
   deps: VoyageDeps,
-  attempt = 0,
+  attempt: number,
 ): Promise<EmbedDocumentsResult> {
   const sleep = deps.sleep ?? defaultSleep;
-  const res = await deps.fetch(VOYAGE_BASE, {
+  const res = await deps.fetch(ENDPOINT, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${deps.apiKey}`,
@@ -66,7 +70,7 @@ async function embedOnce(
     },
     body: JSON.stringify({
       model: MODEL,
-      input: batch,
+      inputs: batch,
       input_type: inputType,
       output_dimension: DIM,
       output_dtype: 'float',
@@ -75,9 +79,12 @@ async function embedOnce(
   });
 
   if (res.ok) {
-    const json = await res.json() as { data: Array<{ embedding: number[] }>; usage?: { total_tokens?: number } };
+    const json = await res.json() as {
+      data: Array<{ embeddings: number[][] }>;
+      usage?: { total_tokens?: number };
+    };
     return {
-      vectors: json.data.map(d => d.embedding),
+      vectors: json.data.map(d => d.embeddings),
       totalTokens: json.usage?.total_tokens ?? 0,
     };
   }
