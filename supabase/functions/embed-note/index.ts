@@ -23,7 +23,7 @@ import { embedDocuments } from '../_shared/voyage.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
 import {
   claimAndRun, processJobs,
-  type Job, type DbOps, type ClaimFn, type EmbedFn,
+  type Job, type DbOps, type ClaimFn, type EmbedFn, type ReplaceArgs,
 } from '../_shared/process-job.ts';
 
 // CLAIM_LIMIT is the max jobs drained per Edge Function invocation. With pg_cron
@@ -42,7 +42,7 @@ serve(async (req) => {
 
   const supabase = serviceClient();
   const ops = buildOps(supabase);
-  const embed: EmbedFn = async (texts) => embedDocuments(texts, { apiKey, fetch });
+  const embed: EmbedFn = async (chunksPerDoc) => embedDocuments(chunksPerDoc, { apiKey, fetch });
 
   if (body.sweep) {
     const claim: ClaimFn = async (limit) => claimQueued(supabase, limit);
@@ -88,18 +88,22 @@ function buildOps(supabase: ReturnType<typeof serviceClient>): DbOps {
         .from('lamplight_embeddings')
         .select('content_hash')
         .eq('user_id', userId).eq('source_type', 'note').eq('source_id', noteId)
-        .maybeSingle();
+        .limit(1).maybeSingle();
       if (error) throw error;
       return data?.content_hash ?? null;
     },
-    async upsertEmbedding(row) {
-      const { error } = await supabase.from('lamplight_embeddings').upsert({
-        user_id: row.user_id,
-        source_type: row.source_type,
-        source_id: row.source_id,
-        content_hash: row.content_hash,
-        embedding: row.vector,
-      }, { onConflict: 'user_id,source_type,source_id' });
+    async replaceNoteEmbeddings(args: ReplaceArgs) {
+      const { error } = await supabase.rpc('replace_note_embeddings', {
+        p_user_id: args.userId,
+        p_note_id: args.noteId,
+        p_content_hash: args.contentHash,
+        p_chunks: args.chunks.map(c => ({
+          chunk_index: c.chunk_index,
+          chunk_text: c.chunk_text,
+          embedding: vectorLiteral(c.embedding),
+          metadata: c.metadata ?? {},
+        })),
+      });
       if (error) throw error;
     },
     async markDone(jobId) {
@@ -128,4 +132,13 @@ function buildOps(supabase: ReturnType<typeof serviceClient>): DbOps {
       await recordLamplightUsage(supabase, row);
     },
   };
+}
+
+// pgvector accepts vector literals as strings in the form "[v1,v2,v3]".
+// The RPC casts via (c->>'embedding')::extensions.vector(512), which extracts
+// the JSON field as text then lets pgvector parse its own bracketed literal.
+// Sending a number[] as JSON would arrive as a native JSON array and pgvector
+// would reject the cast — hence we serialize here to the text-literal format.
+function vectorLiteral(v: number[]): string {
+  return `[${v.join(',')}]`;
 }
