@@ -204,6 +204,20 @@ describe('decideFirstLoadActions — returning user', () => {
     ).toEqual([{ kind: 'greet', firstName: 'Grace' }]);
   });
 
+  it('emits greet with firstName: null when user has no name or email', () => {
+    const user = makeUser({ id: 'u1', email: undefined, user_metadata: {} });
+    expect(
+      decideFirstLoadActions({
+        user,
+        authLoading: false,
+        profileLoading: false,
+        hasBeenWelcomed: true,
+        hasBeenGreetedToday: false,
+        localNoteCount: 0,
+      }),
+    ).toEqual([{ kind: 'greet', firstName: null }]);
+  });
+
   it('welcomed and already greeted today: emits no actions', () => {
     const user = makeUser({ id: 'u1', email: 'a@b.com' });
     expect(
