@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,8 @@ import type {
   LamplightTradition,
 } from '@/notepad/storage/lamplight-adapter';
 import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
+import { EntitlementBlock } from './EntitlementBlock';
+import type { LamplightEntitlement, PromoConfig } from '@/notepad/storage/lamplight-adapter';
 
 export interface LamplightSettingsSectionProps {
   adapter: LamplightAdapter;
@@ -28,6 +30,27 @@ const TRADITIONS: LamplightTradition[] = ['evangelical', 'catholic', 'orthodox',
 export function LamplightSettingsSection({ adapter, userId }: LamplightSettingsSectionProps) {
   const { settings, upsert, deleteAll, isLoading } = useLamplightSettings({ adapter, userId });
   const [confirmTurnOff, setConfirmTurnOff] = useState(false);
+
+  const [entitlement, setEntitlement] = useState<LamplightEntitlement | null>(null);
+  const [promo, setPromo] = useState<PromoConfig>({ promoActive: false, promoEndsAt: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [ent, p] = await Promise.all([
+          adapter.getEntitlement(userId),
+          adapter.getPromoConfig(),
+        ]);
+        if (cancelled) return;
+        setEntitlement(ent);
+        setPromo(p);
+      } catch {
+        // Best-effort — block just won't render if these fail.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [adapter, userId]);
 
   if (isLoading) {
     return (
@@ -71,6 +94,8 @@ export function LamplightSettingsSection({ adapter, userId }: LamplightSettingsS
       >
         Lamplight
       </h3>
+
+      <EntitlementBlock entitlement={entitlement} promo={promo} />
 
       <label className="flex items-center gap-2 mb-4 text-xs cursor-pointer">
         <input
