@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { useConnectionCards } from '../../hooks/useConnectionCards';
+import { useAuthSession } from '@/auth/context/useAuthSession';
+import { firstNameOf } from '../../first-load/notepad-first-load';
+import { sanitizeFirstName } from '../../utils/personalization';
+import { prefixWhyWithName } from '../../connection-cards/why-render';
 import type { LamplightAdapter } from '../../storage/lamplight-adapter';
 import type { Note } from '../../types';
 
@@ -27,6 +31,8 @@ export function ConnectionCardsStrip({
     totalNoteCount,
     loadNeighborNotes,
   });
+  const { user } = useAuthSession();
+  const firstName = user ? sanitizeFirstName(firstNameOf(user)) : null;
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
 
   // The strip is invisible for every state except 'ready' — no empty states,
@@ -79,7 +85,7 @@ export function ConnectionCardsStrip({
               }}
               data-cached={activeCard.why.cached}
             >
-              {activeCard.why.text}
+              {prefixWhyWithName(activeCard.why.text, firstName)}
             </p>
           )}
           {activeCard.why.phase === 'error' && (

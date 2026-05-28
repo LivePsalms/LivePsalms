@@ -5,6 +5,12 @@ import { ConnectionCardsStrip } from './ConnectionCardsStrip';
 import { FakeLamplightAdapter } from '../../storage/fake-lamplight-adapter';
 import type { Note } from '../../types';
 
+// Stub useAuthSession so tests don't require an AuthProvider in scope.
+// The component renders with no user → firstName = null → why text bare.
+vi.mock('@/auth/context/useAuthSession', () => ({
+  useAuthSession: () => ({ user: null, loading: false }),
+}));
+
 afterEach(cleanup);
 
 function makeContent(text: string): string {
