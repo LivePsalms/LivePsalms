@@ -89,4 +89,49 @@ export interface LamplightAdapter {
   hasNoteEmbedding(noteId: string): Promise<boolean>;
   /** Invokes lamplight-generate Edge Function with kind='connection_card_why'. */
   generateConnectionWhy(sourceNoteId: string, relatedNoteId: string): Promise<ConnectionWhyResult>;
+  isLamplightAdmin(): Promise<boolean>;
+  adminListJobs(filters: AdminJobFilters): Promise<AdminJobRow[]>;
+  adminJobCounts(sinceIso: string): Promise<AdminJobCounts>;
+  adminRequeueJob(jobId: string): Promise<AdminJobRow>;
+  adminRequeueAllFailed(kind?: string, limit?: number): Promise<number>;
+  adminUsageTop(windowDays: number, limit?: number): Promise<AdminUsageRow[]>;
+}
+
+export interface AdminJobFilters {
+  status?: Array<'queued' | 'running' | 'done' | 'failed'>;
+  kind?: string[];
+  userSearch?: string;
+  since?: string; // ISO timestamp
+  limit?: number;
+}
+
+export interface AdminJobRow {
+  id: string;
+  userId: string;
+  email: string | null;
+  kind: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  attempts: number;
+  payload: unknown;
+  scheduledAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  error: string | null;
+}
+
+export interface AdminJobCounts {
+  queued: number;
+  running: number;
+  done: number;
+  failed: number;
+  since: string;
+}
+
+export interface AdminUsageRow {
+  userId: string;
+  email: string | null;
+  tokensIn: number;
+  tokensOut: number;
+  calls: number;
+  errors: number;
 }

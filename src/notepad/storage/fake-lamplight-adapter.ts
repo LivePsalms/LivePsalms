@@ -6,6 +6,10 @@ import type {
   DailyDevotionGenerateResult,
   ConnectionNeighbor,
   ConnectionWhyResult,
+  AdminJobFilters,
+  AdminJobRow,
+  AdminJobCounts,
+  AdminUsageRow,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
 
@@ -100,6 +104,20 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     return { ...this.promo };
   }
 
+  // Admin fake state.
+  public isAdmin = false;
+  public usageRows: Array<{
+    userId: string;
+    model: string;
+    artifactKind: string;
+    tokensIn: number;
+    tokensOut: number;
+    status: 'ok' | 'error';
+    errorCode?: string | null;
+    createdAt: string;
+  }> = [];
+  public adminJobs: AdminJobRow[] = [];
+
   // ── Connection Cards ────────────────────────────────────────────────
   private connectionNeighbors = new Map<string, ConnectionNeighbor[]>();
   private noteEmbeddingsPresent = new Set<string>();
@@ -159,5 +177,93 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     const why = `Fake connection between ${sourceNoteId} and ${relatedNoteId}.`;
     this.connectionWhyCache.set(key, why);
     return { ok: true, why, cached: false };
+  }
+
+  async isLamplightAdmin(): Promise<boolean> {
+    return this.isAdmin;
+  }
+
+  async adminListJobs(filters: AdminJobFilters): Promise<AdminJobRow[]> {
+    const status = filters.status ?? ['failed'];
+    const since = filters.since ? new Date(filters.since).getTime() : 0;
+    return this.adminJobs.filter((j) => {
+      if (!status.includes(j.status)) return false;
+      if (filters.kind && !filters.kind.includes(j.kind)) return false;
+      if (filters.userSearch) {
+        const q = filters.userSearch.toLowerCase();
+        const matchEmail = (j.email ?? '').toLowerCase().includes(q);
+        const matchId = j.userId === filters.userSearch;
+        if (!matchEmail && !matchId) return false;
+      }
+      if (since && new Date(j.scheduledAt).getTime() < since) return false;
+      return true;
+    }).slice(0, filters.limit ?? 200);
+  }
+
+  async adminJobCounts(sinceIso: string): Promise<AdminJobCounts> {
+    const sinceMs = new Date(sinceIso).getTime();
+    const inWindow = this.adminJobs.filter(j => new Date(j.scheduledAt).getTime() >= sinceMs);
+    const by = (s: AdminJobRow['status']) => inWindow.filter(j => j.status === s).length;
+    return {
+      queued: by('queued'),
+      running: by('running'),
+      done: by('done'),
+      failed: by('failed'),
+      since: sinceIso,
+    };
+  }
+
+  async adminRequeueJob(jobId: string): Promise<AdminJobRow> {
+    const idx = this.adminJobs.findIndex(j => j.id === jobId);
+    if (idx < 0) throw new Error(`job not found: ${jobId}`);
+    const next: AdminJobRow = {
+      ...this.adminJobs[idx],
+      status: 'queued',
+      attempts: 0,
+      error: null,
+      scheduledAt: new Date().toISOString(),
+      startedAt: null,
+      finishedAt: null,
+    };
+    this.adminJobs[idx] = next;
+    return next;
+  }
+
+  async adminRequeueAllFailed(kind?: string, limit?: number): Promise<number> {
+    const cap = Math.min(Math.max(1, limit ?? 100), 100);
+    const candidates = this.adminJobs
+      .filter(j => j.status === 'failed' && (!kind || j.kind === kind))
+      .slice(0, cap);
+    candidates.forEach((j) => {
+      const i = this.adminJobs.findIndex(x => x.id === j.id);
+      this.adminJobs[i] = {
+        ...j,
+        status: 'queued',
+        attempts: 0,
+        error: null,
+        scheduledAt: new Date().toISOString(),
+        startedAt: null,
+        finishedAt: null,
+      };
+    });
+    return candidates.length;
+  }
+
+  async adminUsageTop(windowDays: number, limit?: number): Promise<AdminUsageRow[]> {
+    const cutoff = Date.now() - Math.max(1, windowDays) * 24 * 3600 * 1000;
+    const byUser = new Map<string, { tokensIn: number; tokensOut: number; calls: number; errors: number }>();
+    for (const row of this.usageRows) {
+      if (new Date(row.createdAt).getTime() < cutoff) continue;
+      const cur = byUser.get(row.userId) ?? { tokensIn: 0, tokensOut: 0, calls: 0, errors: 0 };
+      cur.tokensIn += row.tokensIn;
+      cur.tokensOut += row.tokensOut;
+      cur.calls += 1;
+      if (row.status === 'error') cur.errors += 1;
+      byUser.set(row.userId, cur);
+    }
+    return Array.from(byUser.entries())
+      .map(([userId, agg]) => ({ userId, email: null, ...agg }))
+      .sort((a, b) => (b.tokensIn + b.tokensOut) - (a.tokensIn + a.tokensOut))
+      .slice(0, limit ?? 50);
   }
 }

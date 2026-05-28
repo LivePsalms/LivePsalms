@@ -11,6 +11,10 @@ import type {
   DailyDevotionGenerateResult,
   ConnectionNeighbor,
   ConnectionWhyResult,
+  AdminJobFilters,
+  AdminJobRow,
+  AdminJobCounts,
+  AdminUsageRow,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
 
@@ -244,5 +248,102 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       grantedAt: (row.granted_at as string) ?? null,
       expiresAt: (row.expires_at as string) ?? null,
     };
+  }
+
+  async isLamplightAdmin(): Promise<boolean> {
+    const { data, error } = await this.#client.rpc('is_lamplight_admin');
+    if (error) return false;
+    return Boolean(data);
+  }
+
+  async adminListJobs(filters: AdminJobFilters): Promise<AdminJobRow[]> {
+    // Omit `p_since` when not provided so the RPC's own default (7 days) fires
+    // rather than duplicating it on the client. Sending null would make the
+    // server's `scheduled_at >= p_since` predicate match zero rows.
+    const params: Record<string, unknown> = {
+      p_status: filters.status ?? ['failed'],
+      p_kind: filters.kind ?? null,
+      p_user_search: filters.userSearch ?? null,
+      p_limit: filters.limit ?? 200,
+    };
+    if (filters.since !== undefined) {
+      params.p_since = filters.since;
+    }
+    const { data, error } = await this.#client.rpc('admin_list_lamplight_jobs', params);
+    if (error) throw error;
+    return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: r.id as string,
+      userId: r.user_id as string,
+      email: (r.email as string) ?? null,
+      kind: r.kind as string,
+      status: r.status as AdminJobRow['status'],
+      attempts: r.attempts as number,
+      payload: r.payload,
+      scheduledAt: r.scheduled_at as string,
+      startedAt: (r.started_at as string) ?? null,
+      finishedAt: (r.finished_at as string) ?? null,
+      error: (r.error as string) ?? null,
+    }));
+  }
+
+  async adminJobCounts(sinceIso: string): Promise<AdminJobCounts> {
+    const { data, error } = await this.#client.rpc('admin_lamplight_job_counts', {
+      p_since: sinceIso,
+    });
+    if (error) throw error;
+    const obj = (data ?? {}) as Record<string, unknown>;
+    return {
+      queued: Number(obj.queued ?? 0),
+      running: Number(obj.running ?? 0),
+      done: Number(obj.done ?? 0),
+      failed: Number(obj.failed ?? 0),
+      since: String(obj.since ?? sinceIso),
+    };
+  }
+
+  async adminRequeueJob(jobId: string): Promise<AdminJobRow> {
+    const { data, error } = await this.#client.rpc('admin_requeue_lamplight_job', {
+      p_job_id: jobId,
+    });
+    if (error) throw error;
+    const r = data as Record<string, unknown>;
+    return {
+      id: r.id as string,
+      userId: r.user_id as string,
+      email: null,
+      kind: r.kind as string,
+      status: r.status as AdminJobRow['status'],
+      attempts: r.attempts as number,
+      payload: r.payload,
+      scheduledAt: r.scheduled_at as string,
+      startedAt: (r.started_at as string) ?? null,
+      finishedAt: (r.finished_at as string) ?? null,
+      error: (r.error as string) ?? null,
+    };
+  }
+
+  async adminRequeueAllFailed(kind?: string, limit?: number): Promise<number> {
+    const { data, error } = await this.#client.rpc('admin_requeue_failed_lamplight_jobs', {
+      p_kind: kind ?? null,
+      p_limit: limit ?? 100,
+    });
+    if (error) throw error;
+    return Number(data ?? 0);
+  }
+
+  async adminUsageTop(windowDays: number, limit?: number): Promise<AdminUsageRow[]> {
+    const { data, error } = await this.#client.rpc('admin_lamplight_usage_top', {
+      p_window_days: windowDays,
+      p_limit: limit ?? 50,
+    });
+    if (error) throw error;
+    return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      userId: r.user_id as string,
+      email: (r.email as string) ?? null,
+      tokensIn: Number(r.tokens_in ?? 0),
+      tokensOut: Number(r.tokens_out ?? 0),
+      calls: Number(r.calls ?? 0),
+      errors: Number(r.errors ?? 0),
+    }));
   }
 }
