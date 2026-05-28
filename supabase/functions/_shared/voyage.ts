@@ -74,7 +74,6 @@ async function embedOnce(
       input_type: inputType,
       output_dimension: DIM,
       output_dtype: 'float',
-      truncation: true,
     }),
   });
 

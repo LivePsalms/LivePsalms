@@ -31,7 +31,7 @@ describe('voyage embed (contextualized)', () => {
     expect(body.input_type).toBe('document');
     expect(body.output_dimension).toBe(512);
     expect(body.output_dtype).toBe('float');
-    expect(body.truncation).toBe(true);
+    expect(body.truncation).toBeUndefined();
     expect(calls[0].init.headers).toMatchObject({ Authorization: 'Bearer k' });
   });
 
