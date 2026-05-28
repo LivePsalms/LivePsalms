@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { LamplightSettingsSection } from './components/LamplightSettingsSection';
+import { AdminEntryLink } from './components/AdminEntryLink';
 import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
 import { supabase as supabaseClient } from '@/lib/supabase';
 
@@ -228,6 +229,8 @@ export function ProfilePage() {
             </p>
           </div>
         </div>
+
+        <AdminEntryLink />
 
         {/* Tier Display */}
         <div style={sectionStyle}>
