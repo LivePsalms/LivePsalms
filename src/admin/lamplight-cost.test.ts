@@ -6,6 +6,10 @@ describe('lamplight-cost', () => {
     expect(estCostCents('voyage-3-large', 1_000_000, 0)).toBe(18);
   });
 
+  it('voyage-context-3: 1M in tokens → 18 cents', () => {
+    expect(estCostCents('voyage-context-3', 1_000_000, 0)).toBe(18);
+  });
+
   it('claude-sonnet-4-6: 1M in + 500k out → 1050 cents', () => {
     expect(estCostCents('claude-sonnet-4-6', 1_000_000, 500_000)).toBe(1050);
   });

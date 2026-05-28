@@ -2,6 +2,7 @@
 // Update when Voyage or Anthropic adjust rates.
 const PRICE_PER_M_TOKENS_CENTS: Record<string, { in: number; out: number }> = {
   'voyage-3-large':             { in: 18,   out: 0    },  // $0.18 / 1M
+  'voyage-context-3':           { in: 18,   out: 0    },  // $0.18 / 1M — cross-check against voyageai.com/pricing at deploy
   'claude-haiku-4-5':           { in: 100,  out: 500  },  // verify against Anthropic pricing page before merge
   'claude-haiku-4-5-20251001':  { in: 100,  out: 500  },  // version-suffixed alias used by the pipelines
   'claude-sonnet-4-6':          { in: 300,  out: 1500 },
