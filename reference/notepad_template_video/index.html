@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notepad — Cinematic Compilation</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #notepad-cinema {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #notepad-cinema .stage {
+      position: absolute;
+      inset: 0;
+    }
+
+    #notepad-cinema .clip {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      /* will-change tells the compositor these will be filter/opacity-animated.
+         Keeps the blur on the GPU and avoids snap-to-pixel artifacts. */
+      will-change: filter, opacity;
+      backface-visibility: hidden;
+      transform: translateZ(0);
+      /* Initial state — gsap.set re-asserts this at the clip's data-start
+         (see timeline below). Without it, frame 0 of any non-active clip would
+         briefly flash before its setter fires. */
+      opacity: 0;
+      filter: blur(18px);
+    }
+
+    /* Whisper-quiet vignette. Inner edge sits just inside the frame so the
+       footage stays full-bleed; the falloff lives in the outer 8% only.
+       Premium brand-film texture without a "lens" feel. */
+    #notepad-cinema .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse 92% 88% at 50% 50%,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0) 70%,
+        rgba(0, 0, 0, 0.18) 92%,
+        rgba(0, 0, 0, 0.32) 100%
+      );
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="notepad-cinema"
+       data-composition-id="notepad-cinema"
+       data-start="0"
+       data-duration="18.482"
+       data-width="1920"
+       data-height="1080">
+
+    <div class="stage">
+      <video id="clip-1" class="clip" data-start="0" data-duration="5.773" data-track-index="0" src="Template_video.mp4" muted playsinline></video>
+      <video id="clip-2" class="clip" data-start="4.373" data-duration="5.188" data-track-index="1" src="template_video2.mp4" muted playsinline></video>
+      <video id="clip-3" class="clip" data-start="8.161" data-duration="4.900" data-track-index="0" src="template_video3.mp4" muted playsinline></video>
+      <video id="clip-4" class="clip" data-start="11.661" data-duration="4.647" data-track-index="1" src="template_video4.mp4" muted playsinline></video>
+      <video id="clip-5" class="clip" data-start="14.908" data-duration="3.574" data-track-index="0" src="template_video5.mp4" muted playsinline></video>
+    </div>
+
+    <div class="vignette"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({ paused: true });
+
+      /* Emil Kowalski's strong ease-in-out is cubic-bezier(0.77, 0, 0.175, 1).
+         GSAP's `power3.inOut` is the closest named curve; `power4.inOut` is
+         even tighter to that bezier but lands a touch too mechanical here.
+         For a cinematic "controlled exhale" we want generous deceleration on
+         both ends, so power3.inOut is the right adverb. */
+      const easeBreath  = "power3.inOut";   // the crossfade itself
+      const easeOpening = "power3.out";     // first frame emerging from black
+      const easeClosing = "power2.inOut";   // final dissolve to black
+
+      const PEAK_BLUR    = 18;   // px — Emil's <20px Safari ceiling
+      const OPEN_BLUR    = 12;   // softer opening so the first clip "arrives"
+      const XFADE        = 1.4;  // seconds — long enough to read as a breath
+      const OPEN_REVEAL  = 1.1;
+      const CLOSE_DUR    = 1.0;
+
+      /* Clip windows (seconds):
+         clip-1:  0.000 → 5.773
+         clip-2:  4.373 → 9.561   (overlap with 1: 4.373–5.773)
+         clip-3:  8.161 → 13.061  (overlap with 2: 8.161–9.561)
+         clip-4: 11.661 → 16.308  (overlap with 3: 11.661–13.061)
+         clip-5: 14.908 → 18.482  (overlap with 4: 14.908–16.308)
+      */
+
+      /* The wider rules forbid gsap.set() on later-scene elements at t=0
+         because they may not be in the DOM yet. Setting inside the timeline
+         at each clip's data-start gives the framework time to mount the
+         <video> first, and matches the CSS initial state. */
+      tl.set("#clip-1", { opacity: 0, filter: `blur(${OPEN_BLUR}px)` }, 0);
+      tl.set("#clip-2", { opacity: 0, filter: `blur(${PEAK_BLUR}px)` }, 4.373);
+      tl.set("#clip-3", { opacity: 0, filter: `blur(${PEAK_BLUR}px)` }, 8.161);
+      tl.set("#clip-4", { opacity: 0, filter: `blur(${PEAK_BLUR}px)` }, 11.661);
+      tl.set("#clip-5", { opacity: 0, filter: `blur(${PEAK_BLUR}px)` }, 14.908);
+
+      /* Opening — clip 1 arrives through soft focus.
+         Slight 0.15s offset honors the rule "don't start at t=0" and gives
+         the renderer one frame to confirm the first video is decoded. */
+      tl.to("#clip-1",
+            { opacity: 1, filter: "blur(0px)", duration: OPEN_REVEAL, ease: easeOpening },
+            0.15);
+
+      /* Transition 1 → 2 (4.373s — 5.773s).
+         Outgoing softens and dissolves. Incoming emerges through that softness
+         and resolves. Same ease on both sides keeps the breath symmetric. */
+      tl.to("#clip-1",
+            { opacity: 0, filter: `blur(${PEAK_BLUR}px)`, duration: XFADE, ease: easeBreath },
+            4.373);
+      tl.to("#clip-2",
+            { opacity: 1, filter: "blur(0px)", duration: XFADE, ease: easeBreath },
+            4.373);
+
+      /* Transition 2 → 3 (8.161s — 9.561s) */
+      tl.to("#clip-2",
+            { opacity: 0, filter: `blur(${PEAK_BLUR}px)`, duration: XFADE, ease: easeBreath },
+            8.161);
+      tl.to("#clip-3",
+            { opacity: 1, filter: "blur(0px)", duration: XFADE, ease: easeBreath },
+            8.161);
+
+      /* Transition 3 → 4 (11.661s — 13.061s) */
+      tl.to("#clip-3",
+            { opacity: 0, filter: `blur(${PEAK_BLUR}px)`, duration: XFADE, ease: easeBreath },
+            11.661);
+      tl.to("#clip-4",
+            { opacity: 1, filter: "blur(0px)", duration: XFADE, ease: easeBreath },
+            11.661);
+
+      /* Transition 4 → 5 (14.908s — 16.308s) */
+      tl.to("#clip-4",
+            { opacity: 0, filter: `blur(${PEAK_BLUR}px)`, duration: XFADE, ease: easeBreath },
+            14.908);
+      tl.to("#clip-5",
+            { opacity: 1, filter: "blur(0px)", duration: XFADE, ease: easeBreath },
+            14.908);
+
+      /* Closing — final exhale to black on clip-5 only. This is the one
+         place exit animations are allowed (final scene exception).
+         Starts 1.0s before composition end so the dissolve lands exactly on
+         the final frame. */
+      tl.to("#clip-5",
+            { opacity: 0, filter: `blur(${OPEN_BLUR}px)`, duration: CLOSE_DUR, ease: easeClosing },
+            18.482 - CLOSE_DUR);
+
+      window.__timelines["notepad-cinema"] = tl;
+    </script>
+  </div>
+</body>
+</html>

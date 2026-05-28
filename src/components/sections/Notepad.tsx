@@ -15,6 +15,7 @@ import { GraphPane } from './notepad/GraphPane';
 import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
 import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
 import { LamplightTabPanel } from '@/notepad/components/lamplight/LamplightTabPanel';
+import { ConnectionCardsStrip } from '@/notepad/components/lamplight/ConnectionCardsStrip';
 import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
 import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
 import { useLamplightEmbeddingTrigger } from '@/notepad/hooks/useLamplightEmbeddingTrigger';
@@ -201,18 +202,7 @@ function NotepadWorkspace() {
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (
-            <LamplightTabPanel
-              lamplightAdapter={lamplightAdapter}
-              activeNote={activeNote}
-              totalNoteCount={notes.length}
-              loadNeighborNotes={async (ids) =>
-                notes.filter((n) => ids.includes(n.id))
-              }
-              onOpenNote={(id) => {
-                collection.openNote(id);
-                setActiveTab('content');
-              }}
-            />
+            <LamplightTabPanel lamplightAdapter={lamplightAdapter} />
           )}
           {activeTab === 'lamplight' && !lamplightAdapter && (
             <div
@@ -223,6 +213,23 @@ function NotepadWorkspace() {
                 Lamplight unavailable — Supabase not configured.
               </p>
             </div>
+          )}
+
+          {/* Connection Cards strip — only on the Content tab, only when the
+              active note qualifies and has neighbors. The strip self-hides
+              for every other state (no empty-state placeholders here; the
+              Lamplight tab handles those for users who go looking). */}
+          {activeTab === 'content' && lamplightAdapter && user && (
+            <ConnectionCardsStrip
+              adapter={lamplightAdapter}
+              userId={user.id}
+              activeNote={activeNote}
+              totalNoteCount={notes.length}
+              loadNeighborNotes={async (ids) =>
+                notes.filter((n) => ids.includes(n.id))
+              }
+              onOpenNote={(id) => collection.openNote(id)}
+            />
           )}
         </main>
 
