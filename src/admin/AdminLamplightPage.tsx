@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useIsAdmin } from './hooks/useIsAdmin';
 import { useAdminJobCounts } from './hooks/useAdminJobCounts';
 import { useAdminFailedJobs } from './hooks/useAdminFailedJobs';
@@ -35,7 +36,6 @@ export function AdminLamplightPage() {
   const [sinceDays, setSinceDays] = useState(7);
   const [usageWindowDays, setUsageWindowDays] = useState(7);
 
-   
   const sinceIso = useMemo(
     // eslint-disable-next-line react-hooks/purity
     () => new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString(),
@@ -99,11 +99,13 @@ export function AdminLamplightPage() {
           if (supabaseClient) {
             supabaseClient.functions.invoke('embed-note', { body: { job_id: jobId } }).catch(() => {});
           }
+          toast.success('Job re-queued');
           await failed.refetch();
           await counts.refetch();
         }}
         onRetryAll={async () => {
           const n = await adapter.adminRequeueAllFailed(kindFilter || undefined);
+          toast.success(`Re-queued ${n} failed job${n === 1 ? '' : 's'}`);
           await failed.refetch();
           await counts.refetch();
           return n;

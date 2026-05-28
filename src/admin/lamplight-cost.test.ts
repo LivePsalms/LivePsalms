@@ -19,4 +19,9 @@ describe('lamplight-cost', () => {
     expect(formatCents(0)).toBe('$0.00');
     expect(formatCents(7)).toBe('$0.07');
   });
+
+  it('claude-haiku-4-5-20251001 alias resolves to the same rates as claude-haiku-4-5', () => {
+    expect(estCostCents('claude-haiku-4-5-20251001', 1_000_000, 500_000))
+      .toBe(estCostCents('claude-haiku-4-5', 1_000_000, 500_000));
+  });
 });
