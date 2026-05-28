@@ -55,11 +55,55 @@ export function ConnectionCardsStrip({
       className="border-t px-4 py-3"
       style={{ borderColor: 'var(--pale-stone)', background: 'var(--plaster)' }}
     >
+      {activeCard && (
+        <div
+          className="mb-2 border rounded px-3 py-2"
+          style={{ borderColor: 'var(--pale-stone)', background: 'var(--alabaster)' }}
+        >
+          {activeCard.why.phase === 'loading' && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-xs"
+              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Lighting…
+            </p>
+          )}
+          {activeCard.why.phase === 'shown' && (
+            <p
+              className="text-sm italic"
+              style={{
+                color: 'var(--deep-umber)',
+                fontFamily: 'Cormorant Garamond, serif',
+              }}
+              data-cached={activeCard.why.cached}
+            >
+              {activeCard.why.text}
+            </p>
+          )}
+          {activeCard.why.phase === 'error' && (
+            <div
+              className="text-xs"
+              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              <p className="mb-1">Couldn't read this connection.</p>
+              <button
+                onClick={() => retryWhy(activeCard.relatedNoteId)}
+                className="underline cursor-pointer"
+                style={{ color: 'var(--deep-umber)' }}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <p
         className="text-[10px] uppercase tracking-wider mb-2"
         style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
       >
-        Connections · {cards.length}
+        Connection Cards
       </p>
       <div className="flex gap-2 overflow-x-auto pb-1" role="list">
         {cards.map((c) => {
@@ -111,50 +155,6 @@ export function ConnectionCardsStrip({
           );
         })}
       </div>
-      {activeCard && (
-        <div
-          className="mt-2 border rounded px-3 py-2"
-          style={{ borderColor: 'var(--pale-stone)', background: 'var(--alabaster)' }}
-        >
-          {activeCard.why.phase === 'loading' && (
-            <p
-              role="status"
-              aria-live="polite"
-              className="text-xs"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-            >
-              Lighting…
-            </p>
-          )}
-          {activeCard.why.phase === 'shown' && (
-            <p
-              className="text-sm italic"
-              style={{
-                color: 'var(--deep-umber)',
-                fontFamily: 'Cormorant Garamond, serif',
-              }}
-              data-cached={activeCard.why.cached}
-            >
-              {activeCard.why.text}
-            </p>
-          )}
-          {activeCard.why.phase === 'error' && (
-            <div
-              className="text-xs"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-            >
-              <p className="mb-1">Couldn't read this connection.</p>
-              <button
-                onClick={() => retryWhy(activeCard.relatedNoteId)}
-                className="underline cursor-pointer"
-                style={{ color: 'var(--deep-umber)' }}
-              >
-                Try again
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }

@@ -120,7 +120,7 @@ describe('ConnectionCardsStrip', () => {
         onOpenNote={() => {}}
       />,
     );
-    await waitFor(() => expect(screen.getByText(/Connections · 2/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Connection Cards/i)).toBeInTheDocument());
     expect(screen.getByText('Note note-2')).toBeInTheDocument();
     expect(screen.getByText('Note note-3')).toBeInTheDocument();
   });
