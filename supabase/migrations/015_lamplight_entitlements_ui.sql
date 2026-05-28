@@ -220,3 +220,53 @@ $$;
 
 revoke execute on function public.admin_requeue_failed_lamplight_jobs(text, int) from public, anon;
 grant  execute on function public.admin_requeue_failed_lamplight_jobs(text, int) to authenticated;
+
+-- ── admin_lamplight_usage_top ────────────────────────────────────────────
+create or replace function public.admin_lamplight_usage_top(
+  p_window_days int default 7,
+  p_limit int default 50
+)
+returns table (
+  user_id uuid,
+  email text,
+  tokens_in bigint,
+  tokens_out bigint,
+  calls bigint,
+  errors bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_lamplight_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select uu.user_id,
+         u.email::text,
+         uu.tokens_in,
+         uu.tokens_out,
+         uu.calls,
+         uu.errors
+  from (
+    select user_id,
+           sum(tokens_in)::bigint  as tokens_in,
+           sum(tokens_out)::bigint as tokens_out,
+           count(*)::bigint        as calls,
+           count(*) filter (where status = 'error')::bigint as errors
+    from public.lamplight_usage
+    where created_at >= now() - make_interval(days => greatest(1, p_window_days))
+    group by user_id
+    order by sum(tokens_in) + sum(tokens_out) desc
+    limit greatest(1, least(p_limit, 200))
+  ) uu
+  left join auth.users u on u.id = uu.user_id
+  order by uu.tokens_in + uu.tokens_out desc;
+end;
+$$;
+
+revoke execute on function public.admin_lamplight_usage_top(int, int) from public, anon;
+grant  execute on function public.admin_lamplight_usage_top(int, int) to authenticated;

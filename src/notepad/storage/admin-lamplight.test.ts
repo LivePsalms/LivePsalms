@@ -234,4 +234,34 @@ maybeDescribe('Lamplight admin RPCs (integration)', () => {
 
     await svc.from('lamplight_jobs').delete().eq('kind', fakeKind);
   });
+
+  it('admin_lamplight_usage_top aggregates correctly; non-admin raises', async () => {
+    const svc = serviceClient();
+    const tag = `usage-top-${Date.now()}`;
+    await svc.from('lamplight_usage').insert([
+      { user_id: userA.userId, model: 'voyage-3-large', artifact_kind: tag,
+        tokens_in: 100, tokens_out: 0, status: 'ok' },
+      { user_id: userA.userId, model: 'claude-sonnet-4-6', artifact_kind: tag,
+        tokens_in: 50, tokens_out: 30, status: 'ok' },
+      { user_id: userA.userId, model: 'voyage-3-large', artifact_kind: tag,
+        tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'voyage_429' },
+    ]);
+
+    const { data, error } = await admin.client.rpc('admin_lamplight_usage_top', {
+      p_window_days: 7, p_limit: 200,
+    });
+    expect(error).toBeNull();
+    const rows = data as Array<{ user_id: string; tokens_in: number; tokens_out: number; calls: number; errors: number }>;
+    const mine = rows.find(r => r.user_id === userA.userId);
+    expect(mine).toBeTruthy();
+    expect(Number(mine!.tokens_in)).toBeGreaterThanOrEqual(150);
+    expect(Number(mine!.tokens_out)).toBeGreaterThanOrEqual(30);
+    expect(Number(mine!.errors)).toBeGreaterThanOrEqual(1);
+
+    const { error: nonAdmErr } = await userA.client.rpc('admin_lamplight_usage_top', {});
+    expect(nonAdmErr).not.toBeNull();
+    expect(nonAdmErr!.message).toMatch(/not authorized/);
+
+    await svc.from('lamplight_usage').delete().eq('artifact_kind', tag);
+  });
 });
