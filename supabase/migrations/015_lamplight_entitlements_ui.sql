@@ -50,3 +50,10 @@ alter table public.lamplight_usage enable row level security;
 create policy "Users can view own lamplight_usage"
   on public.lamplight_usage for select
   using (auth.uid() = user_id or public.is_lamplight_admin());
+
+-- ── lamplight_jobs: additive admin SELECT ────────────────────────────────
+-- Existing user-scoped policies (migration 008) remain. Postgres OR-merges
+-- permissive policies, so admins see all rows; non-admins still see only own.
+create policy "Admins can view all lamplight_jobs"
+  on public.lamplight_jobs for select
+  using (public.is_lamplight_admin());

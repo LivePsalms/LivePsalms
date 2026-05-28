@@ -102,4 +102,46 @@ maybeDescribe('Lamplight admin RPCs (integration)', () => {
     // Cleanup.
     await svc.from('lamplight_usage').delete().eq('artifact_kind', tag);
   });
+
+  it('admin can read another user\'s lamplight_jobs; non-admin cannot', async () => {
+    const svc = serviceClient();
+    const tag = `job-rls-${Date.now()}`;
+
+    // Insert a job owned by userA via service-role (bypasses RLS).
+    const { data: inserted, error: insErr } = await svc.from('lamplight_jobs').insert({
+      user_id: userA.userId,
+      kind: 'embedding_refresh',
+      status: 'failed',
+      payload: { note_id: tag, content_hash: 'h' },
+      attempts: 3,
+      error: 'voyage_500',
+      finished_at: new Date().toISOString(),
+    }).select('id').single();
+    expect(insErr).toBeNull();
+    const jobId = inserted!.id as string;
+
+    // Admin sees it.
+    const { data: admData, error: admErr } = await admin.client
+      .from('lamplight_jobs').select('id').eq('id', jobId);
+    expect(admErr).toBeNull();
+    expect(admData?.length).toBe(1);
+
+    // Insert a job owned by admin and check userA cannot see it.
+    const { data: admOwn, error: admOwnErr } = await svc.from('lamplight_jobs').insert({
+      user_id: admin.userId,
+      kind: 'embedding_refresh',
+      status: 'failed',
+      payload: { note_id: `${tag}-admin`, content_hash: 'h' },
+      attempts: 3,
+      error: 'voyage_500',
+      finished_at: new Date().toISOString(),
+    }).select('id').single();
+    expect(admOwnErr).toBeNull();
+    const { data: userViewOfAdmin } = await userA.client
+      .from('lamplight_jobs').select('id').eq('id', admOwn!.id);
+    expect(userViewOfAdmin?.length ?? 0).toBe(0);
+
+    // Cleanup.
+    await svc.from('lamplight_jobs').delete().in('id', [jobId, admOwn!.id]);
+  });
 });
