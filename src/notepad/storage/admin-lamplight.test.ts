@@ -183,4 +183,55 @@ maybeDescribe('Lamplight admin RPCs (integration)', () => {
     expect(nonAdmErr).not.toBeNull();
     expect(nonAdmErr!.message).toMatch(/not authorized/);
   });
+
+  it('admin_requeue_lamplight_job resets fields; non-admin raises', async () => {
+    const svc = serviceClient();
+    const tag = `requeue-${Date.now()}`;
+    const { data: inserted } = await svc.from('lamplight_jobs').insert({
+      user_id: userA.userId, kind: 'embedding_refresh', status: 'failed',
+      payload: { note_id: tag, content_hash: 'h' },
+      attempts: 3, error: 'voyage_500',
+      finished_at: new Date().toISOString(),
+    }).select('*').single();
+    const jobId = inserted!.id as string;
+
+    const { data, error } = await admin.client.rpc('admin_requeue_lamplight_job', { p_job_id: jobId });
+    expect(error).toBeNull();
+    const row = data as { status: string; attempts: number; error: string | null; finished_at: string | null };
+    expect(row.status).toBe('queued');
+    expect(row.attempts).toBe(0);
+    expect(row.error).toBeNull();
+    expect(row.finished_at).toBeNull();
+
+    const { error: nonAdmErr } = await userA.client.rpc('admin_requeue_lamplight_job', { p_job_id: jobId });
+    expect(nonAdmErr).not.toBeNull();
+    expect(nonAdmErr!.message).toMatch(/not authorized/);
+
+    await svc.from('lamplight_jobs').delete().eq('id', jobId);
+  });
+
+  it('admin_requeue_failed_lamplight_jobs returns count requeued; capped at 100', async () => {
+    const svc = serviceClient();
+    const tag = `bulk-requeue-${Date.now()}`;
+    const fakeKind = `embedding_refresh_${tag}`;
+    for (let i = 0; i < 3; i++) {
+      await svc.from('lamplight_jobs').insert({
+        user_id: userA.userId, kind: fakeKind, status: 'failed',
+        payload: { note_id: `${tag}-${i}`, content_hash: 'h' },
+        attempts: 3, error: 'voyage_500',
+        finished_at: new Date().toISOString(),
+      });
+    }
+
+    const { data, error } = await admin.client.rpc('admin_requeue_failed_lamplight_jobs', {
+      p_kind: fakeKind, p_limit: 100,
+    });
+    expect(error).toBeNull();
+    expect(data).toBe(3);
+
+    const { data: rows } = await svc.from('lamplight_jobs').select('status').eq('kind', fakeKind);
+    expect(rows!.every(r => r.status === 'queued')).toBe(true);
+
+    await svc.from('lamplight_jobs').delete().eq('kind', fakeKind);
+  });
 });

@@ -143,3 +143,80 @@ $$;
 
 revoke execute on function public.admin_lamplight_job_counts(timestamptz) from public, anon;
 grant execute on function public.admin_lamplight_job_counts(timestamptz) to authenticated;
+
+-- ── admin_requeue_lamplight_job (single) ─────────────────────────────────
+create or replace function public.admin_requeue_lamplight_job(p_job_id uuid)
+returns public.lamplight_jobs
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.lamplight_jobs;
+begin
+  if not public.is_lamplight_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  update public.lamplight_jobs
+     set status       = 'queued',
+         attempts     = 0,
+         error        = null,
+         scheduled_at = now(),
+         started_at   = null,
+         finished_at  = null
+   where id = p_job_id
+  returning * into v_row;
+
+  if not found then
+    raise exception 'job not found: %', p_job_id;
+  end if;
+
+  return v_row;
+end;
+$$;
+
+revoke execute on function public.admin_requeue_lamplight_job(uuid) from public, anon;
+grant  execute on function public.admin_requeue_lamplight_job(uuid) to authenticated;
+
+-- ── admin_requeue_failed_lamplight_jobs (bulk) ───────────────────────────
+create or replace function public.admin_requeue_failed_lamplight_jobs(
+  p_kind text default null,
+  p_limit int default 100
+)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count int;
+begin
+  if not public.is_lamplight_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  with picked as (
+    select id from public.lamplight_jobs
+     where status = 'failed'
+       and (p_kind is null or kind = p_kind)
+     order by finished_at asc nulls last
+     limit greatest(1, least(p_limit, 100))
+  )
+  update public.lamplight_jobs j
+     set status       = 'queued',
+         attempts     = 0,
+         error        = null,
+         scheduled_at = now(),
+         started_at   = null,
+         finished_at  = null
+   from picked
+   where j.id = picked.id;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke execute on function public.admin_requeue_failed_lamplight_jobs(text, int) from public, anon;
+grant  execute on function public.admin_requeue_failed_lamplight_jobs(text, int) to authenticated;
