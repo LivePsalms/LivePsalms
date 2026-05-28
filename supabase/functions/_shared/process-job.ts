@@ -1,5 +1,6 @@
 // supabase/functions/_shared/process-job.ts
 import { extractTextFromNoteContent } from './tiptap-text.ts';
+import { chunkNotePlaintext } from './chunker.ts';
 
 export interface Job {
   id: string;
@@ -15,23 +16,29 @@ export interface NoteRow {
   content: string;
 }
 
-export interface EmbeddingRow {
-  user_id: string | null;
-  source_type: 'note' | 'bible_passage';
-  source_id: string;
-  content_hash: string;
-  vector: number[];
+export interface ChunkPayload {
+  chunk_index: number;
+  chunk_text: string;
+  embedding: number[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface ReplaceArgs {
+  userId: string;
+  noteId: string;
+  contentHash: string;
+  chunks: ChunkPayload[];
 }
 
 export interface DbOps {
   loadNote(noteId: string): Promise<NoteRow | null>;
   loadExistingHash(userId: string, noteId: string): Promise<string | null>;
-  upsertEmbedding(row: EmbeddingRow): Promise<void>;
+  replaceNoteEmbeddings(args: ReplaceArgs): Promise<void>;
   markDone(jobId: string): Promise<void>;
   markFailedOrRetry(job: Job, err: unknown, attempts: number): Promise<void>;
   recordUsage(row: {
     user_id: string;
-    model: 'voyage-3-large';
+    model: 'voyage-context-3';
     artifact_kind: 'embedding_refresh';
     tokens_in: number;
     tokens_out: number;
@@ -40,7 +47,12 @@ export interface DbOps {
   }): Promise<void>;
 }
 
-export type EmbedFn = (texts: string[]) => Promise<{ vectors: number[][]; totalTokens: number }>;
+// EmbedFn signature: takes one or more documents (each a list of chunk strings)
+// and returns one vector per chunk per document, plus a token count.
+export type EmbedFn = (chunksPerDoc: string[][]) => Promise<{
+  vectors: number[][][];
+  totalTokens: number;
+}>;
 export type ClaimFn = (limit: number) => Promise<Job[]>;
 
 const MAX_ATTEMPTS = 3;
@@ -70,30 +82,31 @@ export async function processJobs(jobs: Job[], ops: DbOps, embed: EmbedFn): Prom
     const plaintext = extractTextFromNoteContent(note.content);
     if (!plaintext.trim()) { await ops.markDone(job.id); continue; }
 
-    // The only retryable region — Voyage call + upsert. If markDone after this
-    // throws, that error bubbles up rather than triggering a re-queue (which
-    // would cause double-billing because the embedding was already written).
-    const embeddingRow: EmbeddingRow = {
-      user_id: note.user_id,
-      source_type: 'note',
-      source_id: noteId,
-      content_hash: newHash,
-      vector: [],
-    };
+    const noteChunks = chunkNotePlaintext(plaintext);
+    if (noteChunks.length === 0) { await ops.markDone(job.id); continue; }
 
-    let vectors: number[][];
+    let chunkVectors: number[][];
     let tokensIn: number;
     try {
-      const result = await embed([plaintext]);
-      vectors = result.vectors;
+      const result = await embed([noteChunks.map(c => c.text)]);
+      chunkVectors = result.vectors[0];
       tokensIn = result.totalTokens;
-      await ops.upsertEmbedding({ ...embeddingRow, vector: vectors[0] });
+      await ops.replaceNoteEmbeddings({
+        userId: note.user_id,
+        noteId,
+        contentHash: newHash,
+        chunks: noteChunks.map((c, i) => ({
+          chunk_index: c.index,
+          chunk_text: c.text,
+          embedding: chunkVectors[i],
+        })),
+      });
     } catch (err) {
       await ops.markFailedOrRetry(job, err, (job.attempts ?? 0) + 1);
       if ((job.attempts ?? 0) + 1 >= MAX_ATTEMPTS) {
         void ops.recordUsage({
           user_id: note.user_id,
-          model: 'voyage-3-large',
+          model: 'voyage-context-3',
           artifact_kind: 'embedding_refresh',
           tokens_in: 0,
           tokens_out: 0,
@@ -106,7 +119,7 @@ export async function processJobs(jobs: Job[], ops: DbOps, embed: EmbedFn): Prom
 
     void ops.recordUsage({
       user_id: note.user_id,
-      model: 'voyage-3-large',
+      model: 'voyage-context-3',
       artifact_kind: 'embedding_refresh',
       tokens_in: tokensIn,
       tokens_out: 0,

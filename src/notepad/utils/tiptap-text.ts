@@ -1,5 +1,11 @@
 import type { Note } from '../types';
 
+// Block-level TipTap node types whose children should be separated by \n\n.
+const BLOCK_TYPES = new Set([
+  'doc', 'blockquote', 'bulletList', 'orderedList', 'listItem',
+  'heading', 'codeBlock',
+]);
+
 export function extractPlainText(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
   const n = node as Record<string, unknown>;
@@ -7,7 +13,9 @@ export function extractPlainText(node: unknown): string {
     return n.text;
   }
   if (Array.isArray(n.content)) {
-    return n.content.map(extractPlainText).join(' ');
+    const parts = (n.content as unknown[]).map(extractPlainText).filter(s => s.length > 0);
+    const sep = BLOCK_TYPES.has(n.type as string) ? '\n\n' : ' ';
+    return parts.join(sep);
   }
   return '';
 }

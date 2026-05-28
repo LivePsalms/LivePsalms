@@ -47,7 +47,7 @@ describe('extractPlainText', () => {
         },
       ],
     };
-    expect(extractPlainText(doc)).toBe('first paragraph second paragraph');
+    expect(extractPlainText(doc)).toBe('first paragraph\n\nsecond paragraph');
   });
 
   it('returns empty string for non-objects', () => {
