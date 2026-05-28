@@ -52,9 +52,9 @@ describe('firstNameOf', () => {
     expect(firstNameOf(user)).toBe('grace');
   });
 
-  it("falls back to 'friend' when neither full_name nor email is available", () => {
+  it('returns null when neither full_name nor email is available', () => {
     const user = makeUser({ id: 'u1', email: undefined, user_metadata: {} });
-    expect(firstNameOf(user)).toBe('friend');
+    expect(firstNameOf(user)).toBeNull();
   });
 
   it('falls back to email when full_name is whitespace only', () => {

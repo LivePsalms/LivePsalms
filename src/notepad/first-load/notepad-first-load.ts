@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js';
 
 export type FirstLoadAction =
   | { kind: 'redirect-welcome' }
-  | { kind: 'greet'; firstName: string }
+  | { kind: 'greet'; firstName: string | null }
   | { kind: 'offer-migration' };
 
 export interface FirstLoadInput {
@@ -14,12 +14,12 @@ export interface FirstLoadInput {
   localNoteCount: number;
 }
 
-export function firstNameOf(user: User): string {
+export function firstNameOf(user: User): string | null {
   const fullName = (user.user_metadata?.full_name as string | undefined)?.trim();
   if (fullName) return fullName.split(/\s+/)[0];
   const email = user.email;
   if (email) return email.split('@')[0];
-  return 'friend';
+  return null;
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;

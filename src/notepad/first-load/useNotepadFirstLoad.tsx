@@ -45,7 +45,7 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
             break;
           case 'greet':
             markGreetedToday(user.id, today, sessionStorage);
-            toast.success(`Welcome back, ${action.firstName}!`);
+            toast.success(`Welcome back${action.firstName ? `, ${action.firstName}` : ''}!`);
             break;
           case 'offer-migration':
             setShowMigration(true);
