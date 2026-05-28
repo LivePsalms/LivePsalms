@@ -50,8 +50,17 @@ function makeSupabaseMock(opts: {
   const insertedId = opts.insertedId ?? 'artifact-1';
   const insertError = opts.insertError ?? null;
   const inserts: Array<Record<string, unknown>> = [];
+  const usageInserts: Array<Record<string, unknown>> = [];
   const supabase = {
-    from() {
+    from(table: string) {
+      if (table === 'lamplight_usage') {
+        return {
+          insert: (row: Record<string, unknown>) => {
+            usageInserts.push(row);
+            return Promise.resolve({ error: null });
+          },
+        };
+      }
       return {
         select: () => ({
           eq: () => ({
@@ -87,7 +96,7 @@ function makeSupabaseMock(opts: {
       };
     },
   };
-  return { supabase: supabase as unknown as Parameters<typeof runDailyDevotionPipeline>[0]['supabase'], inserts };
+  return { supabase: supabase as unknown as Parameters<typeof runDailyDevotionPipeline>[0]['supabase'], inserts, usageInserts };
 }
 
 describe('runDailyDevotionPipeline', () => {
@@ -143,7 +152,7 @@ describe('runDailyDevotionPipeline', () => {
   });
 
   it('happy path: generates, validates, persists, returns ok with artifact_id', async () => {
-    const { supabase, inserts } = makeSupabaseMock();
+    const { supabase, inserts, usageInserts } = makeSupabaseMock();
     const result = await runDailyDevotionPipeline({
       llm: makeAdapter([cleanArtifact]),
       supabase,
@@ -167,6 +176,9 @@ describe('runDailyDevotionPipeline', () => {
       source_verses: ['Psalm 23:4'],
       prompt_version: 'daily-devotion-2026-05-27-v1',
     });
+    await Promise.resolve(); // let the fire-and-forget recordUsage microtask drain
+    expect(usageInserts).toHaveLength(1);
+    expect(usageInserts[0]).toMatchObject({ artifact_kind: 'daily_devotion', status: 'ok' });
   });
 
   it('composed system prompt: LAMPLIGHT_SYSTEM_FRAGMENT first, artifact stance second, {{local_date}} substituted, stricter suffix only on retry', async () => {
@@ -230,7 +242,12 @@ describe('runDailyDevotionPipeline', () => {
   it('race: INSERT conflict triggers re-read; returns cached:true with the existing row', async () => {
     const inserts: Array<Record<string, unknown>> = [];
     const supabase = {
-      from() {
+      from(table: string) {
+        if (table === 'lamplight_usage') {
+          return {
+            insert: () => Promise.resolve({ error: null }),
+          };
+        }
         return {
           select: () => ({
             eq: () => ({

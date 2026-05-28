@@ -29,6 +29,9 @@ import {
   runConnectionWhyPipeline,
   type ConnectionWhyContext,
 } from './connection-why-pipeline.ts';
+import { recordLamplightUsage } from '../_shared/usage.ts';
+import { classifyGenerateError } from './classify-error.ts';
+export { classifyGenerateError };
 
 // Today's Lamp is invoked from the browser via supabase.functions.invoke, so
 // the function must answer CORS preflights and echo the allow-origin header
@@ -89,13 +92,27 @@ serve(async (req) => {
       return jsonResp({ error: 'bad local_date' }, 400);
     }
     const localDate = body.local_date;
+    const userId = body.user_id;
     const ctx = await buildDailyDevotionContext(supabase, {
-      userId: body.user_id, localDate, voicePreference, traditionHint, voyageDeps, rerankEnabled,
+      userId, localDate, voicePreference, traditionHint, voyageDeps, rerankEnabled,
     });
-    const result = await runDailyDevotionPipeline({
-      llm, supabase, ctx, userId: body.user_id, localDate,
-    });
-    return jsonResp(result);
+    try {
+      const result = await runDailyDevotionPipeline({
+        llm, supabase, ctx, userId, localDate,
+      });
+      return jsonResp(result);
+    } catch (err) {
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'daily_devotion',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: classifyGenerateError(err),
+      }).catch(() => {});
+      throw err;
+    }
   }
 
   if (body.kind === 'connection_card_why') {
@@ -106,28 +123,61 @@ serve(async (req) => {
     ) {
       return jsonResp({ error: 'bad payload' }, 400);
     }
+    const userId = body.user_id;
     const ctxResult = await buildConnectionWhyContext(supabase, {
-      userId: body.user_id,
+      userId,
       sourceNoteId: body.source_note_id,
       relatedNoteId: body.related_note_id,
       voicePreference,
     });
     if (ctxResult.kind === 'no_embedding') {
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'connection_card_why',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: 'no_embedding',
+      }).catch(() => {});
       return jsonResp({ ok: false, reason: 'no_embedding', attempts: 0 });
     }
     if (ctxResult.kind === 'not_neighbor') {
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'connection_card_why',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: 'not_neighbor',
+      }).catch(() => {});
       return jsonResp({ ok: false, reason: 'not_neighbor', attempts: 0 });
     }
-    const result = await runConnectionWhyPipeline({
-      llm,
-      supabase,
-      ctx: ctxResult.context,
-    });
-    return jsonResp(result);
+    try {
+      const result = await runConnectionWhyPipeline({
+        llm,
+        supabase,
+        ctx: ctxResult.context,
+      });
+      return jsonResp(result);
+    } catch (err) {
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'connection_card_why',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: classifyGenerateError(err),
+      }).catch(() => {});
+      throw err;
+    }
   }
 
   return jsonResp({ error: 'unknown kind' }, 400);
 });
+
 
 function jsonResp(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

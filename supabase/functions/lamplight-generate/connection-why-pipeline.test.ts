@@ -47,10 +47,20 @@ interface MaybeSingleResult {
 function makeSupabase(opts: {
   cachedRow?: { why: string; content_hash: string };
   upsertCalls?: Array<Record<string, unknown>>;
+  usageInserts?: Array<Record<string, unknown>>;
 }) {
   const upsertCalls = opts.upsertCalls ?? [];
+  const usageInserts = opts.usageInserts ?? [];
   return {
     from(table: string) {
+      if (table === 'lamplight_usage') {
+        return {
+          insert: (row: Record<string, unknown>) => {
+            usageInserts.push(row);
+            return Promise.resolve({ error: null });
+          },
+        };
+      }
       if (table !== 'lamplight_connections') {
         throw new Error(`unexpected table: ${table}`);
       }
@@ -102,11 +112,12 @@ describe('runConnectionWhyPipeline', () => {
 
   it('cache miss generates, validates, upserts', async () => {
     const upsertCalls: Array<Record<string, unknown>> = [];
+    const usageInserts: Array<Record<string, unknown>> = [];
     const llm = makeLLM([{ why: 'Both notes return to wilderness.' }]);
     const result = await runConnectionWhyPipeline({
       llm,
-       
-      supabase: makeSupabase({ upsertCalls }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
+
+      supabase: makeSupabase({ upsertCalls, usageInserts }) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
       ctx: makeCtx(),
     });
     expect(result.ok).toBe(true);
@@ -120,6 +131,9 @@ describe('runConnectionWhyPipeline', () => {
     expect(row.related_note_id).toBe('note-2');
     expect(row.content_hash).toBe('abc123');
     expect(row.why).toBe('Both notes return to wilderness.');
+    await Promise.resolve(); // let the fire-and-forget recordUsage microtask drain
+    expect(usageInserts).toHaveLength(1);
+    expect(usageInserts[0]).toMatchObject({ artifact_kind: 'connection_card_why', status: 'ok' });
   });
 
   it('cache row with stale content_hash falls through to generation', async () => {
