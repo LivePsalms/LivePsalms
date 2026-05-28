@@ -24,7 +24,7 @@ export function UsageLeaderboard({ rows, loading, windowDays, onWindowChange }: 
   return (
     <div className="rounded-md border" data-testid="usage-leaderboard">
       <div className="flex items-center gap-2 px-4 py-3 border-b">
-        <span className="text-xs uppercase tracking-wide text-gray-500">Token spend</span>
+        <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--deep-umber)' }}>Token spend</span>
         <label className="ml-auto text-xs flex items-center gap-1">
           Window
           <select value={windowDays} onChange={(e) => onWindowChange(Number(e.target.value))} className="border rounded px-2 py-1">
@@ -33,9 +33,9 @@ export function UsageLeaderboard({ rows, loading, windowDays, onWindowChange }: 
         </label>
       </div>
       {loading ? (
-        <div className="px-4 py-6 text-xs text-gray-500">Loading…</div>
+        <div className="px-4 py-6 text-xs" style={{ color: 'var(--deep-umber)' }}>Loading…</div>
       ) : rows.length === 0 ? (
-        <div className="px-4 py-6 text-xs text-gray-500">
+        <div className="px-4 py-6 text-xs" style={{ color: 'var(--deep-umber)' }}>
           No usage recorded in the selected window.
         </div>
       ) : (
@@ -43,9 +43,9 @@ export function UsageLeaderboard({ rows, loading, windowDays, onWindowChange }: 
           {rows.map(r => (
             <li key={r.userId} className="px-4 py-2 text-xs flex items-center gap-3">
               <span className="font-medium">{r.email ?? r.userId.slice(0, 8)}</span>
-              <span className="text-gray-500">{r.tokensIn.toLocaleString()} in · {r.tokensOut.toLocaleString()} out</span>
-              <span className="text-gray-500">~ {formatCents(approxCostCents(r))}</span>
-              <span className="ml-auto text-gray-500">{r.calls} calls{r.errors > 0 ? ` · ${r.errors} err` : ''}</span>
+              <span style={{ color: 'var(--silica)' }}>{r.tokensIn.toLocaleString()} in · {r.tokensOut.toLocaleString()} out</span>
+              <span style={{ color: 'var(--silica)' }}>~ {formatCents(approxCostCents(r))}</span>
+              <span className="ml-auto" style={{ color: 'var(--silica)' }}>{r.calls} calls{r.errors > 0 ? ` · ${r.errors} err` : ''}</span>
             </li>
           ))}
         </ul>

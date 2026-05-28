@@ -63,7 +63,7 @@ export function AdminLamplightPage() {
   });
 
   if (adminLoading) {
-    return <div className="p-6 text-xs text-gray-500">Loading…</div>;
+    return <div className="p-6 text-xs" style={{ color: 'var(--deep-umber)' }}>Loading…</div>;
   }
   if (!isAdmin) {
     return <Navigate to="/" replace />;

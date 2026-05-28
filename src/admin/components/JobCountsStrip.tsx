@@ -40,7 +40,7 @@ export function JobCountsStrip({ counts, loading, windowHours, onWindowChange }:
 function CountCell({ label, value, loading }: { label: string; value: number | undefined; loading: boolean }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--deep-umber)' }}>{label}</span>
       <span className="text-lg font-medium">
         {loading ? '…' : (value ?? 0)}
       </span>

@@ -65,9 +65,9 @@ export function FailedJobsTable(props: FailedJobsTableProps) {
       </div>
 
       {loading ? (
-        <div className="px-4 py-6 text-xs text-gray-500">Loading…</div>
+        <div className="px-4 py-6 text-xs" style={{ color: 'var(--deep-umber)' }}>Loading…</div>
       ) : jobs.length === 0 ? (
-        <div className="px-4 py-6 text-xs text-gray-500">
+        <div className="px-4 py-6 text-xs" style={{ color: 'var(--deep-umber)' }}>
           No failed jobs in the selected window — Lamplight is healthy.
         </div>
       ) : (
