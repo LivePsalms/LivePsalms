@@ -158,6 +158,17 @@ $$;
 grant execute on function public.match_my_note_neighbors(uuid, int, float) to authenticated;
 
 -- ── 9. Edge-Function-only atomic DELETE+INSERT RPC ───────────────────────
+-- p_chunks shape (each element):
+--   { chunk_index: int,
+--     chunk_text: text,
+--     embedding:  string (pgvector text literal: "[v1,v2,...,v512]"),
+--     metadata:   jsonb optional }
+-- The embedding MUST be a JSON string, not a nested JSON array — the cast
+-- (c->>'embedding')::extensions.vector(512) extracts as text and pgvector
+-- parses its own bracketed literal. A native JSON array on the wire will
+-- still arrive as a string after ->> (JSON-encoded), but with extra escaping
+-- that pgvector will reject. Callers should serialize embedding as the
+-- literal string explicitly.
 create or replace function public.replace_note_embeddings(
   p_user_id      uuid,
   p_note_id      text,
@@ -190,3 +201,83 @@ $$;
 revoke execute on function public.replace_note_embeddings(uuid, text, text, jsonb)
   from public, authenticated;
 -- service-role only (no grant); Edge Function uses service-role JWT.
+
+-- ── 10. Re-create enqueue_lamplight_embedding with chunk-aware hash lookup ─
+-- After migration 016, lamplight_embeddings has N rows per note (one per
+-- chunk). The original SELECT INTO from 011 silently returned an arbitrary
+-- row; chunks share the same content_hash so it still works, but the
+-- explicit `and chunk_index = 0` filter makes the choice deterministic and
+-- protects against future divergence.
+create or replace function public.enqueue_lamplight_embedding(
+  p_note_id uuid,
+  p_content_hash text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_existing_hash text;
+  v_job_id uuid;
+begin
+  if not exists (
+    select 1 from notes where id = p_note_id and user_id = auth.uid()
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  if not exists (
+    select 1 from lamplight_settings
+    where user_id = auth.uid() and enabled = true
+  ) then
+    return null;
+  end if;
+
+  select content_hash into v_existing_hash
+  from lamplight_embeddings
+  where user_id = auth.uid()
+    and source_type = 'note'
+    and source_id = p_note_id::text
+    and chunk_index = 0;
+
+  if v_existing_hash = p_content_hash then
+    return null;
+  end if;
+
+  select id into v_job_id
+  from lamplight_jobs
+  where user_id = auth.uid()
+    and kind = 'embedding_refresh'
+    and status = 'queued'
+    and payload->>'note_id' = p_note_id::text;
+
+  if v_job_id is not null then
+    return v_job_id;
+  end if;
+
+  begin
+    insert into lamplight_jobs (user_id, kind, status, payload, scheduled_at)
+    values (
+      auth.uid(),
+      'embedding_refresh',
+      'queued',
+      jsonb_build_object('note_id', p_note_id, 'content_hash', p_content_hash),
+      now()
+    )
+    returning id into v_job_id;
+  exception when unique_violation then
+    -- Concurrent caller raced us. Return the now-existing queued job's id.
+    select id into v_job_id
+    from lamplight_jobs
+    where user_id = auth.uid()
+      and kind = 'embedding_refresh'
+      and status = 'queued'
+      and payload->>'note_id' = p_note_id::text
+    limit 1;
+  end;
+
+  return v_job_id;
+end;
+$$;
+
+grant execute on function public.enqueue_lamplight_embedding(uuid, text) to authenticated;
