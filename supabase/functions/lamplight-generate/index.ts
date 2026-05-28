@@ -271,12 +271,12 @@ async function buildDailyDevotionContext(
     .filter(n => n.plaintext.trim().length > 0);
   if (notes.length === 0) return null;
 
-  const { data: profile, error: pErr } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from('profiles')
     .select('full_name')
     .eq('id', args.userId)
     .maybeSingle();
-  if (pErr) throw pErr;
+  if (profileErr) throw profileErr;
   const firstName = sanitizeFirstName((profile?.full_name as string | undefined) ?? null);
 
   const themeQuery = notes
