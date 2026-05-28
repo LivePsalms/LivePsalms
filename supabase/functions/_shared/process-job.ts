@@ -29,9 +29,18 @@ export interface DbOps {
   upsertEmbedding(row: EmbeddingRow): Promise<void>;
   markDone(jobId: string): Promise<void>;
   markFailedOrRetry(job: Job, err: unknown, attempts: number): Promise<void>;
+  recordUsage(row: {
+    user_id: string;
+    model: 'voyage-3-large';
+    artifact_kind: 'embedding_refresh';
+    tokens_in: number;
+    tokens_out: number;
+    status: 'ok' | 'error';
+    error_code?: string | null;
+  }): Promise<void>;
 }
 
-export type EmbedFn = (texts: string[]) => Promise<number[][]>;
+export type EmbedFn = (texts: string[]) => Promise<{ vectors: number[][]; totalTokens: number }>;
 export type ClaimFn = (limit: number) => Promise<Job[]>;
 
 const MAX_ATTEMPTS = 3;
@@ -64,20 +73,45 @@ export async function processJobs(jobs: Job[], ops: DbOps, embed: EmbedFn): Prom
     // The only retryable region — Voyage call + upsert. If markDone after this
     // throws, that error bubbles up rather than triggering a re-queue (which
     // would cause double-billing because the embedding was already written).
+    const embeddingRow: EmbeddingRow = {
+      user_id: note.user_id,
+      source_type: 'note',
+      source_id: noteId,
+      content_hash: newHash,
+      vector: [],
+    };
+
+    let vectors: number[][];
+    let tokensIn: number;
     try {
-      const [vector] = await embed([plaintext]);
-      await ops.upsertEmbedding({
-        user_id: note.user_id,
-        source_type: 'note',
-        source_id: noteId,
-        content_hash: newHash,
-        vector,
-      });
+      const result = await embed([plaintext]);
+      vectors = result.vectors;
+      tokensIn = result.totalTokens;
+      await ops.upsertEmbedding({ ...embeddingRow, vector: vectors[0] });
     } catch (err) {
       await ops.markFailedOrRetry(job, err, (job.attempts ?? 0) + 1);
+      if ((job.attempts ?? 0) + 1 >= MAX_ATTEMPTS) {
+        void ops.recordUsage({
+          user_id: note.user_id,
+          model: 'voyage-3-large',
+          artifact_kind: 'embedding_refresh',
+          tokens_in: 0,
+          tokens_out: 0,
+          status: 'error',
+          error_code: extractVoyageErrorCode(err),
+        }).catch(() => {});
+      }
       continue;
     }
 
+    void ops.recordUsage({
+      user_id: note.user_id,
+      model: 'voyage-3-large',
+      artifact_kind: 'embedding_refresh',
+      tokens_in: tokensIn,
+      tokens_out: 0,
+      status: 'ok',
+    }).catch(() => {});
     await ops.markDone(job.id);
   }
 }
@@ -86,4 +120,10 @@ export async function claimAndRun(claim: ClaimFn, ops: DbOps, embed: EmbedFn, li
   const jobs = await claim(limit);
   await processJobs(jobs, ops, embed);
   return jobs.length;
+}
+
+export function extractVoyageErrorCode(err: unknown): string {
+  const msg = String((err as { message?: string })?.message ?? err);
+  const m = msg.match(/voyage_(\d+)/i) ?? msg.match(/\b(4\d\d|5\d\d)\b/);
+  return m ? `voyage_${m[1]}` : 'voyage_unknown';
 }

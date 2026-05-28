@@ -20,6 +20,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { serviceClient } from '../_shared/supabase.ts';
 import { embedDocuments } from '../_shared/voyage.ts';
+import { recordLamplightUsage } from '../_shared/usage.ts';
 import {
   claimAndRun, processJobs,
   type Job, type DbOps, type ClaimFn, type EmbedFn,
@@ -122,6 +123,9 @@ function buildOps(supabase: ReturnType<typeof serviceClient>): DbOps {
           scheduled_at: new Date(Date.now() + backoffSec * 1000).toISOString(),
         }).eq('id', job.id);
       }
+    },
+    async recordUsage(row) {
+      await recordLamplightUsage(supabase, row);
     },
   };
 }

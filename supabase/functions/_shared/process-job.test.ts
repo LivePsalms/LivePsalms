@@ -1,6 +1,6 @@
 // supabase/functions/_shared/process-job.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { processJobs, type EmbedFn, type DbOps, type EmbeddingRow, type Job } from './process-job';
+import { processJobs, extractVoyageErrorCode, type EmbedFn, type DbOps, type EmbeddingRow, type Job } from './process-job';
 
 function makeOps(initial: Partial<{
   note: { id: string; user_id: string; content: string } | null;
@@ -9,6 +9,7 @@ function makeOps(initial: Partial<{
   upserts: Array<{ user_id: string | null; source_type: string; source_id: string; content_hash: string; vector: number[] }>;
   markedDone: string[];
   markedFailed: Array<{ id: string; err: string; status: string; attempts: number }>;
+  recordUsage: ReturnType<typeof vi.fn>;
 } {
   const upserts: EmbeddingRow[] = [];
   const markedDone: string[] = [];
@@ -23,10 +24,12 @@ function makeOps(initial: Partial<{
       const status = attempts >= 3 ? 'failed' : 'queued';
       markedFailed.push({ id: job.id, err: String(err), status, attempts });
     },
+    recordUsage: vi.fn(async () => {}),
   } as unknown as DbOps & {
     upserts: EmbeddingRow[];
     markedDone: string[];
     markedFailed: Array<{ id: string; err: string; status: string; attempts: number }>;
+    recordUsage: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -36,12 +39,16 @@ describe('processJobs', () => {
       note: { id: 'n1', user_id: 'u1', content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }] }) },
       existingHash: null,
     });
-    const embed: EmbedFn = vi.fn(async (texts) => texts.map(() => new Array(1024).fill(0.5)));
+    const embed: EmbedFn = vi.fn(async (texts) => ({
+      vectors: texts.map(() => new Array(1024).fill(0)),
+      totalTokens: 7,
+    }));
     const jobs = [{
       id: 'j1', user_id: 'u1', kind: 'embedding_refresh',
       payload: { note_id: 'n1', content_hash: 'newhash' }, attempts: 0,
     }];
     await processJobs(jobs, ops, embed);
+    await Promise.resolve(); // drain microtask queue for fire-and-forget recordUsage
     expect(embed).toHaveBeenCalledOnce();
     expect(ops.upserts).toEqual([{
       user_id: 'u1', source_type: 'note', source_id: 'n1',
@@ -49,6 +56,10 @@ describe('processJobs', () => {
     }]);
     expect(ops.markedDone).toEqual(['j1']);
     expect(ops.markedFailed).toEqual([]);
+    expect(ops.recordUsage).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'u1', artifact_kind: 'embedding_refresh', status: 'ok',
+      model: 'voyage-3-large', tokens_in: 7, tokens_out: 0,
+    }));
   });
 
   it('skips Voyage when existing hash matches payload hash', async () => {
@@ -87,6 +98,7 @@ describe('processJobs', () => {
       payload: { note_id: 'n1', content_hash: 'h' }, attempts: 1,
     }], ops, embed);
     expect(ops.markedFailed[0]).toMatchObject({ id: 'j4', status: 'queued', attempts: 2 });
+    expect(ops.recordUsage).not.toHaveBeenCalled();
   });
 
   it('marks failed permanently after 3 attempts', async () => {
@@ -98,7 +110,12 @@ describe('processJobs', () => {
       id: 'j5', user_id: 'u1', kind: 'embedding_refresh',
       payload: { note_id: 'n1', content_hash: 'h' }, attempts: 2,
     }], ops, embed);
+    await Promise.resolve(); // drain microtask queue for fire-and-forget recordUsage
     expect(ops.markedFailed[0]).toMatchObject({ id: 'j5', status: 'failed', attempts: 3 });
+    expect(ops.recordUsage).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'u1', artifact_kind: 'embedding_refresh', status: 'error',
+      model: 'voyage-3-large',
+    }));
   });
 
   it('skips when extracted plaintext is empty', async () => {
@@ -121,5 +138,19 @@ describe('processJobs', () => {
     }], ops, embed);
     expect(embed).not.toHaveBeenCalled();
     expect(ops.markedFailed[0]).toMatchObject({ id: 'j7', status: 'failed', attempts: 3 });
+  });
+});
+
+describe('extractVoyageErrorCode', () => {
+  it('extracts code from "voyage_429"', () => {
+    expect(extractVoyageErrorCode(new Error('voyage_429: rate limit'))).toBe('voyage_429');
+  });
+
+  it('extracts HTTP status from generic error message', () => {
+    expect(extractVoyageErrorCode(new Error('HTTP 503: server error'))).toBe('voyage_503');
+  });
+
+  it('falls back to voyage_unknown when no code is present', () => {
+    expect(extractVoyageErrorCode(new Error('network failure'))).toBe('voyage_unknown');
   });
 });

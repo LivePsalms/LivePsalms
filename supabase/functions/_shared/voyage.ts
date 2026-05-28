@@ -20,28 +20,35 @@ export interface VoyageDeps {
 
 const defaultSleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
-export async function embedDocuments(texts: string[], deps: VoyageDeps): Promise<number[][]> {
+export interface EmbedDocumentsResult {
+  vectors: number[][];
+  totalTokens: number;
+}
+
+export async function embedDocuments(texts: string[], deps: VoyageDeps): Promise<EmbedDocumentsResult> {
   return embedBatched(texts, 'document', deps);
 }
 
 export async function embedQuery(text: string, deps: VoyageDeps): Promise<number[]> {
-  const [v] = await embedBatched([text], 'query', deps);
-  return v;
+  const { vectors } = await embedBatched([text], 'query', deps);
+  return vectors[0];
 }
 
 async function embedBatched(
   texts: string[],
   inputType: InputType,
   deps: VoyageDeps,
-): Promise<number[][]> {
-  if (texts.length === 0) return [];
-  const out: number[][] = [];
+): Promise<EmbedDocumentsResult> {
+  if (texts.length === 0) return { vectors: [], totalTokens: 0 };
+  const vectors: number[][] = [];
+  let totalTokens = 0;
   for (let i = 0; i < texts.length; i += BATCH_MAX) {
     const batch = texts.slice(i, i + BATCH_MAX);
-    const vectors = await embedOnce(batch, inputType, deps);
-    out.push(...vectors);
+    const result = await embedOnce(batch, inputType, deps, 0);
+    vectors.push(...result.vectors);
+    totalTokens += result.totalTokens;
   }
-  return out;
+  return { vectors, totalTokens };
 }
 
 async function embedOnce(
@@ -49,7 +56,7 @@ async function embedOnce(
   inputType: InputType,
   deps: VoyageDeps,
   attempt = 0,
-): Promise<number[][]> {
+): Promise<EmbedDocumentsResult> {
   const sleep = deps.sleep ?? defaultSleep;
   const res = await deps.fetch(VOYAGE_BASE, {
     method: 'POST',
@@ -68,8 +75,11 @@ async function embedOnce(
   });
 
   if (res.ok) {
-    const json = await res.json() as { data: Array<{ embedding: number[] }> };
-    return json.data.map(d => d.embedding);
+    const json = await res.json() as { data: Array<{ embedding: number[] }>; usage?: { total_tokens?: number } };
+    return {
+      vectors: json.data.map(d => d.embedding),
+      totalTokens: json.usage?.total_tokens ?? 0,
+    };
   }
 
   const retryable = res.status === 429 || res.status >= 500;

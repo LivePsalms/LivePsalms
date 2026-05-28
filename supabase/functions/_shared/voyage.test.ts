@@ -1,12 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { embedDocuments, embedQuery, rerank } from './voyage';
 
-function mockFetchOk(payloads: Array<{ embeddings: number[][] }>) {
+function mockFetchOk(payloads: Array<{ embeddings: number[][]; total_tokens?: number }>) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   let i = 0;
   const fn = vi.fn(async (url: string, init: RequestInit) => {
     calls.push({ url, init });
-    const body = { data: payloads[i++].embeddings.map(e => ({ embedding: e })) };
+    const payload = payloads[i++];
+    const body = {
+      data: payload.embeddings.map(e => ({ embedding: e })),
+      usage: { total_tokens: payload.total_tokens ?? 42 },
+    };
     return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
   });
   return { fn, calls };
@@ -14,9 +18,10 @@ function mockFetchOk(payloads: Array<{ embeddings: number[][] }>) {
 
 describe('voyage embed', () => {
   it('sends document input_type and returns vectors', async () => {
-    const { fn, calls } = mockFetchOk([{ embeddings: [[0.1, 0.2]] }]);
+    const { fn, calls } = mockFetchOk([{ embeddings: [[0.1, 0.2]], total_tokens: 7 }]);
     const out = await embedDocuments(['hello'], { apiKey: 'k', fetch: fn });
-    expect(out).toEqual([[0.1, 0.2]]);
+    expect(out.vectors).toEqual([[0.1, 0.2]]);
+    expect(out.totalTokens).toBe(7);
     const body = JSON.parse(calls[0].init.body as string);
     expect(body.input_type).toBe('document');
     expect(body.model).toBe('voyage-3-large');
@@ -36,12 +41,13 @@ describe('voyage embed', () => {
   it('batches >64 inputs into multiple calls', async () => {
     const inputs = Array.from({ length: 130 }, (_, i) => `t${i}`);
     const { fn, calls } = mockFetchOk([
-      { embeddings: Array.from({ length: 64 }, () => [1]) },
-      { embeddings: Array.from({ length: 64 }, () => [2]) },
-      { embeddings: Array.from({ length: 2  }, () => [3]) },
+      { embeddings: Array.from({ length: 64 }, () => [1]), total_tokens: 10 },
+      { embeddings: Array.from({ length: 64 }, () => [2]), total_tokens: 10 },
+      { embeddings: Array.from({ length: 2  }, () => [3]), total_tokens: 5 },
     ]);
     const out = await embedDocuments(inputs, { apiKey: 'k', fetch: fn });
-    expect(out.length).toBe(130);
+    expect(out.vectors.length).toBe(130);
+    expect(out.totalTokens).toBe(25);
     expect(calls.length).toBe(3);
   });
 
@@ -50,10 +56,11 @@ describe('voyage embed', () => {
     const fn = vi.fn(async () => {
       attempts++;
       if (attempts === 1) return new Response('rate limited', { status: 429 });
-      return new Response(JSON.stringify({ data: [{ embedding: [1] }] }), { status: 200 });
+      return new Response(JSON.stringify({ data: [{ embedding: [1] }], usage: { total_tokens: 3 } }), { status: 200 });
     });
     const out = await embedDocuments(['x'], { apiKey: 'k', fetch: fn, sleep: async () => {} });
-    expect(out).toEqual([[1]]);
+    expect(out.vectors).toEqual([[1]]);
+    expect(out.totalTokens).toBe(3);
     expect(attempts).toBe(2);
   });
 
@@ -67,7 +74,9 @@ describe('voyage embed', () => {
 
   it('returns [] for empty input', async () => {
     const fn = vi.fn();
-    expect(await embedDocuments([], { apiKey: 'k', fetch: fn })).toEqual([]);
+    const out = await embedDocuments([], { apiKey: 'k', fetch: fn });
+    expect(out.vectors).toEqual([]);
+    expect(out.totalTokens).toBe(0);
     expect(fn).not.toHaveBeenCalled();
   });
 });
