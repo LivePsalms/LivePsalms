@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeFirstName as clientSan } from '../notepad/utils/personalization';
-// Read the server file content at runtime via a separate import to ensure
-// behavioral parity. We cannot import the Deno-flavored file directly under
-// vitest (no .ts extension in import). Instead, we re-export the same module
-// from a parallel path the server points at — confirmed iso by both passing
-// identical fixtures.
+// Behavioral parity is enforced two ways:
+//   1. Byte-equality: the 'identical body content' test reads both source files
+//      at runtime and asserts they are equal. This is the primary drift guard.
+//   2. Behavioral sweep below: fixture-driven coverage of the client sanitizer,
+//      serving as defense-in-depth against a silent runtime divergence that
+//      byte-equality alone would not catch (e.g., platform regex differences).
+// Note: the server file cannot be imported directly under vitest because vitest
+// runs in Node and the server file is authored for Deno. Byte-equality is
+// therefore the only cross-runtime check.
 
 const FIXTURES: Array<{ input: string | null | undefined; expected: string | null }> = [
   { input: null, expected: null },
@@ -32,7 +36,7 @@ const FIXTURES: Array<{ input: string | null | undefined; expected: string | nul
   { input: '  Sarah Mitchell  ', expected: 'Sarah' },
 ];
 
-describe('personalization parity (client vs server)', () => {
+describe('personalization — client sanitizer parity sweep', () => {
   // Read server file and parse the function body as text — assert it
   // matches the client file. Cheapest way to enforce byte-identical core.
   it('client and server files have identical body content', async () => {
