@@ -39,6 +39,7 @@ export interface UseConnectionCardsArgs {
   loadNeighborNotes: (ids: string[]) => Promise<Note[]>;
   qualifyingMinWords?: number;
   qualifyingMinVaultSize?: number;
+  qualifyingMinSimilarity?: number;
   maxRenderedCards?: number;
 }
 
@@ -60,8 +61,12 @@ export function useConnectionCards(
     activeNote,
     totalNoteCount,
     loadNeighborNotes,
-    qualifyingMinWords = 100,
-    qualifyingMinVaultSize = 10,
+    // Test-mode defaults — loosened from the spec's 100 words / 10 notes /
+    // 0.78 similarity so the strip is easier to trigger in dev. Production
+    // ship will tighten these back up; track via the followup card.
+    qualifyingMinWords = 10,
+    qualifyingMinVaultSize = 2,
+    qualifyingMinSimilarity = 0.3,
     maxRenderedCards = 3,
   } = args;
 
@@ -105,7 +110,11 @@ export function useConnectionCards(
 
       let neighbors: ConnectionNeighbor[];
       try {
-        neighbors = await adapter.getConnectionNeighbors(activeNote.id, 5);
+        neighbors = await adapter.getConnectionNeighbors(
+          activeNote.id,
+          5,
+          qualifyingMinSimilarity,
+        );
       } catch {
         if (cancelledRef.current || gen !== generationRef.current) return;
         setState({ phase: 'error', reason: 'network' });
@@ -159,6 +168,7 @@ export function useConnectionCards(
     totalNoteCount,
     qualifyingMinWords,
     qualifyingMinVaultSize,
+    qualifyingMinSimilarity,
     maxRenderedCards,
   ]);
 

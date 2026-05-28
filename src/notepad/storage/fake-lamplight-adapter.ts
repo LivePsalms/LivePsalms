@@ -133,6 +133,7 @@ export class FakeLamplightAdapter implements LamplightAdapter {
   async getConnectionNeighbors(
     sourceNoteId: string,
     _k = 5,
+    _minSimilarity?: number,
   ): Promise<ConnectionNeighbor[]> {
     return this.connectionNeighbors.get(sourceNoteId) ?? [];
   }

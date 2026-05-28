@@ -138,11 +138,16 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
   async getConnectionNeighbors(
     sourceNoteId: string,
     k = 5,
+    minSimilarity?: number,
   ): Promise<ConnectionNeighbor[]> {
-    const { data, error } = await this.#client.rpc('match_my_note_neighbors', {
+    const args: Record<string, unknown> = {
       p_source_note_id: sourceNoteId,
       p_k: k,
-    });
+    };
+    if (typeof minSimilarity === 'number') {
+      args.p_min_similarity = minSimilarity;
+    }
+    const { data, error } = await this.#client.rpc('match_my_note_neighbors', args);
     if (error) throw error;
     return ((data as Array<{ related_note_id: string; similarity: number }>) ?? []).map(
       (row) => ({

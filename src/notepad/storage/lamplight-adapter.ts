@@ -78,8 +78,13 @@ export interface LamplightAdapter {
   getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null>;
   /** Invokes lamplight-generate Edge Function with kind='daily_devotion'. */
   generateDailyDevotion(userId: string, localDate: string): Promise<DailyDevotionGenerateResult>;
-  /** Returns neighboring notes with similarity scores using the `match_my_note_neighbors` RPC. */
-  getConnectionNeighbors(sourceNoteId: string, k?: number): Promise<ConnectionNeighbor[]>;
+  /** Returns neighboring notes with similarity scores using the `match_my_note_neighbors` RPC.
+   *  `minSimilarity` overrides the RPC default (0.78); pass a lower value while testing. */
+  getConnectionNeighbors(
+    sourceNoteId: string,
+    k?: number,
+    minSimilarity?: number,
+  ): Promise<ConnectionNeighbor[]>;
   /** Returns true if the given note has an embedding. */
   hasNoteEmbedding(noteId: string): Promise<boolean>;
   /** Invokes lamplight-generate Edge Function with kind='connection_card_why'. */
