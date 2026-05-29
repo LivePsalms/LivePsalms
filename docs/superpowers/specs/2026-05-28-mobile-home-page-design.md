@@ -138,10 +138,10 @@ Reduced motion: same paths as desktop reduced-motion — all elements settle to 
 
 ### MidSectionMotion — mobile path
 
-- `initialRenderMode()` returns `'video'` on mobile regardless of `'gpu' in navigator`.
-- Existing `<video>` element renders normally with the desktop video source (already exists as the fallback path).
-- The pin ScrollTrigger that holds the stage on desktop is wrapped: on mobile it doesn't pin. The section flows naturally; the video plays once it's in view (existing autoplay behavior unchanged).
-- Beat copy (`BEATS`) appears via the existing `reducedBeatRefs` IntersectionObserver path — that path was built for `prefers-reduced-motion` users and works identically on mobile.
+- `initialRenderMode()` (extracted to `src/components/sections/mid-section-render-mode.ts`) returns `'reduced'` on mobile regardless of `'gpu' in navigator`. See Decision 7 for the rationale (the `'video'` JSX path requires a 500vh sticky wrapper + absolutely-positioned beats overlay built for pinning; reusing the existing `'reduced'` JSX preserves the journey without that layout fight).
+- The existing reduced-motion JSX (5 stacked blocks with `/mid-section-poster.jpg` + beat copy + IntersectionObserver fades) handles the mobile render path with no JSX changes.
+- The pinned ScrollTrigger and WebGPU intensity effects are unreachable on mobile because both early-return when `renderMode !== 'webgpu' && renderMode !== 'video'`.
+- The desktop `<video>` element is NOT rendered on mobile — the trade-off accepted in Decision 7. The journey survives via the photographic poster sequence.
 
 ### TwoPathInterlude — CSS-driven mobile
 
@@ -183,7 +183,7 @@ The repo uses Vitest (`vitest.config.ts`) and a mix of component + behavior test
 
 - **`useIsMobile.test.ts`** — covers SSR-safe default, initial match, change subscription, unsubscribe on unmount.
 - **`HeroMobile.test.tsx`** — renders without `<video>`, runs the quote cross-fade once visible, respects `prefers-reduced-motion`.
-- **`mid-section-motion.mobile.test.ts`** — `initialRenderMode()` returns `'video'` when mobile is true, even when `'gpu' in navigator`. Pin ScrollTrigger does not run on mobile branch.
+- **`mid-section-render-mode.test.ts`** — `initialRenderMode()` returns `'reduced'` when mobile is true, even when `'gpu' in navigator`. Returns `'webgpu'` on desktop when WebGPU is available. Returns `'reduced'` on desktop when `prefers-reduced-motion` is set.
 - **`PurposeGridDots.test.tsx`** — renders one dot per project, activates the dot whose tile is centered in viewport.
 - **`HeaderMobile.test.tsx`** — hamburger toggles Sheet, link tap fires `handleNavTrigger`, Sheet closes on link tap.
 - **No integration test** of "switching viewport widths mid-session" — that's a real-world edge case the existing `matchMedia` subscription handles correctly by design.

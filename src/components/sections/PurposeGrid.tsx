@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
 import { PurposeGridDots } from './PurposeGridDots';
 import { categoryLabel } from '@/data/projects';
+import { MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 import type { FilterCategory, Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
@@ -344,7 +345,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
     if (!root || typeof IntersectionObserver === 'undefined') return;
 
     // Only attach the observer on mobile widths — desktop uses static grid mode.
-    if (window.innerWidth >= 768) return;
+    if (window.innerWidth >= MOBILE_BREAKPOINT) return;
 
     const tiles = Array.from(root.querySelectorAll<HTMLElement>('[data-flip-id]'));
     if (tiles.length === 0) return;

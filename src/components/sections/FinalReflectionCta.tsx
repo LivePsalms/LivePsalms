@@ -13,6 +13,8 @@ import {
   TextStaggerHoverActive,
   TextStaggerHoverHidden,
 } from '@/components/ui/text-stagger-hover';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { scaleForMobile } from '@/lib/motion-scale';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,6 +33,7 @@ export function FinalReflectionCta() {
   });
   const inputRef = useRef<HTMLInputElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -41,6 +44,8 @@ export function FinalReflectionCta() {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
 
+    // Mobile shortens duration + scrub via MOBILE_TIME_SCALE per spec
+    // Decision 14 — snappier reveal on phones.
     const ctx = gsap.context(() => {
       gsap.fromTo(
         section,
@@ -50,12 +55,12 @@ export function FinalReflectionCta() {
           y: 0,
           filter: 'blur(0px)',
           ease: 'power2.out',
-          duration: 1,
+          duration: scaleForMobile(1, isMobile),
           scrollTrigger: {
             trigger: section,
             start: 'top 90%',
             end: 'top 30%',
-            scrub: 5,
+            scrub: scaleForMobile(5, isMobile),
             invalidateOnRefresh: true,
           },
         },
@@ -63,7 +68,7 @@ export function FinalReflectionCta() {
     }, section);
 
     return () => ctx.revert();
-  }, []);
+  }, [isMobile]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

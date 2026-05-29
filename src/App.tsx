@@ -19,6 +19,8 @@ import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useLoadingOverlay } from '@/hooks/useLoadingOverlay';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { scaleForMobile } from '@/lib/motion-scale';
 import { useProjectColors } from '@/hooks/useProjectColors';
 import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/context/AuthProvider';
@@ -70,9 +72,12 @@ function App() {
 
   // Loading overlay starts inactive. Activation is driven exclusively by
   // handleNavTrigger from Header click sources (see below). Reduced-motion
-  // suppression lives inside that wrapper.
+  // suppression lives inside that wrapper. Mobile shortens the minimum hold
+  // time per spec Decision 16 — snappier on phones, still long enough to
+  // mask the route transition.
+  const isMobile = useIsMobile();
   const overlay = useLoadingOverlay({
-    minMs: 1500,
+    minMs: scaleForMobile(1500, isMobile),
     initialActive: false,
   });
 
