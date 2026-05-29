@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
+import { PurposeGridDots } from './PurposeGridDots';
 import { categoryLabel } from '@/data/projects';
 import type { FilterCategory, Project } from '@/types';
 
@@ -87,7 +88,7 @@ function ProjectCard({
       onClick={() => onProjectClick(project)}
       onMouseEnter={() => hoverEnabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${heightClass} cursor-pointer overflow-hidden`}
+      className={`pg-img group relative flex-shrink-0 md:min-w-0 w-44 md:w-auto ${heightClass} snap-center md:snap-align-none cursor-pointer overflow-hidden`}
       style={{ borderRadius: '2px' }}
     >
       <img
@@ -160,6 +161,7 @@ interface PurposeGridProps {
 export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
   const [gridReady, setGridReady] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const watermarkRef = useRef<HTMLSpanElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
@@ -335,6 +337,39 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
     setActiveFilter(next);
   };
 
+  // Mobile-only IntersectionObserver to track which tile is centered in the
+  // snap carousel — drives the dot indicator beneath the strip.
+  useEffect(() => {
+    const root = gridRef.current;
+    if (!root || typeof IntersectionObserver === 'undefined') return;
+
+    // Only attach the observer on mobile widths — desktop uses static grid mode.
+    if (window.innerWidth >= 768) return;
+
+    const tiles = Array.from(root.querySelectorAll<HTMLElement>('[data-flip-id]'));
+    if (tiles.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const id = (entry.target as HTMLElement).getAttribute('data-flip-id');
+            if (id) setActiveId(id);
+          }
+        }
+      },
+      {
+        // Center band of the viewport — a snapped tile crossing this region is "active."
+        root: null,
+        rootMargin: '-40% 0px -40% 0px',
+        threshold: [0, 0.5, 1],
+      },
+    );
+
+    for (const tile of tiles) observer.observe(tile);
+    return () => observer.disconnect();
+  }, [filteredProjects]);
+
   // Strip → grid auto-playing morph.
   //
   // When the section scrolls into view the Flip animation plays through
@@ -494,7 +529,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
       <div
         ref={gridRef}
         data-layout="strip"
-        className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible"
+        className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none"
         style={{ background: 'var(--app-bg)' }}
       >
         {filteredProjects.map((project, index) => {
@@ -525,6 +560,7 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
           );
         })}
       </div>
+      <PurposeGridDots projects={filteredProjects} activeId={activeId} />
     </section>
   );
 }
