@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useConnectionCards } from '../../hooks/useConnectionCards';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { firstNameOf } from '../../first-load/notepad-first-load';
@@ -24,12 +24,35 @@ export function ConnectionCardsStrip({
   loadNeighborNotes,
   onOpenNote,
 }: ConnectionCardsStripProps) {
+  // Pull the server-authoritative similarity threshold so the strip never
+  // renders a card the edge function will refuse to explain. While the fetch
+  // is in flight (or if it errors), the hook falls back to the spec value
+  // (0.78), which is the production-safe default.
+  const [minSimilarity, setMinSimilarity] = useState<number | undefined>(
+    undefined,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    adapter
+      .getConnectionCardThresholds()
+      .then((t) => {
+        if (!cancelled) setMinSimilarity(t.minSimilarity);
+      })
+      .catch(() => {
+        // Swallow — hook default (0.78) is the right fallback.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adapter]);
+
   const { state, expandCard, retryWhy } = useConnectionCards({
     adapter,
     userId,
     activeNote,
     totalNoteCount,
     loadNeighborNotes,
+    qualifyingMinSimilarity: minSimilarity,
   });
   const { user } = useAuthSession();
   const firstName = user ? sanitizeFirstName(firstNameOf(user)) : null;

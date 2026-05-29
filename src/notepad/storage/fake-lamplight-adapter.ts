@@ -6,6 +6,7 @@ import type {
   DailyDevotionGenerateResult,
   ConnectionNeighbor,
   ConnectionWhyResult,
+  ConnectionCardThresholds,
   AdminJobFilters,
   AdminJobRow,
   AdminJobCounts,
@@ -21,6 +22,7 @@ export class FakeLamplightAdapter implements LamplightAdapter {
   settings = new Map<string, LamplightSettings>();
   entitlements = new Map<string, LamplightEntitlement>();
   promo: PromoConfig = { promoActive: true, promoEndsAt: null };
+  connectionCardThresholds: ConnectionCardThresholds = { minSimilarity: 0.78 };
   deleteAllUserDataCalls: string[] = [];
   // Track every enqueueEmbedding call for assertions.
   public enqueueCalls: Array<{ noteId: string; contentHash: string }> = [];
@@ -104,6 +106,10 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     return { ...this.promo };
   }
 
+  async getConnectionCardThresholds(): Promise<ConnectionCardThresholds> {
+    return { ...this.connectionCardThresholds };
+  }
+
   // Admin fake state.
   public isAdmin = false;
   public usageRows: Array<{
@@ -150,10 +156,15 @@ export class FakeLamplightAdapter implements LamplightAdapter {
 
   async getConnectionNeighbors(
     sourceNoteId: string,
-    _k = 5,
-    _minSimilarity?: number,
+    k = 5,
+    minSimilarity?: number,
   ): Promise<ConnectionNeighbor[]> {
-    return this.connectionNeighbors.get(sourceNoteId) ?? [];
+    const all = this.connectionNeighbors.get(sourceNoteId) ?? [];
+    const filtered =
+      typeof minSimilarity === 'number'
+        ? all.filter((n) => n.similarity >= minSimilarity)
+        : all;
+    return filtered.slice(0, k);
   }
 
   async hasNoteEmbedding(noteId: string): Promise<boolean> {

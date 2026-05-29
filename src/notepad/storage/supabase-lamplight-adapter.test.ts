@@ -249,6 +249,35 @@ describe('SupabaseLamplightAdapter — entitlement + promo', () => {
   });
 });
 
+describe('SupabaseLamplightAdapter.getConnectionCardThresholds', () => {
+  let backend: Backend;
+  let adapter: SupabaseLamplightAdapter;
+
+  beforeEach(() => {
+    backend = { settings: [], entitlements: [], config: [], deletes: [] };
+    adapter = new SupabaseLamplightAdapter(makeClient(backend));
+  });
+
+  it('falls back to spec value (0.78) when row is absent', async () => {
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+
+  it('returns the configured similarity when row is present', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 0.3 });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.3 });
+  });
+
+  it('falls back to 0.78 when value is non-numeric', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 'oops' });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+
+  it('falls back to 0.78 when value is out of [0, 1]', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 1.5 });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+});
+
 import type { DailyDevotion } from './lamplight-artifacts';
 
 describe('SupabaseLamplightAdapter.getDailyDevotion', () => {

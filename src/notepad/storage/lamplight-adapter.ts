@@ -41,6 +41,15 @@ export interface PromoConfig {
   promoEndsAt: string | null;
 }
 
+/**
+ * Connection-card thresholds sourced from the `app_config` table so the
+ * browser strip and the edge function always agree. `minSimilarity` is the
+ * only knob the server enforces today; the others are client-only gates.
+ */
+export interface ConnectionCardThresholds {
+  minSimilarity: number;
+}
+
 import type { DailyDevotion } from './lamplight-artifacts';
 
 export type DailyDevotionGenerateResult =
@@ -74,6 +83,12 @@ export interface LamplightAdapter {
   enqueueEmbedding(noteId: string, contentHash: string): Promise<string | null>;
   getEntitlement(userId: string): Promise<LamplightEntitlement | null>;
   getPromoConfig(): Promise<PromoConfig>;
+  /**
+   * Returns the connection-card similarity threshold (and any future
+   * server-enforced thresholds) from `app_config`. Used by the strip so it
+   * only renders cards the edge function will agree to explain.
+   */
+  getConnectionCardThresholds(): Promise<ConnectionCardThresholds>;
   /** Returns the persisted daily devotion for (userId, periodKey) if it exists, else null. */
   getDailyDevotion(userId: string, periodKey: string): Promise<DailyDevotion | null>;
   /** Invokes lamplight-generate Edge Function with kind='daily_devotion'. */

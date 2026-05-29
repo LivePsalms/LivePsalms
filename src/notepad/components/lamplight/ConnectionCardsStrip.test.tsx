@@ -234,6 +234,59 @@ describe('ConnectionCardsStrip', () => {
     expect(screen.queryByText('Lighting…')).not.toBeInTheDocument();
   });
 
+  it('respects the server-supplied similarity threshold (hides neighbors below it)', async () => {
+    // The strip pulls the threshold from `app_config` via the adapter. Setting
+    // it strictly above all seeded neighbors must cause the strip to fall to
+    // its hidden state — proving the threshold actually flows through.
+    const adapter = new FakeLamplightAdapter();
+    adapter.connectionCardThresholds = { minSimilarity: 0.99 };
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.95 },
+      { relatedNoteId: 'note-3', similarity: 0.88 },
+    ]);
+    const note = fakeNote({ id: 'note-1' });
+    const loadNeighborNotes = async (ids: string[]) =>
+      ids.map((id) => fakeNote({ id, title: `Note ${id}` }));
+    const { container } = render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    // Wait long enough for the threshold fetch + hook re-run.
+    await waitFor(() => expect(container.firstChild).toBeNull());
+  });
+
+  it('renders neighbors when server-supplied threshold is loose enough', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.connectionCardThresholds = { minSimilarity: 0.3 };
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.4 },
+    ]);
+    const note = fakeNote({ id: 'note-1' });
+    const loadNeighborNotes = async (ids: string[]) =>
+      ids.map((id) => fakeNote({ id, title: `Note ${id}` }));
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByText('Note note-2')).toBeInTheDocument(),
+    );
+  });
+
   it('surfaces validators_failed error inline in detail zone', async () => {
     const adapter = new FakeLamplightAdapter();
     adapter.__seedNoteEmbedding('note-1');

@@ -125,11 +125,13 @@ serve(async (req) => {
       return jsonResp({ error: 'bad payload' }, 400);
     }
     const userId = body.user_id;
+    const minSimilarity = await loadConnectionMinSimilarity(supabase);
     const ctxResult = await buildConnectionWhyContext(supabase, {
       userId,
       sourceNoteId: body.source_note_id,
       relatedNoteId: body.related_note_id,
       voicePreference,
+      minSimilarity,
     });
     if (ctxResult.kind === 'no_embedding') {
       void recordLamplightUsage(supabase, {
@@ -338,6 +340,25 @@ type BuildConnectionWhyContextResult =
   | { kind: 'not_neighbor' }
   | { kind: 'ok'; context: ConnectionWhyContext };
 
+// Read the connection-card similarity threshold from app_config. The browser
+// strip reads the same row, so client and server stay in sync. Falls back to
+// the spec value (0.78) when the row is absent or malformed — this is the
+// production-safe default.
+async function loadConnectionMinSimilarity(
+  supabase: SupabaseClient,
+): Promise<number> {
+  const { data } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'lamplight_min_similarity')
+    .maybeSingle();
+  const raw = (data as { value?: unknown } | null)?.value;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 1) {
+    return raw;
+  }
+  return 0.78;
+}
+
 async function buildConnectionWhyContext(
   supabase: SupabaseClient,
   args: {
@@ -345,6 +366,7 @@ async function buildConnectionWhyContext(
     sourceNoteId: string;
     relatedNoteId: string;
     voicePreference: string;
+    minSimilarity: number;
   },
 ): Promise<BuildConnectionWhyContextResult> {
   // 1. Load both notes (including tags for shared-signal intersection).
@@ -395,7 +417,7 @@ async function buildConnectionWhyContext(
     source_id: string;
     similarity: number;
   }>)
-    .filter((n) => n.similarity >= 0.78)
+    .filter((n) => n.similarity >= args.minSimilarity)
     .slice(0, 5)
     .find((n) => n.source_id === args.relatedNoteId);
   if (!currentNeighbor) {

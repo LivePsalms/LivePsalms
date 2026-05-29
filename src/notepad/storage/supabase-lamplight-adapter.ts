@@ -11,6 +11,7 @@ import type {
   DailyDevotionGenerateResult,
   ConnectionNeighbor,
   ConnectionWhyResult,
+  ConnectionCardThresholds,
   AdminJobFilters,
   AdminJobRow,
   AdminJobCounts,
@@ -223,6 +224,24 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       promoActive: promoRow?.value === true,
       promoEndsAt: typeof endsRow?.value === 'string' ? endsRow.value : null,
     };
+  }
+
+  async getConnectionCardThresholds(): Promise<ConnectionCardThresholds> {
+    const { data, error } = await this.#client
+      .from('app_config')
+      .select('value')
+      .eq('key', 'lamplight_min_similarity')
+      .maybeSingle();
+    if (error) throw error;
+    const raw = (data as { value?: unknown } | null)?.value;
+    // Server falls back to 0.78 when the row is missing or malformed
+    // (see lamplight-generate/index.ts loadConnectionMinSimilarity). Mirror
+    // that fallback here so client and server agree even before the migration
+    // is applied.
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 1) {
+      return { minSimilarity: raw };
+    }
+    return { minSimilarity: 0.78 };
   }
 
   #mapSettings(row: Record<string, unknown>): LamplightSettings {

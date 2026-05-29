@@ -61,12 +61,18 @@ export function useConnectionCards(
     activeNote,
     totalNoteCount,
     loadNeighborNotes,
-    // Test-mode defaults — loosened from the spec's 100 words / 10 notes /
-    // 0.78 similarity so the strip is easier to trigger in dev. Production
-    // ship will tighten these back up; track via the followup card.
+    // qualifyingMinSimilarity defaults to the spec value (0.78) so that, in
+    // production, a missing or in-flight server config never causes the strip
+    // to request neighbors the edge function would later refuse to explain.
+    // The Connection Cards strip overrides this with the value sourced from
+    // `app_config.lamplight_min_similarity` (see ConnectionCardsStrip.tsx).
+    //
+    // minWords / minVaultSize remain at dev-loosened values for now (spec is
+    // 100 / 10); they are client-only gates and do not affect the server
+    // contract, so they don't need server sourcing.
     qualifyingMinWords = 10,
     qualifyingMinVaultSize = 2,
-    qualifyingMinSimilarity = 0.3,
+    qualifyingMinSimilarity = 0.78,
     maxRenderedCards = 3,
   } = args;
 
