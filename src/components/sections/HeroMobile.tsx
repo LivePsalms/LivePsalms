@@ -1,9 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
 import { BRIDGE_COPY } from './hero-bridge-content';
 import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
+import { cn } from '@/lib/utils';
+import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
 import type { HeroProps } from './HeroDesktop';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -27,48 +29,20 @@ const MOBILE_COLLAPSE_VH = 60;
  */
 export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+
   const quoteRef = useRef<HTMLDivElement>(null);
-  const [quoteVisible, setQuoteVisible] = useState(false);
   const bridgeRef = useRef<HTMLDivElement>(null);
-  const [bridgeVisible, setBridgeVisible] = useState(false);
+
+  // Cross-fade in once the quote enters the viewport. Graceful no-IO fallback
+  // makes the content visible immediately when IntersectionObserver is absent.
+  const quoteVisible = useIntersectionStage(quoteRef, { threshold: 0.4 });
+  const bridgeVisible = useIntersectionStage(bridgeRef, { threshold: 0.3 });
 
   useEffect(() => {
     if (!introActive) return;
     onIntroComplete?.();
     onHandoff?.();
   }, [introActive, onIntroComplete, onHandoff]);
-
-  useEffect(() => {
-    const node = quoteRef.current;
-    if (!node || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setQuoteVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const node = bridgeRef.current;
-    if (!node || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setBridgeVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
 
   // Snapshot at mount only; OS reduced-motion changes mid-session require a
   // reload. Matches HeroDesktop's pattern — listening for changes here would
@@ -141,16 +115,16 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           ref={quoteRef}
           data-testid="hero-mobile-quote"
           data-visible={quoteVisible ? 'true' : 'false'}
-          className={[
+          className={cn(
             'mt-12 text-center px-6 transition-opacity duration-1000 max-w-md',
             quoteVisible ? 'opacity-100' : 'opacity-0',
-          ].join(' ')}
+          )}
         >
           <p className="quote-text italic text-[15px] leading-relaxed">
-            &ldquo;He leads me beside still waters.
+            "He leads me beside still waters.
           </p>
           <p className="quote-text italic text-[15px] leading-relaxed mt-2">
-            He restores my soul.&rdquo;
+            He restores my soul."
           </p>
           <p className="quote-attr text-xs opacity-60 mt-4">
             Psalm 23:2-3
@@ -163,26 +137,26 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           className="mt-16 mb-24 text-center px-6 flex flex-col gap-8 max-w-md"
         >
           <p
-            className={[
-              'bridge-invite text-[15px] leading-relaxed transition-opacity duration-700',
+            className={cn(
+              'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700',
               bridgeVisible ? 'opacity-100' : 'opacity-0',
-            ].join(' ')}
+            )}
           >
             {BRIDGE_COPY.invitation}
           </p>
           <p
-            className={[
+            className={cn(
               'bridge-thesis text-[15px] leading-relaxed transition-opacity duration-700 delay-200',
               bridgeVisible ? 'opacity-100' : 'opacity-0',
-            ].join(' ')}
+            )}
           >
             {BRIDGE_COPY.thesis}
           </p>
           <p
-            className={[
+            className={cn(
               'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700 delay-500',
               bridgeVisible ? 'opacity-100' : 'opacity-0',
-            ].join(' ')}
+            )}
           >
             {BRIDGE_COPY.assurance}
           </p>
