@@ -33,6 +33,9 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
     onHandoff?.();
   }, [introActive, onIntroComplete, onHandoff]);
 
+  // Snapshot at mount only; OS reduced-motion changes mid-session require a
+  // reload. Matches HeroDesktop's pattern — listening for changes here would
+  // require re-running GSAP setup mid-session with stale state.
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -51,28 +54,35 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
     };
     if (!letters.P || !letters.S1 || !letters.L || !letters.M || !letters.S2) return;
 
-    const distancePx = window.innerHeight * (MOBILE_COLLAPSE_VH / 100);
+    // Wrap in a gsap.context so cleanup (ctx.revert) tears down BOTH the
+    // timeline AND its ScrollTrigger in one call — matches HeroDesktop's
+    // convention and survives future additions of more tweens inside this
+    // effect without leaking ScrollTriggers.
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: svg,
+          start: 'top top',
+          // Functional `end` so ScrollTrigger.refresh() recomputes on resize/
+          // orientation change (matches HeroDesktop pattern; spec note about
+          // mobile Safari address bar resize).
+          end: () => `+=${window.innerHeight * (MOBILE_COLLAPSE_VH / 100)}`,
+          // scrub: 0.7 — snappier than desktop's 1.0; scaled by MOBILE_TIME_SCALE
+          // so the constant remains the source of truth for "snappier on mobile".
+          scrub: 1 * MOBILE_TIME_SCALE,
+          pin: false,
+          invalidateOnRefresh: true,
+        },
+      });
 
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: svg,
-        start: 'top top',
-        end: `+=${distancePx}`,
-        scrub: 1 * MOBILE_TIME_SCALE,
-        pin: false,
-      },
+      tl.to(letters.P,  { x: COLLAPSE.P,  ease: 'power2.inOut' }, 0)
+        .to(letters.S1, { x: COLLAPSE.S1, ease: 'power2.inOut' }, 0)
+        .to(letters.L,  { x: COLLAPSE.L,  ease: 'power2.inOut' }, 0)
+        .to(letters.M,  { x: COLLAPSE.M,  ease: 'power2.inOut' }, 0)
+        .to(letters.S2, { x: COLLAPSE.S2, ease: 'power2.inOut' }, 0);
     });
 
-    tl.to(letters.P,  { x: COLLAPSE.P,  ease: 'power2.inOut' }, 0)
-      .to(letters.S1, { x: COLLAPSE.S1, ease: 'power2.inOut' }, 0)
-      .to(letters.L,  { x: COLLAPSE.L,  ease: 'power2.inOut' }, 0)
-      .to(letters.M,  { x: COLLAPSE.M,  ease: 'power2.inOut' }, 0)
-      .to(letters.S2, { x: COLLAPSE.S2, ease: 'power2.inOut' }, 0);
-
-    return () => {
-      tl.scrollTrigger?.kill();
-      tl.kill();
-    };
+    return () => ctx.revert();
   }, [prefersReducedMotion]);
 
   return (
