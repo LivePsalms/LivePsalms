@@ -44,7 +44,7 @@ export function MobileProjectTile({
 
   const { scrollYProgress } = useScroll({
     target: tileRef,
-    offset: ['start 60%', 'start 5%'],
+    offset: ['start 50%', 'end 50%'],
   });
 
   // One-way latched progress: only ever increases. Drives all reveal
@@ -60,17 +60,20 @@ export function MobileProjectTile({
 
   // Image: left-to-right curtain wipe. At progress 0 the image is clipped
   // from the right (inset right = 100%) and invisible; it unveils to fully
-  // visible at progress 0.75.
-  const imageInsetRight = useTransform(latchedProgress, [0, 0.75], [100, 0], { ease });
+  // visible at progress 0.85.
+  const imageInsetRight = useTransform(latchedProgress, [0, 0.85], [100, 0], { ease });
   const imageClipPath = useTransform(
     imageInsetRight,
     (v) => `inset(0 ${v}% 0 0)`
   );
-  const imageOpacity = useTransform(latchedProgress, [0, 0.75], [0, 1], { ease });
+  const imageOpacity = useTransform(latchedProgress, [0, 0.85], [0, 1], { ease });
 
-  // Text: drops in from 50px above. Lags the image and finishes after it.
-  const textOpacity = useTransform(latchedProgress, [0.15, 0.85], [0, 1], { ease });
-  const textY = useTransform(latchedProgress, [0.15, 0.85], [-50, 0], { ease });
+  // Text: drops in from 60px above with a 14px blur clearing. Lags the
+  // image and finishes after it.
+  const textOpacity = useTransform(latchedProgress, [0.2, 0.95], [0, 1], { ease });
+  const textY = useTransform(latchedProgress, [0.2, 0.95], [-60, 0], { ease });
+  const textBlurPx = useTransform(latchedProgress, [0.2, 0.95], [14, 0], { ease });
+  const textFilter = useTransform(textBlurPx, (v) => `blur(${v}px)`);
 
   return (
     <button
@@ -90,7 +93,7 @@ export function MobileProjectTile({
         style={
           reduced
             ? undefined
-            : { opacity: textOpacity, y: textY }
+            : { opacity: textOpacity, y: textY, filter: textFilter }
         }
       >
         <span
