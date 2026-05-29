@@ -80,4 +80,22 @@ describe('HeroMobile content', () => {
     expect(img?.getAttribute('src')).toBe('/tropical_jungle.png');
     expect(img?.getAttribute('alt')).toBe('');
   });
+
+  it('mounts and unmounts cleanly when prefers-reduced-motion is set', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('reduce') || query.includes('max-width'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { unmount } = render(<Hero introActive={false} />);
+    expect(() => unmount()).not.toThrow();
+  });
 });
