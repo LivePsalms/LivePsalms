@@ -60,7 +60,7 @@ function WaterText({ children, className, style, as: Tag = 'a', ...props }: { ch
   );
 }
 
-interface HeaderProps {
+export interface HeaderProps {
   showNav?: boolean;
   darkText?: boolean;
   /**
@@ -72,7 +72,7 @@ interface HeaderProps {
   onNavTrigger?: () => void;
 }
 
-export function Header({ showNav = true, darkText = false, onNavTrigger }: HeaderProps) {
+export function HeaderDesktop({ showNav = true, darkText = false, onNavTrigger }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -278,6 +278,7 @@ export function Header({ showNav = true, darkText = false, onNavTrigger }: Heade
 
   return (
     <header
+      data-testid="header-desktop"
       className={`fixed top-0 left-0 right-0 z-50 bg-transparent transition-all duration-500 ${
         isScrolled ? 'py-3' : 'py-4 md:py-6'
       }`}
