@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -11,11 +11,26 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
+function useIsHoverable(): boolean {
+  const [hoverable, setHoverable] = useState<boolean>(() =>
+    typeof window === 'undefined' ? true : window.matchMedia('(hover: hover)').matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia('(hover: hover)');
+    const onChange = () => setHoverable(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return hoverable;
+}
+
 export function TwoPathInterlude() {
   const sectionRef = useRef<HTMLElement>(null);
   const hairlineRef = useRef<HTMLDivElement>(null);
   const leftColRef = useRef<HTMLDivElement>(null);
   const rightColRef = useRef<HTMLDivElement>(null);
+
+  const hoverable = useIsHoverable();
 
   const handleReadBelow = () => {
     scrollToPurposeGrid({
@@ -103,6 +118,7 @@ export function TwoPathInterlude() {
       aria-label="Two ways to continue"
     >
       <div ref={hairlineRef} className="two-path-hairline" aria-hidden="true" />
+      <div className="two-path-or-label" aria-hidden="true">— or —</div>
 
       <div ref={leftColRef} className="two-path-col two-path-col-left">
         <p className="two-path-statement">
@@ -114,10 +130,14 @@ export function TwoPathInterlude() {
           className="two-path-cta two-path-cta-read"
           aria-label="Read below — scroll to the purpose grid"
         >
-          <TextStaggerHover as="span" className="two-path-cta-label">
-            <TextStaggerHoverActive animation="blur">Read Below</TextStaggerHoverActive>
-            <TextStaggerHoverHidden animation="blur">Read Below</TextStaggerHoverHidden>
-          </TextStaggerHover>
+          {hoverable ? (
+            <TextStaggerHover as="span" className="two-path-cta-label">
+              <TextStaggerHoverActive animation="blur">Read Below</TextStaggerHoverActive>
+              <TextStaggerHoverHidden animation="blur">Read Below</TextStaggerHoverHidden>
+            </TextStaggerHover>
+          ) : (
+            <span className="two-path-cta-label">Read Below</span>
+          )}
           <span className="two-path-arrow" aria-hidden="true" />
         </button>
       </div>
@@ -131,10 +151,14 @@ export function TwoPathInterlude() {
           className="two-path-cta two-path-cta-notepad"
           aria-label="Go to Notepad"
         >
-          <TextStaggerHover as="span" className="two-path-cta-label">
-            <TextStaggerHoverActive animation="blur">Go to Notepad</TextStaggerHoverActive>
-            <TextStaggerHoverHidden animation="blur">Go to Notepad</TextStaggerHoverHidden>
-          </TextStaggerHover>
+          {hoverable ? (
+            <TextStaggerHover as="span" className="two-path-cta-label">
+              <TextStaggerHoverActive animation="blur">Go to Notepad</TextStaggerHoverActive>
+              <TextStaggerHoverHidden animation="blur">Go to Notepad</TextStaggerHoverHidden>
+            </TextStaggerHover>
+          ) : (
+            <span className="two-path-cta-label">Go to Notepad</span>
+          )}
           <span className="two-path-underline" aria-hidden="true" />
         </Link>
       </div>

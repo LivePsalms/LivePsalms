@@ -790,6 +790,9 @@ img {
   opacity: 1;
 }
 
+/* Default (desktop): hide the mobile-only "— or —" label. */
+.two-path-or-label { display: none; }
+
 /* ─── Mobile (< 768px): stack vertically, horizontal hairline stub between columns ─── */
 @media (max-width: 767px) {
   .two-path-interlude {
@@ -822,6 +825,19 @@ img {
   .two-path-col-left,
   .two-path-col-right {
     justify-self: center;
+  }
+
+  /* Mobile-only "— or —" label that sits with the hairline between columns. */
+  .two-path-or-label {
+    display: block;
+    grid-row: 2;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    color: currentColor;
+    margin-top: -16px;
   }
 }
 
