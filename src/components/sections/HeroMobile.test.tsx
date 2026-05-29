@@ -128,4 +128,16 @@ describe('HeroMobile content', () => {
     expect(getByTestId('hero-mobile-quote').getAttribute('data-visible')).toBe('false');
     vi.unstubAllGlobals();
   });
+
+  it('renders all three BRIDGE_COPY lines', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    vi.resetModules();
+    const { BRIDGE_COPY } = await import('./hero-bridge-content');
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    expect(screen.getByText(BRIDGE_COPY.invitation)).toBeInTheDocument();
+    expect(screen.getByText(BRIDGE_COPY.thesis)).toBeInTheDocument();
+    expect(screen.getByText(BRIDGE_COPY.assurance)).toBeInTheDocument();
+  });
 });

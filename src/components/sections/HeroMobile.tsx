@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
+import { BRIDGE_COPY } from './hero-bridge-content';
 import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import type { HeroProps } from './HeroDesktop';
 
@@ -28,6 +29,8 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
   const svgRef = useRef<SVGSVGElement>(null);
   const quoteRef = useRef<HTMLDivElement>(null);
   const [quoteVisible, setQuoteVisible] = useState(false);
+  const bridgeRef = useRef<HTMLDivElement>(null);
+  const [bridgeVisible, setBridgeVisible] = useState(false);
 
   useEffect(() => {
     if (!introActive) return;
@@ -46,6 +49,22 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
         }
       },
       { threshold: 0.4 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const node = bridgeRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setBridgeVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -135,6 +154,37 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           </p>
           <p className="quote-attr text-xs opacity-60 mt-4">
             Psalm 23:2-3
+          </p>
+        </div>
+        <div
+          ref={bridgeRef}
+          data-testid="hero-mobile-bridge"
+          data-visible={bridgeVisible ? 'true' : 'false'}
+          className="mt-16 mb-24 text-center px-6 flex flex-col gap-8 max-w-md"
+        >
+          <p
+            className={[
+              'bridge-invite text-[15px] leading-relaxed transition-opacity duration-700',
+              bridgeVisible ? 'opacity-100' : 'opacity-0',
+            ].join(' ')}
+          >
+            {BRIDGE_COPY.invitation}
+          </p>
+          <p
+            className={[
+              'bridge-thesis text-[15px] leading-relaxed transition-opacity duration-700 delay-200',
+              bridgeVisible ? 'opacity-100' : 'opacity-0',
+            ].join(' ')}
+          >
+            {BRIDGE_COPY.thesis}
+          </p>
+          <p
+            className={[
+              'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700 delay-500',
+              bridgeVisible ? 'opacity-100' : 'opacity-0',
+            ].join(' ')}
+          >
+            {BRIDGE_COPY.assurance}
           </p>
         </div>
       </div>
