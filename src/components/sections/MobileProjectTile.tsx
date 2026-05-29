@@ -75,6 +75,8 @@ export function MobileProjectTile({
   const textBlurPx = useTransform(latchedProgress, [0.2, 0.95], [14, 0], { ease });
   const textFilter = useTransform(textBlurPx, (v) => `blur(${v}px)`);
 
+  const textAnchor: 'left' | 'right' = order === 'text-image' ? 'left' : 'right';
+
   return (
     <button
       ref={tileRef}
@@ -83,13 +85,38 @@ export function MobileProjectTile({
       data-tile-order={order}
       onClick={() => onProjectClick(project)}
       aria-label={ariaLabel}
-      className={`group flex w-full items-center gap-6 px-6 min-h-[70vh] text-left ${
-        order === 'image-text' ? 'flex-row-reverse' : ''
-      }`}
+      className="relative block w-full min-h-screen overflow-hidden text-left"
     >
       <motion.div
+        data-testid="tile-image"
+        className="absolute inset-0"
+        style={
+          reduced
+            ? undefined
+            : { clipPath: imageClipPath, opacity: imageOpacity }
+        }
+      >
+        <img
+          src={project.thumbnail}
+          alt={project.name}
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-2/5 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(0deg, rgba(40,30,20,0.55) 0%, rgba(40,30,20,0) 100%)',
+          }}
+        />
+      </motion.div>
+      <motion.div
         data-testid="tile-text"
-        className="flex-1 flex flex-col gap-2"
+        data-text-anchor={textAnchor}
+        className={`absolute bottom-6 z-10 flex flex-col gap-2 ${
+          textAnchor === 'left' ? 'left-6 text-left' : 'right-6 text-right'
+        }`}
         style={
           reduced
             ? undefined
@@ -99,13 +126,17 @@ export function MobileProjectTile({
         <span
           aria-hidden="true"
           className="text-[10px] tracking-[0.3em] uppercase text-white/60"
+          style={{ textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
         >
           {eyebrow}
         </span>
         <span
           data-testid="tile-title"
           className="text-[26px] leading-[1.05] italic text-white"
-          style={{ fontFamily: '"Cormorant Garamond", serif' }}
+          style={{
+            fontFamily: '"Cormorant Garamond", serif',
+            textShadow: '0 1px 12px rgba(0,0,0,0.45)',
+          }}
         >
           {title}
         </span>
@@ -113,26 +144,11 @@ export function MobileProjectTile({
           <span
             data-testid="tile-scripture"
             className="text-[10px] tracking-[0.12em] uppercase text-white/70"
+            style={{ textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
           >
             {scripture}
           </span>
         )}
-      </motion.div>
-      <motion.div
-        data-testid="tile-image"
-        className="flex-[1.15] aspect-[3/4] overflow-hidden"
-        style={
-          reduced
-            ? { borderRadius: '2px' }
-            : { borderRadius: '2px', clipPath: imageClipPath, opacity: imageOpacity }
-        }
-      >
-        <img
-          src={project.thumbnail}
-          alt={project.name}
-          loading="lazy"
-          className="w-full h-full object-cover"
-        />
       </motion.div>
     </button>
   );

@@ -72,6 +72,15 @@ describe('MobileProjectTile', () => {
     expect(getByTestId('mobile-project-tile').getAttribute('data-tile-order')).toBe('image-text');
   });
 
+  it('alternates text overlay anchor: index 0 → left, index 1 → right', () => {
+    const { rerender, getByTestId } = render(
+      <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
+    );
+    expect(getByTestId('tile-text').getAttribute('data-text-anchor')).toBe('left');
+    rerender(<MobileProjectTile project={peaceProject} index={1} onProjectClick={vi.fn()} />);
+    expect(getByTestId('tile-text').getAttribute('data-text-anchor')).toBe('right');
+  });
+
   it('exposes an aria-label that combines category, title, and scripture', () => {
     render(<MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />);
     const button = screen.getByRole('button');
