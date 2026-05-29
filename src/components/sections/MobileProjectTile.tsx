@@ -1,3 +1,5 @@
+import { useRef, useMemo } from 'react';
+import { motion, useScroll, useTransform, cubicBezier } from 'framer-motion';
 import { categoryLabel } from '@/data/projects';
 import { devotions } from '@/data/devotions';
 import type { Project } from '@/types';
@@ -16,6 +18,14 @@ const overlayLabelById: Record<string, string> = {
   trust: 'Serenity of Trust',
 };
 
+function usePrefersReducedMotion(): boolean {
+  return useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    if (typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+}
+
 export interface MobileProjectTileProps {
   project: Project;
   index: number;
@@ -32,13 +42,38 @@ export function MobileProjectTile({
   const title = devotion?.title ?? overlayLabelById[project.id] ?? eyebrow;
   const scripture = devotion?.scriptureRef ?? null;
   const order: 'text-image' | 'image-text' = index % 2 === 0 ? 'text-image' : 'image-text';
-
   const ariaLabel = scripture
     ? `${eyebrow} — ${title}, ${scripture}`
     : `${eyebrow} — ${title}`;
 
+  const tileRef = useRef<HTMLButtonElement>(null);
+  const reduced = usePrefersReducedMotion();
+
+  const { scrollYProgress } = useScroll({
+    target: tileRef,
+    offset: ['start 85%', 'start 30%'],
+  });
+
+  const ease = cubicBezier(0.22, 1, 0.36, 1);
+
+  // Image clip-path: clipped from the bottom at progress 0 (inset bottom = 100%)
+  // unwinds to fully revealed at progress 0.6.
+  const imageInsetBottom = useTransform(scrollYProgress, [0, 0.6], [100, 0], { ease });
+  const imageClipPath = useTransform(
+    imageInsetBottom,
+    (v) => `inset(0 0 ${v}% 0)`
+  );
+  const imageOpacity = useTransform(scrollYProgress, [0, 0.6], [0, 1], { ease });
+
+  // Text: lags the image by 0.1.
+  const textOpacity = useTransform(scrollYProgress, [0.1, 0.7], [0, 1], { ease });
+  const textY = useTransform(scrollYProgress, [0.1, 0.7], [20, 0], { ease });
+  const textBlurPx = useTransform(scrollYProgress, [0.1, 0.7], [6, 0], { ease });
+  const textFilter = useTransform(textBlurPx, (v) => `blur(${v}px)`);
+
   return (
     <button
+      ref={tileRef}
       type="button"
       data-testid="mobile-project-tile"
       data-tile-order={order}
@@ -48,7 +83,15 @@ export function MobileProjectTile({
         order === 'image-text' ? 'flex-row-reverse' : ''
       }`}
     >
-      <div className="flex-1 flex flex-col gap-2">
+      <motion.div
+        data-testid="tile-text"
+        className="flex-1 flex flex-col gap-2"
+        style={
+          reduced
+            ? undefined
+            : { opacity: textOpacity, y: textY, filter: textFilter }
+        }
+      >
         <span
           aria-hidden="true"
           className="text-[10px] tracking-[0.3em] uppercase text-white/60"
@@ -70,15 +113,23 @@ export function MobileProjectTile({
             {scripture}
           </span>
         )}
-      </div>
-      <div className="flex-[1.15] aspect-[3/4] overflow-hidden" style={{ borderRadius: '2px' }}>
+      </motion.div>
+      <motion.div
+        data-testid="tile-image"
+        className="flex-[1.15] aspect-[3/4] overflow-hidden"
+        style={
+          reduced
+            ? { borderRadius: '2px' }
+            : { borderRadius: '2px', clipPath: imageClipPath, opacity: imageOpacity }
+        }
+      >
         <img
           src={project.thumbnail}
           alt={project.name}
           loading="lazy"
           className="w-full h-full object-cover"
         />
-      </div>
+      </motion.div>
     </button>
   );
 }

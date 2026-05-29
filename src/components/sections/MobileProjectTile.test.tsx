@@ -77,4 +77,59 @@ describe('MobileProjectTile', () => {
     const button = screen.getByRole('button');
     expect(button.getAttribute('aria-label')).toBe('Restoration — Beside Still Waters, Psalm 23:2–3');
   });
+
+  it('renders no clip-path or blur when prefers-reduced-motion is set', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      render(
+        <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
+      );
+      const imageWrap = screen.getByTestId('tile-image');
+      const textCol = screen.getByTestId('tile-text');
+
+      // Reduced-motion: no inline clip-path on the image wrap, no blur on text.
+      expect(imageWrap.style.clipPath).toBe('');
+      expect(textCol.style.filter).toBe('');
+      expect(textCol.style.opacity === '' || textCol.style.opacity === '1').toBe(true);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('applies an initial clip-path/blur when reduced motion is not set', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      render(
+        <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
+      );
+      const imageWrap = screen.getByTestId('tile-image');
+      const textCol = screen.getByTestId('tile-text');
+
+      // Animated path: motion engaged means inline clip-path/filter exist.
+      expect(imageWrap.style.clipPath).not.toBe('');
+      expect(textCol.style.filter).not.toBe('');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
 });
