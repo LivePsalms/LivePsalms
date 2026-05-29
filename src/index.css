@@ -128,6 +128,7 @@
     font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--app-bg);
     color: var(--deep-umber);
+    position: relative;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
