@@ -33,6 +33,7 @@ describe('Hero dispatcher', () => {
   });
 
   it('renders HeroMobile below 768px', async () => {
+    vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
     expect(screen.getByTestId('hero-mobile')).toBeInTheDocument();
