@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
 import type { HeroProps } from './HeroDesktop';
 
@@ -17,11 +17,8 @@ const SILHOUETTE_ALT = ''; // Decorative — hero copy carries the meaning. Matc
  * state without delay.
  */
 export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
-  const introFiredRef = useRef(false);
-
   useEffect(() => {
-    if (!introActive || introFiredRef.current) return;
-    introFiredRef.current = true;
+    if (!introActive) return;
     onIntroComplete?.();
     onHandoff?.();
   }, [introActive, onIntroComplete, onHandoff]);

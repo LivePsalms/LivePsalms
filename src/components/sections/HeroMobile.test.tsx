@@ -75,6 +75,9 @@ describe('HeroMobile content', () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
-    expect(container.querySelector('img')).not.toBeNull();
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe('/tropical_jungle.png');
+    expect(img?.getAttribute('alt')).toBe('');
   });
 });
