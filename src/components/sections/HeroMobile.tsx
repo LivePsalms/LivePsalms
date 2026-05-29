@@ -100,7 +100,8 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
     <div
       data-testid="hero-mobile"
       data-intro-active={introActive ? 'true' : 'false'}
-      className="relative w-full min-h-[100svh] bg-[color:var(--deep-umber)] text-white"
+      className="relative w-full min-h-[100svh]"
+      style={{ backgroundColor: 'var(--app-bg)' }}
     >
       <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />

@@ -140,4 +140,34 @@ describe('HeroMobile content', () => {
     expect(screen.getByText(BRIDGE_COPY.thesis)).toBeInTheDocument();
     expect(screen.getByText(BRIDGE_COPY.assurance)).toBeInTheDocument();
   });
+
+  it('applies var(--app-bg) as the root background color', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    const root = screen.getByTestId('hero-mobile');
+    expect(root.style.backgroundColor).toBe('var(--app-bg)');
+  });
+
+  it('does NOT apply text-white to the root container', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    const root = screen.getByTestId('hero-mobile');
+    expect(root.className).not.toMatch(/text-white/);
+  });
+
+  it('does NOT apply a dark umber background class to the root container', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    const root = screen.getByTestId('hero-mobile');
+    expect(root.className).not.toMatch(/deep-umber/);
+  });
 });
