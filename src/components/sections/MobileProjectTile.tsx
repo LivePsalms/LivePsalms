@@ -29,10 +29,7 @@ export function MobileProjectTile({
 }: MobileProjectTileProps) {
   const devotion = devotions[project.id];
   const eyebrow = categoryLabel[project.category];
-  const title =
-    devotion?.title ??
-    overlayLabelById[project.id] ??
-    `${eyebrow} of ${project.name}`;
+  const title = devotion?.title ?? overlayLabelById[project.id] ?? eyebrow;
   const scripture = devotion?.scriptureRef ?? null;
   const order: 'text-image' | 'image-text' = index % 2 === 0 ? 'text-image' : 'image-text';
 

@@ -24,6 +24,15 @@ const orphanProject: Project = {
   overlayColor: '#B08A6A',
 };
 
+const forgivenessProject: Project = {
+  id: 'forgiveness',
+  name: 'Serenity 02',
+  category: 'hospitality',
+  thumbnail: '/mid_section/serenity2.png',
+  images: ['/mid_section/serenity2.png'],
+  overlayColor: '#B08A6A',
+};
+
 describe('MobileProjectTile', () => {
   it('renders the category eyebrow as RESTORATION for residential projects', () => {
     render(<MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />);
@@ -31,7 +40,7 @@ describe('MobileProjectTile', () => {
   });
 
   it('renders the category eyebrow as SERENITY for hospitality projects', () => {
-    render(<MobileProjectTile project={orphanProject} index={0} onProjectClick={vi.fn()} />);
+    render(<MobileProjectTile project={forgivenessProject} index={0} onProjectClick={vi.fn()} />);
     expect(screen.getByText('Serenity')).toBeInTheDocument();
   });
 
