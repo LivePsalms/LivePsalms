@@ -78,7 +78,7 @@ describe('MobileProjectTile', () => {
     expect(button.getAttribute('aria-label')).toBe('Restoration — Beside Still Waters, Psalm 23:2–3');
   });
 
-  it('renders no clip-path or blur when prefers-reduced-motion is set', () => {
+  it('renders no clip-path when prefers-reduced-motion is set', () => {
     const original = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
@@ -97,16 +97,16 @@ describe('MobileProjectTile', () => {
       const imageWrap = screen.getByTestId('tile-image');
       const textCol = screen.getByTestId('tile-text');
 
-      // Reduced-motion: no inline clip-path on the image wrap, no blur on text.
+      // Reduced-motion: no inline clip-path on the image wrap, text wrap
+      // is unstyled so opacity is empty or fully opaque.
       expect(imageWrap.style.clipPath).toBe('');
-      expect(textCol.style.filter).toBe('');
       expect(textCol.style.opacity === '' || textCol.style.opacity === '1').toBe(true);
     } finally {
       window.matchMedia = original;
     }
   });
 
-  it('applies an initial clip-path/blur when reduced motion is not set', () => {
+  it('applies an initial clip-path when reduced motion is not set', () => {
     const original = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: false,
@@ -123,17 +123,15 @@ describe('MobileProjectTile', () => {
         <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
       );
       const imageWrap = screen.getByTestId('tile-image');
-      const textCol = screen.getByTestId('tile-text');
 
-      // Animated path: motion engaged means inline clip-path/filter exist.
+      // Animated path: motion engaged means inline clip-path exists.
       expect(imageWrap.style.clipPath).not.toBe('');
-      expect(textCol.style.filter).not.toBe('');
     } finally {
       window.matchMedia = original;
     }
   });
 
-  it('renders the initial (fully clipped) image state at scroll progress 0', () => {
+  it('renders the initial (fully right-clipped) image state at scroll progress 0', () => {
     const original = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: false,
@@ -151,9 +149,9 @@ describe('MobileProjectTile', () => {
       );
       const imageWrap = screen.getByTestId('tile-image');
       // The latched progress starts at 0, so the image should be fully
-      // clipped from the bottom. The latch's "no reverse" guarantee is
-      // verified end-to-end in the browser (Task 6).
-      expect(imageWrap.style.clipPath).toBe('inset(0 0 100% 0)');
+      // clipped from the right (left-to-right curtain wipe). The latch's
+      // "no reverse" guarantee is verified end-to-end in the browser.
+      expect(imageWrap.style.clipPath).toBe('inset(0 100% 0 0)');
     } finally {
       window.matchMedia = original;
     }

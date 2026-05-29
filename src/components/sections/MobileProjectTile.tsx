@@ -44,7 +44,7 @@ export function MobileProjectTile({
 
   const { scrollYProgress } = useScroll({
     target: tileRef,
-    offset: ['start 85%', 'start 30%'],
+    offset: ['start 60%', 'start 5%'],
   });
 
   // One-way latched progress: only ever increases. Drives all reveal
@@ -58,20 +58,19 @@ export function MobileProjectTile({
 
   const ease = cubicBezier(0.22, 1, 0.36, 1);
 
-  // Image clip-path: clipped from the bottom at progress 0 (inset bottom = 100%)
-  // unwinds to fully revealed at progress 0.6.
-  const imageInsetBottom = useTransform(latchedProgress, [0, 0.6], [100, 0], { ease });
+  // Image: left-to-right curtain wipe. At progress 0 the image is clipped
+  // from the right (inset right = 100%) and invisible; it unveils to fully
+  // visible at progress 0.75.
+  const imageInsetRight = useTransform(latchedProgress, [0, 0.75], [100, 0], { ease });
   const imageClipPath = useTransform(
-    imageInsetBottom,
-    (v) => `inset(0 0 ${v}% 0)`
+    imageInsetRight,
+    (v) => `inset(0 ${v}% 0 0)`
   );
-  const imageOpacity = useTransform(latchedProgress, [0, 0.6], [0, 1], { ease });
+  const imageOpacity = useTransform(latchedProgress, [0, 0.75], [0, 1], { ease });
 
-  // Text: lags the image by 0.1.
-  const textOpacity = useTransform(latchedProgress, [0.1, 0.7], [0, 1], { ease });
-  const textY = useTransform(latchedProgress, [0.1, 0.7], [20, 0], { ease });
-  const textBlurPx = useTransform(latchedProgress, [0.1, 0.7], [6, 0], { ease });
-  const textFilter = useTransform(textBlurPx, (v) => `blur(${v}px)`);
+  // Text: drops in from 50px above. Lags the image and finishes after it.
+  const textOpacity = useTransform(latchedProgress, [0.15, 0.85], [0, 1], { ease });
+  const textY = useTransform(latchedProgress, [0.15, 0.85], [-50, 0], { ease });
 
   return (
     <button
@@ -91,7 +90,7 @@ export function MobileProjectTile({
         style={
           reduced
             ? undefined
-            : { opacity: textOpacity, y: textY, filter: textFilter }
+            : { opacity: textOpacity, y: textY }
         }
       >
         <span
