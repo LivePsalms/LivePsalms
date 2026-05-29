@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 're
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { navItems } from '@/data/projects';
+import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 import { X, Menu } from 'lucide-react';
 import {
   subscribeNavCollapseProgress,
@@ -40,9 +40,8 @@ const easePower1Out = (n: number): number => 1 - (1 - n);
 const easePower2Out = (n: number): number => 1 - (1 - n) * (1 - n);
 const easePower3Out = (n: number): number => 1 - (1 - n) * (1 - n) * (1 - n);
 
-// Labels that fire the loading overlay when clicked. Social is intentionally
-// excluded (it's a hover dropdown, not a navigation).
-const NAV_TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Community', 'Contact']);
+// NAV_TRIGGER_LABELS is the source of truth for which nav clicks fire the
+// loading overlay. It lives in `@/data/projects` so HeaderMobile can share it.
 
 function WaterText({ children, className, style, as: Tag = 'a', ...props }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties; as?: React.ElementType; [key: string]: unknown }) {
   const text = typeof children === 'string' ? children : '';

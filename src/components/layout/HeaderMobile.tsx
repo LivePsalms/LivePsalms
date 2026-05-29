@@ -9,14 +9,11 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { PsalmsWordmarkSvg } from '@/components/sections/PsalmsWordmarkSvg';
-import { navItems } from '@/data/projects';
+import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 
 interface HeaderMobileProps {
   onNavTrigger?: () => void;
 }
-
-// Labels that trigger the loading overlay. Mirrors the Set on HeaderDesktop.
-const TRIGGER_LABELS = new Set(['Purpose', 'Notepad', 'Community', 'Contact']);
 
 /**
  * Compact top bar for the mobile viewport (< 768px). Wordmark left, hamburger
@@ -57,7 +54,7 @@ export function HeaderMobile({ onNavTrigger }: HeaderMobileProps) {
                   to={item.href}
                   className="block py-3 min-h-[44px]"
                   onClick={() => {
-                    if (TRIGGER_LABELS.has(item.label)) onNavTrigger?.();
+                    if (NAV_TRIGGER_LABELS.has(item.label)) onNavTrigger?.();
                   }}
                 >
                   {item.label}

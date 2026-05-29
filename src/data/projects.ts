@@ -100,3 +100,13 @@ export const navItems = [
   { label: 'Community', href: '/community' },
   { label: 'Contact', href: '/contact' },
 ];
+
+// Labels whose tap should fire the loading overlay. Social is intentionally
+// excluded (it's a hover dropdown, not a navigation). Single source of truth
+// imported by HeaderDesktop and HeaderMobile.
+export const NAV_TRIGGER_LABELS: ReadonlySet<string> = new Set([
+  'Purpose',
+  'Notepad',
+  'Community',
+  'Contact',
+]);
