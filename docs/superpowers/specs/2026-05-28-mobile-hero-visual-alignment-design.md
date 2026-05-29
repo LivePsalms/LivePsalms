@@ -17,9 +17,9 @@ This spec brings mobile in line with desktop's palette and navbar identity. No l
 
 | # | Decision | Choice | Notes |
 |---|---|---|---|
-| 1 | Hero background layering | **Two zones, exactly mirroring desktop:** zone 1 (wordmark + silhouette + quote) = `var(--app-bg)`; zone 2 (bridge copy) = `var(--paper-cream)`. Hard color boundary between them. | Matches `HeroDesktop.tsx:704` `<section>` boundary where desktop transitions to the paper-cream bridge area. |
-| 2 | HeroMobile root background | **Drop the `bg-[color:var(--deep-umber)]` on the root.** Set background per zone instead. | Root container becomes background-less; each zone owns its color. |
-| 3 | HeroMobile root text color | **Drop `text-white`.** Each zone inherits the existing text styles (`bridge-line-center`, `quote-text` etc. already render dark on light per desktop). | Wordmark uses `currentColor` via `PsalmsWordmarkSvg`; default container text becomes the page default (deep-umber by inheritance). |
+| 1 | Hero background | **Single continuous `var(--app-bg)` (#988F80 warm taupe).** Revised during implementation. | Discovered during implementation: `--paper-cream` is referenced in `HeroDesktop.tsx` lines 704 + 727 but **never defined** in `src/index.css`. Desktop has therefore been rendering as a single continuous taupe (the body's `--app-bg` shows through the undefined cream). "Mirror exactly how desktop renders" → one continuous taupe zone, not the two-zone layered look the dead code attempts. The desktop bug is left in place — fixing it is out of scope for this spec. |
+| 2 | HeroMobile root background | **Set `backgroundColor: 'var(--app-bg)'`** on the root (replacing `bg-[color:var(--deep-umber)]`). | Single-zone approach — no nested zone containers needed. |
+| 3 | HeroMobile root text color | **Drop `text-white`.** Body default applies (`color: var(--deep-umber)` from `index.css:130`). | `bridge-line-center`, `quote-text`, `quote-attr` classes already inherit `currentColor` and render correctly as dark text on the taupe. Wordmark uses `currentColor` via `PsalmsWordmarkSvg`. |
 | 4 | Navbar logo asset | **`<img src="/logo-icon.png" alt="LivePsalms" />`** — the 'A' icon used by desktop. | Path and alt match `HeaderDesktop.tsx:310-311` exactly. Replace `<PsalmsWordmarkSvg />` in `HeaderMobile`. |
 | 5 | Navbar logo sizing | **`className="h-8 w-auto object-contain"`** (32px high). Desktop uses `h-8 md:h-10`; mobile takes only the `h-8` half. | Mobile bar is `h-14` (56px); a 32px logo sits comfortably with 12px breathing room top/bottom. |
 | 6 | Navbar logo conditional invert | **Subscribe to `subscribeNavTheme` from `@/lib/nav-theme`** and apply `filter: invert(1)` when `isDarkBg` is true. Same rule HeaderDesktop applies at line 314. | When the scroll position is over a dark section, the dark icon inverts to white. On mobile this triggers when the user reaches the MidSection (which uses dark `'reduced'` blocks). |
@@ -36,45 +36,36 @@ This spec brings mobile in line with desktop's palette and navbar identity. No l
 
 #### `HeroMobile.tsx`
 
-Replace the single-color root container with a two-zone composition.
+Single change to the root container: swap the dark umber background for the body-matching taupe, and drop `text-white`. No structural changes — the existing inner wrapper, refs, IntersectionObserver fades, and bridge block all stay where they are.
 
 Before (current):
 ```tsx
-<div className="relative w-full min-h-[100svh] bg-[color:var(--deep-umber)] text-white">
-  <div className="...wordmark + img + quote + bridge all in here...">
-```
-
-After:
-```tsx
-<div className="relative w-full">
-  {/* Zone 1 — wordmark + silhouette + quote on warm taupe */}
-  <div
-    className="relative w-full min-h-[100svh] flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8"
-    style={{ backgroundColor: 'var(--app-bg)' }}
-  >
-    <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
-    <img src={SILHOUETTE_SRC} alt={SILHOUETTE_ALT} className="..." />
-    {/* quote block */}
-    <div ref={quoteRef} ...>...</div>
-  </div>
-  {/* Zone 2 — bridge copy on paper cream */}
-  <div
-    ref={bridgeRef}
-    style={{ backgroundColor: 'var(--paper-cream)' }}
-    className="w-full pt-16 pb-24 px-6"
-  >
-    <div className="max-w-md mx-auto text-center flex flex-col gap-8">
-      {/* three bridge paragraphs */}
-    </div>
+<div
+  data-testid="hero-mobile"
+  data-intro-active={introActive ? 'true' : 'false'}
+  className="relative w-full min-h-[100svh] bg-[color:var(--deep-umber)] text-white"
+>
+  <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
+    {/* wordmark, silhouette, quote, bridge — unchanged */}
   </div>
 </div>
 ```
 
-The `quoteRef` block stays inside zone 1 (the visual flow is: wordmark → silhouette → quote → boundary → bridge). The `useIntersectionStage` hooks attached to `quoteRef` and `bridgeRef` are unaffected by the structural restructuring — they observe their respective refs and report visibility.
+After:
+```tsx
+<div
+  data-testid="hero-mobile"
+  data-intro-active={introActive ? 'true' : 'false'}
+  className="relative w-full min-h-[100svh]"
+  style={{ backgroundColor: 'var(--app-bg)' }}
+>
+  <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
+    {/* wordmark, silhouette, quote, bridge — unchanged */}
+  </div>
+</div>
+```
 
-The existing class `bridge-line-center` (Cormorant Garamond italic, dark deep-umber text) renders correctly on cream. The existing `quote-text` and `quote-attr` classes are designed for light backgrounds and render correctly on taupe.
-
-Remove the root `text-white` — each zone's typography inherits from the existing global CSS classes for those elements.
+`bridge-line-center`, `quote-text`, and `quote-attr` are all dark serif/sans on a light surface — they render correctly on taupe. The wordmark inherits color via `currentColor`.
 
 #### `HeaderMobile.tsx`
 

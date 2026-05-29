@@ -28,9 +28,11 @@
 
 ---
 
-## Task 1: HeroMobile two-zone background
+## Task 1: HeroMobile single-zone taupe background
 
-The current `HeroMobile` has one root `<div>` with `bg-[color:var(--deep-umber)] text-white` that wraps everything (wordmark, silhouette, quote, bridge). Split it so zone 1 (wordmark + silhouette + quote) sits on `var(--app-bg)` taupe and zone 2 (bridge copy) sits on `var(--paper-cream)`. Drop the global `text-white`.
+> **Spec deviation captured during planning:** `--paper-cream` is referenced in `HeroDesktop.tsx` lines 704 and 727 but is NOT defined in `src/index.css`. Desktop has therefore been rendering its "bridge section" as transparent — the body's `--app-bg` taupe shows through. The literal mirror of "how desktop renders" is one continuous taupe, not the two-zone look the dead code in HeroDesktop attempts. Spec updated to single-zone; this task implements that.
+
+Swap the HeroMobile root container's `bg-[color:var(--deep-umber)] text-white` for `style={{ backgroundColor: 'var(--app-bg)' }}` and drop `text-white`. Inner wrapper, refs, IntersectionObserver fades, and bridge block all stay where they are.
 
 **Files:**
 - Modify: `src/components/sections/HeroMobile.tsx`
@@ -41,26 +43,14 @@ The current `HeroMobile` has one root `<div>` with `bg-[color:var(--deep-umber)]
 Append to `src/components/sections/HeroMobile.test.tsx` inside the existing `describe('HeroMobile content', ...)` block:
 
 ```tsx
-it('renders zone 1 with app-bg background and a data-zone="hero" attribute', async () => {
+it('applies var(--app-bg) as the root background color', async () => {
   Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
   setMatchMedia(true);
   vi.resetModules();
   const { Hero } = await import('./Hero');
   render(<Hero introActive={false} />);
-  const zone1 = screen.getByTestId('hero-mobile-zone-1');
-  expect(zone1).toBeInTheDocument();
-  expect(zone1.style.backgroundColor).toBe('var(--app-bg)');
-});
-
-it('renders zone 2 with paper-cream background and a data-zone="bridge" attribute', async () => {
-  Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-  setMatchMedia(true);
-  vi.resetModules();
-  const { Hero } = await import('./Hero');
-  render(<Hero introActive={false} />);
-  const zone2 = screen.getByTestId('hero-mobile-zone-2');
-  expect(zone2).toBeInTheDocument();
-  expect(zone2.style.backgroundColor).toBe('var(--paper-cream)');
+  const root = screen.getByTestId('hero-mobile');
+  expect(root.style.backgroundColor).toBe('var(--app-bg)');
 });
 
 it('does NOT apply text-white to the root container', async () => {
@@ -73,7 +63,7 @@ it('does NOT apply text-white to the root container', async () => {
   expect(root.className).not.toMatch(/text-white/);
 });
 
-it('does NOT apply a dark umber background to the root container', async () => {
+it('does NOT apply a dark umber background class to the root container', async () => {
   Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
   setMatchMedia(true);
   vi.resetModules();
@@ -89,110 +79,42 @@ it('does NOT apply a dark umber background to the root container', async () => {
 Run: `npx vitest run src/components/sections/HeroMobile.test.tsx`
 Expected: the 4 new tests fail (testids missing; root class still contains `deep-umber` and `text-white`).
 
-- [ ] **Step 3: Restructure HeroMobile.tsx**
+- [ ] **Step 3: Update HeroMobile.tsx root container**
 
-Open `src/components/sections/HeroMobile.tsx`. Replace the entire return statement (current lines 99-166) with the two-zone structure:
+Open `src/components/sections/HeroMobile.tsx`. Find the outermost `<div data-testid="hero-mobile">` (currently lines 100-104) and modify its className + add an inline style. Replace:
 
 ```tsx
-return (
-  <div
-    data-testid="hero-mobile"
-    data-intro-active={introActive ? 'true' : 'false'}
-    className="relative w-full"
-  >
-    {/* Zone 1 — wordmark + silhouette + quote on warm taupe */}
-    <div
-      data-testid="hero-mobile-zone-1"
-      data-zone="hero"
-      className="relative w-full min-h-[100svh] flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8"
-      style={{ backgroundColor: 'var(--app-bg)' }}
-    >
-      <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
-      <img
-        src={SILHOUETTE_SRC}
-        alt={SILHOUETTE_ALT}
-        className="w-[88vw] max-w-md aspect-[4/5] object-cover opacity-90"
-        loading="eager"
-        decoding="async"
-      />
-      <div
-        ref={quoteRef}
-        data-testid="hero-mobile-quote"
-        data-visible={quoteVisible ? 'true' : 'false'}
-        className={cn(
-          'mt-12 text-center px-6 transition-opacity duration-1000 max-w-md',
-          quoteVisible ? 'opacity-100' : 'opacity-0',
-        )}
-      >
-        <p className="quote-text italic text-[15px] leading-relaxed">
-          "He leads me beside still waters.
-        </p>
-        <p className="quote-text italic text-[15px] leading-relaxed mt-2">
-          He restores my soul."
-        </p>
-        <p className="quote-attr text-xs opacity-60 mt-4">
-          Psalm 23:2-3
-        </p>
-      </div>
-    </div>
+<div
+  data-testid="hero-mobile"
+  data-intro-active={introActive ? 'true' : 'false'}
+  className="relative w-full min-h-[100svh] bg-[color:var(--deep-umber)] text-white"
+>
+```
 
-    {/* Zone 2 — bridge copy on paper cream */}
-    <div
-      data-testid="hero-mobile-zone-2"
-      data-zone="bridge"
-      className="w-full pt-16 pb-24 px-6"
-      style={{ backgroundColor: 'var(--paper-cream)' }}
-    >
-      <div
-        ref={bridgeRef}
-        data-testid="hero-mobile-bridge"
-        data-visible={bridgeVisible ? 'true' : 'false'}
-        className="max-w-md mx-auto text-center flex flex-col gap-8"
-      >
-        <p
-          className={cn(
-            'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700',
-            bridgeVisible ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {BRIDGE_COPY.invitation}
-        </p>
-        <p
-          className={cn(
-            'bridge-thesis text-[15px] leading-relaxed transition-opacity duration-700 delay-200',
-            bridgeVisible ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {BRIDGE_COPY.thesis}
-        </p>
-        <p
-          className={cn(
-            'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700 delay-500',
-            bridgeVisible ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {BRIDGE_COPY.assurance}
-        </p>
-      </div>
-    </div>
-  </div>
-);
+with:
+
+```tsx
+<div
+  data-testid="hero-mobile"
+  data-intro-active={introActive ? 'true' : 'false'}
+  className="relative w-full min-h-[100svh]"
+  style={{ backgroundColor: 'var(--app-bg)' }}
+>
 ```
 
 What changed:
-- Root `<div data-testid="hero-mobile">` no longer has `min-h-[100svh]`, no `bg-[color:var(--deep-umber)]`, no `text-white`. Only `relative w-full`.
-- Zone 1 wraps the wordmark + silhouette + quote and owns the taupe background + the `100svh` minimum height + the flex centering.
-- Zone 2 wraps the bridge copy and owns the paper-cream background. The bridge `<div>` (with its IntersectionObserver ref + visibility class) is the inner content of zone 2.
-- `data-zone` attribute on each zone for semantic test queries.
+- `bg-[color:var(--deep-umber)]` removed from className.
+- `text-white` removed from className.
+- `style={{ backgroundColor: 'var(--app-bg)' }}` added so the test can read it via `element.style.backgroundColor`.
 
-Do not touch the existing `useLayoutEffect` GSAP setup, the `useEffect` intro-fire effect, `prefersReducedMotion` memo, refs, constants (`SILHOUETTE_SRC`, `COLLAPSE`, `MOBILE_COLLAPSE_VH`, `SILHOUETTE_ALT`), imports, or the JSDoc comment block. The change is JSX only.
+Everything inside that root div — the inner wrapper, wordmark, silhouette, quote block, bridge block, refs, GSAP setup, IntersectionObserver hooks — stays exactly as it is.
+
+Do not touch the existing `useLayoutEffect` GSAP setup, the `useEffect` intro-fire effect, `prefersReducedMotion` memo, refs, constants (`SILHOUETTE_SRC`, `COLLAPSE`, `MOBILE_COLLAPSE_VH`, `SILHOUETTE_ALT`), imports, or the JSDoc comment block.
 
 - [ ] **Step 4: Run the tests and confirm pass**
 
 Run: `npx vitest run src/components/sections/HeroMobile.test.tsx`
-Expected: all 13 tests pass (the original 9 plus the 4 new ones).
-
-If a pre-existing test references the root's `text-white` class or asserts the root container has `min-h-[100svh]`, update the assertion to read from `hero-mobile-zone-1` instead. The original 9 tests as inspected at commit `e5b3ce3` do not — they assert `data-testid="hero-mobile"` exists, presence of an `<img>` with src `/tropical_jungle.png`, absence of `<video>`, presence of wordmark labelled "psalms", and `data-visible` on the quote container. All still hold.
+Expected: all 12 tests pass (the original 9 plus the 3 new ones).
 
 - [ ] **Step 5: Verify type-check and full section suite**
 
@@ -206,7 +128,7 @@ Expected: full section suite green.
 
 ```bash
 git add src/components/sections/HeroMobile.tsx src/components/sections/HeroMobile.test.tsx
-git commit -m "feat(hero-mobile): two-zone background mirroring desktop (taupe → cream)"
+git commit -m "feat(hero-mobile): root background to --app-bg, drop deep-umber + text-white"
 ```
 
 ---
