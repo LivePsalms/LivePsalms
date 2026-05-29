@@ -2,9 +2,7 @@ import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PurposeGridDots } from './PurposeGridDots';
 import { categoryLabel } from '@/data/projects';
-import { MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
@@ -167,7 +165,6 @@ export function DesktopMosaic({
   onProjectClick,
 }: DesktopMosaicProps) {
   const [gridReady, setGridReady] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const morphTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
@@ -210,39 +207,6 @@ export function DesktopMosaic({
 
     return () => ctx.revert();
   }, [sectionRef]);
-
-  // Mobile-only IntersectionObserver to track which tile is centered in the
-  // snap carousel — drives the dot indicator beneath the strip.
-  useEffect(() => {
-    const root = gridRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return;
-
-    // Only attach the observer on mobile widths — desktop uses static grid mode.
-    if (window.innerWidth >= MOBILE_BREAKPOINT) return;
-
-    const tiles = Array.from(root.querySelectorAll<HTMLElement>('[data-flip-id]'));
-    if (tiles.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            const id = (entry.target as HTMLElement).getAttribute('data-flip-id');
-            if (id) setActiveId(id);
-          }
-        }
-      },
-      {
-        // Center band of the viewport — a snapped tile crossing this region is "active."
-        root: null,
-        rootMargin: '-40% 0px -40% 0px',
-        threshold: [0, 0.5, 1],
-      },
-    );
-
-    for (const tile of tiles) observer.observe(tile);
-    return () => observer.disconnect();
-  }, [filteredProjects]);
 
   // Strip → grid auto-playing morph.
   //
@@ -405,44 +369,41 @@ export function DesktopMosaic({
   }, [filteredProjects, flipStateRef]);
 
   return (
-    <>
-      {/* Editorial container — data-layout drives strip vs grid mode on md+.
-          Mobile always uses the horizontal scrolling strip. */}
-      <div
-        ref={gridRef}
-        data-layout="strip"
-        className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none"
-        style={{ background: 'var(--app-bg)' }}
-      >
-        {filteredProjects.map((project, index) => {
-          // Slightly varied strip heights so the top edge breathes like the
-          // reference. Only apply in strip mode — grid mode uses CSS
-          // aspect-ratio rules keyed off data-span (see index.css).
-          const heightCycle = [
-            'h-64 md:h-[22rem]',
-            'h-72 md:h-[24rem]',
-            'h-60 md:h-[20rem]',
-            'h-[17rem] md:h-[23rem]',
-            'h-72 md:h-[25rem]',
-            'h-64 md:h-[21rem]',
-            'h-[17rem] md:h-[22.5rem]',
-            'h-72 md:h-[24rem]',
-          ];
-          const h = heightCycle[index % heightCycle.length];
-          const span = spans[index] ?? 3;
-          return (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              span={span}
-              heightClass={h}
-              onProjectClick={onProjectClick}
-              hoverEnabled={gridReady}
-            />
-          );
-        })}
-      </div>
-      <PurposeGridDots projects={filteredProjects} activeId={activeId} />
-    </>
+    // Editorial container — data-layout drives strip vs grid mode on md+.
+    // Mobile always uses the horizontal scrolling strip.
+    <div
+      ref={gridRef}
+      data-layout="strip"
+      className="relative flex w-full items-end gap-1 px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none"
+      style={{ background: 'var(--app-bg)' }}
+    >
+      {filteredProjects.map((project, index) => {
+        // Slightly varied strip heights so the top edge breathes like the
+        // reference. Only apply in strip mode — grid mode uses CSS
+        // aspect-ratio rules keyed off data-span (see index.css).
+        const heightCycle = [
+          'h-64 md:h-[22rem]',
+          'h-72 md:h-[24rem]',
+          'h-60 md:h-[20rem]',
+          'h-[17rem] md:h-[23rem]',
+          'h-72 md:h-[25rem]',
+          'h-64 md:h-[21rem]',
+          'h-[17rem] md:h-[22.5rem]',
+          'h-72 md:h-[24rem]',
+        ];
+        const h = heightCycle[index % heightCycle.length];
+        const span = spans[index] ?? 3;
+        return (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            span={span}
+            heightClass={h}
+            onProjectClick={onProjectClick}
+            hoverEnabled={gridReady}
+          />
+        );
+      })}
+    </div>
   );
 }

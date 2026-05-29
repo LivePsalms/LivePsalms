@@ -8,6 +8,7 @@ interface PurposeGridDotsProps {
 export function PurposeGridDots({ projects, activeId }: PurposeGridDotsProps) {
   return (
     <div
+      data-testid="purpose-grid-dots"
       className="md:hidden flex justify-center gap-1.5 mt-4"
       aria-hidden="true"
     >

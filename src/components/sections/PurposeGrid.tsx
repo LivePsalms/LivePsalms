@@ -2,7 +2,9 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
 import { FilterTabs } from '@/components/ui-custom/FilterTabs';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { DesktopMosaic } from './DesktopMosaic';
+import { MobileParallaxList } from './MobileParallaxList';
 import type { FilterCategory, Project } from '@/types';
 
 // PurposeGrid no longer touches Flip directly, but DesktopMosaic does and
@@ -19,6 +21,7 @@ interface PurposeGridProps {
 
 export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
+  const isMobile = useIsMobile();
   const sectionRef = useRef<HTMLElement>(null);
   const watermarkRef = useRef<HTMLSpanElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
@@ -164,12 +167,19 @@ export function PurposeGrid({ projects, onProjectClick }: PurposeGridProps) {
         <FilterTabs activeFilter={activeFilter} onFilterChange={handleFilterChange} />
       </div>
 
-      <DesktopMosaic
-        sectionRef={sectionRef}
-        filteredProjects={filteredProjects}
-        flipStateRef={flipStateRef}
-        onProjectClick={onProjectClick}
-      />
+      {isMobile ? (
+        <MobileParallaxList
+          projects={filteredProjects}
+          onProjectClick={onProjectClick}
+        />
+      ) : (
+        <DesktopMosaic
+          sectionRef={sectionRef}
+          filteredProjects={filteredProjects}
+          flipStateRef={flipStateRef}
+          onProjectClick={onProjectClick}
+        />
+      )}
     </section>
   );
 }
