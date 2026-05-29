@@ -50,3 +50,31 @@ describe('Hero dispatcher', () => {
     expect(screen.queryByTestId('hero-mobile')).not.toBeInTheDocument();
   });
 });
+
+describe('HeroMobile content', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+  });
+
+  it('renders the PSALMS wordmark', async () => {
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    expect(screen.getByLabelText(/psalms/i)).toBeInTheDocument();
+  });
+
+  it('does NOT render a <video> element', async () => {
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    expect(container.querySelector('video')).toBeNull();
+  });
+
+  it('renders the silhouette image as an <img>', async () => {
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    expect(container.querySelector('img')).not.toBeNull();
+  });
+});
