@@ -26,13 +26,13 @@ const COLLAPSE = {
   S2: -1076.4,
 } as const;
 
-interface HeroProps {
+export interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
   onHandoff?: () => void;
 }
 
-export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
+export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const [showNav, setShowNav] = useState<boolean>(!introActive);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -575,6 +575,7 @@ export function Hero({ introActive = false, onIntroComplete, onHandoff }: HeroPr
   return (
     <section
       ref={heroRef}
+      data-testid="hero-desktop"
       className="relative overflow-visible"
     >
       {/* Hero region — first viewport + scroll-collapse pin combined.
