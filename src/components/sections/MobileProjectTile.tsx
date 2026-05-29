@@ -85,7 +85,7 @@ export function MobileProjectTile({
       data-tile-order={order}
       onClick={() => onProjectClick(project)}
       aria-label={ariaLabel}
-      className="relative block w-full min-h-screen overflow-hidden text-left"
+      className="relative block w-full aspect-[3/4] overflow-hidden text-left"
     >
       <motion.div
         data-testid="tile-image"

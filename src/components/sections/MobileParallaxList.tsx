@@ -11,7 +11,7 @@ export function MobileParallaxList({
   onProjectClick,
 }: MobileParallaxListProps) {
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full gap-10">
       {projects.map((project, index) => (
         <MobileProjectTile
           key={project.id}
