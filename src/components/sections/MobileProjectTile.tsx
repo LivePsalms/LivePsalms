@@ -58,13 +58,15 @@ export function MobileProjectTile({
 
   const ease = cubicBezier(0.22, 1, 0.36, 1);
 
-  // Image: left-to-right curtain wipe. At progress 0 the image is clipped
-  // from the right (inset right = 100%) and invisible; it unveils to fully
-  // visible at progress 0.85.
-  const imageInsetRight = useTransform(latchedProgress, [0, 0.85], [100, 0], { ease });
-  const imageClipPath = useTransform(
-    imageInsetRight,
-    (v) => `inset(0 ${v}% 0 0)`
+  // Image: curtain wipe whose direction alternates per index. Even tiles
+  // wipe left→right (clipped from the right, inset right = 100% → 0%);
+  // odd tiles wipe right→left (clipped from the left, inset left = 100% → 0%).
+  // Wipe direction is in lockstep with the text-anchor side so the curtain
+  // always pulls toward the text.
+  const wipeDirection: 'ltr' | 'rtl' = index % 2 === 0 ? 'ltr' : 'rtl';
+  const imageInsetValue = useTransform(latchedProgress, [0, 0.85], [100, 0], { ease });
+  const imageClipPath = useTransform(imageInsetValue, (v) =>
+    wipeDirection === 'ltr' ? `inset(0 ${v}% 0 0)` : `inset(0 0 0 ${v}%)`
   );
   const imageOpacity = useTransform(latchedProgress, [0, 0.85], [0, 1], { ease });
 
@@ -89,6 +91,7 @@ export function MobileProjectTile({
     >
       <motion.div
         data-testid="tile-image"
+        data-wipe-direction={wipeDirection}
         className="absolute inset-0"
         style={
           reduced

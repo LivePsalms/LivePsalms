@@ -143,7 +143,7 @@ describe('MobileProjectTile', () => {
     }
   });
 
-  it('renders the initial (fully right-clipped) image state at scroll progress 0', () => {
+  it('renders the initial (fully right-clipped) image state at index 0', () => {
     const original = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: false,
@@ -160,12 +160,43 @@ describe('MobileProjectTile', () => {
         <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
       );
       const imageWrap = screen.getByTestId('tile-image');
-      // The latched progress starts at 0, so the image should be fully
-      // clipped from the right (left-to-right curtain wipe). The latch's
-      // "no reverse" guarantee is verified end-to-end in the browser.
+      // Index 0 → LTR wipe → starts fully clipped from the right.
       expect(imageWrap.style.clipPath).toBe('inset(0 100% 0 0)');
     } finally {
       window.matchMedia = original;
     }
+  });
+
+  it('renders the initial (fully left-clipped) image state at index 1', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      render(
+        <MobileProjectTile project={peaceProject} index={1} onProjectClick={vi.fn()} />
+      );
+      const imageWrap = screen.getByTestId('tile-image');
+      // Index 1 → RTL wipe → starts fully clipped from the left.
+      expect(imageWrap.style.clipPath).toBe('inset(0 0 0 100%)');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('exposes data-wipe-direction reflecting per-index alternation', () => {
+    const { rerender, getByTestId } = render(
+      <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
+    );
+    expect(getByTestId('tile-image').getAttribute('data-wipe-direction')).toBe('ltr');
+    rerender(<MobileProjectTile project={peaceProject} index={1} onProjectClick={vi.fn()} />);
+    expect(getByTestId('tile-image').getAttribute('data-wipe-direction')).toBe('rtl');
   });
 });
