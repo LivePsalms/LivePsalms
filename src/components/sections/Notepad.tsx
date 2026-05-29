@@ -64,6 +64,14 @@ function NotepadWorkspace() {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   }, []);
 
+  const handleOpenNoteFromSidebar = useCallback(
+    (id: string) => {
+      collection.openNote(id);
+      setActiveTab('content');
+    },
+    [collection],
+  );
+
   return (
     <div className="fixed inset-0 flex flex-col" style={{ top: 0, background: 'var(--plaster)' }}>
       <NotepadToolbar
@@ -134,7 +142,12 @@ function NotepadWorkspace() {
               pointerEvents: sidebarOpen ? 'auto' : 'none',
             }}
           >
-            {sidebarOpen && <NotepadSidebar hideCollectionHeader />}
+            {sidebarOpen && (
+              <NotepadSidebar
+                hideCollectionHeader
+                onOpenNote={handleOpenNoteFromSidebar}
+              />
+            )}
           </div>
         </div>
 
