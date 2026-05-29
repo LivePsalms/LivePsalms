@@ -1,5 +1,12 @@
 import { useRef, useMemo } from 'react';
-import { motion, useScroll, useTransform, cubicBezier } from 'framer-motion';
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useMotionValueEvent,
+  cubicBezier,
+} from 'framer-motion';
 import { categoryLabel } from '@/data/projects';
 import { devotions } from '@/data/devotions';
 import type { Project } from '@/types';
@@ -54,21 +61,30 @@ export function MobileProjectTile({
     offset: ['start 85%', 'start 30%'],
   });
 
+  // One-way latched progress: only ever increases. Drives all reveal
+  // transforms so that scrolling back up does not reverse the animation.
+  const latchedProgress = useMotionValue(0);
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if (v > latchedProgress.get()) {
+      latchedProgress.set(v);
+    }
+  });
+
   const ease = cubicBezier(0.22, 1, 0.36, 1);
 
   // Image clip-path: clipped from the bottom at progress 0 (inset bottom = 100%)
   // unwinds to fully revealed at progress 0.6.
-  const imageInsetBottom = useTransform(scrollYProgress, [0, 0.6], [100, 0], { ease });
+  const imageInsetBottom = useTransform(latchedProgress, [0, 0.6], [100, 0], { ease });
   const imageClipPath = useTransform(
     imageInsetBottom,
     (v) => `inset(0 0 ${v}% 0)`
   );
-  const imageOpacity = useTransform(scrollYProgress, [0, 0.6], [0, 1], { ease });
+  const imageOpacity = useTransform(latchedProgress, [0, 0.6], [0, 1], { ease });
 
   // Text: lags the image by 0.1.
-  const textOpacity = useTransform(scrollYProgress, [0.1, 0.7], [0, 1], { ease });
-  const textY = useTransform(scrollYProgress, [0.1, 0.7], [20, 0], { ease });
-  const textBlurPx = useTransform(scrollYProgress, [0.1, 0.7], [6, 0], { ease });
+  const textOpacity = useTransform(latchedProgress, [0.1, 0.7], [0, 1], { ease });
+  const textY = useTransform(latchedProgress, [0.1, 0.7], [20, 0], { ease });
+  const textBlurPx = useTransform(latchedProgress, [0.1, 0.7], [6, 0], { ease });
   const textFilter = useTransform(textBlurPx, (v) => `blur(${v}px)`);
 
   return (

@@ -132,4 +132,30 @@ describe('MobileProjectTile', () => {
       window.matchMedia = original;
     }
   });
+
+  it('renders the initial (fully clipped) image state at scroll progress 0', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      render(
+        <MobileProjectTile project={peaceProject} index={0} onProjectClick={vi.fn()} />
+      );
+      const imageWrap = screen.getByTestId('tile-image');
+      // The latched progress starts at 0, so the image should be fully
+      // clipped from the bottom. The latch's "no reverse" guarantee is
+      // verified end-to-end in the browser (Task 6).
+      expect(imageWrap.style.clipPath).toBe('inset(0 0 100% 0)');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
 });
