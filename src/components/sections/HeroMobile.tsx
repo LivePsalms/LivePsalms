@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
@@ -26,12 +26,30 @@ const MOBILE_COLLAPSE_VH = 60;
  */
 export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const quoteRef = useRef<HTMLDivElement>(null);
+  const [quoteVisible, setQuoteVisible] = useState(false);
 
   useEffect(() => {
     if (!introActive) return;
     onIntroComplete?.();
     onHandoff?.();
   }, [introActive, onIntroComplete, onHandoff]);
+
+  useEffect(() => {
+    const node = quoteRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setQuoteVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // Snapshot at mount only; OS reduced-motion changes mid-session require a
   // reload. Matches HeroDesktop's pattern — listening for changes here would
@@ -100,6 +118,25 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           loading="eager"
           decoding="async"
         />
+        <div
+          ref={quoteRef}
+          data-testid="hero-mobile-quote"
+          data-visible={quoteVisible ? 'true' : 'false'}
+          className={[
+            'mt-12 text-center px-6 transition-opacity duration-1000 max-w-md',
+            quoteVisible ? 'opacity-100' : 'opacity-0',
+          ].join(' ')}
+        >
+          <p className="quote-text italic text-[15px] leading-relaxed">
+            &ldquo;He leads me beside still waters.
+          </p>
+          <p className="quote-text italic text-[15px] leading-relaxed mt-2">
+            He restores my soul.&rdquo;
+          </p>
+          <p className="quote-attr text-xs opacity-60 mt-4">
+            Psalm 23:2-3
+          </p>
+        </div>
       </div>
     </div>
   );

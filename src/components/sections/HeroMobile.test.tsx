@@ -98,4 +98,34 @@ describe('HeroMobile content', () => {
     const { unmount } = render(<Hero introActive={false} />);
     expect(() => unmount()).not.toThrow();
   });
+
+  it('renders the quote text and attribution', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    render(<Hero introActive={false} />);
+    expect(screen.getByText(/He leads me beside still waters/)).toBeInTheDocument();
+    expect(screen.getByText(/He restores my soul/)).toBeInTheDocument();
+    expect(screen.getByText(/Psalm 23:2-3/)).toBeInTheDocument();
+  });
+
+  it('quote container starts hidden (data-visible="false") on mount', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia(true);
+    // IntersectionObserver does NOT fire (default jsdom: undefined). Stub a passive one.
+    class PassiveIO {
+      observe = vi.fn();
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+      takeRecords = vi.fn();
+      root = null; rootMargin = ''; thresholds = [];
+    }
+    vi.stubGlobal('IntersectionObserver', PassiveIO);
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    expect(getByTestId('hero-mobile-quote').getAttribute('data-visible')).toBe('false');
+    vi.unstubAllGlobals();
+  });
 });
