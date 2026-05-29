@@ -32,11 +32,11 @@ describe('initialRenderMode (mobile branch)', () => {
 
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     vi.resetModules();
-    const mod = await import('./MidSectionMotion');
+    const mod = await import('./mid-section-render-mode');
     expect(mod.initialRenderMode()).toBe('reduced');
   });
 
-  it('returns "webgpu" on desktop when WebGPU is available', async () => {
+  it('returns "webgpu" on desktop (≥ 768) when WebGPU is available', async () => {
     window.matchMedia = vi.fn().mockImplementation((q: string) => ({
       matches: false,
       media: q,
@@ -50,7 +50,7 @@ describe('initialRenderMode (mobile branch)', () => {
 
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     vi.resetModules();
-    const mod = await import('./MidSectionMotion');
+    const mod = await import('./mid-section-render-mode');
     expect(mod.initialRenderMode()).toBe('webgpu');
   });
 
@@ -68,7 +68,7 @@ describe('initialRenderMode (mobile branch)', () => {
 
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     vi.resetModules();
-    const mod = await import('./MidSectionMotion');
+    const mod = await import('./mid-section-render-mode');
     expect(mod.initialRenderMode()).toBe('reduced');
   });
 });
