@@ -2,26 +2,10 @@ import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import gsap from 'gsap';
 import { Flip, ScrollTrigger } from 'gsap/all';
 import { motion, AnimatePresence } from 'framer-motion';
-import { categoryLabel } from '@/data/projects';
+import { categoryLabel, overlayLabelById } from '@/data/projects';
 import type { Project } from '@/types';
 
 gsap.registerPlugin(Flip, ScrollTrigger);
-
-// Per-image overlay overrides keyed by project id. Falls back to the
-// shared category label when no override exists.
-const overlayLabelById: Record<string, string> = {
-  peace: 'Restoration of Peace',
-  hope: 'Restoration of Hope',
-  strength: 'Restoration of Strength',
-  wholeness: 'Restoration of Wholeness',
-  purpose: 'Restoration of Purpose',
-  connection: 'Restoration of Connection',
-  identity: 'Restoration of Identity',
-  joy: 'Restoration of Joy',
-  forgiveness: 'Serenity of Forgiveness',
-  surrender: 'Serenity of Surrender',
-  trust: 'Serenity of Trust',
-};
 
 // Row pattern: strict 3/4/3/4…; the final row truncates to whatever items
 // remain. Returns each item's grid-column span count against a 12-col grid.

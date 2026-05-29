@@ -7,23 +7,9 @@ import {
   useMotionValueEvent,
   cubicBezier,
 } from 'framer-motion';
-import { categoryLabel } from '@/data/projects';
+import { categoryLabel, overlayLabelById } from '@/data/projects';
 import { devotions } from '@/data/devotions';
 import type { Project } from '@/types';
-
-const overlayLabelById: Record<string, string> = {
-  peace: 'Restoration of Peace',
-  hope: 'Restoration of Hope',
-  strength: 'Restoration of Strength',
-  wholeness: 'Restoration of Wholeness',
-  purpose: 'Restoration of Purpose',
-  connection: 'Restoration of Connection',
-  identity: 'Restoration of Identity',
-  joy: 'Restoration of Joy',
-  forgiveness: 'Serenity of Forgiveness',
-  surrender: 'Serenity of Surrender',
-  trust: 'Serenity of Trust',
-};
 
 function usePrefersReducedMotion(): boolean {
   return useMemo(() => {

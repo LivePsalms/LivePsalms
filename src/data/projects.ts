@@ -9,6 +9,23 @@ export const categoryLabel: Record<Project['category'], string> = {
   hospitality: 'Serenity',
 };
 
+// Per-image overlay overrides keyed by project id. Consumed by both the
+// desktop hover overlay and the mobile tile title fallback. Falls back to
+// the shared categoryLabel when no override exists for a given id.
+export const overlayLabelById: Record<string, string> = {
+  peace: 'Restoration of Peace',
+  hope: 'Restoration of Hope',
+  strength: 'Restoration of Strength',
+  wholeness: 'Restoration of Wholeness',
+  purpose: 'Restoration of Purpose',
+  connection: 'Restoration of Connection',
+  identity: 'Restoration of Identity',
+  joy: 'Restoration of Joy',
+  forgiveness: 'Serenity of Forgiveness',
+  surrender: 'Serenity of Surrender',
+  trust: 'Serenity of Trust',
+};
+
 // Project entries for the editorial mosaic. Each image under
 // public/mid_section is named by its category so it can be wired directly
 // into the grid. IDs and display names are derived from the filename.
