@@ -13,12 +13,11 @@ import {
   computeIntensityState,
   mapBeatProgressWebGPU,
 } from './mid-section-intensity';
+import { MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 
 gsap.registerPlugin(ScrollTrigger);
 
 type RenderMode = 'webgpu' | 'video' | 'reduced';
-
-const MID_SECTION_MOBILE_BREAKPOINT = 768;
 
 /**
  * Picks the render mode at first mount. Order of precedence:
@@ -37,7 +36,7 @@ const MID_SECTION_MOBILE_BREAKPOINT = 768;
 export function initialRenderMode(): RenderMode {
   if (typeof window === 'undefined') return 'video';
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'reduced';
-  if (window.innerWidth < MID_SECTION_MOBILE_BREAKPOINT) return 'reduced';
+  if (window.innerWidth < MOBILE_BREAKPOINT) return 'reduced';
   if ('gpu' in navigator) return 'webgpu';
   return 'video';
 }
