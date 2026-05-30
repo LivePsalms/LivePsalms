@@ -10,7 +10,6 @@ import type { HeroProps } from './HeroDesktop';
 
 gsap.registerPlugin(ScrollTrigger);
 
-
 // Per-letter SVG-userspace destinations toward the central A, matching the
 // desktop COLLAPSE values from HeroDesktop.tsx.
 const COLLAPSE = { P: 653.3, S1: 339.8, L: -313.9, M: -690.5, S2: -1076.4 } as const;
