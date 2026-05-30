@@ -3,6 +3,7 @@ import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { decideHeroIntro, persistIntroPlayed } from '@/components/sections/hero-intro-gate';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { MobileBottomDock } from '@/components/layout/MobileBottomDock';
 import { Hero } from '@/components/sections/Hero';
 import { HeroLoadingOverlay } from '@/components/sections/HeroLoadingOverlay';
 import { MidSectionMotion } from '@/components/sections/MidSectionMotion';
@@ -21,6 +22,7 @@ import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useLoadingOverlay } from '@/hooks/useLoadingOverlay';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { scaleForMobile } from '@/lib/motion-scale';
+import { cn } from '@/lib/utils';
 import { useProjectColors } from '@/hooks/useProjectColors';
 import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/context/AuthProvider';
@@ -109,6 +111,7 @@ function App() {
   const isCommunityPage = location.pathname === '/community';
   const isContactPage = location.pathname === '/contact';
   const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage;
+  const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage;
 
   const handleProjectClick = useCallback(
     (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
@@ -125,9 +128,16 @@ function App() {
   return (
     <AuthProvider>
       <>
-        <div className="relative min-h-screen" style={{ background: 'var(--app-bg)', zIndex: 1 }}>
+        <div
+          className={cn(
+            'relative min-h-screen',
+            dockMounted && 'pb-[var(--mobile-dock-clearance)] md:pb-0',
+          )}
+          style={{ background: 'var(--app-bg)', zIndex: 1 }}
+        >
         <div className="relative" style={{ zIndex: 1 }}>
-          {!isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
+          {dockMounted && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
+          {dockMounted && <MobileBottomDock onNavTrigger={handleNavTrigger} />}
 
           <Routes>
             <Route
