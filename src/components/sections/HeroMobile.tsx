@@ -10,8 +10,6 @@ import type { HeroProps } from './HeroDesktop';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SILHOUETTE_SRC = '/tropical_jungle.png';
-const SILHOUETTE_ALT = '';
 
 // Per-letter SVG-userspace destinations toward the central A, matching the
 // desktop COLLAPSE values from HeroDesktop.tsx.
@@ -23,9 +21,9 @@ const MOBILE_COLLAPSE_VH = 60;
 
 /**
  * Mobile-specific Hero composition. Same 4 beats as desktop — wordmark intro
- * (instant on mobile), shortened scroll-collapse (no pin), static silhouette
- * image (no video), quote sequence (Task 6), bridge copy (Task 7) — rebuilt
- * for one-thumb scroll.
+ * (instant on mobile), shortened scroll-collapse (no pin), looping ambient
+ * video (with poster fallback for reduced-motion), Psalm 23 quote sitting
+ * directly under the wordmark, bridge copy — rebuilt for one-thumb scroll.
  */
 export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -105,19 +103,12 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
     >
       <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
-        <img
-          src={SILHOUETTE_SRC}
-          alt={SILHOUETTE_ALT}
-          className="w-[88vw] max-w-md aspect-[4/5] object-cover opacity-90"
-          loading="eager"
-          decoding="async"
-        />
         <div
           ref={quoteRef}
           data-testid="hero-mobile-quote"
           data-visible={quoteVisible ? 'true' : 'false'}
           className={cn(
-            'mt-12 text-center px-6 transition-opacity duration-1000 max-w-md',
+            'text-center px-6 transition-opacity duration-1000 max-w-md',
             quoteVisible ? 'opacity-100' : 'opacity-0',
           )}
         >
@@ -131,6 +122,17 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
             Psalm 23:2-3
           </p>
         </div>
+        <video
+          data-testid="hero-mobile-video"
+          src="/hero_main_video.mp4"
+          poster="/tropical_jungle.png"
+          autoPlay={!prefersReducedMotion}
+          muted
+          playsInline
+          loop
+          preload="auto"
+          className="w-[60vw] max-w-sm aspect-video object-cover"
+        />
         <div
           ref={bridgeRef}
           data-testid="hero-mobile-bridge"
