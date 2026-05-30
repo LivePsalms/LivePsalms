@@ -7,6 +7,7 @@ import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
 import type { HeroProps } from './HeroDesktop';
+import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -100,6 +101,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
       className="relative w-full min-h-[100svh]"
       style={{ backgroundColor: 'var(--app-bg)' }}
     >
+      <HeroMaskClipDef />
       <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
         <div
@@ -121,18 +123,24 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
             Psalm 23:2-3
           </p>
         </div>
-        <video
-          data-testid="hero-mobile-video"
-          aria-hidden="true"
-          src="/hero_main_video.mp4"
-          poster="/tropical_jungle.png"
-          autoPlay={!prefersReducedMotion}
-          muted
-          playsInline
-          loop
-          preload="auto"
-          className="w-[60vw] max-w-sm aspect-video object-cover"
-        />
+        <div
+          data-testid="hero-mobile-video-mask"
+          className="w-[88vw] max-w-md aspect-[5/3] overflow-hidden"
+          style={{ clipPath: 'url(#hero-mask-clip)' }}
+        >
+          <video
+            data-testid="hero-mobile-video"
+            aria-hidden="true"
+            src="/hero_main_video.mp4"
+            poster="/tropical_jungle.png"
+            autoPlay={!prefersReducedMotion}
+            muted
+            playsInline
+            loop
+            preload="auto"
+            className="w-full h-full object-cover"
+          />
+        </div>
         <div
           ref={bridgeRef}
           data-testid="hero-mobile-bridge"
