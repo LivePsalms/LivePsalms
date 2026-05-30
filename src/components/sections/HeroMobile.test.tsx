@@ -236,14 +236,17 @@ describe('HeroMobile content', () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
-    const video = container.querySelector<HTMLVideoElement>('video');
+    const wrapper = container.querySelector<HTMLDivElement>(
+      '[data-testid="hero-mobile-video-mask"]',
+    );
+    expect(wrapper).not.toBeNull();
+    // jsdom serialises url(#frag) as url("#frag") — match either quoted or unquoted form.
+    expect(wrapper?.style.clipPath).toMatch(/url\(["']?#hero-mask-clip["']?\)/);
+    expect(wrapper?.className).toContain('w-[88vw]');
+    expect(wrapper?.className).toContain('aspect-[5/3]');
+    expect(wrapper?.className).toContain('overflow-hidden');
+    const video = wrapper?.querySelector<HTMLVideoElement>('video');
     expect(video).not.toBeNull();
-    const parent = video?.parentElement;
-    expect(parent).not.toBeNull();
-    expect(parent?.style.clipPath).toBe('url(#hero-mask-clip)');
-    expect(parent?.className).toContain('w-[88vw]');
-    expect(parent?.className).toContain('aspect-[5/3]');
-    expect(parent?.className).toContain('overflow-hidden');
     // The video itself now fills the wrapper rather than carrying its own size.
     expect(video?.className).toContain('w-full');
     expect(video?.className).toContain('h-full');
