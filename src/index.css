@@ -78,6 +78,11 @@
     --mid-section-scrim-opacity: 1; /* Tunable knob for mid-section legibility scrim (0 = no scrim) */
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
+    /* Floating mobile bottom dock — height (h-11 = 44px) + outer pb minimum
+       + iOS home-indicator safe-area + 1rem breathing buffer. Drives the
+       mobile-only padding-bottom on the App wrapper so content never sits
+       under the dock. Single source of truth. */
+    --mobile-dock-clearance: calc(44px + 0.75rem + env(safe-area-inset-bottom, 0px) + 1rem);
     --text-muted: #FBF6EA;
     --deep-umber: #3A3426;
     --charred: #19130C;
