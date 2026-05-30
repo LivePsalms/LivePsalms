@@ -64,7 +64,7 @@ The current mobile hero has a 56px top Header consuming the first scroll cell, a
         src="/logo-icon.png"
         alt=""
         className="h-6 w-6 object-contain"
-        style={{ filter: isDarkBg ? 'invert(0)' : 'invert(1)', transition: 'filter 300ms ease' }}
+        style={{ filter: 'invert(1)' }}
       />
     </Link>
     <button
@@ -118,7 +118,7 @@ Same prop signature as the old `HeaderMobile` so `App.tsx`'s existing `handleNav
 | Reduced motion | `motion-reduce:transition-none` — instant snap, no slide. Hide/reveal still occurs. |
 | Safe-area | `pb-[max(0.75rem,env(safe-area-inset-bottom))]` — 12px on devices without home indicator, more on devices with one. |
 | Pointer events | Outer `<aside>` is `pointer-events-none`; only the pill cluster captures events. Gutters left/right of the cluster don't intercept scroll/taps. |
-| Theme reaction | `subscribeNavTheme` (same hook the old Header used). When `nav-theme = 'dark'`, the logo `<img>`'s `invert()` filter flips so the icon stays legible against the dark pill on a dark page. |
+| Theme reaction | None. The pill background is permanently `var(--deep-umber)` and the logo `<img>` carries a permanent `filter: invert(1)` to render white. Unlike the old transparent `HeaderMobile` (which needed nav-theme to swap colors as the underlying section changed), the opaque pill has its own visual identity and doesn't need to react to the page surface. |
 | Drawer | The existing Sheet drawer (right-side, `var(--deep-umber)` bg, `navItems` from `@/data/projects`) is re-used verbatim — only the trigger surface changes. |
 
 ## `useScrollDirection` hook
@@ -309,7 +309,7 @@ The dock's physical placement in the JSX tree is at the same level as the existi
 - **Scroll back up**: `data-visible="true"`.
 - **`scrollY < 80`**: forced `data-visible="true"` even after a prior down-scroll.
 - **Desktop (≥ 768px) via `useIsMobile`**: renders `null`.
-- **Mount/unmount**: `subscribeNavTheme` returns an unsubscribe; verify it's called on unmount (no leak).
+- **Permanent filter**: logo `<img>` has inline `filter: invert(1)` (no nav-theme dependency).
 - **`prefers-reduced-motion`**: outer aside still has `motion-reduce:transition-none` class (asserts the class is present; the actual CSS reduce behavior is browser-tested).
 
 ### `src/components/sections/HeroMobile.test.tsx`
