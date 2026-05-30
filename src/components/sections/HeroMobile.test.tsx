@@ -243,6 +243,7 @@ describe('HeroMobile content', () => {
     // jsdom serialises url(#frag) as url("#frag") — match either quoted or unquoted form.
     expect(wrapper?.style.clipPath).toMatch(/url\(["']?#hero-mask-clip["']?\)/);
     expect(wrapper?.className).toContain('w-[88vw]');
+    expect(wrapper?.className).toContain('max-w-md');
     expect(wrapper?.className).toContain('aspect-[5/3]');
     expect(wrapper?.className).toContain('overflow-hidden');
     const video = wrapper?.querySelector<HTMLVideoElement>('video');
