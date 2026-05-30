@@ -255,4 +255,35 @@ describe('HeroMobile content', () => {
     expect(video?.className).not.toContain('w-[60vw]');
     expect(video?.className).not.toContain('aspect-video');
   });
+
+  it('outer column wrapper uses the breathing-room spacing (pt-20 pb-16 px-5 gap-10)', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const root = getByTestId('hero-mobile');
+    // The column wrapper is the first child div inside the root.
+    const column = root.querySelector<HTMLDivElement>(':scope > div.flex.flex-col');
+    expect(column).not.toBeNull();
+    expect(column?.className).toContain('pt-20');
+    expect(column?.className).toContain('pb-16');
+    expect(column?.className).toContain('px-5');
+    expect(column?.className).toContain('gap-10');
+  });
+
+  it('quote attribution contains an aria-hidden decorative red-square accent', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const quote = getByTestId('hero-mobile-quote');
+    const attr = quote.querySelector<HTMLParagraphElement>('.quote-attr');
+    expect(attr).not.toBeNull();
+    const accent = attr?.querySelector<HTMLSpanElement>('span[aria-hidden="true"]');
+    expect(accent).not.toBeNull();
+    // The accent uses the --accent-red token with a #d9483a fallback.
+    expect(accent?.className).toMatch(/bg-\[var\(--accent-red,#d9483a\)\]/);
+  });
 });

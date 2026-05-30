@@ -103,14 +103,14 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
     >
       {/* Hidden SVG defs for the mask clip-path */}
       <HeroMaskClipDef />
-      <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
+      <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
         <div
           ref={quoteRef}
           data-testid="hero-mobile-quote"
           data-visible={quoteVisible ? 'true' : 'false'}
           className={cn(
-            'text-center px-6 transition-opacity duration-1000 max-w-md',
+            'text-center px-8 mt-2 transition-opacity duration-1000 max-w-md',
             quoteVisible ? 'opacity-100' : 'opacity-0',
           )}
         >
@@ -120,7 +120,11 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           <p className="quote-text italic text-[15px] leading-relaxed mt-2">
             He restores my soul."
           </p>
-          <p className="quote-attr text-xs opacity-60 mt-4">
+          <p className="quote-attr text-xs opacity-60 mt-5 inline-flex items-center justify-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block w-1.5 h-1.5 bg-[var(--accent-red,#d9483a)]"
+            />
             Psalm 23:2-3
           </p>
         </div>
@@ -146,7 +150,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           ref={bridgeRef}
           data-testid="hero-mobile-bridge"
           data-visible={bridgeVisible ? 'true' : 'false'}
-          className="mt-16 mb-24 text-center px-6 flex flex-col gap-8 max-w-md"
+          className="mt-20 mb-32 text-center px-6 flex flex-col gap-8 max-w-md"
         >
           <p
             className={cn(
