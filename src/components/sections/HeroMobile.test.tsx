@@ -219,4 +219,36 @@ describe('HeroMobile content', () => {
     expect(video).not.toBeNull();
     expect(video?.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('mounts the hero-mask-clip SVG def', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    const clipPath = container.querySelector('clipPath#hero-mask-clip');
+    expect(clipPath).not.toBeNull();
+  });
+
+  it('wraps the video in a clip-pathed container at 88vw aspect-[5/3]', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    const video = container.querySelector<HTMLVideoElement>('video');
+    expect(video).not.toBeNull();
+    const parent = video?.parentElement;
+    expect(parent).not.toBeNull();
+    expect(parent?.style.clipPath).toBe('url(#hero-mask-clip)');
+    expect(parent?.className).toContain('w-[88vw]');
+    expect(parent?.className).toContain('aspect-[5/3]');
+    expect(parent?.className).toContain('overflow-hidden');
+    // The video itself now fills the wrapper rather than carrying its own size.
+    expect(video?.className).toContain('w-full');
+    expect(video?.className).toContain('h-full');
+    expect(video?.className).toContain('object-cover');
+    expect(video?.className).not.toContain('w-[60vw]');
+    expect(video?.className).not.toContain('aspect-video');
+  });
 });
