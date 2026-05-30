@@ -2,17 +2,24 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 
-function setMatchMedia(matches: boolean) {
-  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches,
-    media: query,
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })) as unknown as typeof window.matchMedia;
+function setMatchMedia(opts: { mobile: boolean; reducedMotion?: boolean }) {
+  const { mobile, reducedMotion = false } = opts;
+  window.matchMedia = vi.fn().mockImplementation((query: string) => {
+    const matches =
+      query.includes('reduce') ? reducedMotion :
+      query.includes('max-width') ? mobile :
+      false;
+    return {
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+  }) as unknown as typeof window.matchMedia;
 }
 
 // jsdom does not provide ResizeObserver; stub it so HeroDesktop can mount.
@@ -29,7 +36,7 @@ afterEach(cleanup);
 describe('Hero dispatcher', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
   });
 
   it('renders HeroMobile below 768px', async () => {
@@ -42,7 +49,7 @@ describe('Hero dispatcher', () => {
 
   it('renders HeroDesktop at or above 768px', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
-    setMatchMedia(false);
+    setMatchMedia({ mobile: false });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
@@ -54,7 +61,7 @@ describe('Hero dispatcher', () => {
 describe('HeroMobile content', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
   });
 
   it('renders the PSALMS wordmark', async () => {
@@ -64,35 +71,31 @@ describe('HeroMobile content', () => {
     expect(screen.getByLabelText(/psalms/i)).toBeInTheDocument();
   });
 
-  it('does NOT render a <video> element', async () => {
+  it('renders a <video> with /hero_main_video.mp4 src and /tropical_jungle.png poster', async () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
-    expect(container.querySelector('video')).toBeNull();
+    const video = container.querySelector<HTMLVideoElement>('video');
+    expect(video).not.toBeNull();
+    expect(video?.getAttribute('src')).toBe('/hero_main_video.mp4');
+    expect(video?.getAttribute('poster')).toBe('/tropical_jungle.png');
+    // Use DOM properties (not hasAttribute) — React may set these as
+    // properties rather than attributes on the rendered element.
+    expect(video?.muted).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.hasAttribute('playsinline')).toBe(true);
   });
 
-  it('renders the silhouette image as an <img>', async () => {
+  it('does NOT render the silhouette as an <img> (asset is now a video poster)', async () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img?.getAttribute('src')).toBe('/tropical_jungle.png');
-    expect(img?.getAttribute('alt')).toBe('');
+    expect(container.querySelector('img[src="/tropical_jungle.png"]')).toBeNull();
   });
 
   it('mounts and unmounts cleanly when prefers-reduced-motion is set', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes('reduce') || query.includes('max-width'),
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
+    setMatchMedia({ mobile: true, reducedMotion: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { unmount } = render(<Hero introActive={false} />);
@@ -101,7 +104,7 @@ describe('HeroMobile content', () => {
 
   it('renders the quote text and attribution', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
@@ -112,7 +115,7 @@ describe('HeroMobile content', () => {
 
   it('quote container starts hidden (data-visible="false") on mount', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     // IntersectionObserver does NOT fire (default jsdom: undefined). Stub a passive one.
     class PassiveIO {
       observe = vi.fn();
@@ -131,7 +134,7 @@ describe('HeroMobile content', () => {
 
   it('renders all three BRIDGE_COPY lines', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     vi.resetModules();
     const { BRIDGE_COPY } = await import('./hero-bridge-content');
     const { Hero } = await import('./Hero');
@@ -143,7 +146,7 @@ describe('HeroMobile content', () => {
 
   it('applies var(--app-bg) as the root background color', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
@@ -153,7 +156,7 @@ describe('HeroMobile content', () => {
 
   it('does NOT apply text-white to the root container', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
@@ -163,11 +166,46 @@ describe('HeroMobile content', () => {
 
   it('does NOT apply a dark umber background class to the root container', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
-    setMatchMedia(true);
+    setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     render(<Hero introActive={false} />);
     const root = screen.getByTestId('hero-mobile');
     expect(root.className).not.toMatch(/deep-umber/);
+  });
+
+  it('renders the quote DOM-before the video', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container, getByTestId } = render(<Hero introActive={false} />);
+    const quote = getByTestId('hero-mobile-quote');
+    const video = container.querySelector('video');
+    expect(video).not.toBeNull();
+    // DOCUMENT_POSITION_FOLLOWING (4) means video appears AFTER quote in the DOM.
+    expect(quote.compareDocumentPosition(video!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('sets autoplay on the video when prefers-reduced-motion is NOT set', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    const video = container.querySelector<HTMLVideoElement>('video');
+    expect(video).not.toBeNull();
+    expect(video?.autoplay).toBe(true);
+  });
+
+  it('does NOT set autoplay on the video when prefers-reduced-motion IS set', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true, reducedMotion: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    const video = container.querySelector<HTMLVideoElement>('video');
+    expect(video).not.toBeNull();
+    expect(video?.autoplay).toBe(false);
   });
 });
