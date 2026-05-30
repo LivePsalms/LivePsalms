@@ -101,6 +101,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
       className="relative w-full min-h-[100svh]"
       style={{ backgroundColor: 'var(--app-bg)' }}
     >
+      {/* Hidden SVG defs for the mask clip-path */}
       <HeroMaskClipDef />
       <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-12 px-5 gap-8">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />

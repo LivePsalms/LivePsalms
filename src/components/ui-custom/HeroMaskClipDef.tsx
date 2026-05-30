@@ -1,8 +1,13 @@
 /**
  * Hidden SVG def for the `hero-mask-clip` clipPath. Used by the home hero
- * masked image and by the NextDevotionHandoff pill. Mount in exactly one
- * place per render tree — Hero on the home route, MoodBoard on the detail
- * route. Both never mount together so no ID collision risk.
+ * masked image/video and by the NextDevotionHandoff pill.
+ *
+ * Mount once per rendered subtree. On the home route, the Hero dispatcher
+ * renders exactly one of HeroDesktop or HeroMobile (never both), so each
+ * mounts its own copy safely. MoodBoard mounts it on the detail route.
+ * Other consumers (PurposeStack, NextDevotionHandoff) reference the same
+ * fragment ID — if they appear in the same tree as a Hero, they reuse
+ * whichever def is already mounted rather than mounting another.
  */
 export function HeroMaskClipDef() {
   return (
