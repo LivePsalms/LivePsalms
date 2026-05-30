@@ -123,6 +123,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
         </div>
         <video
           data-testid="hero-mobile-video"
+          aria-hidden="true"
           src="/hero_main_video.mp4"
           poster="/tropical_jungle.png"
           autoPlay={!prefersReducedMotion}

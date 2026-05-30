@@ -208,4 +208,15 @@ describe('HeroMobile content', () => {
     expect(video).not.toBeNull();
     expect(video?.autoplay).toBe(false);
   });
+
+  it('marks the decorative video as aria-hidden', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { container } = render(<Hero introActive={false} />);
+    const video = container.querySelector<HTMLVideoElement>('video');
+    expect(video).not.toBeNull();
+    expect(video?.getAttribute('aria-hidden')).toBe('true');
+  });
 });
