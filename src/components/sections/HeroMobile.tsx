@@ -240,7 +240,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
             ref={bridgeRef}
             data-testid="hero-mobile-bridge"
             aria-label="Site introduction"
-            className="relative flex flex-col items-center justify-center px-6 py-24 text-center"
+            className="relative w-full flex flex-col items-center justify-center px-6 py-24 text-center"
             style={{ minHeight: '100svh', backgroundColor: 'var(--paper-cream)' }}
           >
             <div className="flex flex-col items-center">
@@ -259,12 +259,12 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           <div
             ref={bridgeRef}
             data-testid="hero-mobile-bridge"
-            className="relative"
+            className="relative w-full"
             style={{ height: '300svh' }}
           >
             <section
               aria-label="Site introduction"
-              className="overflow-hidden"
+              className="w-full overflow-hidden"
               style={{
                 position: 'sticky',
                 top: 0,
