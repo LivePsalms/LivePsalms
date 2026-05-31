@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-describe('initialRenderMode (mobile branch)', () => {
+describe('initialRenderMode', () => {
   let originalGpu: unknown;
 
   beforeEach(() => {
@@ -18,9 +18,9 @@ describe('initialRenderMode (mobile branch)', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns "reduced" on mobile even when WebGPU is available', async () => {
+  it('returns "webgpu" on mobile when WebGPU is available', async () => {
     window.matchMedia = vi.fn().mockImplementation((q: string) => ({
-      matches: q.includes('reduce') ? false : false,
+      matches: false,
       media: q,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
@@ -33,10 +33,10 @@ describe('initialRenderMode (mobile branch)', () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     vi.resetModules();
     const mod = await import('./mid-section-render-mode');
-    expect(mod.initialRenderMode()).toBe('reduced');
+    expect(mod.initialRenderMode()).toBe('webgpu');
   });
 
-  it('returns "webgpu" on desktop (≥ 768) when WebGPU is available', async () => {
+  it('returns "webgpu" on desktop when WebGPU is available', async () => {
     window.matchMedia = vi.fn().mockImplementation((q: string) => ({
       matches: false,
       media: q,

@@ -8,6 +8,7 @@ import {
   TextStaggerHoverActive,
   TextStaggerHoverHidden,
 } from '@/components/ui/text-stagger-hover';
+import { MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -71,8 +72,20 @@ export function TwoPathInterlude() {
     });
 
     // Sequential 1·2·3 reveal — ~2.7s total. Faster than cathedral but still
-    // readable: hairline → left rises → right falls, with 0.7s between starts
-    // so the beats overlap meaningfully without collapsing into one moment.
+    // readable: hairline → first column → second column, with 0.7s between
+    // starts so the beats overlap meaningfully without collapsing into one moment.
+    //
+    // Column firing order follows visual reading order:
+    //   Desktop: left → right (the columns sit side-by-side; left-to-right feels natural).
+    //   Mobile (< MOBILE_BREAKPOINT): top → bottom. Because the CSS media query at
+    //     index.css `.two-path-col-right { grid-row: 1; }` puts the right column at
+    //     the top on mobile, we fire `right` first so the visual top animates before
+    //     the visual bottom.
+    const isMobile =
+      typeof window !== 'undefined' &&
+      window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches;
+    const firstCol = isMobile ? right : left;
+    const secondCol = isMobile ? left : right;
 
     // 1 — Hairline radiates from center outward.
     tl.to(hairline, {
@@ -81,16 +94,18 @@ export function TwoPathInterlude() {
       ease: 'power2.out',
     }, 0.1);
 
-    // 2 — Left column rises from below (translateY(+60px) → 0, opacity 0 → 1).
-    tl.to(left, {
+    // 2 — First column animates in. CSS sets its starting transform
+    // (translateY(+60px) for left, translateY(-60px) for right) so the tween
+    // just returns y → 0.
+    tl.to(firstCol, {
       opacity: 1,
       y: 0,
       duration: 1.2,
       ease: 'power3.out',
     }, 0.8);
 
-    // 3 — Right column falls from above (translateY(-60px) → 0, opacity 0 → 1).
-    tl.to(right, {
+    // 3 — Second column animates in.
+    tl.to(secondCol, {
       opacity: 1,
       y: 0,
       duration: 1.2,
@@ -149,17 +164,16 @@ export function TwoPathInterlude() {
         <Link
           to="/notepad/notes"
           className="two-path-cta two-path-cta-notepad"
-          aria-label="Go to Notepad"
+          aria-label="Open your Notepad"
         >
           {hoverable ? (
             <TextStaggerHover as="span" className="two-path-cta-label">
-              <TextStaggerHoverActive animation="blur">Go to Notepad</TextStaggerHoverActive>
-              <TextStaggerHoverHidden animation="blur">Go to Notepad</TextStaggerHoverHidden>
+              <TextStaggerHoverActive animation="blur">Open your Notepad</TextStaggerHoverActive>
+              <TextStaggerHoverHidden animation="blur">Open your Notepad</TextStaggerHoverHidden>
             </TextStaggerHover>
           ) : (
-            <span className="two-path-cta-label">Go to Notepad</span>
+            <span className="two-path-cta-label">Open your Notepad</span>
           )}
-          <span className="two-path-underline" aria-hidden="true" />
         </Link>
       </div>
     </section>
