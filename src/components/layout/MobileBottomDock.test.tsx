@@ -130,6 +130,21 @@ describe('MobileBottomDock', () => {
     expect(socialRow.getAttribute('data-social-state')).toBe('closed');
   });
 
+  it('collapses Social automatically when the panel closes, even after Social was expanded', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^social$/i }));
+    expect(screen.getByRole('button', { name: /^social$/i }).getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: /close menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+
+    expect(screen.getByRole('button', { name: /^social$/i }).getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('does NOT fire onNavTrigger when SOCIAL is tapped (excluded from NAV_TRIGGER_LABELS)', async () => {
     vi.resetModules();
     const onNavTrigger = vi.fn();
