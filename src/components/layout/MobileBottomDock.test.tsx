@@ -145,6 +145,34 @@ describe('MobileBottomDock', () => {
     expect(screen.getByRole('button', { name: /^social$/i }).getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('keeps data-visible="true" while panel is open, even when the user scrolls down', async () => {
+    vi.resetModules();
+    Object.defineProperty(window, 'scrollY', { value: 200, configurable: true, writable: true });
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-visible')).toBe('true');
+
+    await act(async () => {
+      Object.defineProperty(window, 'scrollY', { value: 400, configurable: true, writable: true });
+      window.dispatchEvent(new Event('scroll'));
+      await flushRaf();
+    });
+
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-visible')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: /close menu/i }));
+
+    await act(async () => {
+      Object.defineProperty(window, 'scrollY', { value: 600, configurable: true, writable: true });
+      window.dispatchEvent(new Event('scroll'));
+      await flushRaf();
+    });
+
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-visible')).toBe('false');
+  });
+
   it('does NOT fire onNavTrigger when SOCIAL is tapped (excluded from NAV_TRIGGER_LABELS)', async () => {
     vi.resetModules();
     const onNavTrigger = vi.fn();
