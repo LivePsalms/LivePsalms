@@ -31,8 +31,22 @@ import {
 // 5 keeps each invocation under ~15s while preventing queue runaway.
 const CLAIM_LIMIT = 5;
 
+// Invoked from the browser by useLamplightEmbeddingTrigger after each save
+// (per-job_id path) and also server-to-server by pg_cron (sweep path). The
+// browser path requires CORS preflight + allow-origin echoed on every
+// response; without it the browser silently drops the invocation and the
+// queue only ever drains when pg_cron fires.
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
-  if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS });
+  }
+  if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: CORS_HEADERS });
 
   const apiKey = Deno.env.get('VOYAGE_AI_KEY');
   if (!apiKey) return jsonResp({ error: 'VOYAGE_AI_KEY missing' }, 500);
@@ -60,7 +74,10 @@ serve(async (req) => {
 });
 
 function jsonResp(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+  });
 }
 
 async function claimQueued(supabase: ReturnType<typeof serviceClient>, limit: number): Promise<Job[]> {
