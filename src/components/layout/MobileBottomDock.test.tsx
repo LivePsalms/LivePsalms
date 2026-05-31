@@ -245,12 +245,25 @@ describe('MobileBottomDock', () => {
     expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-visible')).toBe('true');
   });
 
-  it('renders the logo with a permanent invert(1) filter for white-on-dark on the pill', async () => {
+  it('renders the logo inside a .dock-home tile with no inline filter (CSS drives the adaptive invert)', async () => {
     vi.resetModules();
     const { MobileBottomDock } = await import('./MobileBottomDock');
     render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
     const logo = screen.getByAltText('');
-    expect(logo.style.filter).toBe('invert(1)');
+    // No inline style; .dock-home img in index.css owns the default invert
+    // and the [data-bg="dark"] override cross-fades it back to 0.
+    expect(logo.style.filter).toBe('');
+    expect(logo.closest('.dock-home')).not.toBeNull();
+  });
+
+  it('exposes data-bg on the dock root for adaptive theming', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+    const dock = screen.getByTestId('mobile-bottom-dock');
+    // jsdom's elementsFromPoint returns [] so the hook keeps the initial
+    // 'light' default; we only care that the attribute is wired up.
+    expect(['light', 'dark']).toContain(dock.getAttribute('data-bg'));
   });
 
   it('outer aside has motion-reduce class for reduced-motion users', async () => {

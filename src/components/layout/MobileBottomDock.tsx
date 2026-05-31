@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
+import { useAdaptiveDockTheme } from '@/hooks/use-adaptive-dock-theme';
 
 interface MobileBottomDockProps {
   onNavTrigger?: () => void;
@@ -23,6 +24,10 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
   const dir = useScrollDirection();
   const [panelOpen, setPanelOpenRaw] = useState(false);
   const [socialExpanded, setSocialExpanded] = useState(false);
+  // Detects what's behind the dock so it can invert against dark sections.
+  // Hook is unconditionally called (rules of hooks) but it bails out when
+  // disabled, and we already return null for the desktop viewport below.
+  const bgTheme = useAdaptiveDockTheme(isMobile);
 
   if (!isMobile) return null;
 
@@ -42,6 +47,7 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
       data-testid="mobile-bottom-dock"
       data-visible={visible ? 'true' : 'false'}
       data-panel-state={panelOpen ? 'open' : 'closed'}
+      data-bg={bgTheme}
       aria-label="Quick navigation"
       className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-transform duration-300 motion-reduce:transition-none"
       style={{ transform: visible ? 'translateY(0)' : 'translateY(calc(100% + 1rem))' }}
@@ -93,18 +99,17 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
           <Link
             to="/"
             aria-label="Home"
-            className="h-11 w-11 rounded-xl bg-[color:var(--deep-umber)] inline-flex items-center justify-center"
+            className="dock-home h-11 w-11 rounded-xl inline-flex items-center justify-center"
           >
             <img
               src="/logo-icon.png"
               alt=""
               className="h-6 w-6 object-contain"
-              style={{ filter: 'invert(1)' }}
             />
           </Link>
           <button
             type="button"
-            className="menu-toggle h-11 px-6 rounded-full bg-[color:var(--deep-umber)] text-white text-xs font-semibold tracking-[0.14em]"
+            className="menu-toggle h-11 px-6 rounded-full text-white text-xs font-semibold tracking-[0.14em]"
             aria-expanded={panelOpen}
             aria-controls="mobile-menu-panel"
             onClick={() => setPanelOpen(!panelOpen)}
