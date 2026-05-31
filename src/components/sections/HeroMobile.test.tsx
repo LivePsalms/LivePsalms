@@ -309,4 +309,60 @@ describe('HeroMobile content', () => {
     const quote = getByTestId('hero-mobile-quote');
     expect(quote.className).toContain('w-[70vw]');
   });
+
+  it('bridge wrapper has height 300svh when motion is enabled', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const bridge = getByTestId('hero-mobile-bridge');
+    expect(bridge.style.height).toBe('300svh');
+  });
+
+  it('bridge contains three <p> beats with spatial position classes when motion is enabled', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { BRIDGE_COPY } = await import('./hero-bridge-content');
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const bridge = getByTestId('hero-mobile-bridge');
+    const beats = bridge.querySelectorAll<HTMLParagraphElement>('p');
+    expect(beats).toHaveLength(3);
+    expect(beats[0].className).toContain('bridge-beat-left');
+    expect(beats[0].className).toContain('bridge-line-side');
+    expect(beats[0].textContent).toBe(BRIDGE_COPY.invitation);
+    expect(beats[1].className).toContain('bridge-beat-right');
+    expect(beats[1].className).toContain('bridge-thesis');
+    expect(beats[1].textContent).toBe(BRIDGE_COPY.thesis);
+    expect(beats[2].className).toContain('bridge-beat-center');
+    expect(beats[2].className).toContain('bridge-line-center');
+    expect(beats[2].textContent).toBe(BRIDGE_COPY.assurance);
+  });
+
+  it('bridge renders a static stack (no 300svh wrapper) when prefers-reduced-motion is set', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true, reducedMotion: true });
+    vi.resetModules();
+    const { BRIDGE_COPY } = await import('./hero-bridge-content');
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const bridge = getByTestId('hero-mobile-bridge');
+    // No 300svh outer wrapper; bridge IS the static <section>.
+    expect(bridge.style.height).not.toBe('300svh');
+    expect(bridge.tagName).toBe('SECTION');
+    // All three beats still in the DOM and not positioned via .bridge-beat
+    // (which would absolute-stack them at center 50/50).
+    const beats = bridge.querySelectorAll<HTMLParagraphElement>('p');
+    expect(beats).toHaveLength(3);
+    expect(beats[0].textContent).toBe(BRIDGE_COPY.invitation);
+    expect(beats[1].textContent).toBe(BRIDGE_COPY.thesis);
+    expect(beats[2].textContent).toBe(BRIDGE_COPY.assurance);
+    for (const beat of beats) {
+      expect(beat.className).not.toContain('bridge-beat-left');
+      expect(beat.className).not.toContain('bridge-beat-right');
+      expect(beat.className).not.toContain('bridge-beat-center');
+    }
+  });
 });
