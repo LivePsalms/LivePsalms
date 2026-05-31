@@ -115,7 +115,11 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
   /* ── Bridge cascade: pinned three-beat sequence. Text 1 enters from the
         left, hands off to text 2 on the right, hands off to text 3 at center.
         Same scroll-scrub pattern as the wordmark-collapse: CSS sticky owns
-        the visual pin; GSAP owns the timeline scrub. ── */
+        the visual pin; GSAP owns the timeline scrub.
+        Mirrored on mobile by HeroMobile.tsx — keep the two timelines in sync
+        (kiss-handoff fractions, eases, blur/opacity/translate values). The
+        mobile port differs only in `scrub` (× MOBILE_TIME_SCALE) and text 2's
+        enter `x` (30 vs 120, proportional to viewport). ── */
   useEffect(() => {
     const scrollEl = bridgeRef.current;
     const t1 = bridgeInviteRef.current;
