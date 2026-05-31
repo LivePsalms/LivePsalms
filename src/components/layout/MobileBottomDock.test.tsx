@@ -83,6 +83,27 @@ describe('MobileBottomDock', () => {
     expect(screen.getByRole('button', { name: /^menu$/i }).getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('renders the 4 nav links inside the panel and exposes them by accessible name', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    expect(screen.getByRole('link', { name: 'PURPOSE' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'NOTEPAD' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'COMMUNITY' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'CONTACT' })).toBeInTheDocument();
+  });
+
+  it('fires onNavTrigger when a NAV_TRIGGER_LABELS link is tapped', async () => {
+    vi.resetModules();
+    const onNavTrigger = vi.fn();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock onNavTrigger={onNavTrigger} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    fireEvent.click(screen.getByRole('link', { name: 'PURPOSE' }));
+    expect(onNavTrigger).toHaveBeenCalledTimes(1);
+  });
+
   it('hides on scroll-down past threshold (data-visible="false")', async () => {
     vi.resetModules();
     Object.defineProperty(window, 'scrollY', { value: 200, configurable: true, writable: true });

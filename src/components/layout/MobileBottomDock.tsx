@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
 
@@ -17,7 +18,7 @@ interface MobileBottomDockProps {
  * hide-on-scroll-down behavior is suspended so the panel never scrolls
  * out from under the user mid-interaction.
  */
-export function MobileBottomDock({ onNavTrigger: _onNavTrigger }: MobileBottomDockProps) {
+export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
   const isMobile = useIsMobile();
   const dir = useScrollDirection();
   const [panelOpen, setPanelOpenRaw] = useState(false);
@@ -41,7 +42,20 @@ export function MobileBottomDock({ onNavTrigger: _onNavTrigger }: MobileBottomDo
     >
       <div className="pointer-events-auto flex flex-col items-center gap-2">
         <div id="mobile-menu-panel" className="menu-panel" aria-hidden={!panelOpen}>
-          {/* Links land in Task 3. */}
+          <ul className="menu-links">
+            {navItems.map((item, i) => (
+              <li key={item.label} style={{ ['--i' as string]: i + 1 } as CSSProperties}>
+                <Link
+                  to={item.href}
+                  onClick={() => {
+                    if (NAV_TRIGGER_LABELS.has(item.label)) onNavTrigger?.();
+                  }}
+                >
+                  {item.label.toUpperCase()}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
         <div className="flex items-center gap-2">
           <Link
