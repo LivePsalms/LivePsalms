@@ -183,6 +183,40 @@
   .hero-form-indicator {
     display: none;
   }
+  /* Mobile-only — the particle stream runs as a bright vertical column
+     straight through the headline, washing out the center characters.
+     Drop a soft scrim behind the h1 (matching the pattern already used
+     for .hero-sub) so the title stays legible. The h1 needs its own
+     stacking context for ::before with z-index:-1 to sit between the
+     canvas and the title text. */
+  .hero-h1 {
+    position: relative;
+    isolation: isolate;
+  }
+  .hero-h1::before {
+    content: '';
+    position: absolute;
+    inset: -0.6rem -1rem;
+    background: radial-gradient(
+      ellipse 75% 75% at 50% 50%,
+      rgba(8, 8, 10, 0.78),
+      rgba(8, 8, 10, 0) 80%
+    );
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    -webkit-mask: radial-gradient(
+      ellipse 70% 70% at 50% 50%,
+      #000 40%,
+      transparent 85%
+    );
+    mask: radial-gradient(
+      ellipse 70% 70% at 50% 50%,
+      #000 40%,
+      transparent 85%
+    );
+    z-index: -1;
+    pointer-events: none;
+  }
 }
 
 .section {

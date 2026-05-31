@@ -133,7 +133,16 @@ function App() {
             'relative min-h-screen',
             dockMounted && 'pb-[var(--mobile-dock-clearance)] md:pb-0',
           )}
-          style={{ background: 'var(--app-bg)', zIndex: 1 }}
+          // On the notepad landing, paint the wrapper in the same near-black
+          // as the closing CTA so the mobile dock-clearance padding zone
+          // below the page (--mobile-dock-clearance) matches the section
+          // above it instead of revealing the app-bg taupe. No visible
+          // effect on desktop where pb collapses to 0 and the wrapper bg
+          // is fully covered by the NotepadLanding's own paper background.
+          style={{
+            background: isNotepadLanding ? 'var(--dock-bg-dark)' : 'var(--app-bg)',
+            zIndex: 1,
+          }}
         >
         <div className="relative" style={{ zIndex: 1 }}>
           {dockMounted && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
