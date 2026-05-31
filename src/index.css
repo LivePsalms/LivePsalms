@@ -901,3 +901,38 @@ input[type="email"]::placeholder {
   color: currentColor;
   opacity: 0.75; /* Firefox lowers placeholder opacity by default; pin it explicitly */
 }
+
+/* ───── MobileBottomDock disclosure menu ───── */
+
+.menu-panel {
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  background: var(--deep-umber);
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 24px 0;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 400ms ease;
+}
+
+[data-panel-state="open"] .menu-panel {
+  max-height: 420px;
+  opacity: 1;
+}
+
+.menu-toggle {
+  position: relative;
+  min-width: 110px;
+  transition: min-width 300ms ease-out;
+}
+
+[data-panel-state="open"] .menu-toggle {
+  min-width: 150px;
+}
+
+.menu-toggle .text-close { display: none; }
+[data-panel-state="open"] .menu-toggle .text-menu { display: none; }
+[data-panel-state="open"] .menu-toggle .text-close { display: inline; }

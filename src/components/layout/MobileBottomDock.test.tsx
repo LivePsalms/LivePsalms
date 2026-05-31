@@ -52,7 +52,7 @@ describe('MobileBottomDock', () => {
     render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
     const logo = screen.getByRole('link', { name: /home/i });
     expect(logo.getAttribute('href')).toBe('/');
-    expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^menu$/i })).toBeInTheDocument();
   });
 
   it('starts visible (data-visible="true")', async () => {
@@ -63,26 +63,24 @@ describe('MobileBottomDock', () => {
     expect(dock.getAttribute('data-visible')).toBe('true');
   });
 
-  it('opens the Sheet drawer when MENU is clicked', async () => {
+  it('toggles data-panel-state and aria-expanded when the MENU button is clicked', async () => {
     vi.resetModules();
     const { MobileBottomDock } = await import('./MobileBottomDock');
     render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /open menu/i }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Purpose' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Notepad' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Community' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Contact' })).toBeInTheDocument();
-  });
+    const dock = screen.getByTestId('mobile-bottom-dock');
+    const toggle = screen.getByRole('button', { name: /^menu$/i });
+    expect(dock.getAttribute('data-panel-state')).toBe('closed');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBe('mobile-menu-panel');
 
-  it('fires onNavTrigger when a trigger-label nav link is tapped', async () => {
-    vi.resetModules();
-    const onNavTrigger = vi.fn();
-    const { MobileBottomDock } = await import('./MobileBottomDock');
-    render(<MemoryRouter><MobileBottomDock onNavTrigger={onNavTrigger} /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /open menu/i }));
-    fireEvent.click(screen.getByRole('link', { name: 'Purpose' }));
-    expect(onNavTrigger).toHaveBeenCalled();
+    fireEvent.click(toggle);
+    expect(dock.getAttribute('data-panel-state')).toBe('open');
+    const closeToggle = screen.getByRole('button', { name: /close menu/i });
+    expect(closeToggle.getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.click(closeToggle);
+    expect(dock.getAttribute('data-panel-state')).toBe('closed');
+    expect(screen.getByRole('button', { name: /^menu$/i }).getAttribute('aria-expanded')).toBe('false');
   });
 
   it('hides on scroll-down past threshold (data-visible="false")', async () => {
