@@ -286,7 +286,7 @@ img {
   font-style: italic;
   line-height: 1.4;
   color: var(--deep-umber);
-  max-width: 440px;
+  max-width: min(440px, 80vw);
 }
 
 .bridge-line-center {
@@ -296,7 +296,7 @@ img {
   font-style: italic;
   line-height: 1.4;
   color: var(--deep-umber);
-  max-width: 560px;
+  max-width: min(560px, 80vw);
 }
 
 .bridge-thesis {
@@ -306,13 +306,16 @@ img {
   font-style: italic;
   line-height: 1.4;
   color: var(--deep-umber);
-  max-width: 440px;
+  max-width: min(440px, 80vw);
 }
 
-/* Stage positioning utilities. Mobile (default): all three beats absolutely
-   centered on the stage — they overlap, but kiss-handoff opacity timing
-   means only one is visible at a time. Desktop (≥ 768px): left and right
-   positions activate; center beat keeps the default. */
+/* Stage positioning utilities. All viewports: .bridge-beat (no suffix) is
+   the base — absolutely positioned, centered on the stage (left:50%,
+   translate(-50%,-50%)). .bridge-beat-left and -right pin to the viewport
+   edges (8vw inset). .bridge-beat-center is a marker class — it inherits
+   the .bridge-beat default centering, so it has no rules of its own. The
+   three beats overlap by design; kiss-handoff opacity timing in the GSAP
+   timeline keeps exactly one visible at a time. */
 .bridge-beat {
   position: absolute;
   top: 50%;
@@ -321,18 +324,24 @@ img {
   text-align: center;
 }
 
-@media (min-width: 768px) {
-  .bridge-beat-left {
-    left: 10vw;
-    transform: translate(0, -50%);
-  }
-  .bridge-beat-right {
-    left: auto;
-    right: 10vw;
-    transform: translate(0, -50%);
-  }
-  /* .bridge-beat-center keeps the default mobile centering on desktop too */
+/* No media query — applies at every viewport. Side offsets tightened from
+   10vw to 8vw at every width. At 360px viewports the inset is ~29px instead
+   of ~36px, giving the side beats more text width within the typography
+   cap; at 1440px the inset is ~115px instead of ~144px — a marginal
+   compositional shift that the 440px text cap absorbs comfortably. */
+.bridge-beat-left {
+  left: 8vw;
+  right: auto;
+  transform: translate(0, -50%);
+  text-align: left;
 }
+.bridge-beat-right {
+  left: auto;
+  right: 8vw;
+  transform: translate(0, -50%);
+  text-align: right;
+}
+/* .bridge-beat-center keeps the default 50/50 centering established by .bridge-beat */
 
 /* ───── Mid-section motion (scroll-scrubbed video + 5 text beats) ─────
    Renders between the Psalm 23:2-3 verse and PurposeGrid on the home route.
