@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
-import { BRIDGE_COPY } from './hero-bridge-content';
+import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
 import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
@@ -92,6 +92,93 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
         .to(letters.M,  { x: COLLAPSE.M,  ease: 'power2.inOut' }, 0)
         .to(letters.S2, { x: COLLAPSE.S2, ease: 'power2.inOut' }, 0);
     });
+
+    return () => ctx.revert();
+  }, [prefersReducedMotion]);
+
+  /* ── Bridge cascade: pinned three-beat sequence. Mobile port of the
+        desktop scrub-timeline. Text 1 rises from below; text 2 slides in
+        from off-screen-right (x:30 — proportional to mobile viewport,
+        equivalent to desktop's x:120 at 1440px); text 3 rises with more
+        travel; kiss-handoff timing via BRIDGE_PIN_TIMING.
+        scrub = 2 * MOBILE_TIME_SCALE for snappier mobile pace,
+        matching the wordmark-collapse scrub above. ── */
+  useEffect(() => {
+    const scrollEl = bridgeRef.current;
+    const t1 = bridgeInviteRef.current;
+    const t2 = bridgeThesisRef.current;
+    const t3 = bridgeAssureRef.current;
+    if (!scrollEl || !t1 || !t2 || !t3) return;
+
+    if (prefersReducedMotion) {
+      // Reduced motion: clear any transform/blur state. The reduced-motion
+      // JSX path renders the beats in normal flow (no pin), so visibility
+      // is handled by the layout — we just neutralise any leftover GSAP
+      // state from a previous mount.
+      gsap.set([t1, t2, t3], { opacity: 1, y: 0, x: 0, filter: 'blur(0px)' });
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      // Per-beat initial states. Identical to desktop except text 2's
+      // horizontal travel is x:30 (≈ 8% of a 360px viewport, matching the
+      // 120/1440 desktop proportion).
+      gsap.set(t1, { opacity: 0, y: 40, filter: 'blur(10px)' });
+      gsap.set(t2, { opacity: 0, x: 30, filter: 'blur(10px)' });
+      gsap.set(t3, { opacity: 0, y: 80, filter: 'blur(10px)' });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: scrollEl,
+          start: 'top 80%',
+          end: 'bottom bottom',
+          scrub: 2 * MOBILE_TIME_SCALE,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      // Text 1 — enter (rise + blur clear + fade up), hold, exit (opacity).
+      tl.to(
+        t1,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text1.holdStart - BRIDGE_PIN_TIMING.text1.enter },
+        BRIDGE_PIN_TIMING.text1.enter,
+      );
+      tl.to(
+        t1,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text1.exit - BRIDGE_PIN_TIMING.text1.holdEnd },
+        BRIDGE_PIN_TIMING.text1.holdEnd,
+      );
+
+      // Text 2 — horizontal slide from offscreen-right into resting position.
+      tl.to(
+        t2,
+        { opacity: 1, x: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text2.holdStart - BRIDGE_PIN_TIMING.text2.enter },
+        BRIDGE_PIN_TIMING.text2.enter,
+      );
+      tl.to(
+        t2,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text2.exit - BRIDGE_PIN_TIMING.text2.holdEnd },
+        BRIDGE_PIN_TIMING.text2.holdEnd,
+      );
+
+      // Text 3 — long hold; exits in the last 5%.
+      tl.to(
+        t3,
+        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
+          duration: BRIDGE_PIN_TIMING.text3.holdStart - BRIDGE_PIN_TIMING.text3.enter },
+        BRIDGE_PIN_TIMING.text3.enter,
+      );
+      tl.to(
+        t3,
+        { opacity: 0, ease: 'power1.in',
+          duration: BRIDGE_PIN_TIMING.text3.exit - BRIDGE_PIN_TIMING.text3.holdEnd },
+        BRIDGE_PIN_TIMING.text3.holdEnd,
+      );
+    }, scrollEl);
 
     return () => ctx.revert();
   }, [prefersReducedMotion]);
