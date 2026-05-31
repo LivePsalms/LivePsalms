@@ -30,11 +30,13 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
 
   const quoteRef = useRef<HTMLDivElement>(null);
   const bridgeRef = useRef<HTMLDivElement>(null);
+  const bridgeInviteRef = useRef<HTMLParagraphElement>(null);
+  const bridgeThesisRef = useRef<HTMLParagraphElement>(null);
+  const bridgeAssureRef = useRef<HTMLParagraphElement>(null);
 
   // Cross-fade in once the quote enters the viewport. Graceful no-IO fallback
   // makes the content visible immediately when IntersectionObserver is absent.
   const quoteVisible = useIntersectionStage(quoteRef, { threshold: 0.4 });
-  const bridgeVisible = useIntersectionStage(bridgeRef, { threshold: 0.3 });
 
   useEffect(() => {
     if (!introActive) return;
@@ -146,37 +148,64 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
             className="w-full h-full object-cover"
           />
         </div>
-        <div
-          ref={bridgeRef}
-          data-testid="hero-mobile-bridge"
-          data-visible={bridgeVisible ? 'true' : 'false'}
-          className="mt-20 mb-32 text-center px-6 flex flex-col gap-8 max-w-md"
-        >
-          <p
-            className={cn(
-              'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700',
-              bridgeVisible ? 'opacity-100' : 'opacity-0',
-            )}
+        {prefersReducedMotion ? (
+          <section
+            ref={bridgeRef}
+            data-testid="hero-mobile-bridge"
+            aria-label="Site introduction"
+            className="relative flex flex-col items-center justify-center px-6 py-24 text-center"
+            style={{ minHeight: '100svh', backgroundColor: 'var(--paper-cream)' }}
           >
-            {BRIDGE_COPY.invitation}
-          </p>
-          <p
-            className={cn(
-              'bridge-thesis text-[15px] leading-relaxed transition-opacity duration-700 delay-200',
-              bridgeVisible ? 'opacity-100' : 'opacity-0',
-            )}
+            <div className="flex flex-col items-center">
+              <p ref={bridgeInviteRef} className="bridge-line-center">
+                {BRIDGE_COPY.invitation}
+              </p>
+              <p ref={bridgeThesisRef} className="bridge-thesis mt-8">
+                {BRIDGE_COPY.thesis}
+              </p>
+              <p ref={bridgeAssureRef} className="bridge-line-center mt-8">
+                {BRIDGE_COPY.assurance}
+              </p>
+            </div>
+          </section>
+        ) : (
+          <div
+            ref={bridgeRef}
+            data-testid="hero-mobile-bridge"
+            className="relative"
+            style={{ height: '300svh' }}
           >
-            {BRIDGE_COPY.thesis}
-          </p>
-          <p
-            className={cn(
-              'bridge-line-center text-[15px] leading-relaxed transition-opacity duration-700 delay-500',
-              bridgeVisible ? 'opacity-100' : 'opacity-0',
-            )}
-          >
-            {BRIDGE_COPY.assurance}
-          </p>
-        </div>
+            <section
+              aria-label="Site introduction"
+              className="overflow-hidden"
+              style={{
+                position: 'sticky',
+                top: 0,
+                height: '100svh',
+                backgroundColor: 'var(--paper-cream)',
+              }}
+            >
+              <p
+                ref={bridgeInviteRef}
+                className="bridge-beat bridge-beat-left bridge-line-side"
+              >
+                {BRIDGE_COPY.invitation}
+              </p>
+              <p
+                ref={bridgeThesisRef}
+                className="bridge-beat bridge-beat-right bridge-thesis"
+              >
+                {BRIDGE_COPY.thesis}
+              </p>
+              <p
+                ref={bridgeAssureRef}
+                className="bridge-beat bridge-beat-center bridge-line-center"
+              >
+                {BRIDGE_COPY.assurance}
+              </p>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );
