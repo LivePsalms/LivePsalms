@@ -13,6 +13,8 @@ dist
 /forgiveness-*.png
 /surrender-*.png
 /trust-*.png
+/bridge-*.png
+/verify-*.png
 
 # HyperFrames render snapshots
 public/Logo-motion/my-video/snapshots/
