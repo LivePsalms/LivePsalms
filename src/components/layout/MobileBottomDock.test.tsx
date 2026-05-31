@@ -259,11 +259,55 @@ describe('MobileBottomDock', () => {
   it('exposes data-bg on the dock root for adaptive theming', async () => {
     vi.resetModules();
     const { MobileBottomDock } = await import('./MobileBottomDock');
-    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/notepad']}><MobileBottomDock /></MemoryRouter>);
     const dock = screen.getByTestId('mobile-bottom-dock');
     // jsdom's elementsFromPoint returns [] so the hook keeps the initial
     // 'light' default; we only care that the attribute is wired up.
     expect(['light', 'dark']).toContain(dock.getAttribute('data-bg'));
+  });
+
+  it('forces data-bg="dark" (cream pill state) on non-notepad routes', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter initialEntries={['/']}><MobileBottomDock /></MemoryRouter>);
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-bg')).toBe('dark');
+  });
+
+  it('auto-closes the panel when a nav link is tapped (route change)', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter initialEntries={['/']}><MobileBottomDock /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-panel-state')).toBe('open');
+
+    fireEvent.click(screen.getByRole('link', { name: 'PURPOSE' }));
+
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-panel-state')).toBe('closed');
+    expect(screen.getByRole('button', { name: /^menu$/i }).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('also collapses the social sub-row on route change so it does not flash open on the next page', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter initialEntries={['/']}><MobileBottomDock /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^social$/i }));
+    expect(screen.getByRole('button', { name: /^social$/i }).getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.click(screen.getByRole('link', { name: 'NOTEPAD' }));
+
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    expect(screen.getByRole('button', { name: /^social$/i }).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('does not force data-bg on /notepad — adaptive sampling decides', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter initialEntries={['/notepad']}><MobileBottomDock /></MemoryRouter>);
+    // jsdom's elementsFromPoint returns [] so the hook resolves to its
+    // 'light' default on /notepad. The point is that the value is NOT
+    // route-forced — opposite of the non-notepad case above.
+    expect(screen.getByTestId('mobile-bottom-dock').getAttribute('data-bg')).toBe('light');
   });
 
   it('outer aside has motion-reduce class for reduced-motion users', async () => {

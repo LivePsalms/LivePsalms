@@ -1,9 +1,9 @@
-import { useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
-import { useAdaptiveDockTheme } from '@/hooks/use-adaptive-dock-theme';
+import { useAdaptiveDockTheme, type DockTheme } from '@/hooks/use-adaptive-dock-theme';
 
 interface MobileBottomDockProps {
   onNavTrigger?: () => void;
@@ -22,12 +22,17 @@ interface MobileBottomDockProps {
 export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
   const isMobile = useIsMobile();
   const dir = useScrollDirection();
+  const location = useLocation();
   const [panelOpen, setPanelOpenRaw] = useState(false);
   const [socialExpanded, setSocialExpanded] = useState(false);
-  // Detects what's behind the dock so it can invert against dark sections.
-  // Hook is unconditionally called (rules of hooks) but it bails out when
-  // disabled, and we already return null for the desktop viewport below.
-  const bgTheme = useAdaptiveDockTheme(isMobile);
+  // Adaptive cream-on-dark inversion is scoped to the notepad landing —
+  // it's the only route designed with alternating dark/light sections
+  // (hero → garden → CTA). Every other route stays locked to the cream
+  // pill state (data-bg="dark") so the dock reads consistently. The hook
+  // is unconditionally called (rules of hooks) but bails out when disabled.
+  const isNotepadLanding = location.pathname === '/notepad';
+  const adaptiveTheme = useAdaptiveDockTheme(isMobile && isNotepadLanding);
+  const bgTheme: DockTheme = isNotepadLanding ? adaptiveTheme : 'dark';
 
   if (!isMobile) return null;
 
@@ -41,6 +46,15 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
     setPanelOpenRaw(next);
     if (!next) setSocialExpanded(false);
   };
+
+  // Auto-close the panel when the route changes. Covers every navigation
+  // path — link taps inside the panel, the logo tile, browser back/forward,
+  // and programmatic navigation — without coupling to specific click
+  // handlers. Initial mount with the panel already closed is a no-op.
+  useEffect(() => {
+    setPanelOpenRaw(false);
+    setSocialExpanded(false);
+  }, [location.pathname]);
 
   return (
     <aside
