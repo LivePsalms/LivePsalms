@@ -104,6 +104,42 @@ describe('MobileBottomDock', () => {
     expect(onNavTrigger).toHaveBeenCalledTimes(1);
   });
 
+  it('toggles the Instagram sub-row when SOCIAL is clicked inside an open panel', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+
+    const socialBtn = screen.getByRole('button', { name: /^social$/i });
+    expect(socialBtn.getAttribute('aria-expanded')).toBe('false');
+    expect(socialBtn.getAttribute('aria-controls')).toBe('mobile-social-instagram');
+    const socialRow = socialBtn.closest('.social-row') as HTMLElement;
+    expect(socialRow.getAttribute('data-social-state')).toBe('closed');
+
+    fireEvent.click(socialBtn);
+    expect(socialBtn.getAttribute('aria-expanded')).toBe('true');
+    expect(socialRow.getAttribute('data-social-state')).toBe('open');
+    const instagram = screen.getByRole('link', { name: /instagram/i });
+    expect(instagram.getAttribute('href')).toBe('https://instagram.com');
+    expect(instagram.getAttribute('target')).toBe('_blank');
+    expect(instagram.getAttribute('rel')).toContain('noopener');
+    expect(instagram.id).toBe('mobile-social-instagram');
+
+    fireEvent.click(socialBtn);
+    expect(socialBtn.getAttribute('aria-expanded')).toBe('false');
+    expect(socialRow.getAttribute('data-social-state')).toBe('closed');
+  });
+
+  it('does NOT fire onNavTrigger when SOCIAL is tapped (excluded from NAV_TRIGGER_LABELS)', async () => {
+    vi.resetModules();
+    const onNavTrigger = vi.fn();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(<MemoryRouter><MobileBottomDock onNavTrigger={onNavTrigger} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /^menu$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^social$/i }));
+    expect(onNavTrigger).not.toHaveBeenCalled();
+  });
+
   it('hides on scroll-down past threshold (data-visible="false")', async () => {
     vi.resetModules();
     Object.defineProperty(window, 'scrollY', { value: 200, configurable: true, writable: true });

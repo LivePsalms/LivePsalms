@@ -22,6 +22,7 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
   const isMobile = useIsMobile();
   const dir = useScrollDirection();
   const [panelOpen, setPanelOpenRaw] = useState(false);
+  const [socialExpanded, setSocialExpanded] = useState(false);
 
   if (!isMobile) return null;
 
@@ -29,6 +30,7 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
 
   const setPanelOpen = (next: boolean): void => {
     setPanelOpenRaw(next);
+    if (!next) setSocialExpanded(false);
   };
 
   return (
@@ -55,6 +57,32 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
                 </Link>
               </li>
             ))}
+            <li
+              key="social"
+              className="social-row"
+              data-social-state={socialExpanded ? 'open' : 'closed'}
+              style={{ ['--i' as string]: navItems.length + 1 } as CSSProperties}
+            >
+              <div className="social-sub" aria-hidden={!socialExpanded}>
+                <a
+                  id="mobile-social-instagram"
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  INSTAGRAM ↗
+                </a>
+              </div>
+              <button
+                type="button"
+                className="social-toggle"
+                aria-expanded={socialExpanded}
+                aria-controls="mobile-social-instagram"
+                onClick={() => setSocialExpanded((v) => !v)}
+              >
+                SOCIAL
+              </button>
+            </li>
           </ul>
         </div>
         <div className="flex items-center gap-2">
