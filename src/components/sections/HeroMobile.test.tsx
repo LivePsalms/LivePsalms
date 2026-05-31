@@ -286,4 +286,27 @@ describe('HeroMobile content', () => {
     // The accent uses the --accent-red token with a #d9483a fallback.
     expect(accent?.className).toMatch(/bg-\[var\(--accent-red,#d9483a\)\]/);
   });
+
+  it('quote container is left-anchored (self-start, text-left, no text-center, no px-8)', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const quote = getByTestId('hero-mobile-quote');
+    expect(quote.className).toContain('self-start');
+    expect(quote.className).toContain('text-left');
+    expect(quote.className).not.toContain('text-center');
+    expect(quote.className).not.toContain('px-8');
+  });
+
+  it('quote container is sized to w-[70vw]', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    setMatchMedia({ mobile: true });
+    vi.resetModules();
+    const { Hero } = await import('./Hero');
+    const { getByTestId } = render(<Hero introActive={false} />);
+    const quote = getByTestId('hero-mobile-quote');
+    expect(quote.className).toContain('w-[70vw]');
+  });
 });

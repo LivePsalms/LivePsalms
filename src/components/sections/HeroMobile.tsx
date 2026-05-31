@@ -110,7 +110,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
           data-testid="hero-mobile-quote"
           data-visible={quoteVisible ? 'true' : 'false'}
           className={cn(
-            'text-center px-8 mt-2 transition-opacity duration-1000 max-w-md',
+            'self-start text-left w-[70vw] max-w-md mt-2 transition-opacity duration-1000',
             quoteVisible ? 'opacity-100' : 'opacity-0',
           )}
         >
