@@ -30,6 +30,15 @@ afterEach(() => {
 });
 
 describe('MobileBottomDock', () => {
+  // Each test uses vi.resetModules() + a dynamic import('./MobileBottomDock')
+  // so the module graph (React, react-router-dom, project data, hooks) is
+  // re-evaluated per test. Under full-suite parallelism this re-evaluation
+  // occasionally exceeds the default 5s test budget on the first few cases
+  // of the file. Give every test in this describe a generous budget so the
+  // suite is deterministic under load. In isolation each test still finishes
+  // in well under 2s.
+  vi.setConfig({ testTimeout: 30000 });
+
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     setMatchMedia({ mobile: true });
