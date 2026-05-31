@@ -910,6 +910,11 @@ input[type="email"]::placeholder {
   background: var(--deep-umber);
   border-radius: 16px;
   overflow: hidden;
+  /* Padding stays constant across closed/open states so the corner radius
+     doesn't deform mid-animation. Tailwind preflight forces
+     box-sizing: border-box, so max-height: 0 clips the padding cleanly
+     when closed. If padding were moved into the [data-panel-state="open"]
+     rule, the corners would visibly snap when opening. */
   padding: 24px 0;
   max-height: 0;
   opacity: 0;

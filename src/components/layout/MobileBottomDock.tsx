@@ -28,6 +28,10 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
 
   const visible = panelOpen ? true : dir !== 'down';
 
+  // Wrapper rather than useEffect([panelOpen]) so the social reset is
+  // synchronous with the close, not deferred one render. A deferred reset
+  // would briefly leave the Instagram sub-row visible while the panel is
+  // already collapsing, producing a flash.
   const setPanelOpen = (next: boolean): void => {
     setPanelOpenRaw(next);
     if (!next) setSocialExpanded(false);
@@ -105,6 +109,12 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
             aria-controls="mobile-menu-panel"
             onClick={() => setPanelOpen(!panelOpen)}
           >
+            {/* Both labels are always rendered; CSS display swap shows the
+                active one. The mirrored aria-hidden props strip the
+                inactive label from the accessible-name tree — required
+                because JSDOM in tests doesn't honor display:none for
+                accessible-name computation, and useful in real browsers
+                for assistive tech that ignores display:none. */}
             <span className="text-menu" aria-hidden={panelOpen}>MENU</span>
             <span className="text-close" aria-hidden={!panelOpen}>CLOSE MENU</span>
           </button>
