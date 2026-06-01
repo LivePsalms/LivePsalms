@@ -30,13 +30,27 @@ gsap.registerPlugin(ScrollTrigger);
 type RestorationCTAProps = {
   purposeWord: string;
   overlayColor: string;
+  /**
+   * 'desktop' (default) is a 100vw flex-shrink-0 item inside the horizontal
+   * moodboard track. 'mobile' is a full-width vertical section placed inline
+   * before the mobile handoff — same content, no horizontal-track sizing.
+   */
+  variant?: 'desktop' | 'mobile';
 };
 
-function RestorationCTA({ purposeWord, overlayColor }: RestorationCTAProps) {
+function RestorationCTA({ purposeWord, overlayColor, variant = 'desktop' }: RestorationCTAProps) {
+  const isMobile = variant === 'mobile';
   return (
     <div
-      className="relative flex-shrink-0 h-screen flex items-center justify-center"
-      style={{ width: '100vw', backgroundColor: `color-mix(in srgb, ${overlayColor} 95%, black 10%)` }}
+      className={
+        isMobile
+          ? 'relative w-full min-h-screen flex items-center justify-center'
+          : 'relative flex-shrink-0 h-screen flex items-center justify-center'
+      }
+      style={{
+        ...(isMobile ? null : { width: '100vw' }),
+        backgroundColor: `color-mix(in srgb, ${overlayColor} 95%, black 10%)`,
+      }}
     >
       <div className="flex flex-col items-center text-center max-w-lg px-8">
         <h3
@@ -1094,7 +1108,7 @@ function PeaceMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={R1.courtyardDoor} alt="Courtyard doorway" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={R1.courtyardDoor} alt="Courtyard doorway" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           When was the last time you truly felt at rest?
         </h3>
@@ -1112,18 +1126,18 @@ function PeaceMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           David, the writer of Psalm 23, was no stranger to chaos. He had been hunted by a king, betrayed by friends, and burdened by war. Yet in the middle of all that turmoil, he wrote what may be the most peaceful passage in all of Scripture.
         </p>
-        <PhotoDevelopImage src={R1.outdoorShower} alt="Outdoor shower" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={R1.outdoorShower} alt="Outdoor shower" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Notice the language: &ldquo;He makes me lie down.&rdquo; God doesn&rsquo;t suggest rest. He makes us lie down. Like a shepherd who knows that an exhausted sheep will wander into danger, God sometimes brings us to a full stop because He knows what we need more than we do.
         </p>
-        <PhotoDevelopImage src={R1.stoneBedDark} alt="Stone bed" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={R1.stoneBedDark} alt="Stone bed" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And then He leads us beside &ldquo;quiet waters.&rdquo; Not raging rivers. Not crashing waves. Quiet waters. The Hebrew word for &ldquo;refreshes&rdquo; here is the word <em>shub</em>&mdash;which literally means &ldquo;to return&rdquo; or &ldquo;to restore.&rdquo; God&rsquo;s restoration brings you back to wholeness.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={R1.bathPlants} alt="Bath with plants" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={R1.warmSauna} alt="Warm sauna" className="w-full aspect-[2/3]" />
       </section>
@@ -1137,7 +1151,7 @@ function PeaceMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Peace is not the absence of problems; it is the presence of a Shepherd who knows exactly where to take us when we are depleted.
         </p>
-        <PhotoDevelopImage src={R1.stillPool} alt="Tranquil pool" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src={R1.stillPool} alt="Tranquil pool" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -1152,7 +1166,7 @@ function PeaceMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Today, set aside just ten minutes. No phone. No agenda. No noise. And then let Him. Don&rsquo;t rush it. Just be led.
         </p>
-        <PhotoDevelopImage src={R1.archCouch} alt="Resting couch" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={R1.archCouch} alt="Resting couch" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -1161,8 +1175,11 @@ function PeaceMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Lord, I confess that I have been running on empty. I have searched for rest in places that cannot give it. Today, I come to You, the Shepherd of my soul. Lead me to the green pastures and the quiet waters that only You can provide. Refresh what is weary in me. Restore what has been lost. Bring me back to wholeness, peace, and strength. I trust Your leading. Amen.
         </p>
-        <PhotoDevelopImage src={R1.ivyNook} alt="Peaceful nook" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={R1.ivyNook} alt="Peaceful nook" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Peace" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -1490,7 +1507,7 @@ function HopeMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src="/restoration3/image1.png" alt="Hope doorway" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src="/restoration3/image1.png" alt="Hope doorway" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           Hope is a fragile thing.
         </h3>
@@ -1508,18 +1525,18 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Jeremiah 29:11 is one of the most beloved verses in Scripture, but its full power is lost if we don&rsquo;t understand when God spoke it. This was not a promise delivered in a season of triumph. It was a letter&mdash;written by the prophet Jeremiah&mdash;to a people in exile.
         </p>
-        <PhotoDevelopImage src="/restoration3/image4.png" alt="Scripture scene" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration3/image4.png" alt="Scripture scene" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           False prophets were telling them the exile would be brief. But God&rsquo;s actual message was far more challenging: settle in. Build houses. Plant gardens. The exile would last seventy years. And it is into that crushing news that God speaks this promise of hope. He doesn&rsquo;t deny the difficulty. He doesn&rsquo;t promise a quick fix. He says: &ldquo;I have not abandoned you. I have plans for you&mdash;and those plans end in flourishing, not destruction.&rdquo;
         </p>
-        <PhotoDevelopImage src="/restoration3/image12.png" alt="Exile landscape" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration3/image12.png" alt="Exile landscape" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And then comes the invitation: &ldquo;You will seek me and find me when you seek me with all your heart. I will be found by you,&rdquo; declares the Lord. Restoration doesn&rsquo;t begin with a change in circumstances. It begins with a turning of the heart&mdash;toward the God who has been there all along, even in exile.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src="/restoration3/image2.png" alt="Hope landscape" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src="/restoration3/image7.png" alt="God's plans" className="w-full aspect-[2/3]" />
       </section>
@@ -1533,7 +1550,7 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Hope is not wishful thinking&mdash;it is the confident assurance that God&rsquo;s intentions toward us are good, even when our circumstances suggest otherwise. Restoration of hope does not require an escape from the hard season. It requires a redirecting of our gaze toward the One who holds the future we cannot yet see.
         </p>
-        <PhotoDevelopImage src="/restoration3/image14.png" alt="Hope restored" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration3/image14.png" alt="Hope restored" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -1548,7 +1565,7 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           It declares that you trust God&rsquo;s future more than your present feelings. And as you plant, seek Him. Not casually. With all your heart. Because He has promised: when you search for Him wholeheartedly, you will find Him. And finding Him is the beginning of every restoration.
         </p>
-        <PhotoDevelopImage src="/restoration3/image10.png" alt="Planting in exile" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/restoration3/image10.png" alt="Planting in exile" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -1557,8 +1574,11 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Father, I confess that my hope has grown thin. I&rsquo;ve been waiting, and the waiting has worn me down. But today I choose to believe Your word over my weariness. You said You have plans for me&mdash;plans for a hope and a future. I can&rsquo;t see that future yet, but I trust the One who holds it. Restore my hope, Lord. Give me the courage to plant in exile, to build in the waiting, and to seek You with everything I have. I believe that You will be found. Bring me back, Lord. Bring me home. Amen.
         </p>
-        <PhotoDevelopImage src="/restoration3/image13.png" alt="Hope fulfilled" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/restoration3/image13.png" alt="Hope fulfilled" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Hope" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -1886,7 +1906,7 @@ function StrengthMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={S.hero} alt="Strength horizon" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={S.hero} alt="Strength horizon" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           There&rsquo;s a kind of tired that sleep can&rsquo;t fix.
         </h3>
@@ -1904,18 +1924,18 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Isaiah wrote these words to the people of Israel during one of the darkest chapters in their history. They were in exile, far from home, watching everything they had built crumble around them. They were asking the question so many of us ask in seasons of depletion: &ldquo;Has God forgotten me?&rdquo;
         </p>
-        <PhotoDevelopImage src={S.scripture1} alt="Scripture scene" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={S.scripture1} alt="Scripture scene" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And God&rsquo;s response through Isaiah is remarkable. He doesn&rsquo;t scold them for being tired. He doesn&rsquo;t tell them to try harder. Instead, He points them to His own inexhaustible nature: &ldquo;The Lord is the everlasting God, the Creator of the ends of the earth. He will not grow tired or weary.&rdquo; The God who sustains the galaxies does not run out of strength&mdash;and He offers that same limitless power to the depleted.
         </p>
-        <PhotoDevelopImage src="/restoration5/hf_20260414_221611_185b9639-c6a6-4755-8f23-6c64e49f54c2.png" alt="Exile horizon" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration5/hf_20260414_221611_185b9639-c6a6-4755-8f23-6c64e49f54c2.png" alt="Exile horizon" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           But notice the condition: &ldquo;those who hope in the Lord.&rdquo; The Hebrew word for &ldquo;hope&rdquo; here is <em className="not-italic font-['Cormorant_Garamond'] italic">qavah</em>, which means &ldquo;to wait with eager expectation.&rdquo; It&rsquo;s not passive resignation. It&rsquo;s active trust. It&rsquo;s choosing to believe that God&rsquo;s strength will meet you exactly where your own runs out. And when it does, you don&rsquo;t just survive&mdash;you soar.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src="/restoration5/hf_20260414_221941_0acfb11f-754d-4b65-b6b7-7d7a65eae2a6.png" alt="Weariness landscape" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={S.principle1} alt="Wait with eager expectation" className="w-full aspect-[2/3]" />
       </section>
@@ -1929,7 +1949,7 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           God&rsquo;s restoration of strength does not depend on our ability to generate it ourselves. It depends on our willingness to wait on Him. The renewed strength God promises is not a return to self-sufficiency&mdash;it is a deeper dependence on the One whose power never diminishes.
         </p>
-        <PhotoDevelopImage src="/restoration5/hf_20260414_211704_fc37cef0-b61a-463d-95c7-07387941a8d2.png" alt="Strength renewed" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration5/hf_20260414_211704_fc37cef0-b61a-463d-95c7-07387941a8d2.png" alt="Strength renewed" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -1944,7 +1964,7 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Ask Him not for the energy to keep performing, but for the renewed strength that comes from resting in His power. Write down Isaiah 40:31 and place it somewhere you&rsquo;ll see it this week. Let it remind you: your emptiness is not the end of the story. It&rsquo;s the place where God&rsquo;s restoration begins.
         </p>
-        <PhotoDevelopImage src={S.application1} alt="Resting in His power" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={S.application1} alt="Resting in His power" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -1953,8 +1973,11 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Father, I am tired. Not the kind of tired that a good night&rsquo;s sleep can fix, but the kind that reaches down into my spirit. I confess that I&rsquo;ve been trying to run on my own fuel, and I have nothing left. Today, I choose to wait on You. I place my hope&mdash;my eager expectation&mdash;in Your unfailing strength. Renew me, Lord. Restore what depletion has taken. Lift me up so I can soar again. Amen.
         </p>
-        <PhotoDevelopImage src={S.prayer} alt="Soar like eagles" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={S.prayer} alt="Soar like eagles" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Strength" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -2282,7 +2305,7 @@ function WholenessMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={W.hero} alt="Restored harvest" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={W.hero} alt="Restored harvest" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           Some losses leave a mark you cannot see.
         </h3>
@@ -2300,18 +2323,18 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The people of Israel knew this grief intimately. In the book of Joel, a devastating plague of locusts had swept through the land, consuming everything&mdash;crops, vineyards, orchards. What had taken years to cultivate was devoured in days. The destruction was total. The people were left staring at bare fields and empty storehouses, wondering if anything could ever grow again.
         </p>
-        <PhotoDevelopImage src="/restoration6/hf_20260414_234114_46a4b300-ba2c-471b-8949-4a4d8e23b74a.png" alt="Bare fields" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration6/hf_20260414_234114_46a4b300-ba2c-471b-8949-4a4d8e23b74a.png" alt="Bare fields" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And it is into this desolation that God speaks one of the most breathtaking promises in all of Scripture: &ldquo;I will repay you for the years the locusts have eaten.&rdquo; Not just the crops. The years. God doesn&rsquo;t just promise to replace what was lost&mdash;He promises to restore the time that was consumed by destruction.
         </p>
-        <PhotoDevelopImage src="/restoration6/hf_20260415_054031_db02be36-4c89-4222-9c51-cdf5bb36136a.png" alt="Empty storehouse" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration6/hf_20260415_054031_db02be36-4c89-4222-9c51-cdf5bb36136a.png" alt="Empty storehouse" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           This is a promise that defies human logic. We cannot rewind the clock. We cannot unlive our hardest seasons. But God operates outside the boundaries of time. His restoration doesn&rsquo;t mean He erases the past&mdash;it means He redeems it. He takes the very years that were devoured and fills the space with abundance, purpose, and praise. David echoed this same longing in Psalm 51 when he cried out, &ldquo;Restore to me the joy of your salvation.&rdquo;
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={W.hookLeft} alt="Lost years" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={W.principle1} alt="Outside of time" className="w-full aspect-[2/3]" />
       </section>
@@ -2325,7 +2348,7 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           He is not limited by the damage that has been done or the time that has passed. God&rsquo;s promise to repay the years is not about turning back the clock&mdash;it is about filling what remains with such abundance and purpose that the coming chapters of your story will overflow with the goodness that was missing from the ones before. Wholeness does not require a perfect past. It requires a faithful God.
         </p>
-        <PhotoDevelopImage src="/restoration6/hf_20260415_061227_61d807e8-0881-4869-a4f5-cd2249a83f21.png" alt="Joy returning" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration6/hf_20260415_061227_61d807e8-0881-4869-a4f5-cd2249a83f21.png" alt="Joy returning" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -2340,7 +2363,7 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Write this truth somewhere personal&mdash;in your journal, on a note beside your bed: &ldquo;God is restoring what was lost.&rdquo; And then begin to look for evidence of it. Watch for the small mercies, the unexpected open doors, the moments of joy that catch you off guard. That is restoration at work.
         </p>
-        <PhotoDevelopImage src={W.application1} alt="Naming the locusts" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={W.application1} alt="Naming the locusts" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -2349,8 +2372,11 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           God, You know the years that have been taken from me. You know the seasons I grieve, the joy I missed, and the person I wish I had been. I bring all of it to You today&mdash;not with bitterness, but with hope. You promised to repay what the locusts have eaten, and I am choosing to believe that promise. Restore my wholeness. Redeem my story. Fill what remains with Your abundance and purpose. Create in me a clean heart and renew a steadfast spirit within me. I trust that my best days are still ahead because You are in them. Amen.
         </p>
-        <PhotoDevelopImage src={W.prayer} alt="Years redeemed" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={W.prayer} alt="Years redeemed" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Wholeness" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -2678,7 +2704,7 @@ function PurposeMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={P.hero} alt="Purpose woven" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={P.hero} alt="Purpose woven" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           When your story has lost its plot.
         </h3>
@@ -2696,18 +2722,18 @@ function PurposeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Romans 8:28 is one of the most quoted&mdash;and most misunderstood&mdash;verses in the Bible. It is not a promise that everything that happens to us is good. Paul does not say &ldquo;all things are good.&rdquo; He says God works <em className="not-italic font-['Cormorant_Garamond'] italic">in</em> all things <em className="not-italic font-['Cormorant_Garamond'] italic">for</em> good. The distinction is critical. God is not the author of your suffering; He is the Redeemer of it.
         </p>
-        <PhotoDevelopImage src={P.scripture1} alt="Fractured pieces" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={P.scripture1} alt="Fractured pieces" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The word &ldquo;works&rdquo; here is the Greek word <em className="not-italic font-['Cormorant_Garamond'] italic">synergei</em>&mdash;from which we get the English word &ldquo;synergy.&rdquo; It suggests God actively collaborating with the circumstances of our lives, combining even the painful ones into a coherent, purposeful narrative. And notice the scope: not some things. All things. The betrayal, the failure, the loss, the waiting&mdash;none of it is wasted in God&rsquo;s economy.
         </p>
-        <PhotoDevelopImage src={P.scripture2} alt="Synergy" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={P.scripture2} alt="Synergy" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           Paul then reveals the ultimate purpose: to be &ldquo;conformed to the image of his Son.&rdquo; God&rsquo;s restoration of purpose is not about making our lives comfortable. It is about making us more like Christ. Every hard season is shaping something eternal in us.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={P.hookLeft} alt="Disorienting season" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={P.principle1} alt="Image of his Son" className="w-full aspect-[2/3]" />
       </section>
@@ -2721,7 +2747,7 @@ function PurposeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           The restoration of purpose does not mean every chapter will be painless&mdash;it means every chapter is being authored with intention. What feels like a meaningless detour in the moment is often the very road God uses to shape us into who He created us to be. Purpose is not found in the absence of hardship but in the presence of a God who redeems every broken piece.
         </p>
-        <PhotoDevelopImage src={P.principle2} alt="Eternal shaping" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={P.principle2} alt="Eternal shaping" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Application */}
@@ -2736,7 +2762,7 @@ function PurposeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Today, take one area of your life that currently feels purposeless or painful and consciously surrender it to God&rsquo;s authorship. Say out loud: &ldquo;Lord, I do not understand this chapter. But I trust that You are working all things together for good. Restore my sense of purpose. Show me what You are building.&rdquo; And then watch.
         </p>
-        <PhotoDevelopImage src={P.application1} alt="Surrendering to authorship" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={P.application1} alt="Surrendering to authorship" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -2745,8 +2771,11 @@ function PurposeMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Father, I confess that I have questioned Your purposes. There are chapters in my story that I do not understand&mdash;seasons that felt wasted, pain that seemed pointless. But I choose today to trust that You are working in all things. Nothing in my life is outside Your reach or beyond Your ability to redeem. Restore my sense of purpose, Lord. Help me to see that even the hardest seasons are shaping me into the image of Your Son. I surrender the chapters I do not understand to You, the Author who wastes nothing. Amen.
         </p>
-        <PhotoDevelopImage src={P.prayer} alt="Author of all things" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={P.prayer} alt="Author of all things" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Purpose" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -3074,7 +3103,7 @@ function ConnectionMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={C.hero} alt="Brought near" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={C.hero} alt="Brought near" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           The disconnection that hurts the most.
         </h3>
@@ -3092,18 +3121,18 @@ function ConnectionMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Paul wrote to the Ephesians&mdash;a church made up largely of Gentiles, people who were historically outsiders to God&rsquo;s covenant promises. They had been, in Paul&rsquo;s words, &ldquo;far away.&rdquo; Excluded. Without hope. Without God. That was their spiritual r&eacute;sum&eacute; before Christ.
         </p>
-        <PhotoDevelopImage src="/restoration8/hf_20260416_234755_bb74295d-f794-4b96-a325-8325f1e2e21f.png" alt="Far away" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration8/hf_20260416_234755_bb74295d-f794-4b96-a325-8325f1e2e21f.png" alt="Far away" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           But then Paul uses two of the most powerful words in Scripture: &ldquo;But now.&rdquo; Everything changed. The distance was closed&mdash;not by human effort, not by religious performance, but by the blood of Christ. The dividing wall of hostility was destroyed. Access to God was no longer reserved for a select few; it was thrown wide open.
         </p>
-        <PhotoDevelopImage src="/restoration8/hf_20260416_214154_f9197cf0-dad3-451e-9fca-55f30abb7207.png" alt="But now" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration8/hf_20260416_214154_f9197cf0-dad3-451e-9fca-55f30abb7207.png" alt="But now" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           The Greek word Paul uses for &ldquo;brought near&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">eggys</em>&mdash;the same word used to describe intimate proximity. God did not merely wave at them from a distance. He pulled them close. And He does the same for us. Every wall that sin erected, every chasm that shame carved out, every distance that disappointment created&mdash;Christ has bridged it all.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={C.hookLeft} alt="Quiet distance" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={C.principle1} alt="Eggys" className="w-full aspect-[2/3]" />
       </section>
@@ -3117,7 +3146,7 @@ function ConnectionMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           No amount of distance&mdash;whether caused by sin, seasons of spiritual dryness, or the pain of unanswered prayer&mdash;can disqualify us from the nearness God has already purchased. Restoration of connection with God does not require us to earn our way back into His presence. It requires us to accept the invitation that Christ&rsquo;s sacrifice has already extended.
         </p>
-        <PhotoDevelopImage src={C.principle2} alt="Bridged distance" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src={C.principle2} alt="Bridged distance" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -3132,7 +3161,7 @@ function ConnectionMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Open your Bible to Ephesians 2 and read it slowly. Speak to God honestly&mdash;tell Him where the distance started, where the wall went up. And then receive this truth: the blood of Christ has already done the work of bringing you near. You are not an outsider. You are not too far gone. You have been brought near&mdash;and nothing can push you back.
         </p>
-        <PhotoDevelopImage src={C.application1} alt="Open Bible" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={C.application1} alt="Open Bible" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -3141,8 +3170,11 @@ function ConnectionMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Lord, I have felt so far from You. I have let sin, shame, and silence build walls between us that I did not know how to tear down. But today I receive the truth that You have already torn them down through Christ. I do not have to earn my way back to You&mdash;I have been brought near by Your grace. Restore the closeness I have lost. Help me to live in the nearness You have already given me. I am done keeping my distance. I am coming home. Amen.
         </p>
-        <PhotoDevelopImage src={C.prayer} alt="Coming home" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={C.prayer} alt="Coming home" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Connection" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -3470,7 +3502,7 @@ function IdentityMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src="/restoration9/hf_20260417_004454_f57f28f0-4657-4711-bdfd-c1d58dc83c88.png" alt="New creation" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src="/restoration9/hf_20260417_004454_f57f28f0-4657-4711-bdfd-c1d58dc83c88.png" alt="New creation" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           The labels no one else sees.
         </h3>
@@ -3488,18 +3520,18 @@ function IdentityMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Paul wrote these words to the church in Corinth&mdash;a community of former idol worshippers, former prostitutes, former thieves, and former liars who were struggling to leave their old identities behind. The culture kept pulling them back toward who they used to be. And Paul&rsquo;s response is one of the most radical declarations in all of Scripture.
         </p>
-        <PhotoDevelopImage src={I.scripture1} alt="Old creation" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={I.scripture1} alt="Old creation" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Notice that Paul doesn&rsquo;t say the new creation <em className="not-italic font-['Cormorant_Garamond'] italic">is coming</em>. He doesn&rsquo;t say it&rsquo;s a goal to work toward. He says it <em className="not-italic font-['Cormorant_Garamond'] italic">has come</em>. In Christ, the transformation is already accomplished. Your old identity&mdash;the one built on shame, regret, and the labels the world gave you&mdash;has been replaced. Not improved. Not upgraded. <em className="not-italic font-['Cormorant_Garamond'] italic">Replaced</em>.
         </p>
-        <PhotoDevelopImage src={I.scripture2} alt="The new is here" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={I.scripture2} alt="The new is here" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And the source of this new identity? Paul tells us: &ldquo;All this is from God, who reconciled us to himself through Christ.&rdquo; The restoration of your identity is not something you manufacture through self-help or willpower. It is a gift from the God who looked at your brokenness and said, &ldquo;I&rsquo;m not counting that against you. I&rsquo;m making you new.&rdquo;
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={I.hookLeft} alt="Quiet labels" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={I.principle1} alt="Reconciled" className="w-full aspect-[2/3]" />
       </section>
@@ -3513,7 +3545,7 @@ function IdentityMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           In Christ, your identity is no longer defined by your past. Restoration of identity means that who you were and what was done to you no longer get the final word over who you are. You have been reconciled&mdash;brought back into right relationship with God&mdash;and in that reconciliation, you have been given a completely new name. The old labels have been stripped away. The new creation has already begun.
         </p>
-        <PhotoDevelopImage src="/restoration9/hf_20260417_004042_2d78afd9-82c6-447b-93e1-d4df054daedf.png" alt="Made new" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration9/hf_20260417_004042_2d78afd9-82c6-447b-93e1-d4df054daedf.png" alt="Made new" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -3528,7 +3560,7 @@ function IdentityMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Write over it the truth of 2 Corinthians 5:17: &ldquo;I am a new creation. The old is gone. The new is here.&rdquo; Put this where you will see it every morning this week. Every time the old label tries to reassert itself, speak the new one out loud. You are not who you were. You are who God says you are. And He says you are new.
         </p>
-        <PhotoDevelopImage src={I.application1} alt="Crossing out the label" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={I.application1} alt="Crossing out the label" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -3537,8 +3569,11 @@ function IdentityMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           God, I have been carrying labels that were never Yours to give. I&rsquo;ve let my past define me, and I&rsquo;ve answered to names that You never called me. Today, I lay them down. I receive the identity You have given me in Christ: new creation, reconciled, beloved. Help me to live from this truth and not from the old story. When the old labels try to pull me back, anchor me in the reality of who I am in You. The old has gone. The new is here. Thank You for making me whole again. Amen.
         </p>
-        <PhotoDevelopImage src={I.prayer} alt="Beloved" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={I.prayer} alt="Beloved" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Identity" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -3866,7 +3901,7 @@ function JoyMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={J.hero} alt="Streams in the Negev" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={J.hero} alt="Streams in the Negev" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           When was the last time you really laughed?
         </h3>
@@ -3884,18 +3919,18 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Psalm 126 is a song written by the Israelites after they returned from decades of exile in Babylon. For seventy years, they had lived as captives in a foreign land, stripped of their homeland, their temple, and their way of life. And then, almost impossibly, God brought them home. The psalmist describes that moment of return with breathtaking language: &ldquo;We were like those who dreamed.&rdquo;
         </p>
-        <PhotoDevelopImage src="/restoration10/hf_20260424_202713_1125e681-9649-4065-bcfb-da5f11a7ae3c.png" alt="Like those who dreamed" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration10/hf_20260424_202713_1125e681-9649-4065-bcfb-da5f11a7ae3c.png" alt="Like those who dreamed" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And what was the first sign of their restoration? Laughter. Songs of joy. Not careful optimism. Not cautious gratitude. Uncontainable, overflowing, mouth-filling joy. Even the surrounding nations took notice and said, &ldquo;The Lord has done great things for them.&rdquo;
         </p>
-        <PhotoDevelopImage src="/restoration10/hf_20260417_161709_3d94e62d-3112-4db0-93cd-a8e06d8f7376.png" alt="Mouth-filling joy" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration10/hf_20260417_161709_3d94e62d-3112-4db0-93cd-a8e06d8f7376.png" alt="Mouth-filling joy" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           But the psalm doesn&rsquo;t end there. The writer shifts to a prayer: &ldquo;Restore our fortunes, Lord, like streams in the Negev.&rdquo; The Negev is the southern desert of Israel&mdash;dry, barren, seemingly lifeless. But when the rains come, dry riverbeds called <em className="not-italic font-['Cormorant_Garamond'] italic">wadis</em> suddenly rush with water, and the desert blooms almost overnight.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={J.hookLeft} alt="Color draining" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={J.principle1} alt="Wadis flowing" className="w-full aspect-[2/3]" />
       </section>
@@ -3909,7 +3944,7 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           God does not waste our tears&mdash;He transforms them into a harvest. Restored joy is not the absence of sorrow; it is the gift that grows in the very soil that sorrow tilled. The tears we shed in our hardest seasons are seeds, and God promises that every one of them will yield a return of singing.
         </p>
-        <PhotoDevelopImage src="/restoration10/hf_20260417_161445_d7a1bff7-ffb7-48fe-bc41-a67e4712319b.png" alt="Desert blooms" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration10/hf_20260417_161445_d7a1bff7-ffb7-48fe-bc41-a67e4712319b.png" alt="Desert blooms" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -3924,7 +3959,7 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           These are not trivial acts&mdash;they are acts of faith, declaring that the season of sowing tears is giving way to the season of reaping songs. And if you&rsquo;re not there yet, if the tears are still falling, hold on to the promise: &ldquo;Those who go out weeping, carrying seed to sow, will return with songs of joy, carrying sheaves with them.&rdquo;
         </p>
-        <PhotoDevelopImage src={J.application1} alt="Song that comes alive" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={J.application1} alt="Song that comes alive" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -3933,8 +3968,11 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Lord, I have been living in a dry season. Joy feels distant, and laughter feels foreign. But I know that You are the God who sends streams through the desert. I bring You my tears today&mdash;not as evidence of defeat, but as seeds of faith. I trust that You will turn my mourning into dancing and fill my mouth with laughter again. Restore the joy of my salvation, Lord. Let the nations&mdash;and my own weary heart&mdash;see what You have done. Amen.
         </p>
-        <PhotoDevelopImage src={J.prayer} alt="Mourning into dancing" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={J.prayer} alt="Mourning into dancing" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Joy" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -4262,7 +4300,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={F.hero} alt="Open hands" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={F.hero} alt="Open hands" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           Some wounds are loud. Others are quiet but just as deep.
         </h3>
@@ -4280,18 +4318,18 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Paul wrote the letter to the Ephesians from prison. He was writing to a mixed community of Jews and Gentiles who carried real grievances against one another&mdash;histories of exclusion, misunderstanding, and hurt. He does not minimize what they have felt. But he does call them to lay it down.
         </p>
-        <PhotoDevelopImage src="/serenity2/hf_20260417_210451_81d36918-c70b-4d80-8f5c-a90febb338db.png" alt="Real grievances" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/serenity2/hf_20260417_210451_81d36918-c70b-4d80-8f5c-a90febb338db.png" alt="Real grievances" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Greek word translated &ldquo;get rid of&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">airo</em>, which means to lift up and carry away. Paul is describing a deliberate, active release. This is not repression. It is not pretending the wound didn&rsquo;t happen. It is the sacred work of choosing not to keep rehearsing it.
         </p>
-        <PhotoDevelopImage src={F.scripture2} alt="Lift and carry away" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={F.scripture2} alt="Lift and carry away" className="-mx-6 w-[calc(100%+3rem)] aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And Paul anchors it in something beautiful: &ldquo;just as in Christ God forgave you.&rdquo; We do not forgive from a place of moral superiority. We forgive from a place of having been forgiven. The cross is the deepest possible proof that our offenses were absorbed by a love that refused to pass the debt back to us. When we forgive, we are not being asked to manufacture something we don&rsquo;t have. We are being asked to give away what we have already received.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src="/serenity2/hf_20260502_085359_63722552-4e69-444b-8d3a-7f081ef72c6a.png" alt="Quiet wound" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={F.principle1} alt="The cross absorbs" className="w-full aspect-[2/3]" />
       </section>
@@ -4305,7 +4343,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Serenity is impossible to hold on to while bitterness is being nursed. Forgiveness is not a statement that the wound did not matter; it is a refusal to let the wound keep writing the next chapter of our lives. When we release the offense into the hands of a God who sees what we cannot fix, we discover that the thing we thought we needed to hold onto was actually the thing holding onto us.
         </p>
-        <PhotoDevelopImage src="/serenity2/hf_20260417_211444_9529204a-d9a3-41e0-9c8a-2ef0b9dc041a.png" alt="Already received" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/serenity2/hf_20260417_211444_9529204a-d9a3-41e0-9c8a-2ef0b9dc041a.png" alt="Already received" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -4320,7 +4358,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           You may need to do this more than once. You may need to do it every morning for a while. That is not weakness&mdash;that is how forgiveness actually works. If the person is safe and reconciliation is possible, ask God if there is a conversation He wants you to have. If the relationship is unsafe or no longer accessible, know this: your healing does not depend on their apology.
         </p>
-        <PhotoDevelopImage src={F.application1} alt="Open your hands" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={F.application1} alt="Open your hands" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -4329,8 +4367,11 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Lord, You know the name and the wound without me having to explain it. You have seen every moment of it. Today, I bring it to You&mdash;not because it didn&rsquo;t matter, but because I am tired of letting it define me. Help me to release what I have been holding. Teach me to forgive from the deep well of Your own forgiveness toward me. Cleanse me of bitterness. Soften what has hardened. Restore the serenity that only an unburdened heart can know. Amen.
         </p>
-        <PhotoDevelopImage src={F.prayer} alt="Unburdened heart" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={F.prayer} alt="Unburdened heart" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Serenity" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -4658,7 +4699,7 @@ function SurrenderMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={Su.hero} alt="Be still" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={Su.hero} alt="Be still" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           Serenity has never been the fruit of control.
         </h3>
@@ -4676,18 +4717,18 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Psalm 46 was written against the backdrop of catastrophe. The psalmist describes mountains falling into the heart of the sea, waters roaring and foaming, kingdoms shaking. This is not a psalm composed in a quiet garden on a sunny afternoon. It is a psalm born in the middle of upheaval. And yet, in the midst of that chaos, God speaks a single command: &ldquo;Be still, and know that I am God.&rdquo;
         </p>
-        <PhotoDevelopImage src={Su.scripture1} alt="Mountains falling" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={Su.scripture1} alt="Mountains falling" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Hebrew phrase translated &ldquo;be still&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">raphah</em>, which carries the meaning of &ldquo;to let go&rdquo; or &ldquo;to cease striving.&rdquo; It is not simply an invitation to silence. It is a command to release your grip. To stop trying to hold the world together with your own two hands. To relax the white-knuckled fists you have been clenching for far too long.
         </p>
-        <PhotoDevelopImage src={Su.scripture2} alt="Waters roaring" className="w-full aspect-[3/4] mb-8" />
+        <PhotoDevelopImage src={Su.scripture2} alt="Waters roaring" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/4] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And the reason given is not that the storm has passed&mdash;but that God is still God. His sovereignty has not been shaken by anything that is shaking you.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src="/serenity3/hf_20260503_213652_ebf66dbf-1b27-40cd-92ee-44adf241c584.png" alt="Restless hum" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={Su.principle1} alt="White-knuckled fists" className="w-full aspect-[2/3]" />
       </section>
@@ -4701,7 +4742,7 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Serenity is not found by controlling our circumstances; it is found by surrendering them to the God who is already in control. When we release our grip on what we were never meant to carry, we discover that God has been holding it&mdash;and us&mdash;all along.
         </p>
-        <PhotoDevelopImage src="/serenity3/hf_20260418_213303_2c7208e9-a034-4456-9a9f-da42dba4900e.png" alt="Sovereignty unshaken" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/serenity3/hf_20260418_213303_2c7208e9-a034-4456-9a9f-da42dba4900e.png" alt="Sovereignty unshaken" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -4716,7 +4757,7 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Serenity is not an emotion you conjure. It is a gift that flows from trusting the One who holds all things together.
         </p>
-        <PhotoDevelopImage src={Su.application1} alt="Open hands, palms up" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={Su.application1} alt="Open hands, palms up" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -4725,8 +4766,11 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Father, I confess that I have been striving when I should have been surrendering. I have been gripping tightly to things that were never mine to control. Today, I release them into Your hands. Quiet the noise in my mind. Settle the unrest in my spirit. Help me to be still long enough to remember that You are God&mdash;and that is enough. Fill me with the serenity that only comes from trusting You. Amen.
         </p>
-        <PhotoDevelopImage src={Su.prayer} alt="That is enough" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={Su.prayer} alt="That is enough" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Serenity" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
@@ -5054,7 +5098,7 @@ function TrustMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={T.hero} alt="The path made straight" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src={T.hero} alt="The path made straight" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           The heart was never designed to carry the weight of knowing everything.
         </h3>
@@ -5072,18 +5116,18 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Solomon wrote these words to his son, passing down wisdom he had learned at great cost. He was a king surrounded by advisors, wealth, and intellectual resources beyond what most people could imagine. If anyone could have leaned on his own understanding, it was Solomon. And yet the charge he gives is this: &ldquo;Lean not on your own understanding.&rdquo;
         </p>
-        <PhotoDevelopImage src={T.scripture1} alt="Solomon's charge" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src={T.scripture1} alt="Solomon's charge" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Hebrew word for &ldquo;lean&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">sha&rsquo;an</em>, which pictures a person putting the full weight of their body against something for support. Solomon is not saying, &ldquo;Don&rsquo;t think.&rdquo; He is saying, &ldquo;Don&rsquo;t let your understanding be the thing you rest your whole weight on.&rdquo; Because your understanding, no matter how sharp, is finite. It cannot see around the corner.
         </p>
-        <PhotoDevelopImage src={T.scripture2} alt="Sha'an" className="w-full aspect-[3/4] mb-8" />
+        <PhotoDevelopImage src={T.scripture2} alt="Sha'an" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/4] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And notice the promise that follows: &ldquo;He will make your paths straight.&rdquo; The Hebrew here does not mean that the road will be free of difficulty. It means He will make the path level enough for you to walk. He clears the way, one step at a time, for the one who trusts Him more than their own map.
         </p>
       </section>
 
       {/* Image pair */}
-      <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
+      <section className="grid grid-cols-2 gap-2 py-6" style={{ backgroundColor: bg }}>
         <PhotoDevelopImage src={T.hookLeft} alt="Midnight uncertainty" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={T.principle1} alt="Level enough to walk" className="w-full aspect-[2/3]" />
       </section>
@@ -5097,7 +5141,7 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Trust is not the absence of questions&mdash;it is the choice to submit our questions to a God who is wiser than our answers. When we stop leaning on what we can figure out and lean instead on who He is, He quietly straightens paths we could never have engineered ourselves.
         </p>
-        <PhotoDevelopImage src={T.principle2} alt="One step at a time" className="w-full aspect-[3/4]" />
+        <PhotoDevelopImage src={T.principle2} alt="One step at a time" className="-mx-6 w-[calc(100%+3rem)] aspect-[3/4]" />
       </section>
 
       {/* Application */}
@@ -5112,7 +5156,7 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Speak it out loud, then take the very next small step of obedience that is in front of you, and leave the rest of the path in His hands. Serenity grows in the soil of surrendered understanding.
         </p>
-        <PhotoDevelopImage src={T.application1} alt="Naming the unknown" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={T.application1} alt="Naming the unknown" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
 
       {/* Prayer */}
@@ -5121,8 +5165,11 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="font-['Cormorant_Garamond'] italic text-lg text-white/65 leading-[1.7] max-w-sm mx-auto mb-12">
           Father, I confess that I have been trying to carry what was never mine to carry&mdash;the future, the outcome, the full picture. I have leaned so heavily on my own understanding that I have worn myself out. Today, I shift my weight onto You. I trust You with what I cannot see. I trust You with what I cannot fix. Make my path straight, one faithful step at a time. Teach me the serenity of a heart that rests in Your wisdom instead of its own. Amen.
         </p>
-        <PhotoDevelopImage src={T.prayer} alt="Rest in His wisdom" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src={T.prayer} alt="Rest in His wisdom" className="-mx-6 w-[calc(100%+3rem)] aspect-[2/3]" />
       </section>
+
+      {/* Continue-restoring CTA — mirrors the desktop Zone 7 RestorationCTA */}
+      <RestorationCTA purposeWord="Serenity" overlayColor={project.overlayColor} variant="mobile" />
 
       <NextDevotionHandoff
         currentProject={project}
