@@ -1,4 +1,3 @@
-/// <reference types="node" />
 // Regression guard: every public image path referenced in MoodBoard.tsx must
 // resolve to a file that actually exists under /public. This catches the class
 // of bug where an asset reorg (renaming /restoration1/hf_*.png -> image*.png)

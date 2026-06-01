@@ -1,4 +1,3 @@
-/// <reference types="node" />
 // Regression guard: in the mobile devotion variants every <PhotoDevelopImage>
 // renders with object-cover, so an image whose native aspect ratio is far from
 // its slot's aspect-* class gets cropped to a band (a portrait photo jammed
