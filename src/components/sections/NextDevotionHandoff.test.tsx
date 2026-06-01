@@ -119,14 +119,14 @@ describe('NextDevotionHandoff mobile pill — curated break', () => {
   it('renders the title as two segments split at the configured word index', () => {
     renderHandoff();
     // Both segments should appear separately in the DOM
-    expect(screen.getByText('Beside Still')).toBeDefined();
-    expect(screen.getByText('Waters')).toBeDefined();
+    expect(screen.getByText('Beside Still')).toBeInTheDocument();
+    expect(screen.getByText('Waters')).toBeInTheDocument();
     // And the un-split title should NOT appear as a single text node
     expect(screen.queryByText('Beside Still Waters')).toBeNull();
   });
 
   it('renders the title as one node when mobileTitleBreak is undefined', () => {
     renderHandoff({ ...peaceDevotion, mobileTitleBreak: undefined });
-    expect(screen.getByText('Beside Still Waters')).toBeDefined();
+    expect(screen.getByText('Beside Still Waters')).toBeInTheDocument();
   });
 });
