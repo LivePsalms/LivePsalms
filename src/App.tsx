@@ -131,7 +131,13 @@ function App() {
         <div
           className={cn(
             'relative min-h-screen',
-            dockMounted && 'pb-[var(--mobile-dock-clearance)] md:pb-0',
+            // Mobile dock clearance keeps a normal page's last content above the
+            // fixed bottom dock. The purpose-detail page closes on the
+            // full-screen NextDevotionHandoff end-cap, which should bleed to the
+            // bottom edge (the dock floats over its lower edge like any page;
+            // the centered pill stays clear). Reserving clearance below it just
+            // reveals the app-bg taupe as dead space — so skip it on detail.
+            dockMounted && !isDetailPage && 'pb-[var(--mobile-dock-clearance)] md:pb-0',
           )}
           // On the notepad landing, paint the wrapper in the same near-black
           // as the closing CTA so the mobile dock-clearance padding zone
