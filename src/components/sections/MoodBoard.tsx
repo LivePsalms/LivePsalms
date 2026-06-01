@@ -243,19 +243,28 @@ const S = {
 };
 
 /* ── Restoration 1 image map ── */
+// NOTE: The /restoration1 folder was reorganized (commit d90da2f) from
+// hf_*.png to sequential image*.png; desktop PeaceZones was updated but this
+// mobile map was not, which left PeaceMobile rendering broken images. Each key
+// is paired to the existing file by ASPECT RATIO + subject so object-cover
+// shows the full scene rather than a cropped band. Only image8 and image11 are
+// landscape (3:2 = 1.50); every other image is 2:3 portrait (0.67). The two
+// landscape keys (stillPool aspect-[3/2], stoneBedDark aspect-video) MUST use
+// those two; everything else fills a portrait slot. Guarded by
+// moodboard-assets.test.ts.
 const R1 = {
-  courtyardDoor: '/restoration1/hf_20260414_052152_0d84e8c5-405e-47c9-b2ac-b305071e3e75.png',
-  bathPlants: '/restoration1/hf_20260414_052541_e8b75163-1b4a-41bb-9f5f-e62a0375dae5.png',
-  vineDoor: '/restoration1/hf_20260414_052603_e157e053-f024-4596-a970-bc9c9830c26e.png',
-  outdoorShower: '/restoration1/hf_20260414_052818_7e66aa90-20e0-4b89-8dae-59f80afa185d.png',
-  stoneBedDark: '/restoration1/hf_20260414_053954_8eab2b6e-f7e1-4e13-90c8-a009ce499a47.png',
-  stoneBedLight: '/restoration1/hf_20260414_054107_eb2996b7-a1e6-49f1-83b0-3a90f75c8209.png',
-  warmSauna: '/restoration1/hf_20260414_054747_00ef631e-9f18-422a-9b64-f86347597ecc.png',
-  darkSauna: '/restoration1/hf_20260414_055233_18d4b5eb-9558-471f-be7a-7c60d629c9cd.png',
-  stillPool: '/restoration1/hf_20260414_060143_ac59f873-8396-49cc-b71a-31fc3624e0a1.png',
-  spaTable: '/restoration1/hf_20260414_060351_457e393c-6660-4656-ac10-a8687f955863.png',
-  archCouch: '/restoration1/hf_20260414_060514_629506c3-0888-4ddc-a3fc-b64fee0bc241.png',
-  ivyNook: '/restoration1/hf_20260414_060559_8f073d25-fae7-412b-9d3d-b27100c2c7d0.png',
+  courtyardDoor: '/restoration1/image1.png', // courtyard doorway — portrait → 2/3 slot
+  bathPlants: '/restoration1/image2.png', // bath with lush plants — portrait → 2/3 slot
+  vineDoor: '/restoration1/image3.png', // plant + low platform — portrait (unused key)
+  outdoorShower: '/restoration1/image4.png', // outdoor shower — portrait → 2/3 slot
+  stoneBedDark: '/restoration1/image11.png', // warm spa table, low light — landscape → aspect-video
+  stoneBedLight: '/restoration1/image5.png', // shelf, mirror, bottles — portrait (unused key)
+  warmSauna: '/restoration1/image6.png', // arch doorway, stone basin — portrait → 2/3 slot
+  darkSauna: '/restoration1/image13.png', // window nook with orchids (unused key)
+  stillPool: '/restoration1/image8.png', // pool + stacked stones — landscape → aspect-[3/2]
+  spaTable: '/restoration1/image9.png', // yoga mat in courtyard — portrait (unused key)
+  archCouch: '/restoration1/image12.png', // arched couch nook — portrait → 2/3 slot
+  ivyNook: '/restoration1/image7.png', // meditation nook, cushion + orchid — portrait → 2/3 slot
 };
 
 interface MoodBoardProps {
@@ -1503,7 +1512,7 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           False prophets were telling them the exile would be brief. But God&rsquo;s actual message was far more challenging: settle in. Build houses. Plant gardens. The exile would last seventy years. And it is into that crushing news that God speaks this promise of hope. He doesn&rsquo;t deny the difficulty. He doesn&rsquo;t promise a quick fix. He says: &ldquo;I have not abandoned you. I have plans for you&mdash;and those plans end in flourishing, not destruction.&rdquo;
         </p>
-        <PhotoDevelopImage src="/restoration3/image5.png" alt="Exile landscape" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration3/image12.png" alt="Exile landscape" className="w-full aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And then comes the invitation: &ldquo;You will seek me and find me when you seek me with all your heart. I will be found by you,&rdquo; declares the Lord. Restoration doesn&rsquo;t begin with a change in circumstances. It begins with a turning of the heart&mdash;toward the God who has been there all along, even in exile.
         </p>
@@ -1524,7 +1533,7 @@ function HopeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Hope is not wishful thinking&mdash;it is the confident assurance that God&rsquo;s intentions toward us are good, even when our circumstances suggest otherwise. Restoration of hope does not require an escape from the hard season. It requires a redirecting of our gaze toward the One who holds the future we cannot yet see.
         </p>
-        <PhotoDevelopImage src="/restoration3/image8.png" alt="Hope restored" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration3/image14.png" alt="Hope restored" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -1899,7 +1908,7 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And God&rsquo;s response through Isaiah is remarkable. He doesn&rsquo;t scold them for being tired. He doesn&rsquo;t tell them to try harder. Instead, He points them to His own inexhaustible nature: &ldquo;The Lord is the everlasting God, the Creator of the ends of the earth. He will not grow tired or weary.&rdquo; The God who sustains the galaxies does not run out of strength&mdash;and He offers that same limitless power to the depleted.
         </p>
-        <PhotoDevelopImage src={S.scripture2} alt="Exile horizon" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration5/hf_20260414_221611_185b9639-c6a6-4755-8f23-6c64e49f54c2.png" alt="Exile horizon" className="w-full aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           But notice the condition: &ldquo;those who hope in the Lord.&rdquo; The Hebrew word for &ldquo;hope&rdquo; here is <em className="not-italic font-['Cormorant_Garamond'] italic">qavah</em>, which means &ldquo;to wait with eager expectation.&rdquo; It&rsquo;s not passive resignation. It&rsquo;s active trust. It&rsquo;s choosing to believe that God&rsquo;s strength will meet you exactly where your own runs out. And when it does, you don&rsquo;t just survive&mdash;you soar.
         </p>
@@ -1907,7 +1916,7 @@ function StrengthMobile({ project }: { project: Project }) {
 
       {/* Image pair */}
       <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={S.hookLeft} alt="Weariness landscape" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/restoration5/hf_20260414_221941_0acfb11f-754d-4b65-b6b7-7d7a65eae2a6.png" alt="Weariness landscape" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={S.principle1} alt="Wait with eager expectation" className="w-full aspect-[2/3]" />
       </section>
 
@@ -1920,7 +1929,7 @@ function StrengthMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           God&rsquo;s restoration of strength does not depend on our ability to generate it ourselves. It depends on our willingness to wait on Him. The renewed strength God promises is not a return to self-sufficiency&mdash;it is a deeper dependence on the One whose power never diminishes.
         </p>
-        <PhotoDevelopImage src={S.principle2} alt="Strength renewed" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration5/hf_20260414_211704_fc37cef0-b61a-463d-95c7-07387941a8d2.png" alt="Strength renewed" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -2291,11 +2300,11 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The people of Israel knew this grief intimately. In the book of Joel, a devastating plague of locusts had swept through the land, consuming everything&mdash;crops, vineyards, orchards. What had taken years to cultivate was devoured in days. The destruction was total. The people were left staring at bare fields and empty storehouses, wondering if anything could ever grow again.
         </p>
-        <PhotoDevelopImage src={W.scripture1} alt="Bare fields" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration6/hf_20260414_234114_46a4b300-ba2c-471b-8949-4a4d8e23b74a.png" alt="Bare fields" className="w-full aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And it is into this desolation that God speaks one of the most breathtaking promises in all of Scripture: &ldquo;I will repay you for the years the locusts have eaten.&rdquo; Not just the crops. The years. God doesn&rsquo;t just promise to replace what was lost&mdash;He promises to restore the time that was consumed by destruction.
         </p>
-        <PhotoDevelopImage src={W.scripture2} alt="Empty storehouse" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration6/hf_20260415_054031_db02be36-4c89-4222-9c51-cdf5bb36136a.png" alt="Empty storehouse" className="w-full aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           This is a promise that defies human logic. We cannot rewind the clock. We cannot unlive our hardest seasons. But God operates outside the boundaries of time. His restoration doesn&rsquo;t mean He erases the past&mdash;it means He redeems it. He takes the very years that were devoured and fills the space with abundance, purpose, and praise. David echoed this same longing in Psalm 51 when he cried out, &ldquo;Restore to me the joy of your salvation.&rdquo;
         </p>
@@ -2316,7 +2325,7 @@ function WholenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           He is not limited by the damage that has been done or the time that has passed. God&rsquo;s promise to repay the years is not about turning back the clock&mdash;it is about filling what remains with such abundance and purpose that the coming chapters of your story will overflow with the goodness that was missing from the ones before. Wholeness does not require a perfect past. It requires a faithful God.
         </p>
-        <PhotoDevelopImage src={W.principle2} alt="Joy returning" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration6/hf_20260415_061227_61d807e8-0881-4869-a4f5-cd2249a83f21.png" alt="Joy returning" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -2712,7 +2721,7 @@ function PurposeMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           The restoration of purpose does not mean every chapter will be painless&mdash;it means every chapter is being authored with intention. What feels like a meaningless detour in the moment is often the very road God uses to shape us into who He created us to be. Purpose is not found in the absence of hardship but in the presence of a God who redeems every broken piece.
         </p>
-        <PhotoDevelopImage src={P.principle2} alt="Eternal shaping" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src={P.principle2} alt="Eternal shaping" className="w-full aspect-[2/3]" />
       </section>
 
       {/* Application */}
@@ -3083,11 +3092,11 @@ function ConnectionMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Paul wrote to the Ephesians&mdash;a church made up largely of Gentiles, people who were historically outsiders to God&rsquo;s covenant promises. They had been, in Paul&rsquo;s words, &ldquo;far away.&rdquo; Excluded. Without hope. Without God. That was their spiritual r&eacute;sum&eacute; before Christ.
         </p>
-        <PhotoDevelopImage src={C.scripture1} alt="Far away" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration8/hf_20260416_234755_bb74295d-f794-4b96-a325-8325f1e2e21f.png" alt="Far away" className="w-full aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           But then Paul uses two of the most powerful words in Scripture: &ldquo;But now.&rdquo; Everything changed. The distance was closed&mdash;not by human effort, not by religious performance, but by the blood of Christ. The dividing wall of hostility was destroyed. Access to God was no longer reserved for a select few; it was thrown wide open.
         </p>
-        <PhotoDevelopImage src={C.scripture2} alt="But now" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration8/hf_20260416_214154_f9197cf0-dad3-451e-9fca-55f30abb7207.png" alt="But now" className="w-full aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           The Greek word Paul uses for &ldquo;brought near&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">eggys</em>&mdash;the same word used to describe intimate proximity. God did not merely wave at them from a distance. He pulled them close. And He does the same for us. Every wall that sin erected, every chasm that shame carved out, every distance that disappointment created&mdash;Christ has bridged it all.
         </p>
@@ -3461,7 +3470,7 @@ function IdentityMobile({ project }: { project: Project }) {
 
       {/* Opening — image + text */}
       <section className="p-6 pb-16" style={{ backgroundColor: bgLight }}>
-        <PhotoDevelopImage src={I.hero} alt="New creation" className="w-full aspect-[2/3] mb-10" />
+        <PhotoDevelopImage src="/restoration9/hf_20260417_004454_f57f28f0-4657-4711-bdfd-c1d58dc83c88.png" alt="New creation" className="w-full aspect-[2/3] mb-10" />
         <h3 className="font-['Cormorant_Garamond'] italic font-light text-white/90 text-3xl leading-snug mb-8">
           The labels no one else sees.
         </h3>
@@ -3504,7 +3513,7 @@ function IdentityMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           In Christ, your identity is no longer defined by your past. Restoration of identity means that who you were and what was done to you no longer get the final word over who you are. You have been reconciled&mdash;brought back into right relationship with God&mdash;and in that reconciliation, you have been given a completely new name. The old labels have been stripped away. The new creation has already begun.
         </p>
-        <PhotoDevelopImage src={I.principle2} alt="Made new" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration9/hf_20260417_004042_2d78afd9-82c6-447b-93e1-d4df054daedf.png" alt="Made new" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -3875,11 +3884,11 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Psalm 126 is a song written by the Israelites after they returned from decades of exile in Babylon. For seventy years, they had lived as captives in a foreign land, stripped of their homeland, their temple, and their way of life. And then, almost impossibly, God brought them home. The psalmist describes that moment of return with breathtaking language: &ldquo;We were like those who dreamed.&rdquo;
         </p>
-        <PhotoDevelopImage src={J.scripture1} alt="Like those who dreamed" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/restoration10/hf_20260424_202713_1125e681-9649-4065-bcfb-da5f11a7ae3c.png" alt="Like those who dreamed" className="w-full aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           And what was the first sign of their restoration? Laughter. Songs of joy. Not careful optimism. Not cautious gratitude. Uncontainable, overflowing, mouth-filling joy. Even the surrounding nations took notice and said, &ldquo;The Lord has done great things for them.&rdquo;
         </p>
-        <PhotoDevelopImage src={J.scripture2} alt="Mouth-filling joy" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src="/restoration10/hf_20260417_161709_3d94e62d-3112-4db0-93cd-a8e06d8f7376.png" alt="Mouth-filling joy" className="w-full aspect-video mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           But the psalm doesn&rsquo;t end there. The writer shifts to a prayer: &ldquo;Restore our fortunes, Lord, like streams in the Negev.&rdquo; The Negev is the southern desert of Israel&mdash;dry, barren, seemingly lifeless. But when the rains come, dry riverbeds called <em className="not-italic font-['Cormorant_Garamond'] italic">wadis</em> suddenly rush with water, and the desert blooms almost overnight.
         </p>
@@ -3900,7 +3909,7 @@ function JoyMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           God does not waste our tears&mdash;He transforms them into a harvest. Restored joy is not the absence of sorrow; it is the gift that grows in the very soil that sorrow tilled. The tears we shed in our hardest seasons are seeds, and God promises that every one of them will yield a return of singing.
         </p>
-        <PhotoDevelopImage src={J.principle2} alt="Desert blooms" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/restoration10/hf_20260417_161445_d7a1bff7-ffb7-48fe-bc41-a67e4712319b.png" alt="Desert blooms" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -4271,7 +4280,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           Paul wrote the letter to the Ephesians from prison. He was writing to a mixed community of Jews and Gentiles who carried real grievances against one another&mdash;histories of exclusion, misunderstanding, and hurt. He does not minimize what they have felt. But he does call them to lay it down.
         </p>
-        <PhotoDevelopImage src={F.scripture1} alt="Real grievances" className="w-full aspect-[2/3] mb-8" />
+        <PhotoDevelopImage src="/serenity2/hf_20260417_210451_81d36918-c70b-4d80-8f5c-a90febb338db.png" alt="Real grievances" className="w-full aspect-[2/3] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Greek word translated &ldquo;get rid of&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">airo</em>, which means to lift up and carry away. Paul is describing a deliberate, active release. This is not repression. It is not pretending the wound didn&rsquo;t happen. It is the sacred work of choosing not to keep rehearsing it.
         </p>
@@ -4283,7 +4292,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
 
       {/* Image pair */}
       <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={F.hookLeft} alt="Quiet wound" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/serenity2/hf_20260502_085359_63722552-4e69-444b-8d3a-7f081ef72c6a.png" alt="Quiet wound" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={F.principle1} alt="The cross absorbs" className="w-full aspect-[2/3]" />
       </section>
 
@@ -4296,7 +4305,7 @@ function ForgivenessMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Serenity is impossible to hold on to while bitterness is being nursed. Forgiveness is not a statement that the wound did not matter; it is a refusal to let the wound keep writing the next chapter of our lives. When we release the offense into the hands of a God who sees what we cannot fix, we discover that the thing we thought we needed to hold onto was actually the thing holding onto us.
         </p>
-        <PhotoDevelopImage src={F.principle2} alt="Already received" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/serenity2/hf_20260417_211444_9529204a-d9a3-41e0-9c8a-2ef0b9dc041a.png" alt="Already received" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -4671,7 +4680,7 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Hebrew phrase translated &ldquo;be still&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">raphah</em>, which carries the meaning of &ldquo;to let go&rdquo; or &ldquo;to cease striving.&rdquo; It is not simply an invitation to silence. It is a command to release your grip. To stop trying to hold the world together with your own two hands. To relax the white-knuckled fists you have been clenching for far too long.
         </p>
-        <PhotoDevelopImage src={Su.scripture2} alt="Waters roaring" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={Su.scripture2} alt="Waters roaring" className="w-full aspect-[3/4] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And the reason given is not that the storm has passed&mdash;but that God is still God. His sovereignty has not been shaken by anything that is shaking you.
         </p>
@@ -4679,7 +4688,7 @@ function SurrenderMobile({ project }: { project: Project }) {
 
       {/* Image pair */}
       <section className="grid grid-cols-2 gap-2 p-6" style={{ backgroundColor: bg }}>
-        <PhotoDevelopImage src={Su.hookLeft} alt="Restless hum" className="w-full aspect-[2/3]" />
+        <PhotoDevelopImage src="/serenity3/hf_20260503_213652_ebf66dbf-1b27-40cd-92ee-44adf241c584.png" alt="Restless hum" className="w-full aspect-[2/3]" />
         <PhotoDevelopImage src={Su.principle1} alt="White-knuckled fists" className="w-full aspect-[2/3]" />
       </section>
 
@@ -4692,7 +4701,7 @@ function SurrenderMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Serenity is not found by controlling our circumstances; it is found by surrendering them to the God who is already in control. When we release our grip on what we were never meant to carry, we discover that God has been holding it&mdash;and us&mdash;all along.
         </p>
-        <PhotoDevelopImage src={Su.principle2} alt="Sovereignty unshaken" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src="/serenity3/hf_20260418_213303_2c7208e9-a034-4456-9a9f-da42dba4900e.png" alt="Sovereignty unshaken" className="w-full aspect-[3/2]" />
       </section>
 
       {/* Application */}
@@ -5067,7 +5076,7 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/60 leading-[1.85] mb-8">
           The Hebrew word for &ldquo;lean&rdquo; is <em className="not-italic font-['Cormorant_Garamond'] italic">sha&rsquo;an</em>, which pictures a person putting the full weight of their body against something for support. Solomon is not saying, &ldquo;Don&rsquo;t think.&rdquo; He is saying, &ldquo;Don&rsquo;t let your understanding be the thing you rest your whole weight on.&rdquo; Because your understanding, no matter how sharp, is finite. It cannot see around the corner.
         </p>
-        <PhotoDevelopImage src={T.scripture2} alt="Sha'an" className="w-full aspect-video mb-8" />
+        <PhotoDevelopImage src={T.scripture2} alt="Sha'an" className="w-full aspect-[3/4] mb-8" />
         <p className="text-sm text-white/60 leading-[1.85]">
           And notice the promise that follows: &ldquo;He will make your paths straight.&rdquo; The Hebrew here does not mean that the road will be free of difficulty. It means He will make the path level enough for you to walk. He clears the way, one step at a time, for the one who trusts Him more than their own map.
         </p>
@@ -5088,7 +5097,7 @@ function TrustMobile({ project }: { project: Project }) {
         <p className="text-sm text-white/50 leading-[1.85] mb-10">
           Trust is not the absence of questions&mdash;it is the choice to submit our questions to a God who is wiser than our answers. When we stop leaning on what we can figure out and lean instead on who He is, He quietly straightens paths we could never have engineered ourselves.
         </p>
-        <PhotoDevelopImage src={T.principle2} alt="One step at a time" className="w-full aspect-[3/2]" />
+        <PhotoDevelopImage src={T.principle2} alt="One step at a time" className="w-full aspect-[3/4]" />
       </section>
 
       {/* Application */}
