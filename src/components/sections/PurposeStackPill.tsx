@@ -103,11 +103,7 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(); }
       }}
       className="ps-pill absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-      style={{
-        width: 'min(62vw, 920px)',
-        aspectRatio: '11 / 3.2',
-        zIndex: 50,
-      }}
+      style={{ zIndex: 50 }}
     >
       <div
         ref={shapeRef}
@@ -122,8 +118,6 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
       <div
         className="ps-pill-content absolute inset-0 grid items-center text-white"
         style={{
-          gridTemplateColumns: '1fr auto 1fr',
-          padding: '0 10%',
           fontFamily: '"Cormorant Garamond", Georgia, serif',
         }}
       >
@@ -131,7 +125,7 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
           <Mask ref={maskLabelRef} alignEnd={false}>
             <Stack ref={stackLabelRef} innerHtml={`<span class="pl-lbl">${escapeHtml(initial.label)}</span>`} />
           </Mask>
-          <Mask ref={maskTitleRef} alignEnd={false}>
+          <Mask ref={maskTitleRef} alignEnd={false} className="ps-mask-title">
             <Stack ref={stackTitleRef} innerHtml={`<span class="pl-title">${escapeHtml(initial.title)}</span>`} />
           </Mask>
         </div>
@@ -141,8 +135,7 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          className="w-10 opacity-25 invert pointer-events-none"
-          style={{ transform: 'translateY(22px)' }}
+          className="ps-pill-logo w-10 opacity-25 invert pointer-events-none"
         />
         <div className="flex flex-col gap-1 text-right">
           <Mask ref={maskCategoryRef} alignEnd>
@@ -154,6 +147,8 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
         </div>
       </div>
       <style>{`
+        .ps-pill { width: min(62vw, 920px); aspect-ratio: 11 / 3.2; }
+        .ps-pill-content { grid-template-columns: 1fr auto 1fr; padding: 0 10%; }
         .ps-pill .pl-lbl  { font-family: ui-sans-serif, system-ui; font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
         .ps-pill .pl-title{ font-style: italic; font-weight: 300; font-size: 28px; line-height: 1; color: rgba(255,255,255,0.95); }
         .ps-pill .pl-meta { font-family: ui-sans-serif, system-ui; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.7); display: block; }
@@ -161,16 +156,52 @@ export const PurposeStackPill = forwardRef<PurposeStackPillHandle, Props>(functi
         .ps-pill .ps-mask.r { text-align: right; }
         .ps-pill .ps-stack { display: flex; flex-direction: column; will-change: transform; transition: transform 0.55s cubic-bezier(0.65,0,0.25,1); }
         .ps-pill .ps-stack > .frame { flex: 0 0 100%; }
+        .ps-pill-logo { transform: translateY(22px); }
+
+        /* Mobile: at 62vw the pill collapses to ~242×70px, so the 28px title wraps
+           and overflows the shape. Widen the pill and run a title-led layout — a
+           larger 24px title centered on the pill's midline, with the DEVOTION label
+           above it. Aspect-ratio stays near the desktop 3.44 so the objectBoundingBox
+           clip-path keeps its proportions (it stretches to the box). At 24px every
+           devotion title fits in two lines, so the pill height is uniform across
+           devotions; the title mask reserves those two lines (min-height) so the
+           slide-morph between titles is never clipped by the height lock in
+           useLayoutEffect. */
+        @media (max-width: 767px) {
+          .ps-pill { width: 92vw; aspect-ratio: 11 / 3.9; }
+          /* The clip-path carves a stepped foot out of the bottom-left of the
+             shape: below ~y0.48 the grey only exists for x >= ~0.10. At a
+             symmetric 6% pad the title column starts at x~0.06, so a wrapped
+             two-line title drops its lower line into that carved-out region and
+             renders off the pill. Pad the left in past the foot (x~0.11) and
+             let the right column — which only holds the short category +
+             scripture — absorb the difference. The widest title still fits two
+             lines and the longest scripture ref ("2 Corinthians 5:17 ↗") still
+             fits one line on the grey at this split. */
+          .ps-pill-content { padding: 0 3% 0 11%; }
+          .ps-pill .pl-lbl  { font-size: 9px; letter-spacing: 0.2em; }
+          .ps-pill .pl-title{ font-size: 24px; line-height: 1.12; }
+          .ps-pill .pl-meta { font-size: 9px; letter-spacing: 0.12em; }
+          /* Scripture reference (last meta in the right column) reads a touch larger. */
+          .ps-pill-content > div:last-of-type .ps-mask:last-of-type .pl-meta { font-size: 10px; letter-spacing: 0.1em; }
+          /* Reserve two lines for the title so the height lock captures the tall
+             measurement and the morph isn't clipped. Center each frame so a rare
+             single-line title isn't top-heavy in the two-line box. */
+          .ps-pill .ps-mask-title { min-height: 56px; }
+          .ps-pill .ps-mask-title .frame { display: flex; flex-direction: column; justify-content: center; min-height: 56px; }
+          .ps-pill-logo { width: 1.75rem; transform: translateY(12px); }
+        }
       `}</style>
     </div>
   );
 });
 
-const Mask = forwardRef<HTMLDivElement, { alignEnd: boolean; children: React.ReactNode }>(
-  function Mask({ alignEnd, children }, ref) {
-    return <div ref={ref} className={`ps-mask ${alignEnd ? 'r' : ''}`}>{children}</div>;
-  },
-);
+const Mask = forwardRef<
+  HTMLDivElement,
+  { alignEnd: boolean; className?: string; children: React.ReactNode }
+>(function Mask({ alignEnd, className = '', children }, ref) {
+  return <div ref={ref} className={`ps-mask ${alignEnd ? 'r' : ''} ${className}`}>{children}</div>;
+});
 
 const Stack = forwardRef<HTMLDivElement, { innerHtml: string }>(function Stack({ innerHtml }, ref) {
   return (
