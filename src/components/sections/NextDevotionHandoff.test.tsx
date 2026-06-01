@@ -132,15 +132,15 @@ describe('NextDevotionHandoff mobile pill — curated break', () => {
 });
 
 describe('NextDevotionHandoff mobile pill — title scale', () => {
-  it('uses 17px title by default on mobile', () => {
+  it('uses 21px title by default on mobile', () => {
     renderHandoff();
     const title = document.querySelector('.next-handoff-title') as HTMLElement;
     expect(title).toBeTruthy();
-    expect(title.style.fontSize).toBe('17px');
-    expect(title.style.lineHeight).toBe('1.05');
+    expect(title.style.fontSize).toBe('21px');
+    expect(title.style.lineHeight).toBe('1.1');
   });
 
-  it('shrinks the title to 14px when mobileTitleScale is "shrink"', () => {
+  it('shrinks the title to 17px when mobileTitleScale is "shrink"', () => {
     renderHandoff({
       ...peaceDevotion,
       title: 'A Future You Cannot See Yet',
@@ -149,8 +149,8 @@ describe('NextDevotionHandoff mobile pill — title scale', () => {
     });
     const title = document.querySelector('.next-handoff-title') as HTMLElement;
     expect(title).toBeTruthy();
-    expect(title.style.fontSize).toBe('14px');
-    expect(title.style.lineHeight).toBe('1.06');
+    expect(title.style.fontSize).toBe('17px');
+    expect(title.style.lineHeight).toBe('1.1');
   });
 });
 

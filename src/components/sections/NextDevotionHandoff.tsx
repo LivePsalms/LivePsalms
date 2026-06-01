@@ -416,8 +416,8 @@ function Pill({
             style={{
               fontStyle: 'italic',
               fontWeight: 300,
-              fontSize: isMobile ? (shrinkOnMobile ? '14px' : '17px') : '28px',
-              lineHeight: isMobile ? (shrinkOnMobile ? 1.06 : 1.05) : 1,
+              fontSize: isMobile ? (shrinkOnMobile ? '17px' : '21px') : '28px',
+              lineHeight: isMobile ? 1.1 : 1,
               color: 'rgba(255,255,255,0.95)',
             }}
           >
