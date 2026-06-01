@@ -349,7 +349,7 @@ function Pill({
   const pillStyle: React.CSSProperties = {
     clipPath: 'url(#hero-mask-clip)',
     width: isMobile ? '92%' : 'min(62vw, 920px)',
-    aspectRatio: '11 / 3.2',
+    aspectRatio: isMobile ? '11 / 4' : '11 / 3.2',
     transform: 'translate(-50%, -50%)',
   };
 
@@ -370,7 +370,7 @@ function Pill({
     display: 'grid',
     gridTemplateColumns: '1fr auto 1fr',
     alignItems: 'center',
-    padding: isMobile ? '0 14%' : '0 10%',
+    padding: isMobile ? '0 10%' : '0 10%',
     fontFamily: '"Cormorant Garamond", Georgia, serif',
     color: '#fff',
     opacity: 0,
@@ -403,8 +403,8 @@ function Pill({
             className="next-handoff-label"
             style={{
               fontFamily: 'ui-sans-serif, system-ui',
-              fontSize: isMobile ? '6px' : '10px',
-              letterSpacing: '0.25em',
+              fontSize: isMobile ? '9px' : '10px',
+              letterSpacing: isMobile ? '0.22em' : '0.25em',
               textTransform: 'uppercase',
               color: 'rgba(255,255,255,0.6)',
             }}
@@ -433,8 +433,8 @@ function Pill({
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          className={`next-handoff-logo opacity-25 invert pointer-events-none ${isMobile ? 'w-5' : 'w-10'}`}
-          style={{ transform: isMobile ? 'translateY(12px)' : 'translateY(22px)' }}
+          className={`next-handoff-logo opacity-25 invert pointer-events-none ${isMobile ? 'w-[19px]' : 'w-10'}`}
+          style={{ transform: isMobile ? 'translateY(14px)' : 'translateY(22px)' }}
         />
 
         {/* Right column: category + scripture */}
@@ -442,7 +442,7 @@ function Pill({
           <span
             style={{
               fontFamily: 'ui-sans-serif, system-ui',
-              fontSize: isMobile ? '6px' : '10px',
+              fontSize: isMobile ? '9px' : '10px',
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
               color: 'rgba(255,255,255,0.7)',
@@ -453,7 +453,7 @@ function Pill({
           <span
             style={{
               fontFamily: 'ui-sans-serif, system-ui',
-              fontSize: isMobile ? '6px' : '10px',
+              fontSize: isMobile ? '9px' : '10px',
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
               color: 'rgba(255,255,255,0.65)',

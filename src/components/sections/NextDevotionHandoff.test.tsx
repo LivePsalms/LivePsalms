@@ -153,3 +153,27 @@ describe('NextDevotionHandoff mobile pill — title scale', () => {
     expect(title.style.lineHeight).toBe('1.06');
   });
 });
+
+describe('NextDevotionHandoff mobile pill — visual tokens', () => {
+  it('uses 11/4 aspect ratio and 0 10% padding on mobile', () => {
+    renderHandoff();
+    const pill = document.querySelector('.next-handoff-pill') as HTMLElement;
+    const content = document.querySelector('.next-handoff-pill-content') as HTMLElement;
+    expect(pill.style.aspectRatio).toBe('11 / 4');
+    // jsdom normalises the unitless 0 to 0px when reading back inline padding
+    expect(content.style.padding).toMatch(/^0(px)? 10%$/);
+  });
+
+  it('uses 9px eyebrow and 9px scripture metadata on mobile', () => {
+    renderHandoff();
+    const eyebrow = document.querySelector('.next-handoff-label') as HTMLElement;
+    expect(eyebrow.style.fontSize).toBe('9px');
+    // Right-column meta lines also at 9px
+    const rightColMeta = document.querySelectorAll(
+      '.next-handoff-pill-content > div:last-child > span',
+    );
+    rightColMeta.forEach((el) => {
+      expect((el as HTMLElement).style.fontSize).toBe('9px');
+    });
+  });
+});
