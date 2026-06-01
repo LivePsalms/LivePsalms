@@ -328,6 +328,19 @@ function Pill({
   void _nextProject;
   const isMobile = variant === 'mobile';
 
+  const titleNode = (() => {
+    if (!isMobile) return nextDevotion.title;
+    const segments = applyCuratedBreak(nextDevotion.title, nextDevotion.mobileTitleBreak);
+    if (typeof segments === 'string') return segments;
+    return (
+      <>
+        <span>{segments[0]}</span>
+        <br />
+        <span>{segments[1]}</span>
+      </>
+    );
+  })();
+
   // Outer pill — owns sizing, clipPath, centering, click affordance.
   // No background or shadow of its own; the inner fill carries those so the
   // pill is invisible until the entrance fills it from the center outward.
@@ -406,7 +419,7 @@ function Pill({
               color: 'rgba(255,255,255,0.95)',
             }}
           >
-            {nextDevotion.title}
+            {titleNode}
           </span>
         </div>
 
