@@ -9,6 +9,28 @@ import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
 
 gsap.registerPlugin(ScrollTrigger);
 
+/**
+ * Returns the title unchanged when no curated break is configured, or a
+ * two-segment tuple [before, after] when a 1-indexed word boundary is given.
+ *
+ * Used by the mobile Pill branch to render `<>{a}<br/>{b}</>`. Desktop never
+ * calls this — it always renders the title as a single span.
+ *
+ * Exported for unit-testing in NextDevotionHandoff.test.tsx.
+ */
+export function applyCuratedBreak(
+  title: string,
+  breakAfter: number | undefined,
+): string | [string, string] {
+  if (!breakAfter || breakAfter <= 0) return title;
+  const words = title.split(' ');
+  if (breakAfter >= words.length) return title;
+  return [
+    words.slice(0, breakAfter).join(' '),
+    words.slice(breakAfter).join(' '),
+  ];
+}
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(() => {
     if (typeof window === 'undefined') return false;
