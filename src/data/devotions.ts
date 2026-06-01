@@ -11,6 +11,17 @@ export interface Devotion {
   scriptureRef: string;
   monogram: string;
   firstMoodboardImage: string;
+  /**
+   * Mobile-only curated line break for the next-handoff pill title.
+   * Word index (1-indexed) to insert a `<br>` after when rendering on mobile.
+   * Desktop ignores this. Undefined = no curated break (natural wrap).
+   */
+  mobileTitleBreak?: number;
+  /**
+   * Mobile-only title scale override for long titles that cannot fit at the
+   * default size. `'shrink'` drops the mobile title from 17px to 14px.
+   */
+  mobileTitleScale?: 'shrink';
 }
 
 export const devotions: Record<string, Devotion> = {
@@ -21,6 +32,7 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Psalm 23:2–3',
     monogram: 'PE',
     firstMoodboardImage: '/restoration1/image1.png',
+    mobileTitleBreak: 2,
   },
   hope: {
     id: 'hope',
@@ -29,6 +41,8 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Jeremiah 29:11',
     monogram: 'HO',
     firstMoodboardImage: '/restoration3/image1.png',
+    mobileTitleBreak: 3,
+    mobileTitleScale: 'shrink',
   },
   strength: {
     id: 'strength',
@@ -37,6 +51,7 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Isaiah 40:31',
     monogram: 'ST',
     firstMoodboardImage: '/restoration5/hf_20260414_210624_51692a60-f0b4-4235-8fe5-ebf51bae7dff.png',
+    mobileTitleBreak: 2,
   },
   wholeness: {
     id: 'wholeness',
@@ -45,6 +60,7 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Joel 2:25–26',
     monogram: 'WH',
     firstMoodboardImage: '/restoration6/hf_20260414_231106_4132533c-178d-4385-a431-2def24758ac8.png',
+    mobileTitleBreak: 2,
   },
   purpose: {
     id: 'purpose',
@@ -53,6 +69,7 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Romans 8:28',
     monogram: 'PU',
     firstMoodboardImage: '/restoration7/hf_20260415_190342_341ba0fb-3636-4645-aa20-40f7c56ecf5c.png',
+    mobileTitleBreak: 2,
   },
   connection: {
     id: 'connection',
@@ -61,6 +78,7 @@ export const devotions: Record<string, Devotion> = {
     scriptureRef: 'Ephesians 2:13',
     monogram: 'CN',
     firstMoodboardImage: '/restoration8/hf_20260416_074854_c5387c7f-6f07-4b15-bf62-4afdddee9149.png',
+    mobileTitleBreak: 1,
   },
   identity: {
     id: 'identity',
