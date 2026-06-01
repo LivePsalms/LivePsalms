@@ -194,7 +194,7 @@ describe('NextDevotionHandoff — desktop guard', () => {
     );
 
     // Desktop must NOT split the title — the curated break is mobile-only
-    expect(screen.getAllByText('Beside Still Waters').length).toBeGreaterThan(0);
+    expect(screen.getByText('Beside Still Waters')).toBeInTheDocument();
     expect(screen.queryByText('Waters')).toBeNull();
 
     const pill = document.querySelector('.next-handoff-pill') as HTMLElement;
