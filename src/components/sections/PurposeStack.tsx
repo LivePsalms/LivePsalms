@@ -8,6 +8,8 @@ import { computePillData, type PillData } from './purpose-stack-data';
 import { PurposeStackPill, type PurposeStackPillHandle } from './PurposeStackPill';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
+import { useRouteTransitionContext } from '@/transitions/RouteTransitionContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,6 +37,8 @@ export function PurposeStack({ projects }: Props) {
   );
 
   const { startFromPill } = usePillExpandNavigation();
+  const routeTransition = useRouteTransitionContext();
+  const isMobile = useIsMobile();
 
   const reducedMotion =
     typeof window !== 'undefined' &&
@@ -128,14 +132,17 @@ export function PurposeStack({ projects }: Props) {
     const i = visibleIdxRef.current;
     const project = projects[i];
     const data = pillDataPerPanel[i];
+    if (!project) return;
+    const targetUrl = `/purpose/${project.id}`;
+    // Mobile fires the same SplitTransition curtain the home grid uses; desktop
+    // keeps the cinematic pill-expand morph.
+    if (isMobile && routeTransition) {
+      routeTransition.beginCurtainNavigation(targetUrl, data.pillColor);
+      return;
+    }
     const pillRoot = pillRef.current?.getRoot();
-    if (!project || !pillRoot) return;
-    startFromPill({
-      pillEl: pillRoot,
-      pillColor: data.pillColor,
-      targetUrl: `/purpose/${project.id}`,
-      reducedMotion,
-    });
+    if (!pillRoot) return;
+    startFromPill({ pillEl: pillRoot, pillColor: data.pillColor, targetUrl, reducedMotion });
   };
 
   if (pillDataPerPanel.length === 0) return null;

@@ -6,6 +6,7 @@ import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
 import { extractDominantColor } from '@/utils/extractDominantColor';
 import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
+import { useRouteTransitionContext } from '@/transitions/RouteTransitionContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -117,17 +118,21 @@ export function NextDevotionHandoff({
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
 
   const { startFromPill } = usePillExpandNavigation();
+  const routeTransition = useRouteTransitionContext();
   const startExpand = () => {
     if (navigatedRef.current) return;
+    const targetUrl = `/purpose/${nextProject.id}`;
+    // Mobile fires the same SplitTransition curtain the home grid uses; desktop
+    // keeps the cinematic pill-expand morph.
+    if (variant === 'mobile' && routeTransition) {
+      navigatedRef.current = true;
+      routeTransition.beginCurtainNavigation(targetUrl, pillColor);
+      return;
+    }
     const pill = pillRef.current;
     if (!pill) return;
     navigatedRef.current = true;
-    startFromPill({
-      pillEl: pill,
-      pillColor,
-      targetUrl: `/purpose/${nextProject.id}`,
-      reducedMotion,
-    });
+    startFromPill({ pillEl: pill, pillColor, targetUrl, reducedMotion });
   };
 
   const layoutProps: LayoutProps = {

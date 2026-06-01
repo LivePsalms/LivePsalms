@@ -31,6 +31,7 @@ import { ProfilePage } from '@/auth/ProfilePage';
 import { WelcomePage } from '@/auth/WelcomePage';
 import { AdminLamplightPage } from '@/admin/AdminLamplightPage';
 import { useRouteTransition } from '@/transitions/useRouteTransition';
+import { RouteTransitionProvider } from '@/transitions/RouteTransitionContext';
 import './App.css';
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -100,6 +101,13 @@ function App() {
 
   const { status, color, transition } = useRouteTransition(projects);
 
+  // Shared curtain-navigation trigger for the deeply-nested pills (handoff,
+  // /purpose). Wired to the same beginNavigation the home grid uses.
+  const routeTransitionValue = useMemo(
+    () => ({ beginCurtainNavigation: transition.beginNavigation }),
+    [transition],
+  );
+
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
   const isNotepadLanding = location.pathname === '/notepad';
@@ -127,7 +135,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <>
+      <RouteTransitionProvider value={routeTransitionValue}>
         <div
           className={cn(
             'relative min-h-screen',
@@ -213,7 +221,7 @@ function App() {
       <div className="grain-bg" aria-hidden="true" />
 
       <HeroLoadingOverlay active={overlay.active} />
-    </>
+    </RouteTransitionProvider>
     </AuthProvider>
   );
 }
