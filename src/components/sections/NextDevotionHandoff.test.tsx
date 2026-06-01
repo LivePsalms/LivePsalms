@@ -24,7 +24,10 @@ vi.mock('gsap', () => ({
 vi.mock('gsap/all', () => ({ ScrollTrigger: {} }));
 
 // Mock router and transition hooks — they're not exercised by the helper test.
-vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
 vi.mock('@/transitions/usePillExpandNavigation', () => ({
   usePillExpandNavigation: () => ({ startFromPill: vi.fn() }),
 }));
