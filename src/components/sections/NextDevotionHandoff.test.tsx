@@ -172,8 +172,38 @@ describe('NextDevotionHandoff mobile pill — visual tokens', () => {
     const rightColMeta = document.querySelectorAll(
       '.next-handoff-pill-content > div:last-child > span',
     );
+    expect(rightColMeta).toHaveLength(2);
     rightColMeta.forEach((el) => {
       expect((el as HTMLElement).style.fontSize).toBe('9px');
     });
+  });
+});
+
+describe('NextDevotionHandoff — desktop guard', () => {
+  it('renders 28px title and 11/3.2 aspect on desktop, ignoring mobileTitleBreak', () => {
+    render(
+      <MemoryRouter>
+        <NextDevotionHandoff
+          currentProject={baseProject}
+          nextProject={baseProject}
+          nextDevotion={peaceDevotion}
+          variant="desktop"
+          inHorizontalTrack
+        />
+      </MemoryRouter>,
+    );
+
+    // Desktop must NOT split the title — the curated break is mobile-only
+    expect(screen.getAllByText('Beside Still Waters').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Waters')).toBeNull();
+
+    const pill = document.querySelector('.next-handoff-pill') as HTMLElement;
+    expect(pill.style.aspectRatio).toBe('11 / 3.2');
+
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title.style.fontSize).toBe('28px');
+
+    const eyebrow = document.querySelector('.next-handoff-label') as HTMLElement;
+    expect(eyebrow.style.fontSize).toBe('10px');
   });
 });
