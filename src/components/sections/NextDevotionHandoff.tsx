@@ -341,6 +341,8 @@ function Pill({
     );
   })();
 
+  const shrinkOnMobile = isMobile && nextDevotion.mobileTitleScale === 'shrink';
+
   // Outer pill — owns sizing, clipPath, centering, click affordance.
   // No background or shadow of its own; the inner fill carries those so the
   // pill is invisible until the entrance fills it from the center outward.
@@ -414,12 +416,8 @@ function Pill({
             style={{
               fontStyle: 'italic',
               fontWeight: 300,
-              fontSize: isMobile
-                ? (nextDevotion.mobileTitleScale === 'shrink' ? '14px' : '17px')
-                : '28px',
-              lineHeight: isMobile
-                ? (nextDevotion.mobileTitleScale === 'shrink' ? 1.06 : 1.05)
-                : 1,
+              fontSize: isMobile ? (shrinkOnMobile ? '14px' : '17px') : '28px',
+              lineHeight: isMobile ? (shrinkOnMobile ? 1.06 : 1.05) : 1,
               color: 'rgba(255,255,255,0.95)',
             }}
           >

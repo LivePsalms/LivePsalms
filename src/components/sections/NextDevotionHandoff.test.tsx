@@ -137,6 +137,7 @@ describe('NextDevotionHandoff mobile pill — title scale', () => {
     const title = document.querySelector('.next-handoff-title') as HTMLElement;
     expect(title).toBeTruthy();
     expect(title.style.fontSize).toBe('17px');
+    expect(title.style.lineHeight).toBe('1.05');
   });
 
   it('shrinks the title to 14px when mobileTitleScale is "shrink"', () => {
@@ -149,5 +150,6 @@ describe('NextDevotionHandoff mobile pill — title scale', () => {
     const title = document.querySelector('.next-handoff-title') as HTMLElement;
     expect(title).toBeTruthy();
     expect(title.style.fontSize).toBe('14px');
+    expect(title.style.lineHeight).toBe('1.06');
   });
 });
