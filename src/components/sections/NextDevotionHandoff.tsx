@@ -414,8 +414,12 @@ function Pill({
             style={{
               fontStyle: 'italic',
               fontWeight: 300,
-              fontSize: isMobile ? '12px' : '28px',
-              lineHeight: 1,
+              fontSize: isMobile
+                ? (nextDevotion.mobileTitleScale === 'shrink' ? '14px' : '17px')
+                : '28px',
+              lineHeight: isMobile
+                ? (nextDevotion.mobileTitleScale === 'shrink' ? 1.06 : 1.05)
+                : 1,
               color: 'rgba(255,255,255,0.95)',
             }}
           >

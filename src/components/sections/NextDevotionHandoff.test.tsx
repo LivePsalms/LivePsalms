@@ -130,3 +130,24 @@ describe('NextDevotionHandoff mobile pill — curated break', () => {
     expect(screen.getByText('Beside Still Waters')).toBeInTheDocument();
   });
 });
+
+describe('NextDevotionHandoff mobile pill — title scale', () => {
+  it('uses 17px title by default on mobile', () => {
+    renderHandoff();
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title).toBeTruthy();
+    expect(title.style.fontSize).toBe('17px');
+  });
+
+  it('shrinks the title to 14px when mobileTitleScale is "shrink"', () => {
+    renderHandoff({
+      ...peaceDevotion,
+      title: 'A Future You Cannot See Yet',
+      mobileTitleBreak: 3,
+      mobileTitleScale: 'shrink',
+    });
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title).toBeTruthy();
+    expect(title.style.fontSize).toBe('14px');
+  });
+});
