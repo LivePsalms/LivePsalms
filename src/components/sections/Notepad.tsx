@@ -20,8 +20,10 @@ import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-a
 import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
 import { useLamplightEmbeddingTrigger } from '@/notepad/hooks/useLamplightEmbeddingTrigger';
 import { supabase } from '@/lib/supabase';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileNotepadWorkspace } from './notepad/mobile/MobileNotepadWorkspace';
 
-function NotepadWorkspace() {
+function DesktopNotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [graphOpen, setGraphOpen] = useState(true);
   const [graphExpanded, setGraphExpanded] = useState(false);
@@ -259,6 +261,11 @@ function NotepadWorkspace() {
       />
     </div>
   );
+}
+
+function NotepadWorkspace() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileNotepadWorkspace /> : <DesktopNotepadWorkspace />;
 }
 
 export function Notepad() {
