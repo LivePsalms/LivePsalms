@@ -125,7 +125,6 @@ export function MobileNotepadWorkspace() {
         )}
         {tab === 'editor' && (
           <MobileEditorView
-            onOpenDetails={() => setMoreOpen(true)}
             onExit={() => navigate('/')}
             onAfterSave={model.onAfterSave}
             onOpenAccount={openAccount}
