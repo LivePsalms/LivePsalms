@@ -30,7 +30,7 @@ describe('<LamplightMobileView />', () => {
 
   it('switches to Connections when that segment is chosen', () => {
     const { getByRole, getByTestId, queryByTestId } = render(<LamplightMobileView {...props} />);
-    fireEvent.click(getByRole('button', { name: 'Connections' }));
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
     expect(getByTestId('connections')).toBeTruthy();
     expect(queryByTestId('todays-lamp')).toBeNull();
   });

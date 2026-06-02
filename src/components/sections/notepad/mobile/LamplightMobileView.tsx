@@ -33,7 +33,7 @@ export function LamplightMobileView({
         <Segmented<LampSegment>
           options={[
             { value: 'today', label: "Today's Lamp" },
-            { value: 'connections', label: 'Connections' },
+            { value: 'connections', label: 'Connection Cards' },
           ]}
           value={segment}
           onChange={setSegment}
