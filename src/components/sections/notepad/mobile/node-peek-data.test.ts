@@ -69,6 +69,28 @@ describe('buildPeekData', () => {
     });
   });
 
+  it('counts incoming edges in connectionCount', () => {
+    const notes = [makeNote({ id: 'n1', title: 'Target' })];
+    const graph = makeGraph({
+      references: [
+        ref({ id: 'e1', source: 'n2', target: 'n1', type: 'explicit' }),
+        ref({ id: 'e2', source: 'n3', target: 'n1', type: 'explicit' }),
+      ],
+    });
+    const result = buildPeekData({ id: 'n1', kind: 'note' }, notes, graph);
+    expect(result?.kind === 'note' && result.connectionCount).toBe(2);
+  });
+
+  it('falls back to the raw id in linkedVerses when the scripture node is absent', () => {
+    const notes = [makeNote({ id: 'n1' })];
+    const graph = makeGraph({
+      references: [ref({ id: 'e1', source: 'n1', target: 'scripture:ps-23-1', type: 'scripture-reference' })],
+      scripture: {}, // node absent
+    });
+    const result = buildPeekData({ id: 'n1', kind: 'note' }, notes, graph);
+    expect(result?.kind === 'note' && result.linkedVerses[0].label).toBe('scripture:ps-23-1');
+  });
+
   it('builds a scripture peek with deduped referenced-by notes', () => {
     const notes = [
       makeNote({ id: 'n1', title: 'Shepherd', type: 'devotion' }),

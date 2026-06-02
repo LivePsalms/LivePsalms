@@ -18,6 +18,7 @@ export interface PeekNoteData {
   title: string;
   noteType: NoteType;
   connectionCount: number;
+  /** Full plain-text of the note body; the peek view renders it in a scroll area (no truncation here). */
   preview: string;
   linkedVerses: LinkedVerse[];
 }
@@ -70,6 +71,8 @@ export function buildPeekData(
       id: note.id,
       title: note.title,
       noteType: note.type,
+      // Counts all edge types both ways. Cross-reference edges are scripture↔scripture
+      // (a note is never their source), so there is no double-count risk here.
       connectionCount: outgoing.length + incoming.length,
       preview: extractTextFromNote(note),
       linkedVerses,
