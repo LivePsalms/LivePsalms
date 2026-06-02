@@ -1195,3 +1195,11 @@ input[type="email"]::placeholder {
   color: hsl(var(--mersi-dark));
   background: hsl(var(--mersi-dark) / 0.05);
 }
+
+.legal-prose code {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.875em;
+  background: hsl(var(--mersi-dark) / 0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
