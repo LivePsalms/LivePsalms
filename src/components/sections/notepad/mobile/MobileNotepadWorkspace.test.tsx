@@ -18,7 +18,13 @@ const model = {
 vi.mock('./useMobileWorkspaceModel', () => ({ useMobileWorkspaceModel: () => model }));
 vi.mock('./useHasConnections', () => ({ useHasConnections: () => false }));
 vi.mock('./MobileNotesView', () => ({ MobileNotesView: () => <div data-testid="view-notes" /> }));
-vi.mock('./MobileEditorView', () => ({ MobileEditorView: () => <div data-testid="view-editor" /> }));
+const { editorViewSpy } = vi.hoisted(() => ({ editorViewSpy: vi.fn() }));
+vi.mock('./MobileEditorView', () => ({
+  MobileEditorView: (props: { hasActiveNote?: boolean; onNewNote?: () => void }) => {
+    editorViewSpy(props);
+    return <div data-testid="view-editor" />;
+  },
+}));
 vi.mock('./LamplightMobileView', () => ({ LamplightMobileView: () => <div data-testid="view-lamplight" /> }));
 vi.mock('./MobileMoreSheet', () => ({ MobileMoreSheet: (p: { open: boolean }) => (p.open ? <div data-testid="more-sheet" /> : null) }));
 vi.mock('../../../../notepad/components/SearchDialog', () => ({ SearchDialog: () => <div /> }));
@@ -60,5 +66,14 @@ describe('<MobileNotepadWorkspace />', () => {
     const { getByRole, getByTestId } = renderShell();
     fireEvent.click(getByRole('tab', { name: /More/ }));
     expect(getByTestId('more-sheet')).toBeTruthy();
+  });
+
+  it('wires hasActiveNote and onNewNote into the editor view', () => {
+    editorViewSpy.mockClear();
+    const { getByRole } = renderShell();
+    fireEvent.click(getByRole('tab', { name: /Editor/ }));
+    expect(editorViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ hasActiveNote: true, onNewNote: expect.any(Function) }),
+    );
   });
 });

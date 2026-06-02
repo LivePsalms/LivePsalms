@@ -130,6 +130,8 @@ export function MobileNotepadWorkspace() {
             onAfterSave={model.onAfterSave}
             onOpenAccount={openAccount}
             avatarUrl={profile?.avatarUrl ?? null}
+            hasActiveNote={!!model.activeNote}
+            onNewNote={handleNewNote}
           />
         )}
         {tab === 'lamplight' && model.lamplightAdapter && (
