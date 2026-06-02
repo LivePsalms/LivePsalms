@@ -5,6 +5,7 @@ import { WifiOff } from 'lucide-react';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { useAccountProfile } from '@/auth/context/useAccountProfile';
 import { useNotepadActions } from '../../../../notepad/context/useNotepadActions';
+import { filesToNotes } from '../../../../notepad/import/document-importer';
 import { useNotepadFirstLoad } from '../../../../notepad/first-load/useNotepadFirstLoad';
 import { SearchDialog } from '../../../../notepad/components/SearchDialog';
 import { MigrationDialog } from '../../../../notepad/components/MigrationDialog';
@@ -82,6 +83,17 @@ export function MobileNotepadWorkspace() {
     setTab('editor');
   }, [createNote]);
 
+  const handleUploadFiles = useCallback(
+    async (files: File[]) => {
+      const notes = await filesToNotes(files, {
+        folderId: 'root',
+        autoDetectVerses: true,
+      });
+      await actions.importNotes(notes);
+    },
+    [actions],
+  );
+
   return (
     <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--plaster)' }}>
       {!model.isOnline && model.user && (
@@ -105,6 +117,7 @@ export function MobileNotepadWorkspace() {
             onExit={() => navigate('/')}
             onOpenSearch={openSearch}
             onNewNote={handleNewNote}
+            onUploadFiles={handleUploadFiles}
             onOpenNote={handleOpenNote}
             onOpenAccount={openAccount}
             avatarUrl={profile?.avatarUrl ?? null}

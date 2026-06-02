@@ -18,12 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, FileText, X } from 'lucide-react';
 import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { useNotepadActions } from '../context/useNotepadActions';
-import {
-  parseFile,
-  buildNoteFromText,
-  linkNotesByVerses,
-} from '../import/document-importer';
-import type { Note } from '../types';
+import { filesToNotes } from '../import/document-importer';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,22 +82,11 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     setUploading(true);
 
     try {
-      const parsed = await Promise.all(
-        files.map(async (file) => {
-          const text = await parseFile(file);
-          const title = file.name.replace(/\.[^.]+$/, '');
-          return { title, text };
-        }),
-      );
-
-      let notes: Note[] = parsed.map(({ title, text }) =>
-        buildNoteFromText({ title, text, folderId, autoDetectVerses }),
-      );
-
-      if (autoCreateLinks) {
-        notes = linkNotesByVerses(notes);
-      }
-
+      const notes = await filesToNotes(files, {
+        folderId,
+        autoDetectVerses,
+        autoCreateLinks,
+      });
       await importNotes(notes);
 
       setFiles([]);

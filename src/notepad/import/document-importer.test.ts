@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildNoteFromText,
   linkNotesByVerses,
+  filesToNotes,
 } from './document-importer';
 import { extractTextFromNote } from '../utils/tiptap-text';
 import type { Note } from '../types';
@@ -249,5 +250,38 @@ describe('linkNotesByVerses', () => {
     const [resA] = linkNotesByVerses([a, b]);
     // "Related Notes" + "Beta peer" = +3 words
     expect(resA.wordCount).toBeGreaterThan(baseline);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filesToNotes
+// ---------------------------------------------------------------------------
+
+describe('filesToNotes — orchestration', () => {
+  it('parses each file into a Note with extension-stripped title and folderId', async () => {
+    const files = [
+      new File(['hello world'], 'first.txt', { type: 'text/plain' }),
+      new File(['# Heading\n\nbody'], 'second.md', { type: 'text/markdown' }),
+    ];
+    const notes = await filesToNotes(files, { folderId: 'inbox' });
+    expect(notes).toHaveLength(2);
+    expect(notes.map((n) => n.title)).toEqual(['first', 'second']);
+    expect(notes.every((n) => n.folderId === 'inbox')).toBe(true);
+  });
+
+  it('extracts verse refs as tags when autoDetectVerses is true', async () => {
+    const files = [
+      new File(['Trust in Romans 8:28 today'], 'verse.txt', { type: 'text/plain' }),
+    ];
+    const notes = await filesToNotes(files, { folderId: 'root', autoDetectVerses: true });
+    expect(notes[0].tags).toEqual(expect.arrayContaining(['Romans 8:28']));
+  });
+
+  it('returns empty tags when autoDetectVerses is absent', async () => {
+    const files = [
+      new File(['Trust in Romans 8:28 today'], 'verse.txt', { type: 'text/plain' }),
+    ];
+    const notes = await filesToNotes(files, { folderId: 'root' });
+    expect(notes[0].tags).toEqual([]);
   });
 });

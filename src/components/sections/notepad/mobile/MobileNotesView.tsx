@@ -1,11 +1,14 @@
 // src/components/sections/notepad/mobile/MobileNotesView.tsx
-import { Search, Plus, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { NotepadSidebar } from '../../../../notepad/components/Sidebar';
+import { MobileFabMenu } from './MobileFabMenu';
 
 export interface MobileNotesViewProps {
   onExit: () => void;
   onOpenSearch: () => void;
   onNewNote: () => void;
+  /** Receives files chosen via the FAB "Upload note" option. */
+  onUploadFiles: (files: File[]) => void | Promise<void>;
   onOpenNote: (id: string) => void;
   /** Opens the account menu (signed in) or the sign in / sign up modal (signed out). */
   onOpenAccount?: () => void;
@@ -17,6 +20,7 @@ export function MobileNotesView({
   onExit,
   onOpenSearch,
   onNewNote,
+  onUploadFiles,
   onOpenNote,
   onOpenAccount,
   avatarUrl,
@@ -62,20 +66,7 @@ export function MobileNotesView({
         <NotepadSidebar hideCollectionHeader={false} onOpenNote={onOpenNote} />
       </div>
 
-      <button
-        aria-label="New note"
-        onClick={onNewNote}
-        className="absolute right-4 flex items-center justify-center rounded-full shadow-lg"
-        style={{
-          bottom: 'calc(72px + env(safe-area-inset-bottom))',
-          width: 52,
-          height: 52,
-          background: '#b8843a',
-          color: '#fff',
-        }}
-      >
-        <Plus size={24} />
-      </button>
+      <MobileFabMenu onNewNote={onNewNote} onUploadFiles={onUploadFiles} />
     </div>
   );
 }
