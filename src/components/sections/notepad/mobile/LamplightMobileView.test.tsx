@@ -59,4 +59,13 @@ describe('<LamplightMobileView />', () => {
       expect.objectContaining({ showEmptyStates: true }),
     );
   });
+
+  it('shows the sign-in fallback on the Connections segment when signed out', () => {
+    const { getByRole, getByText, queryByTestId } = render(
+      <LamplightMobileView {...props} userId={null} />,
+    );
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
+    expect(getByText('Sign in to see connections.')).toBeInTheDocument();
+    expect(queryByTestId('connections')).toBeNull();
+  });
 });

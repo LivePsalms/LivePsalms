@@ -70,8 +70,8 @@ export function useConnectionCards(
     // qualifyingMinSimilarity defaults to the spec value (0.78) so that, in
     // production, a missing or in-flight server config never causes the strip
     // to request neighbors the edge function would later refuse to explain.
-    // The Connection Cards strip overrides this with the value sourced from
-    // `app_config.lamplight_min_similarity` (see ConnectionCardsStrip.tsx).
+    // The Connection Cards panel overrides this with the value sourced from
+    // `app_config.lamplight_min_similarity` (see ConnectionCardsPanel.tsx).
     //
     // minWords / minVaultSize remain at dev-loosened values for now (spec is
     // 100 / 10); they are client-only gates and do not affect the server
