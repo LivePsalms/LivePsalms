@@ -89,37 +89,42 @@ export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyPro
     );
   }
 
-  // inactive — checklist
-  const items = [
-    { label: 'Write a note with some depth', done: state.meetsDepth },
-    { label: 'Keep a few more notes in your vault', done: state.meetsVault },
-  ];
-  return (
-    <Frame>
-      <Title>No connections lit yet</Title>
-      <Body>The lamp finds notes that quietly echo one another. A couple of things help it along:</Body>
-      <ul className="mt-5 flex flex-col gap-3 text-left w-full max-w-[18rem]">
-        {items.map((item) => (
-          <li
-            key={item.label}
-            data-done={item.done ? 'true' : 'false'}
-            className="flex items-start gap-3 text-sm"
-            style={{ color: 'var(--deep-umber)', fontFamily: UI_FONT }}
-          >
-            <span
-              aria-hidden
-              className="flex-none inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[11px]"
-              style={{
-                background: item.done ? 'var(--deep-umber)' : 'var(--pale-stone)',
-                color: item.done ? 'var(--alabaster)' : 'var(--silica)',
-              }}
+  if (state.phase === 'inactive') {
+    const items = [
+      { label: 'Write a note with some depth', done: state.meetsDepth },
+      { label: 'Keep a few more notes in your vault', done: state.meetsVault },
+    ];
+    return (
+      <Frame>
+        <Title>No connections lit yet</Title>
+        <Body>The lamp finds notes that quietly echo one another. A couple of things help it along:</Body>
+        <ul className="mt-5 flex flex-col gap-3 text-left w-full max-w-[18rem]">
+          {items.map((item) => (
+            <li
+              key={item.label}
+              data-done={item.done ? 'true' : 'false'}
+              className="flex items-start gap-3 text-sm"
+              style={{ color: 'var(--deep-umber)', fontFamily: UI_FONT }}
             >
-              {item.done ? '✓' : '·'}
-            </span>
-            <span>{item.label}</span>
-          </li>
-        ))}
-      </ul>
-    </Frame>
-  );
+              <span
+                aria-hidden
+                className="flex-none inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[11px]"
+                style={{
+                  background: item.done ? 'var(--deep-umber)' : 'var(--pale-stone)',
+                  color: item.done ? 'var(--alabaster)' : 'var(--silica)',
+                }}
+              >
+                {item.done ? '✓' : '·'}
+              </span>
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      </Frame>
+    );
+  }
+
+  // Exhaustiveness: every EmptyState phase is handled above.
+  state satisfies never;
+  return null;
 }
