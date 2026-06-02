@@ -136,7 +136,7 @@ function ProjectCard({
 }
 
 export interface DesktopMosaicProps {
-  sectionRef: React.RefObject<HTMLElement>;
+  sectionRef: React.RefObject<HTMLElement | null>;
   filteredProjects: Project[];
   flipStateRef: React.MutableRefObject<Flip.FlipState | null>;
   onProjectClick: (project: Project) => void;
