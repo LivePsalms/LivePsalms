@@ -79,6 +79,93 @@ describe('useConnectionCards', () => {
     await waitFor(() => expect(result.current.state.phase).toBe('inactive'));
   });
 
+  it('inactive (no active note) carries reason + booleans', async () => {
+    const adapter = new FakeLamplightAdapter();
+    const loadNeighborNotes = async () => [];
+    const { result } = renderHook(() =>
+      useConnectionCards({
+        adapter,
+        userId: 'u1',
+        activeNote: null,
+        totalNoteCount: 50,
+        loadNeighborNotes,
+      }),
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('inactive'));
+    if (result.current.state.phase !== 'inactive') throw new Error('phase');
+    expect(result.current.state.reason).toBe('no_active_note');
+    expect(result.current.state.meetsDepth).toBe(false);
+    expect(result.current.state.meetsVault).toBe(true);
+  });
+
+  it('inactive (note too short) reports meetsDepth=false, meetsVault=true', async () => {
+    const adapter = new FakeLamplightAdapter();
+    const shortNote = fakeNote({ content: makeContent('short note') });
+    const loadNeighborNotes = async () => [];
+    const { result } = renderHook(() =>
+      useConnectionCards({
+        adapter,
+        userId: 'u1',
+        activeNote: shortNote,
+        totalNoteCount: 50,
+        loadNeighborNotes,
+      }),
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('inactive'));
+    if (result.current.state.phase !== 'inactive') throw new Error('phase');
+    expect(result.current.state.reason).toBe('note_too_short');
+    expect(result.current.state.meetsDepth).toBe(false);
+    expect(result.current.state.meetsVault).toBe(true);
+  });
+
+  it('inactive (vault too small) reports meetsDepth=true, meetsVault=false', async () => {
+    const adapter = new FakeLamplightAdapter();
+    const note = fakeNote({});
+    const loadNeighborNotes = async () => [];
+    const { result } = renderHook(() =>
+      useConnectionCards({
+        adapter,
+        userId: 'u1',
+        activeNote: note,
+        totalNoteCount: 1,
+        loadNeighborNotes,
+      }),
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('inactive'));
+    if (result.current.state.phase !== 'inactive') throw new Error('phase');
+    expect(result.current.state.reason).toBe('vault_too_small');
+    expect(result.current.state.meetsDepth).toBe(true);
+    expect(result.current.state.meetsVault).toBe(false);
+  });
+
+  it('retry() re-runs the fetch after a network error', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.95 },
+    ]);
+    adapter.__failNextGetConnectionNeighbors();
+    const note = fakeNote({ id: 'note-1' });
+    const loadNeighborNotes = async (ids: string[]) =>
+      ids.map((id) => fakeNote({ id, title: `Note ${id}` }));
+    const { result } = renderHook(() =>
+      useConnectionCards({
+        adapter,
+        userId: 'u1',
+        activeNote: note,
+        totalNoteCount: 50,
+        loadNeighborNotes,
+      }),
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('error'));
+
+    await act(async () => {
+      result.current.retry();
+    });
+
+    await waitFor(() => expect(result.current.state.phase).toBe('ready'));
+  });
+
   it('returns waiting_for_embedding when qualifying but no embedding yet', async () => {
     const adapter = new FakeLamplightAdapter();
     const note = fakeNote({ id: 'note-1' });

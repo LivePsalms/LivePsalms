@@ -25,7 +25,12 @@ export interface ConnectionCard {
 }
 
 export type ConnectionCardsState =
-  | { phase: 'inactive' }
+  | {
+      phase: 'inactive';
+      reason: 'no_active_note' | 'note_too_short' | 'vault_too_small';
+      meetsDepth: boolean;
+      meetsVault: boolean;
+    }
   | { phase: 'waiting_for_embedding' }
   | { phase: 'no_connections' }
   | { phase: 'ready'; cards: ConnectionCard[] }
@@ -47,6 +52,7 @@ export interface UseConnectionCardsResult {
   state: ConnectionCardsState;
   expandCard: (relatedNoteId: string) => Promise<void>;
   retryWhy: (relatedNoteId: string) => Promise<void>;
+  retry: () => void;
 }
 
 function countWords(s: string): number {
@@ -76,7 +82,13 @@ export function useConnectionCards(
     maxRenderedCards = 3,
   } = args;
 
-  const [state, setState] = useState<ConnectionCardsState>({ phase: 'inactive' });
+  const [state, setState] = useState<ConnectionCardsState>({
+    phase: 'inactive',
+    reason: 'no_active_note',
+    meetsDepth: false,
+    meetsVault: false,
+  });
+  const [retryNonce, setRetryNonce] = useState(0);
   const cancelledRef = useRef(false);
   const generationRef = useRef(0);
   // Retained neighbor list (up to k=5) for potential future "see more" UX.
@@ -93,17 +105,20 @@ export function useConnectionCards(
     const gen = ++generationRef.current;
 
     async function run() {
+      const meetsVault = totalNoteCount >= qualifyingMinVaultSize;
+
       if (!activeNote) {
-        setState({ phase: 'inactive' });
+        setState({ phase: 'inactive', reason: 'no_active_note', meetsDepth: false, meetsVault });
         return;
       }
       const plaintext = extractTextFromNote(activeNote);
-      if (countWords(plaintext) < qualifyingMinWords) {
-        setState({ phase: 'inactive' });
+      const meetsDepth = countWords(plaintext) >= qualifyingMinWords;
+      if (!meetsDepth) {
+        setState({ phase: 'inactive', reason: 'note_too_short', meetsDepth: false, meetsVault });
         return;
       }
-      if (totalNoteCount < qualifyingMinVaultSize) {
-        setState({ phase: 'inactive' });
+      if (!meetsVault) {
+        setState({ phase: 'inactive', reason: 'vault_too_small', meetsDepth: true, meetsVault: false });
         return;
       }
 
@@ -176,6 +191,7 @@ export function useConnectionCards(
     qualifyingMinVaultSize,
     qualifyingMinSimilarity,
     maxRenderedCards,
+    retryNonce,
   ]);
 
   const updateCardWhy = useCallback(
@@ -224,5 +240,9 @@ export function useConnectionCards(
     [expandCard],
   );
 
-  return { state, expandCard, retryWhy };
+  const retry = useCallback(() => {
+    setRetryNonce((n) => n + 1);
+  }, []);
+
+  return { state, expandCard, retryWhy, retry };
 }
