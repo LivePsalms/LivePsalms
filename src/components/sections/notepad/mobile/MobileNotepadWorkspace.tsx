@@ -155,7 +155,7 @@ export function MobileNotepadWorkspace() {
 
       <MobileTabBar active={tab} onSelect={handleSelectTab} lamplightHasConnections={hasConnections} />
 
-      <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+      <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} onOpenNote={handleOpenNote} />
 
       <MobileAuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
