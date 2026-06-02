@@ -28,6 +28,8 @@ import type { Note, Folder } from '../types';
 import { NOTE_TYPE_CONFIG } from '../note-type-config';
 import { InlineEdit } from './InlineEdit';
 import { MoveToFolderDialog } from './MoveToFolderDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useDeferredMenuAction } from './useDeferredMenuAction';
 
 interface NoteItemProps {
   note: Note;
@@ -54,6 +56,9 @@ export function NoteItem({
   const [moveOpen, setMoveOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const isMobile = useIsMobile();
+  const menuAction = useDeferredMenuAction();
 
   const config = NOTE_TYPE_CONFIG[note.type];
   const Icon = config.icon;
@@ -68,7 +73,7 @@ export function NoteItem({
               background: isActive ? 'rgba(188, 179, 163, 0.3)' : 'transparent',
               fontFamily: 'Outfit, sans-serif',
             }}
-            onClick={() => onOpen(note.id)}
+            onClick={() => { if (!menuAction.wasJustOpen()) onOpen(note.id); }}
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
           >
@@ -78,7 +83,7 @@ export function NoteItem({
                 <span
                   className="shrink-0 cursor-pointer rounded hover:bg-black/10 transition-all"
                   style={{
-                    opacity: hovering || menuOpen ? 1 : 0,
+                    opacity: hovering || menuOpen || isMobile ? 1 : 0,
                     transition: 'opacity 0.15s',
                     color: 'var(--silica)',
                     padding: '1px',
@@ -88,32 +93,31 @@ export function NoteItem({
                   <MoreVertical className="w-3 h-3" />
                 </span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <DropdownMenuContent
+                style={{ fontFamily: 'Outfit, sans-serif' }}
+                onCloseAutoFocus={menuAction.onCloseAutoFocus}
+              >
                 <DropdownMenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const next = prompt('Rename note:', note.title);
-                    if (next && next.trim()) onRename(note.id, next.trim());
-                  }}
+                  onSelect={() => menuAction.run(() => setRenaming(true))}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   Rename
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => { setMenuOpen(false); setMoveOpen(true); }}
+                  onSelect={() => menuAction.run(() => setMoveOpen(true))}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   Move to Folder
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => { setMenuOpen(false); onDuplicate(note.id); }}
+                  onSelect={() => menuAction.run(() => onDuplicate(note.id))}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => { setMenuOpen(false); setDeleteOpen(true); }}
+                  onSelect={() => menuAction.run(() => setDeleteOpen(true))}
                   className="text-red-600 focus:text-red-600"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
@@ -127,36 +131,38 @@ export function NoteItem({
             <InlineEdit
               value={note.title}
               onSave={(title) => onRename(note.id, title)}
+              editing={renaming}
+              onEditingChange={setRenaming}
               className="text-[11px] truncate flex-1 min-w-0"
               style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
             />
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <ContextMenuContent
+          style={{ fontFamily: 'Outfit, sans-serif' }}
+          onCloseAutoFocus={menuAction.onCloseAutoFocus}
+        >
           <ContextMenuItem
-            onClick={() => {
-              const next = prompt('Rename note:', note.title);
-              if (next && next.trim()) onRename(note.id, next.trim());
-            }}
+            onSelect={() => menuAction.run(() => setRenaming(true))}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             Rename
           </ContextMenuItem>
           <ContextMenuItem
-            onClick={() => setMoveOpen(true)}
+            onSelect={() => menuAction.run(() => setMoveOpen(true))}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             Move to Folder
           </ContextMenuItem>
           <ContextMenuItem
-            onClick={() => onDuplicate(note.id)}
+            onSelect={() => menuAction.run(() => onDuplicate(note.id))}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             Duplicate
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
-            onClick={() => setDeleteOpen(true)}
+            onSelect={() => menuAction.run(() => setDeleteOpen(true))}
             className="text-red-600 focus:text-red-600"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
