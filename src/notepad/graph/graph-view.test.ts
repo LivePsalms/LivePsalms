@@ -740,4 +740,13 @@ describe('GraphView — onNodeTap interception', () => {
     view.handleMouseUp({ clientX: 100, clientY: 100 });
     expect(opens).toEqual(['a']);
   });
+
+  it('omitting onNodeTap entirely preserves default behavior (desktop path)', () => {
+    const { view, opens } = attachedWith({}); // no onNodeTap key
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(opens).toEqual(['a']);
+  });
 });
