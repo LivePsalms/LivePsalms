@@ -16,6 +16,8 @@ import { Notepad } from '@/components/sections/Notepad';
 import { NotepadLanding } from '@/notepad-landing';
 import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
 import { Contact } from '@/components/sections/Contact';
+import { PrivacyPolicy } from '@/components/sections/PrivacyPolicy';
+import { Terms } from '@/components/sections/Terms';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
@@ -118,7 +120,8 @@ function App() {
   const isWelcomePage = location.pathname === '/welcome';
   const isCommunityPage = location.pathname === '/community';
   const isContactPage = location.pathname === '/contact';
-  const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage;
+  const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
+  const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage || isLegalPage;
   const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage;
 
   const handleProjectClick = useCallback(
@@ -185,6 +188,8 @@ function App() {
             <Route path="/notepad/notes" element={<Notepad />} />
             <Route path="/community" element={<CommunityComingSoon />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
