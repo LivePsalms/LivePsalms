@@ -47,6 +47,11 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
     }, loadingStepIntervalMs);
 
     (async () => {
+      // Consume the explicit-start request: a start()/retry() applies to
+      // exactly the run it triggered and must not leak into later runs caused
+      // by prop changes (e.g. the local date rolling over while mounted).
+      const startRequested = startRequestedRef.current;
+      startRequestedRef.current = false;
       // Reset to loading before each fetch-or-generate run. Done inside the
       // async IIFE so the effect body itself does no synchronous setState.
       setState(prev => prev.phase === 'loading' && prev.loadingStep === 0
@@ -62,7 +67,7 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
         }
         // Cache miss: only generate when auto-generation is on or the user has
         // explicitly asked to start. Otherwise wait in idle for a start() tap.
-        const shouldGenerate = autoGenerate || startRequestedRef.current;
+        const shouldGenerate = autoGenerate || startRequested;
         if (!shouldGenerate) {
           clearInterval(interval);
           setState({ phase: 'idle' });

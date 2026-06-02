@@ -170,4 +170,23 @@ describe('useTodaysLamp', () => {
     act(() => { result.current.retry(); });
     await waitFor(() => expect(result.current.state.phase).toBe('ready'));
   });
+
+  it('start request does not carry over to a new localDate (no auto-generate on date change)', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__queueGenerateResult({ ok: true, artifact: devotion, cached: false });
+    const generateSpy = vi.spyOn(adapter, 'generateDailyDevotion');
+    const { result, rerender } = renderHook(
+      (props: { localDate: string }) =>
+        useTodaysLamp({ adapter, userId: 'user-1', localDate: props.localDate, autoGenerate: false, loadingStepIntervalMs: 10 }),
+      { initialProps: { localDate: '2026-05-27' } },
+    );
+    await waitFor(() => expect(result.current.state.phase).toBe('idle'));
+    act(() => { result.current.start(); });
+    await waitFor(() => expect(result.current.state.phase).toBe('ready'));
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+    // New day while still mounted: must NOT auto-generate; should return to idle.
+    rerender({ localDate: '2026-05-28' });
+    await waitFor(() => expect(result.current.state.phase).toBe('idle'));
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+  });
 });
