@@ -4,6 +4,7 @@ import type { LamplightAdapter, LamplightVoice, LamplightTradition } from '../..
 import type { DailyDevotion } from '../../storage/lamplight-artifacts';
 import { TodaysLampLoading } from './TodaysLampLoading';
 import { TodaysLampError } from './TodaysLampError';
+import { TodaysLampIntro } from './TodaysLampIntro';
 
 export interface TodaysLampCardProps {
   adapter: LamplightAdapter;
@@ -12,13 +13,15 @@ export interface TodaysLampCardProps {
   voicePreference: LamplightVoice;
   traditionHint: LamplightTradition;
   firstName: string | null;
+  autoGenerate?: boolean;
 }
 
 export function TodaysLampCard({
-  adapter, userId, localDate, voicePreference, traditionHint, firstName,
+  adapter, userId, localDate, voicePreference, traditionHint, firstName, autoGenerate = true,
 }: TodaysLampCardProps) {
-  const { state, retry } = useTodaysLamp({ adapter, userId, localDate });
+  const { state, start, retry } = useTodaysLamp({ adapter, userId, localDate, autoGenerate });
 
+  if (state.phase === 'idle')    return <TodaysLampIntro firstName={firstName} onStart={start} />;
   if (state.phase === 'loading') return <TodaysLampLoading step={state.loadingStep} firstName={firstName} />;
   if (state.phase === 'error')   return <TodaysLampError reason={state.reason} firstName={firstName} onRetry={retry} />;
 
