@@ -213,7 +213,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
             </p>
           </div>
         )}
-        {graphMode === 'local' && !activeNoteId && (
+        {graphMode === 'local' && !activeNoteId && !focusNodeId && (
           <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
             <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
               Select a note to see its local graph.

@@ -81,6 +81,15 @@ describe('GraphPane', () => {
     expect(spy.deps!.onNodeTap({ id: 'a', type: 'devotion', title: 'A' })).toBe(false);
   });
 
+  it('embedded: a re-rendered onNodePeek is seen without recreating the view', () => {
+    const first = vi.fn(), second = vi.fn();
+    const { rerender } = render(<GraphPane graphOpen embedded onNodePeek={first} />);
+    rerender(<GraphPane graphOpen embedded onNodePeek={second} />);
+    spy.deps!.onNodeTap({ id: 'a', type: 'devotion', title: 'A' });
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledOnce();
+  });
+
   it('embedded: focusNodeId drives setFocus + local mode', () => {
     const { rerender } = render(<GraphPane graphOpen embedded focusNodeId={null} />);
     rerender(<GraphPane graphOpen embedded focusNodeId="scripture:x" />);
