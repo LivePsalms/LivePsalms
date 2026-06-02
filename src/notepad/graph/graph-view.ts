@@ -48,6 +48,13 @@ export interface GraphSettings {
 export interface GraphViewDeps {
   onNodeOpen: (noteId: string) => void;
   devicePixelRatio?: () => number;
+  /**
+   * Optional tap interceptor. When provided AND it returns true, the view
+   * suppresses its default tap behavior (onNodeOpen for note nodes, popover for
+   * scripture nodes). Used by the embedded mobile graph to route taps to a peek
+   * view. Desktop omits it, so default behavior is preserved.
+   */
+  onNodeTap?: (node: { id: string; type: GraphNode['type']; title: string }) => boolean;
 }
 
 export const DEFAULT_FILTERS: NodeTypeFilters = {
@@ -452,6 +459,13 @@ export class GraphView extends Observable<GraphViewState> {
     if (!node) {
       this.setState((prev) => prev.popover === null ? prev : { ...prev, popover: null });
       return;
+    }
+    if (this.deps.onNodeTap) {
+      const handled = this.deps.onNodeTap({ id: node.id, type: node.type, title: node.title });
+      if (handled) {
+        this.setState((prev) => (prev.popover === null ? prev : { ...prev, popover: null }));
+        return;
+      }
     }
     if (node.type === 'scripture') {
       const current = this.getSnapshot().popover;

@@ -690,3 +690,54 @@ describe('GraphView — setSettings (in-place updates)', () => {
     expect(after).not.toBe(before);
   });
 });
+
+describe('GraphView — onNodeTap interception', () => {
+  type Tap = { id: string; type: GraphNode['type']; title: string };
+  function placeNode(view: GraphView, id: string, x: number, y: number) {
+    const n = view.getSimNodes().find((s) => s.id === id);
+    if (n) { n.x = x; n.y = y; n.fx = x; n.fy = y; }
+  }
+  function attachedWith(over: Partial<GraphViewDeps>) {
+    const { deps, opens } = makeDeps(over);
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    return { view, opens };
+  }
+
+  it('routes a note-node tap to onNodeTap and suppresses onNodeOpen', () => {
+    const taps: Tap[] = [];
+    const { view, opens } = attachedWith({ onNodeTap: (n) => { taps.push(n); return true; } });
+    view.setData([node({ id: 'a', type: 'devotion', title: 'A' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(taps).toEqual([{ id: 'a', type: 'devotion', title: 'A' }]);
+    expect(opens).toEqual([]);
+  });
+
+  it('routes a scripture-node tap to onNodeTap and suppresses the popover', () => {
+    const taps: Tap[] = [];
+    const { view } = attachedWith({ onNodeTap: (n) => { taps.push(n); return true; } });
+    view.setData(
+      [node({ id: 'scripture:gen-1-1', type: 'scripture', title: 'Genesis 1:1', scriptureText: 'In the beginning...', scriptureTranslation: 'WEB' })],
+      [],
+      null,
+    );
+    placeNode(view, 'scripture:gen-1-1', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(taps).toEqual([{ id: 'scripture:gen-1-1', type: 'scripture', title: 'Genesis 1:1' }]);
+    expect(view.getSnapshot().popover).toBeNull();
+  });
+
+  it('falls back to default behavior when onNodeTap returns false', () => {
+    const { view, opens } = attachedWith({ onNodeTap: () => false });
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    placeNode(view, 'a', 100, 100);
+    view.handleMouseDown({ clientX: 100, clientY: 100 });
+    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    expect(opens).toEqual(['a']);
+  });
+});
