@@ -30,6 +30,9 @@ vi.mock('../editor/use-verse-tooltip', () => ({
 }));
 vi.mock('../hooks/use-journal-theme', () => ({ useJournalTheme: () => ['default', vi.fn()] }));
 vi.mock('@tiptap/react', () => ({ EditorContent: () => <div data-testid="editor-content" /> }));
+vi.mock('../../auth/context/useAccountProfile', () => ({
+  useAccountProfile: () => ({ profile: null }),
+}));
 
 import { NotepadEditor } from './Editor';
 
