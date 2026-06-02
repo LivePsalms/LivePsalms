@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -21,7 +28,10 @@ import { FOLDER_ICONS } from '../components/NewFolderDialog';
 import type { Note, Folder, NoteType } from '../types';
 import { NoteItem } from './NoteItem';
 import { NewNoteDialog } from './NewNoteDialog';
+import { InlineEdit } from './InlineEdit';
 import { useTreeViewState } from './tree-view-state';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useDeferredMenuAction } from './useDeferredMenuAction';
 
 export interface FolderItemProps {
   folder: Folder;
@@ -70,6 +80,11 @@ export function FolderItem(props: FolderItemProps) {
   const open = treeView.isExpanded(`folder:${folder.id}`, true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const isMobile = useIsMobile();
+  const menuAction = useDeferredMenuAction();
 
   return (
     <>
@@ -77,31 +92,100 @@ export function FolderItem(props: FolderItemProps) {
         <ContextMenuTrigger asChild>
           <div>
             {/* Folder header */}
-            <button
-              onClick={() => treeView.toggle(`folder:${folder.id}`, true)}
+            <div
               className="flex items-center gap-1.5 w-full px-1 py-1 rounded hover:bg-black/5 transition-colors"
-              style={{ fontFamily: 'Outfit, sans-serif' }}
+              onMouseEnter={() => setHovering(true)}
+              onMouseLeave={() => setHovering(false)}
             >
-              {open ? (
-                <ChevronDown className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
-              ) : (
-                <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
-              )}
-              {(() => {
-                const iconEntry = FOLDER_ICONS.find((i) => i.key === folder.icon);
-                if (iconEntry) {
-                  const FIcon = iconEntry.icon;
-                  return <FIcon className="w-3.5 h-3.5 shrink-0" style={{ color: folder.color || 'var(--silica)' }} />;
-                }
-                return null;
-              })()}
-              <span
-                className="text-[12px] font-medium truncate text-left flex-1"
-                style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+              {/* Expand/collapse chevron */}
+              <button
+                onClick={() => treeView.toggle(`folder:${folder.id}`, true)}
+                className="shrink-0 flex items-center"
+                aria-label={open ? 'Collapse folder' : 'Expand folder'}
               >
-                {folder.name}
-              </span>
-            </button>
+                {open ? (
+                  <ChevronDown className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                ) : (
+                  <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                )}
+              </button>
+
+              {/* Options icon — click to open dropdown (between arrow and icon) */}
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <span
+                    className="shrink-0 cursor-pointer rounded hover:bg-black/10 transition-all"
+                    style={{
+                      opacity: hovering || menuOpen || isMobile ? 1 : 0,
+                      transition: 'opacity 0.15s',
+                      color: 'var(--silica)',
+                      padding: '1px',
+                    }}
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}
+                  >
+                    <MoreVertical className="w-3 h-3" />
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                  onCloseAutoFocus={menuAction.onCloseAutoFocus}
+                >
+                  <DropdownMenuItem
+                    onSelect={() => menuAction.run(() => setRenaming(true))}
+                    style={{ fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => menuAction.run(() => setNewNoteOpen(true))}
+                    style={{ fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    New Note Inside
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => menuAction.run(() => {
+                      const name = prompt('Subfolder name:');
+                      if (name && name.trim()) onCreateSubfolder(folder.id, name.trim());
+                    })}
+                    style={{ fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    New Subfolder
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => menuAction.run(() => setDeleteOpen(true))}
+                    className="text-red-600 focus:text-red-600"
+                    style={{ fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Folder icon + name (toggles too; name is inline-editable) */}
+              <div
+                onClick={() => { if (!renaming && !menuAction.wasJustOpen()) treeView.toggle(`folder:${folder.id}`, true); }}
+                className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                style={{ fontFamily: 'Outfit, sans-serif' }}
+              >
+                {(() => {
+                  const iconEntry = FOLDER_ICONS.find((i) => i.key === folder.icon);
+                  if (iconEntry) {
+                    const FIcon = iconEntry.icon;
+                    return <FIcon className="w-3.5 h-3.5 shrink-0" style={{ color: folder.color || 'var(--silica)' }} />;
+                  }
+                  return null;
+                })()}
+                <InlineEdit
+                  value={folder.name}
+                  onSave={(name) => onRenameFolder(folder.id, name)}
+                  editing={renaming}
+                  onEditingChange={setRenaming}
+                  className="text-[12px] font-medium truncate text-left flex-1 min-w-0"
+                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                />
+              </div>
+            </div>
 
             {/* Children */}
             {open && (
@@ -146,34 +230,34 @@ export function FolderItem(props: FolderItemProps) {
             )}
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <ContextMenuContent
+          style={{ fontFamily: 'Outfit, sans-serif' }}
+          onCloseAutoFocus={menuAction.onCloseAutoFocus}
+        >
           <ContextMenuItem
-            onClick={() => {
-              const next = prompt('Rename folder:', folder.name);
-              if (next && next.trim()) onRenameFolder(folder.id, next.trim());
-            }}
+            onSelect={() => menuAction.run(() => setRenaming(true))}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             Rename
           </ContextMenuItem>
           <ContextMenuItem
-            onClick={() => setNewNoteOpen(true)}
+            onSelect={() => menuAction.run(() => setNewNoteOpen(true))}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             New Note Inside
           </ContextMenuItem>
           <ContextMenuItem
-            onClick={() => {
+            onSelect={() => menuAction.run(() => {
               const name = prompt('Subfolder name:');
               if (name && name.trim()) onCreateSubfolder(folder.id, name.trim());
-            }}
+            })}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
             New Subfolder
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
-            onClick={() => setDeleteOpen(true)}
+            onSelect={() => menuAction.run(() => setDeleteOpen(true))}
             className="text-red-600 focus:text-red-600"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
