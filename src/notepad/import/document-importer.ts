@@ -133,6 +133,41 @@ export function linkNotesByVerses(notes: Note[]): Note[] {
   });
 }
 
+export interface FilesToNotesOpts {
+  folderId: string;
+  /** When true, scrape verse references out of the plain text and use them as tags (capped at 10). */
+  autoDetectVerses?: boolean;
+  /** When true, append a cross-linking "Related Notes" pass via linkNotesByVerses. */
+  autoCreateLinks?: boolean;
+}
+
+/**
+ * Orchestrates the full upload import: parse each File to text, build a Note
+ * per file (title = filename without extension), then optionally cross-link by
+ * shared verse refs. Returns Notes ready for `importNotes`. Shared by the
+ * desktop UploadModal and the mobile FAB upload flow.
+ */
+export async function filesToNotes(
+  files: File[],
+  opts: FilesToNotesOpts,
+): Promise<Note[]> {
+  const { folderId, autoDetectVerses = false, autoCreateLinks = false } = opts;
+  const parsed = await Promise.all(
+    files.map(async (file) => {
+      const text = await parseFile(file);
+      const title = file.name.replace(/\.[^.]+$/, '');
+      return { title, text };
+    }),
+  );
+  let notes = parsed.map(({ title, text }) =>
+    buildNoteFromText({ title, text, folderId, autoDetectVerses }),
+  );
+  if (autoCreateLinks) {
+    notes = linkNotesByVerses(notes);
+  }
+  return notes;
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
