@@ -1,3 +1,11 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import type { ConnectionCardsState } from '../../hooks/useConnectionCards';
 
 type EmptyState = Exclude<ConnectionCardsState, { phase: 'ready' }>;
@@ -43,6 +51,59 @@ function Body({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Plain-English requirements for a connection to surface. Kept qualitative on
+// purpose — no hard numbers — so the copy stays gentle and doesn't drift from
+// the (currently dev-loosened) word/vault/similarity thresholds in the hook.
+const CONNECTION_CRITERIA = [
+  'Your note has enough substance to draw on',
+  "You've gathered a handful of notes in your vault",
+  'The lamp has finished reading your note',
+  'Another note echoes this one',
+];
+
+function ConnectionCriteriaDialog() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="mt-5 text-xs underline cursor-pointer"
+          style={{ color: 'var(--silica)', fontFamily: UI_FONT }}
+        >
+          View criteria
+        </button>
+      </DialogTrigger>
+      <DialogContent className="border-0" style={{ background: 'var(--alabaster)' }}>
+        <DialogHeader>
+          <DialogTitle
+            className="text-xl"
+            style={{ color: 'var(--deep-umber)', fontFamily: SERIF_FONT, fontWeight: 400 }}
+          >
+            What lights a connection
+          </DialogTitle>
+          <DialogDescription style={{ color: 'var(--silica)', fontFamily: UI_FONT }}>
+            The lamp surfaces a connection when a few things line up:
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="flex flex-col gap-3">
+          {CONNECTION_CRITERIA.map((criterion) => (
+            <li
+              key={criterion}
+              className="flex items-start gap-3 text-sm"
+              style={{ color: 'var(--deep-umber)', fontFamily: UI_FONT }}
+            >
+              <span aria-hidden style={{ color: 'var(--silica)' }}>
+                —
+              </span>
+              <span>{criterion}</span>
+            </li>
+          ))}
+        </ul>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyProps) {
   if (state.phase === 'waiting_for_embedding') {
     return (
@@ -54,7 +115,7 @@ export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyPro
           className="text-sm leading-relaxed max-w-[18rem]"
           style={{ color: 'var(--silica)', fontFamily: UI_FONT }}
         >
-          It's quietly taking in what you've written — connections will surface here in a moment.
+          It's taking in what you've written — connections will surface here in a moment.
         </p>
       </Frame>
     );
@@ -65,7 +126,7 @@ export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyPro
       <Frame>
         <Title>Nothing echoes yet</Title>
         <Body>
-          This note stands on its own for now. As your vault grows, the lamp may find quiet
+          This note stands on its own for now. As your vault grows, the lamp may find
           threads between it and others.
         </Body>
       </Frame>
@@ -91,13 +152,13 @@ export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyPro
 
   if (state.phase === 'inactive') {
     const items = [
-      { label: 'Write a note with some depth', done: state.meetsDepth },
+      { label: 'Write more in-depth notes', done: state.meetsDepth },
       { label: 'Keep a few more notes in your vault', done: state.meetsVault },
     ];
     return (
       <Frame>
         <Title>No connections lit yet</Title>
-        <Body>The lamp finds notes that quietly echo one another. A couple of things help it along:</Body>
+        <Body>The lamp finds notes that echo one another. A couple of things help it along:</Body>
         <ul className="mt-5 flex flex-col gap-3 text-left w-full max-w-[18rem]">
           {items.map((item) => (
             <li
@@ -120,6 +181,7 @@ export function ConnectionCardsEmpty({ state, onRetry }: ConnectionCardsEmptyPro
             </li>
           ))}
         </ul>
+        <ConnectionCriteriaDialog />
       </Frame>
     );
   }

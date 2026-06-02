@@ -14,7 +14,7 @@ describe('<ConnectionCardsEmpty />', () => {
       />,
     );
     expect(screen.getByText(/No connections lit yet/i)).toBeInTheDocument();
-    const depth = screen.getByText(/Write a note with some depth/i).closest('li')!;
+    const depth = screen.getByText(/Write more in-depth notes/i).closest('li')!;
     const vault = screen.getByText(/Keep a few more notes in your vault/i).closest('li')!;
     expect(depth).toHaveAttribute('data-done', 'true');
     expect(vault).toHaveAttribute('data-done', 'false');
@@ -27,7 +27,7 @@ describe('<ConnectionCardsEmpty />', () => {
         onRetry={() => {}}
       />,
     );
-    const depth = screen.getByText(/Write a note with some depth/i).closest('li')!;
+    const depth = screen.getByText(/Write more in-depth notes/i).closest('li')!;
     const vault = screen.getByText(/Keep a few more notes in your vault/i).closest('li')!;
     expect(depth).toHaveAttribute('data-done', 'false');
     expect(vault).toHaveAttribute('data-done', 'true');
@@ -42,9 +42,30 @@ describe('<ConnectionCardsEmpty />', () => {
     expect(screen.getByText(/The lamp is reading/i)).toBeInTheDocument();
   });
 
-  it('no_connections: shows the nothing-echoes message', () => {
+  it('inactive: View criteria opens a modal listing the criteria in plain English', () => {
+    render(
+      <ConnectionCardsEmpty
+        state={{ phase: 'inactive', reason: 'note_too_short', meetsDepth: false, meetsVault: true }}
+        onRetry={() => {}}
+      />,
+    );
+    // Closed by default — criteria not yet in the document.
+    expect(screen.queryByText(/Another note echoes this one/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /View criteria/i }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(/What lights a connection/i);
+    expect(dialog).toHaveTextContent(/Your note has enough substance/i);
+    expect(dialog).toHaveTextContent(/handful of notes in your vault/i);
+    expect(dialog).toHaveTextContent(/finished reading your note/i);
+    expect(dialog).toHaveTextContent(/Another note echoes this one/i);
+  });
+
+  it('no_connections: shows the nothing-echoes message and no View criteria link', () => {
     render(<ConnectionCardsEmpty state={{ phase: 'no_connections' }} onRetry={() => {}} />);
     expect(screen.getByText(/Nothing echoes yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View criteria/i })).toBeNull();
   });
 
   it('error: shows the message and Try again invokes onRetry', () => {
