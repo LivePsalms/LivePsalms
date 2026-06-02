@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TodaysLampCard, formatLocalDate } from './TodaysLampCard';
 import { FakeLamplightAdapter } from '../../storage/fake-lamplight-adapter';
@@ -8,7 +8,11 @@ import type { DailyDevotion } from '../../storage/lamplight-artifacts';
 
 afterEach(cleanup);
 
-function renderCard(adapter: FakeLamplightAdapter) {
+function renderCard(
+  adapter: FakeLamplightAdapter,
+  overrides: { autoGenerate?: boolean; firstName?: string | null } = {},
+) {
+  const { autoGenerate = true, firstName = null } = overrides;
   return render(
     <MemoryRouter>
       <TodaysLampCard
@@ -17,9 +21,10 @@ function renderCard(adapter: FakeLamplightAdapter) {
         localDate="2026-05-27"
         voicePreference="Lord"
         traditionHint="unspecified"
-        firstName={null}
+        firstName={firstName}
+        autoGenerate={autoGenerate}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -70,5 +75,33 @@ describe('TodaysLampCard', () => {
     renderCard(adapter);
     await waitFor(() => expect(screen.getByText(/Lamplight had trouble/i)).toBeInTheDocument());
     expect(screen.getByRole('button', { name: /Try again/i })).toBeInTheDocument();
+  });
+});
+
+const manualDevotion: DailyDevotion = {
+  opening: 'op',
+  scripture: { ref: 'Psalm 23:4', text: 'though I walk' },
+  reflection: 'r',
+  prompt: 'p',
+  note_citations: [{ note_id: 'n1', reason: 'rest' }],
+};
+
+describe('TodaysLampCard (manual start)', () => {
+  it('shows the intro instead of generating when autoGenerate=false and nothing is cached', async () => {
+    const adapter = new FakeLamplightAdapter();
+    const generateSpy = vi.spyOn(adapter, 'generateDailyDevotion');
+    renderCard(adapter, { autoGenerate: false });
+    expect(await screen.findByRole('button', { name: /Show Me Today's Lamp/i })).toBeInTheDocument();
+    expect(generateSpy).not.toHaveBeenCalled();
+  });
+
+  it('tapping the button generates once and renders the devotion', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__queueGenerateResult({ ok: true, artifact: manualDevotion, cached: false });
+    const generateSpy = vi.spyOn(adapter, 'generateDailyDevotion');
+    renderCard(adapter, { autoGenerate: false });
+    fireEvent.click(await screen.findByRole('button', { name: /Show Me Today's Lamp/i }));
+    await waitFor(() => expect(screen.getByText(/though I walk/i)).toBeInTheDocument());
+    expect(generateSpy).toHaveBeenCalledTimes(1);
   });
 });

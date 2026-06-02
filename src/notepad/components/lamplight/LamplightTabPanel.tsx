@@ -12,9 +12,10 @@ import { sanitizeFirstName } from '../../utils/personalization';
 
 export interface LamplightTabPanelProps {
   lamplightAdapter: LamplightAdapter;
+  autoGenerate?: boolean;
 }
 
-export function LamplightTabPanel({ lamplightAdapter }: LamplightTabPanelProps) {
+export function LamplightTabPanel({ lamplightAdapter, autoGenerate = true }: LamplightTabPanelProps) {
   const { user } = useAuthSession();
   const userId = user?.id ?? null;
 
@@ -78,6 +79,7 @@ export function LamplightTabPanel({ lamplightAdapter }: LamplightTabPanelProps) 
       voicePreference={settingsState.settings.voicePreference}
       traditionHint={settingsState.settings.traditionHint}
       firstName={firstName}
+      autoGenerate={autoGenerate}
     />
   );
 }

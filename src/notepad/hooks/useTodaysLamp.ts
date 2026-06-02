@@ -3,6 +3,7 @@ import type { LamplightAdapter } from '../storage/lamplight-adapter';
 import type { DailyDevotion } from '../storage/lamplight-artifacts';
 
 export type TodaysLampState =
+  | { phase: 'idle' }
   | { phase: 'loading'; loadingStep: 0 | 1 | 2 }
   | { phase: 'ready'; artifact: DailyDevotion }
   | { phase: 'error'; reason: 'no_notes' | 'validators_failed' | 'network' };
@@ -11,19 +12,23 @@ export interface UseTodaysLampArgs {
   adapter: LamplightAdapter;
   userId: string;
   localDate: string;
+  /** When false, a cache miss enters `idle` instead of generating until start() is called. Default true. */
+  autoGenerate?: boolean;
   loadingStepIntervalMs?: number;
 }
 
 export interface UseTodaysLampResult {
   state: TodaysLampState;
+  start: () => void;
   retry: () => void;
 }
 
 export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
-  const { adapter, userId, localDate, loadingStepIntervalMs = 2500 } = args;
+  const { adapter, userId, localDate, autoGenerate = true, loadingStepIntervalMs = 2500 } = args;
   const [state, setState] = useState<TodaysLampState>({ phase: 'loading', loadingStep: 0 });
   const [generation, setGeneration] = useState(0);
   const cancelledRef = useRef(false);
+  const startRequestedRef = useRef(false);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -42,6 +47,11 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
     }, loadingStepIntervalMs);
 
     (async () => {
+      // Consume the explicit-start request: a start()/retry() applies to
+      // exactly the run it triggered and must not leak into later runs caused
+      // by prop changes (e.g. the local date rolling over while mounted).
+      const startRequested = startRequestedRef.current;
+      startRequestedRef.current = false;
       // Reset to loading before each fetch-or-generate run. Done inside the
       // async IIFE so the effect body itself does no synchronous setState.
       setState(prev => prev.phase === 'loading' && prev.loadingStep === 0
@@ -53,6 +63,14 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
         if (existing) {
           clearInterval(interval);
           setState({ phase: 'ready', artifact: existing });
+          return;
+        }
+        // Cache miss: only generate when auto-generation is on or the user has
+        // explicitly asked to start. Otherwise wait in idle for a start() tap.
+        const shouldGenerate = autoGenerate || startRequested;
+        if (!shouldGenerate) {
+          clearInterval(interval);
+          setState({ phase: 'idle' });
           return;
         }
         const result = await adapter.generateDailyDevotion(userId, localDate);
@@ -71,11 +89,17 @@ export function useTodaysLamp(args: UseTodaysLampArgs): UseTodaysLampResult {
     })();
 
     return () => { clearInterval(interval); };
-  }, [adapter, userId, localDate, loadingStepIntervalMs, generation]);
+  }, [adapter, userId, localDate, autoGenerate, loadingStepIntervalMs, generation]);
 
-  const retry = useCallback(() => {
+  const start = useCallback(() => {
+    startRequestedRef.current = true;
     setGeneration(g => g + 1);
   }, []);
 
-  return { state, retry };
+  const retry = useCallback(() => {
+    startRequestedRef.current = true;
+    setGeneration(g => g + 1);
+  }, []);
+
+  return { state, start, retry };
 }

@@ -3,6 +3,7 @@ import {
   loadingState,
   emptyStateInsufficientNotes,
   generationFailedToast,
+  todaysLampIntro,
 } from './lamplight-copy';
 
 describe('loadingState', () => {
@@ -36,5 +37,19 @@ describe('generationFailedToast', () => {
   it('returns unpersonalized form when firstName is null', () => {
     expect(generationFailedToast(null))
       .toBe("We couldn't generate Today's Lamp — try again?");
+  });
+});
+
+describe('todaysLampIntro', () => {
+  it('returns personalized form when firstName is present', () => {
+    expect(todaysLampIntro('Sarah')).toBe(
+      "Sarah, Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
+    );
+  });
+
+  it('returns unpersonalized form when firstName is null', () => {
+    expect(todaysLampIntro(null)).toBe(
+      "Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
+    );
   });
 });
