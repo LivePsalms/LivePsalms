@@ -2,8 +2,12 @@
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { tabPanelSpy } = vi.hoisted(() => ({ tabPanelSpy: vi.fn() }));
 vi.mock('../../../../notepad/components/lamplight/LamplightTabPanel', () => ({
-  LamplightTabPanel: () => <div data-testid="todays-lamp" />,
+  LamplightTabPanel: (props: { autoGenerate?: boolean }) => {
+    tabPanelSpy(props);
+    return <div data-testid="todays-lamp" />;
+  },
 }));
 vi.mock('../../../../notepad/components/lamplight/ConnectionCardsStrip', () => ({
   ConnectionCardsStrip: () => <div data-testid="connections" />,
@@ -33,5 +37,13 @@ describe('<LamplightMobileView />', () => {
     fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
     expect(getByTestId('connections')).toBeTruthy();
     expect(queryByTestId('todays-lamp')).toBeNull();
+  });
+
+  it("passes autoGenerate=false to the Today's Lamp panel (no auto-generate on mobile)", () => {
+    tabPanelSpy.mockClear();
+    render(<LamplightMobileView {...props} />);
+    expect(tabPanelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ autoGenerate: false }),
+    );
   });
 });

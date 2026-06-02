@@ -41,7 +41,9 @@ export function LamplightMobileView({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {segment === 'today' && <LamplightTabPanel lamplightAdapter={lamplightAdapter} />}
+        {segment === 'today' && (
+          <LamplightTabPanel lamplightAdapter={lamplightAdapter} autoGenerate={false} />
+        )}
         {segment === 'connections' &&
           (userId ? (
             <ConnectionCardsStrip
