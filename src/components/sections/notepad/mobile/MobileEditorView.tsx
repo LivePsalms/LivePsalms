@@ -1,12 +1,11 @@
 // src/components/sections/notepad/mobile/MobileEditorView.tsx
-import { MoreHorizontal, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { NotepadEditor } from '../../../../notepad/components/Editor';
 import type { Note } from '../../../../notepad/types';
 import { useKeyboardInset } from './useKeyboardInset';
 import { MobileNewNoteFab } from './MobileNewNoteFab';
 
 export interface MobileEditorViewProps {
-  onOpenDetails: () => void;
   /** Tapping the logo returns to the home page. */
   onExit: () => void;
   onAfterSave?: (note: Note) => void;
@@ -21,7 +20,6 @@ export interface MobileEditorViewProps {
 }
 
 export function MobileEditorView({
-  onOpenDetails,
   onExit,
   onAfterSave,
   onOpenAccount,
@@ -55,14 +53,6 @@ export function MobileEditorView({
           ) : (
             <User size={18} />
           )}
-        </button>
-        <button
-          aria-label="Note details"
-          onClick={onOpenDetails}
-          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-black/5"
-          style={{ color: 'var(--deep-umber)' }}
-        >
-          <MoreHorizontal size={20} />
         </button>
         </div>
       </header>
