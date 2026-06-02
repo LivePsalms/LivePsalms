@@ -23,8 +23,7 @@ const CENTER = TILE / 2;
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 
-let seq = 0;
-const nextId = () => (seq += 1);
+const nextId = () => Date.now() + Math.random();
 
 function buildParticles(): Particle[] {
   const particles: Particle[] = [];
@@ -97,7 +96,8 @@ function ParticleSpan({
       node.addEventListener('animationend', handler);
       // No cleanup needed: element is unmounted after removal, listener is GC'd.
     },
-    // particle.id is stable for the lifetime of this element; onRemove is stable.
+    // Deps [] is safe: `remove` (passed as onRemove) is a stable reference kept
+    // so by its own [] deps, and particle.id is read-only for this element's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -136,6 +136,7 @@ export const DockHomeSparkle = forwardRef<DockHomeSparkleHandle>(
 
     useImperativeHandle(ref, () => ({ burst }), [burst]);
 
+    // Keep deps [] so the particle sub-component's callback-ref eslint suppression stays valid (remove must be a stable reference).
     const remove = useCallback((id: number) => {
       setParticles((prev) => prev.filter((p) => p.id !== id));
     }, []);
