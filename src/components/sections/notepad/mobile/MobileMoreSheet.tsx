@@ -1,9 +1,13 @@
 // src/components/sections/notepad/mobile/MobileMoreSheet.tsx
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { BacklinksPanel } from '../../../../notepad/components/BacklinksPanel';
 import { InfoPanel } from '../../../../notepad/components/InfoPanel';
 import { GraphPane } from '../GraphPane';
+import { NodePeek } from './NodePeek';
+import { buildPeekData, type PeekTarget } from './node-peek-data';
+import { useNoteCollection } from '../../../../notepad/context/useNoteCollection';
+import { useReferenceGraph } from '../../../../notepad/context/useReferenceGraph';
 import { useOnlineStatus } from '../../../../notepad/hooks/useOnlineStatus';
 import { Segmented } from './Segmented';
 
@@ -12,11 +16,31 @@ type DetailSegment = 'backlinks' | 'info' | 'graph';
 export interface MobileMoreSheetProps {
   open: boolean;
   onClose: () => void;
+  onOpenNote: (id: string) => void;
 }
 
-export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
+export function MobileMoreSheet({ open, onClose, onOpenNote }: MobileMoreSheetProps) {
   const [segment, setSegment] = useState<DetailSegment>('backlinks');
+  const [peeked, setPeeked] = useState<PeekTarget | null>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const isOnline = useOnlineStatus();
+
+  const { notes } = useNoteCollection();
+  const { graph } = useReferenceGraph();
+  const peekData = useMemo(
+    () => (peeked ? buildPeekData(peeked, notes, graph) : null),
+    [peeked, notes, graph],
+  );
+
+  // Reset any open peek when the sheet closes so it doesn't linger on reopen.
+  useEffect(() => {
+    if (!open) setPeeked(null);
+  }, [open]);
+
+  const handleSegment = (next: DetailSegment) => {
+    setPeeked(null);
+    setSegment(next);
+  };
 
   if (!open) return null;
 
@@ -49,14 +73,33 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
               { value: 'graph', label: 'Graph' },
             ]}
             value={segment}
-            onChange={setSegment}
+            onChange={handleSegment}
           />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {segment === 'backlinks' && <BacklinksPanel />}
           {segment === 'info' && <InfoPanel />}
-          {segment === 'graph' && <GraphPane graphOpen expanded={false} onToggleExpand={() => {}} />}
+          {segment === 'graph' && (
+            peekData ? (
+              <NodePeek
+                data={peekData}
+                onBack={() => setPeeked(null)}
+                onOpenInEditor={(id) => { onOpenNote(id); onClose(); }}
+                onFocus={(id) => { setFocusId(id); setPeeked(null); }}
+                onPeekNote={(id) => setPeeked({ id, kind: 'note' })}
+              />
+            ) : (
+              <GraphPane
+                graphOpen
+                embedded
+                focusNodeId={focusId}
+                expanded={false}
+                onToggleExpand={() => {}}
+                onNodePeek={(n) => setPeeked({ id: n.id, kind: n.type === 'scripture' ? 'scripture' : 'note' })}
+              />
+            )
+          )}
         </div>
 
         <footer
