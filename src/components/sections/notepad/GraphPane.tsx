@@ -10,6 +10,7 @@ import {
   type NodeTypeFilters,
   type GraphSettings,
 } from '@/notepad/graph/graph-view';
+import type { GraphNode } from '@/notepad/graph/types';
 
 const NODE_COLORS: Record<string, string> = {
   scripture: '#C49A78',
@@ -29,9 +30,19 @@ interface GraphPaneProps {
   graphOpen: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /**
+   * Render for an embedded context (e.g. the mobile "More" sheet) instead of the
+   * desktop right-hand sidebar. Drops the `hidden md:flex` breakpoint hiding and
+   * the desktop flex/opacity sizing so the graph fills its parent on small screens.
+   */
+  embedded?: boolean;
+  /** Mobile/embedded only: route node taps to a peek view instead of opening the note / popover. */
+  onNodePeek?: (node: { id: string; type: GraphNode['type']; title: string }) => void;
+  /** Mobile/embedded only: center local mode on this node id (e.g. from a peek "Focus" action). */
+  focusNodeId?: string | null;
 }
 
-export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: GraphPaneProps) {
+export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedded = false, onNodePeek, focusNodeId = null }: GraphPaneProps) {
   const { notes, activeNoteId, collection } = useNoteCollection();
   const { references, scriptureNodes, graph } = useReferenceGraph();
   const openNote = collection.openNote;
@@ -41,9 +52,19 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
     [notes, references, scriptureNodes],
   );
 
+  // Kept in a ref so the memoized GraphView stays stable while always seeing the
+  // latest callback. onNodeTap returns true (handled) only when a peek handler exists.
+  const onNodePeekRef = useRef(onNodePeek);
+  onNodePeekRef.current = onNodePeek;
+
   const view = useMemo(() => new GraphView({
     onNodeOpen: (id) => openNote(id),
     devicePixelRatio: () => window.devicePixelRatio || 1,
+    onNodeTap: (n) => {
+      const cb = onNodePeekRef.current;
+      if (cb) { cb(n); return true; }
+      return false;
+    },
   }), [openNote]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,6 +96,10 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
   useEffect(() => { view.setMode(graphMode); }, [view, graphMode]);
   useEffect(() => { view.setFilters(filters); }, [view, filters]);
   useEffect(() => { view.setSettings(settings); }, [view, settings]);
+  useEffect(() => {
+    view.setFocus(focusNodeId);
+    if (focusNodeId) setGraphMode('local');
+  }, [view, focusNodeId]);
 
   // Popover state subscribed via useSyncExternalStore.
   const state = useSyncExternalStore(view.subscribe, view.getSnapshot);
@@ -86,14 +111,25 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
 
   return (
     <aside
-      className="overflow-hidden border-l flex-col hidden md:flex"
-      style={{
-        flex: expanded ? '1 1 0%' : graphOpen ? '0 0 35%' : '0 0 0px',
-        borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
-        background: 'rgba(240, 236, 232, 0.4)',
-        opacity: graphOpen ? 1 : 0,
-        transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-      }}
+      className={
+        embedded
+          ? 'overflow-hidden flex flex-col h-full'
+          : 'overflow-hidden border-l flex-col hidden md:flex'
+      }
+      style={
+        embedded
+          ? // A definite height is required so the flex-1 canvas container below
+            // resolves to a real size — the sheet parent is height-indefinite, so
+            // `h-full` alone would collapse the canvas to 0 and draw nothing.
+            { background: 'rgba(240, 236, 232, 0.4)', minHeight: '60vh' }
+          : {
+              flex: expanded ? '1 1 0%' : graphOpen ? '0 0 35%' : '0 0 0px',
+              borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
+              background: 'rgba(240, 236, 232, 0.4)',
+              opacity: graphOpen ? 1 : 0,
+              transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+            }
+      }
     >
       <div className="p-4 space-y-3 shrink-0">
         <h3 className="text-[10px] font-medium tracking-[0.2em]" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
@@ -165,9 +201,10 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          onMouseMove={(e) => view.handleMouseMove(e)}
-          onMouseDown={(e) => view.handleMouseDown(e)}
-          onMouseUp={(e) => view.handleMouseUp(e)}
+          style={{ touchAction: 'none' }}
+          onPointerDown={(e) => view.handleMouseDown(e)}
+          onPointerMove={(e) => view.handleMouseMove(e)}
+          onPointerUp={(e) => view.handleMouseUp(e)}
         />
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
@@ -201,16 +238,18 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         )}
       </div>
 
-      <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
-        <button onClick={onToggleExpand} className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors">
-          {expanded
-            ? <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
-            : <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />}
-          <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
-            {expanded ? 'COLLAPSE' : 'EXPAND'}
-          </span>
-        </button>
-      </div>
+      {!embedded && (
+        <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
+          <button onClick={onToggleExpand} className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors">
+            {expanded
+              ? <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+              : <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />}
+            <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
+              {expanded ? 'COLLAPSE' : 'EXPAND'}
+            </span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
