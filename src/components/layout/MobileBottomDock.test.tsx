@@ -319,6 +319,8 @@ describe('MobileBottomDock', () => {
   });
 
   it('fires the sparkle and still links home when the logo tile is tapped', async () => {
+    // reducedMotion must be false for the sparkle to fire
+    setMatchMedia({ mobile: true, reducedMotion: false });
     vi.resetModules();
     const { MobileBottomDock } = await import('./MobileBottomDock');
     render(
@@ -332,7 +334,7 @@ describe('MobileBottomDock', () => {
       homeLink.querySelector('[data-testid="dock-home-sparkle"]'),
     ).not.toBeNull();
     // Tapping fires a burst (particles appear) without removing the link.
-    act(() => {
+    await act(async () => {
       fireEvent.click(homeLink);
     });
     expect(homeLink.querySelectorAll('[data-particle]').length).toBeGreaterThan(0);
