@@ -750,3 +750,29 @@ describe('GraphView — onNodeTap interception', () => {
     expect(opens).toEqual(['a']);
   });
 });
+
+describe('GraphView — setFocus', () => {
+  it('local mode centers on the focus id instead of the active id', () => {
+    const { view } = attached();
+    view.setNeighborhoodFn((id) => new Set([id])); // neighborhood = just the focused node
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'scripture:x', type: 'scripture' })],
+      [],
+      'a', // activeNodeId = 'a'
+    );
+    view.setFocus('scripture:x'); // override to the scripture node
+    view.setMode('local');
+    expect(view.getSimNodes().map((n) => n.id)).toEqual(['scripture:x']);
+  });
+
+  it('clearing focus falls back to the active id', () => {
+    const { view } = attached();
+    view.setNeighborhoodFn((id) => new Set([id]));
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], 'a');
+    view.setMode('local');
+    view.setFocus('b');
+    expect(view.getSimNodes().map((n) => n.id)).toEqual(['b']);
+    view.setFocus(null);
+    expect(view.getSimNodes().map((n) => n.id)).toEqual(['a']);
+  });
+});

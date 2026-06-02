@@ -145,6 +145,7 @@ export class GraphView extends Observable<GraphViewState> {
   private settings: GraphSettings = { ...DEFAULT_SETTINGS };
   private filters: NodeTypeFilters = { ...DEFAULT_FILTERS };
   private mode: 'global' | 'local' = 'global';
+  private focusNodeId: string | null = null;
   private getNeighborhoodFn: ((id: string, depth: number) => Set<string>) | null = null;
 
   private hoveredNodeId: string | null = null;
@@ -294,13 +295,14 @@ export class GraphView extends Observable<GraphViewState> {
     }
 
     // Nodes
+    const activeId = this.effectiveActiveId();
     for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
       const isConnected = !hovered || connectedIds.has(n.id);
       const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
       const color = NODE_COLORS[n.type] ?? '#999';
 
-      if (n.id === this.activeNodeId) {
+      if (n.id === activeId) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.radius + 10, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
@@ -395,6 +397,22 @@ export class GraphView extends Observable<GraphViewState> {
   setNeighborhoodFn(fn: (id: string, depth: number) => Set<string>): void {
     this.getNeighborhoodFn = fn;
     this.rebuild();
+  }
+
+  /**
+   * Overrides the "active" node used for local-mode neighborhood filtering and
+   * the active-node highlight ring. Lets the embedded mobile graph center local
+   * mode on an arbitrary node — including a scripture node, which never appears
+   * as the collection's activeNoteId. Pass null to clear.
+   */
+  setFocus(id: string | null): void {
+    if (this.focusNodeId === id) return;
+    this.focusNodeId = id;
+    this.rebuild();
+  }
+
+  private effectiveActiveId(): string | null {
+    return this.focusNodeId ?? this.activeNodeId;
   }
 
   /** Test affordance — read sim nodes (positions, radius) without subscribing. */
@@ -622,8 +640,9 @@ export class GraphView extends Observable<GraphViewState> {
   private filterNodes(nodes: GraphNode[]): GraphNode[] {
     let filtered = nodes;
     if (this.mode === 'local') {
-      if (this.activeNodeId && this.getNeighborhoodFn) {
-        const neighborhood = this.getNeighborhoodFn(this.activeNodeId, this.settings.depth);
+      const focusId = this.effectiveActiveId();
+      if (focusId && this.getNeighborhoodFn) {
+        const neighborhood = this.getNeighborhoodFn(focusId, this.settings.depth);
         filtered = filtered.filter((n) => neighborhood.has(n.id));
       } else {
         filtered = [];
