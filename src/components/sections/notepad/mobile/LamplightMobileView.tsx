@@ -1,7 +1,7 @@
 // src/components/sections/notepad/mobile/LamplightMobileView.tsx
 import { useState } from 'react';
 import { LamplightTabPanel } from '../../../../notepad/components/lamplight/LamplightTabPanel';
-import { ConnectionCardsStrip } from '../../../../notepad/components/lamplight/ConnectionCardsStrip';
+import { ConnectionCardsPanel } from '../../../../notepad/components/lamplight/ConnectionCardsPanel';
 import type { LamplightAdapter } from '../../../../notepad/storage/lamplight-adapter';
 import type { Note } from '../../../../notepad/types';
 import { Segmented } from './Segmented';
@@ -46,13 +46,14 @@ export function LamplightMobileView({
         )}
         {segment === 'connections' &&
           (userId ? (
-            <ConnectionCardsStrip
+            <ConnectionCardsPanel
               adapter={lamplightAdapter}
               userId={userId}
               activeNote={activeNote}
               totalNoteCount={totalNoteCount}
               loadNeighborNotes={loadNeighborNotes}
               onOpenNote={onOpenNote}
+              showEmptyStates
             />
           ) : (
             <div

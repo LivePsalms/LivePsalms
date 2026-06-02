@@ -9,8 +9,12 @@ vi.mock('../../../../notepad/components/lamplight/LamplightTabPanel', () => ({
     return <div data-testid="todays-lamp" />;
   },
 }));
-vi.mock('../../../../notepad/components/lamplight/ConnectionCardsStrip', () => ({
-  ConnectionCardsStrip: () => <div data-testid="connections" />,
+const { panelSpy } = vi.hoisted(() => ({ panelSpy: vi.fn() }));
+vi.mock('../../../../notepad/components/lamplight/ConnectionCardsPanel', () => ({
+  ConnectionCardsPanel: (props: { showEmptyStates?: boolean }) => {
+    panelSpy(props);
+    return <div data-testid="connections" />;
+  },
 }));
 import { LamplightMobileView } from './LamplightMobileView';
 
@@ -44,6 +48,15 @@ describe('<LamplightMobileView />', () => {
     render(<LamplightMobileView {...props} />);
     expect(tabPanelSpy).toHaveBeenCalledWith(
       expect.objectContaining({ autoGenerate: false }),
+    );
+  });
+
+  it('renders the connections panel with showEmptyStates enabled', () => {
+    panelSpy.mockClear();
+    const { getByRole } = render(<LamplightMobileView {...props} />);
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
+    expect(panelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ showEmptyStates: true }),
     );
   });
 });
