@@ -775,4 +775,15 @@ describe('GraphView — setFocus', () => {
     view.setFocus(null);
     expect(view.getSimNodes().map((n) => n.id)).toEqual(['a']);
   });
+
+  it('focus persists across setData until explicitly cleared', () => {
+    const { view } = attached();
+    view.setNeighborhoodFn((id) => new Set([id]));
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], 'a');
+    view.setMode('local');
+    view.setFocus('b');
+    // Update data with a different activeNodeId — focus stays on 'b'.
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], 'c');
+    expect(view.getSimNodes().map((n) => n.id)).toEqual(['b']);
+  });
 });

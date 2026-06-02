@@ -344,6 +344,8 @@ export class GraphView extends Observable<GraphViewState> {
     this.currentNodes = nodes;
     this.currentEdges = edges;
     this.activeNodeId = activeNodeId;
+    // focusNodeId is intentionally NOT cleared here — callers own focus lifetime
+    // and clear it explicitly via setFocus(null). Focus persists across setData.
     this.rebuild();
   }
 
