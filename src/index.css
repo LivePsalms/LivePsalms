@@ -1092,3 +1092,106 @@ input[type="email"]::placeholder {
     transition: none !important;
   }
 }
+
+/* ── Legal pages (Privacy Policy, Terms & Conditions) ───────────────── */
+.legal-prose {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: hsl(var(--mersi-dark) / 0.85);
+}
+
+.legal-prose h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  line-height: 1.2;
+  color: hsl(var(--mersi-dark));
+  margin: 2.5rem 0 1rem;
+}
+
+.legal-prose h3 {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: hsl(var(--mersi-dark));
+  margin: 1.75rem 0 0.75rem;
+}
+
+.legal-prose p {
+  margin: 0 0 1rem;
+}
+
+.legal-prose ul,
+.legal-prose ol {
+  margin: 0 0 1rem;
+  padding-left: 1.4rem;
+}
+
+.legal-prose li {
+  margin: 0 0 0.4rem;
+}
+
+.legal-prose a {
+  color: hsl(var(--mersi-orange));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.legal-prose a:hover {
+  opacity: 0.7;
+}
+
+.legal-prose strong {
+  font-weight: 600;
+  color: hsl(var(--mersi-dark));
+}
+
+.legal-prose blockquote {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid hsl(var(--mersi-orange) / 0.6);
+  background: hsl(var(--mersi-dark) / 0.04);
+  border-radius: 0 6px 6px 0;
+}
+
+.legal-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-prose hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--mersi-dark) / 0.12);
+  margin: 2.5rem 0;
+}
+
+/* Tables: wrapped for horizontal scroll on narrow viewports */
+.legal-prose .table-wrap {
+  overflow-x: auto;
+  margin: 0 0 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 520px;
+}
+
+.legal-prose th,
+.legal-prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid hsl(var(--mersi-dark) / 0.15);
+}
+
+.legal-prose th {
+  font-weight: 600;
+  color: hsl(var(--mersi-dark));
+  background: hsl(var(--mersi-dark) / 0.05);
+}
