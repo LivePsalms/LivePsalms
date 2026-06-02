@@ -24,6 +24,8 @@ import { useNoteLinkPopup } from '../editor/use-note-link-popup';
 import { useVerseTooltip } from '../editor/use-verse-tooltip';
 import { useJournalTheme } from '../hooks/use-journal-theme';
 import { formatTag } from '../utils/tags';
+import { useAccountProfile } from '../../auth/context/useAccountProfile';
+import { emptyStateMessage } from '../utils/empty-state-message';
 import { JOURNAL_THEMES } from '../types';
 import type { JournalTheme, Note } from '../types';
 import '../journal-themes.css';
@@ -65,6 +67,7 @@ export function NotepadEditor({
   const updateNote = actions.updateNote;
   const openNote = collection.openNote;
   const [journalTheme, setJournalTheme] = useJournalTheme();
+  const { profile } = useAccountProfile();
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
   const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
@@ -133,7 +136,7 @@ export function NotepadEditor({
           fontSize: '0.95rem',
         }}
       >
-        Select a note or create a new one
+        {emptyStateMessage(profile?.fullName)}
       </div>
     );
   }
