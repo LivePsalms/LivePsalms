@@ -1135,7 +1135,8 @@ input[type="email"]::placeholder {
 }
 
 .legal-prose a {
-  color: hsl(var(--mersi-orange));
+  color: #6f4e37;
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.2s ease;
@@ -1153,7 +1154,7 @@ input[type="email"]::placeholder {
 .legal-prose blockquote {
   margin: 1.5rem 0;
   padding: 1rem 1.25rem;
-  border-left: 3px solid hsl(var(--mersi-orange) / 0.6);
+  border-left: 3px solid rgba(111, 78, 55, 0.6);
   background: hsl(var(--mersi-dark) / 0.04);
   border-radius: 0 6px 6px 0;
 }
