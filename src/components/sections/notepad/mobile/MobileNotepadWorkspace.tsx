@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { useAuthSession } from '@/auth/context/useAuthSession';
+import { useAccountProfile } from '@/auth/context/useAccountProfile';
 import { useNotepadActions } from '../../../../notepad/context/useNotepadActions';
 import { useNotepadFirstLoad } from '../../../../notepad/first-load/useNotepadFirstLoad';
 import { SearchDialog } from '../../../../notepad/components/SearchDialog';
@@ -12,6 +13,8 @@ import { MobileNotesView } from './MobileNotesView';
 import { MobileEditorView } from './MobileEditorView';
 import { LamplightMobileView } from './LamplightMobileView';
 import { MobileMoreSheet } from './MobileMoreSheet';
+import { MobileAuthModal } from './MobileAuthModal';
+import { MobileAccountSheet } from './MobileAccountSheet';
 import { useMobileWorkspaceModel } from './useMobileWorkspaceModel';
 import { useHasConnections } from './useHasConnections';
 import type { MobileTab } from './types';
@@ -20,11 +23,28 @@ export function MobileNotepadWorkspace() {
   const navigate = useNavigate();
   const model = useMobileWorkspaceModel();
   const actions = useNotepadActions();
-  const { adapter } = useAuthSession();
+  const { adapter, session } = useAuthSession();
+  const { profile } = useAccountProfile();
   const { showMigration, dismissMigration } = useNotepadFirstLoad();
 
   const [tab, setTab] = useState<MobileTab>('notes');
   const [moreOpen, setMoreOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+
+  const openAccount = useCallback(() => {
+    if (model.user) {
+      setAccountOpen(true);
+    } else {
+      setAuthOpen(true);
+    }
+  }, [model.user]);
+
+  const handleSignOut = useCallback(async () => {
+    setAccountOpen(false);
+    await session.signOut();
+    navigate('/notepad');
+  }, [session, navigate]);
 
   const { openNote, createNote } = model;
 
@@ -86,10 +106,18 @@ export function MobileNotepadWorkspace() {
             onOpenSearch={openSearch}
             onNewNote={handleNewNote}
             onOpenNote={handleOpenNote}
+            onOpenAccount={openAccount}
+            avatarUrl={profile?.avatarUrl ?? null}
           />
         )}
         {tab === 'editor' && (
-          <MobileEditorView onOpenDetails={() => setMoreOpen(true)} onAfterSave={model.onAfterSave} />
+          <MobileEditorView
+            onOpenDetails={() => setMoreOpen(true)}
+            onExit={() => navigate('/')}
+            onAfterSave={model.onAfterSave}
+            onOpenAccount={openAccount}
+            avatarUrl={profile?.avatarUrl ?? null}
+          />
         )}
         {tab === 'lamplight' && model.lamplightAdapter && (
           <LamplightMobileView
@@ -114,6 +142,18 @@ export function MobileNotepadWorkspace() {
       <MobileTabBar active={tab} onSelect={handleSelectTab} lamplightHasConnections={hasConnections} />
 
       <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+
+      <MobileAuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <MobileAccountSheet
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        onProfile={() => {
+          setAccountOpen(false);
+          navigate('/profile');
+        }}
+        onSignOut={handleSignOut}
+      />
 
       <SearchDialog />
       <MigrationDialog

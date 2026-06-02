@@ -14,13 +14,13 @@ afterEach(cleanup);
 
 describe('<MobileEditorView />', () => {
   it('renders the editor with bottom toolbar placement', () => {
-    const { getByTestId } = render(<MobileEditorView onOpenDetails={vi.fn()} />);
+    const { getByTestId } = render(<MobileEditorView onOpenDetails={vi.fn()} onExit={vi.fn()} />);
     expect(getByTestId('editor').getAttribute('data-placement')).toBe('bottom');
   });
 
   it('opens details when the ⋯ button is tapped', () => {
     const onOpenDetails = vi.fn();
-    const { getByLabelText } = render(<MobileEditorView onOpenDetails={onOpenDetails} />);
+    const { getByLabelText } = render(<MobileEditorView onOpenDetails={onOpenDetails} onExit={vi.fn()} />);
     fireEvent.click(getByLabelText('Note details'));
     expect(onOpenDetails).toHaveBeenCalledOnce();
   });

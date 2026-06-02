@@ -30,7 +30,7 @@ describe('<MobileNotesView />', () => {
     const { getByLabelText } = render(
       <MobileNotesView {...props} onExit={onExit} onOpenSearch={onOpenSearch} onNewNote={onNewNote} />,
     );
-    fireEvent.click(getByLabelText('Back to Psalms'));
+    fireEvent.click(getByLabelText('Home'));
     fireEvent.click(getByLabelText('Search notes'));
     fireEvent.click(getByLabelText('New note'));
     expect(onExit).toHaveBeenCalledOnce();

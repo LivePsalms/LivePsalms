@@ -26,7 +26,10 @@ vi.mock('../../../../notepad/components/MigrationDialog', () => ({ MigrationDial
 vi.mock('../../../../notepad/first-load/useNotepadFirstLoad', () => ({
   useNotepadFirstLoad: () => ({ showMigration: false, dismissMigration: vi.fn() }),
 }));
-vi.mock('@/auth/context/useAuthSession', () => ({ useAuthSession: () => ({ adapter: {} }) }));
+vi.mock('@/auth/context/useAuthSession', () => ({
+  useAuthSession: () => ({ adapter: {}, session: { signOut: vi.fn() } }),
+}));
+vi.mock('@/auth/context/useAccountProfile', () => ({ useAccountProfile: () => ({ profile: null }) }));
 vi.mock('../../../../notepad/context/useNotepadActions', () => ({ useNotepadActions: () => ({ init: vi.fn() }) }));
 
 import { MobileNotepadWorkspace } from './MobileNotepadWorkspace';
