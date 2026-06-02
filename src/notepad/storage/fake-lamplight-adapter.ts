@@ -135,6 +135,11 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     | 'not_neighbor'
     | 'network'
     | null = null;
+  private failNextGetConnectionNeighbors = false;
+
+  __failNextGetConnectionNeighbors(): void {
+    this.failNextGetConnectionNeighbors = true;
+  }
 
   __seedConnectionNeighbors(sourceNoteId: string, neighbors: ConnectionNeighbor[]): void {
     this.connectionNeighbors.set(sourceNoteId, neighbors);
@@ -159,6 +164,10 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     k = 5,
     minSimilarity?: number,
   ): Promise<ConnectionNeighbor[]> {
+    if (this.failNextGetConnectionNeighbors) {
+      this.failNextGetConnectionNeighbors = false;
+      throw new Error('simulated network failure');
+    }
     const all = this.connectionNeighbors.get(sourceNoteId) ?? [];
     const filtered =
       typeof minSimilarity === 'number'

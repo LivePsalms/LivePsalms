@@ -9,8 +9,12 @@ vi.mock('../../../../notepad/components/lamplight/LamplightTabPanel', () => ({
     return <div data-testid="todays-lamp" />;
   },
 }));
-vi.mock('../../../../notepad/components/lamplight/ConnectionCardsStrip', () => ({
-  ConnectionCardsStrip: () => <div data-testid="connections" />,
+const { panelSpy } = vi.hoisted(() => ({ panelSpy: vi.fn() }));
+vi.mock('../../../../notepad/components/lamplight/ConnectionCardsPanel', () => ({
+  ConnectionCardsPanel: (props: { showEmptyStates?: boolean }) => {
+    panelSpy(props);
+    return <div data-testid="connections" />;
+  },
 }));
 import { LamplightMobileView } from './LamplightMobileView';
 
@@ -45,5 +49,23 @@ describe('<LamplightMobileView />', () => {
     expect(tabPanelSpy).toHaveBeenCalledWith(
       expect.objectContaining({ autoGenerate: false }),
     );
+  });
+
+  it('renders the connections panel with showEmptyStates enabled', () => {
+    panelSpy.mockClear();
+    const { getByRole } = render(<LamplightMobileView {...props} />);
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
+    expect(panelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ showEmptyStates: true }),
+    );
+  });
+
+  it('shows the sign-in fallback on the Connections segment when signed out', () => {
+    const { getByRole, getByText, queryByTestId } = render(
+      <LamplightMobileView {...props} userId={null} />,
+    );
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
+    expect(getByText('Sign in to see connections.')).toBeInTheDocument();
+    expect(queryByTestId('connections')).toBeNull();
   });
 });

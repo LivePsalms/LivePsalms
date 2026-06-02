@@ -30,6 +30,7 @@ describe('useHasConnections', () => {
       state: { phase: 'ready', cards: [{ relatedNoteId: 'x' }] } as never,
       expandCard: vi.fn(),
       retryWhy: vi.fn(),
+      retry: vi.fn(),
     });
     const { getByTestId } = render(<Probe />);
     expect(getByTestId('has').textContent).toBe('true');
@@ -40,6 +41,7 @@ describe('useHasConnections', () => {
       state: { phase: 'no_connections' } as never,
       expandCard: vi.fn(),
       retryWhy: vi.fn(),
+      retry: vi.fn(),
     });
     const { getByTestId } = render(<Probe />);
     expect(getByTestId('has').textContent).toBe('false');
