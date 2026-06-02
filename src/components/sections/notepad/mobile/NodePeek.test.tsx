@@ -69,4 +69,12 @@ describe('<NodePeek /> — scripture', () => {
     fireEvent.click(screen.getByRole('button', { name: /Shepherd/ }));
     expect(onPeekNote).toHaveBeenCalledWith('n1');
   });
+
+  it('Focus fires onFocus with the scripture id; Back fires onBack', () => {
+    const { onFocus, onBack } = setup(scriptureData);
+    fireEvent.click(screen.getByRole('button', { name: /focus in graph/i }));
+    expect(onFocus).toHaveBeenCalledWith('scripture:ps-23-1');
+    fireEvent.click(screen.getByRole('button', { name: /back to graph/i }));
+    expect(onBack).toHaveBeenCalledOnce();
+  });
 });
