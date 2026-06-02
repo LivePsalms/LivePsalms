@@ -26,6 +26,8 @@ export function MobileNotepadWorkspace() {
   const [tab, setTab] = useState<MobileTab>('notes');
   const [moreOpen, setMoreOpen] = useState(false);
 
+  const { openNote, createNote } = model;
+
   const hasConnections = useHasConnections({
     adapter: model.lamplightAdapter,
     userId: model.user?.id ?? null,
@@ -49,16 +51,16 @@ export function MobileNotepadWorkspace() {
 
   const handleOpenNote = useCallback(
     (id: string) => {
-      model.openNote(id);
+      openNote(id);
       setTab('editor');
     },
-    [model],
+    [openNote],
   );
 
   const handleNewNote = useCallback(() => {
-    model.createNote('root', 'devotion');
+    createNote('root', 'devotion');
     setTab('editor');
-  }, [model]);
+  }, [createNote]);
 
   return (
     <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--plaster)' }}>

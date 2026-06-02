@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, cleanup } from '@testing-library/react';
+import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/auth/context/useAuthSession', () => ({
@@ -45,14 +46,16 @@ describe('useMobileWorkspaceModel', () => {
   });
 
   it('provides a loadNeighborNotes that filters the note list by id', async () => {
-    let result: unknown;
+    let captured: ((ids: string[]) => Promise<{ id: string }[]>) | undefined;
     function Probe2() {
       const m = useMobileWorkspaceModel();
-      result = m.loadNeighborNotes;
+      useEffect(() => {
+        captured = m.loadNeighborNotes as (ids: string[]) => Promise<{ id: string }[]>;
+      }, [m.loadNeighborNotes]);
       return null;
     }
     render(<Probe2 />);
-    const notes = await (result as (ids: string[]) => Promise<{ id: string }[]>)(['n2']);
+    const notes = await captured!(['n2']);
     expect(notes).toEqual([{ id: 'n2' }]);
   });
 });

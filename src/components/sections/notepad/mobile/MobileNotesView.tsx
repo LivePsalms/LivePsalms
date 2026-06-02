@@ -11,7 +11,7 @@ export interface MobileNotesViewProps {
 
 export function MobileNotesView({ onExit, onOpenSearch, onNewNote, onOpenNote }: MobileNotesViewProps) {
   return (
-    <div className="flex flex-col h-full min-h-0" style={{ background: 'var(--plaster)' }}>
+    <div className="relative flex flex-col h-full min-h-0" style={{ background: 'var(--plaster)' }}>
       <header
         className="shrink-0 flex items-center justify-between px-3"
         style={{ height: 48, borderBottom: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}

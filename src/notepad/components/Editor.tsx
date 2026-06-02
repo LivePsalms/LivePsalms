@@ -149,7 +149,7 @@ export function NotepadEditor({
       {editor && (
         <div
           data-toolbar-placement={toolbarPlacement}
-          className="shrink-0 flex items-center gap-0.5 px-3 overflow-x-auto"
+          className="shrink-0 flex items-center gap-0.5 px-3"
           style={{
             height: 40,
             background: 'rgba(240, 236, 232, 0.97)',
