@@ -317,4 +317,24 @@ describe('MobileBottomDock', () => {
     const dock = screen.getByTestId('mobile-bottom-dock');
     expect(dock.className).toContain('motion-reduce:transition-none');
   });
+
+  it('fires the sparkle and still links home when the logo tile is tapped', async () => {
+    vi.resetModules();
+    const { MobileBottomDock } = await import('./MobileBottomDock');
+    render(
+      <MemoryRouter><MobileBottomDock /></MemoryRouter>,
+    );
+    const homeLink = screen.getByLabelText('Home');
+    // Navigation target is unchanged.
+    expect(homeLink.getAttribute('href')).toBe('/');
+    // Sparkle layer is mounted inside the tile.
+    expect(
+      homeLink.querySelector('[data-testid="dock-home-sparkle"]'),
+    ).not.toBeNull();
+    // Tapping fires a burst (particles appear) without removing the link.
+    act(() => {
+      fireEvent.click(homeLink);
+    });
+    expect(homeLink.querySelectorAll('[data-particle]').length).toBeGreaterThan(0);
+  });
 });

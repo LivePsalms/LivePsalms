@@ -1,9 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { navItems, NAV_TRIGGER_LABELS } from '@/data/projects';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
 import { useAdaptiveDockTheme, type DockTheme } from '@/hooks/use-adaptive-dock-theme';
+import { DockHomeSparkle, type DockHomeSparkleHandle } from './DockHomeSparkle';
 
 interface MobileBottomDockProps {
   onNavTrigger?: () => void;
@@ -25,6 +26,7 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
   const location = useLocation();
   const [panelOpen, setPanelOpenRaw] = useState(false);
   const [socialExpanded, setSocialExpanded] = useState(false);
+  const sparkleRef = useRef<DockHomeSparkleHandle>(null);
   // Adaptive cream-on-dark inversion is scoped to the notepad landing —
   // it's the only route designed with alternating dark/light sections
   // (hero → garden → CTA). Every other route stays locked to the cream
@@ -113,13 +115,15 @@ export function MobileBottomDock({ onNavTrigger }: MobileBottomDockProps) {
           <Link
             to="/"
             aria-label="Home"
-            className="dock-home h-11 w-11 rounded-xl inline-flex items-center justify-center"
+            className="dock-home relative overflow-visible h-11 w-11 rounded-xl inline-flex items-center justify-center"
+            onClick={() => sparkleRef.current?.burst()}
           >
             <img
               src="/logo-icon.png"
               alt=""
               className="h-6 w-6 object-contain"
             />
+            <DockHomeSparkle ref={sparkleRef} />
           </Link>
           <button
             type="button"
