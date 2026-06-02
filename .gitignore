@@ -20,3 +20,6 @@ dist
 public/Logo-motion/my-video/snapshots/
 .tmp-debug/
 .tmp/
+
+# Superpowers brainstorming companion artifacts
+.superpowers/
