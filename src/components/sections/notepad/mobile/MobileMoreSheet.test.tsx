@@ -25,11 +25,13 @@ vi.mock('./node-peek-data', () => ({
 
 // NodePeek mock surfaces the callbacks as buttons.
 vi.mock('./NodePeek', () => ({
-  NodePeek: (props: { data: { id: string }; onBack: () => void; onOpenInEditor: (id: string) => void; onFocus: (id: string) => void }) => (
+  NodePeek: (props: { data: { id: string }; onBack: () => void; onOpenInEditor: (id: string) => void; onFocus: (id: string) => void; onPeekNote: (id: string) => void }) => (
     <div data-testid="peek">
+      <span data-testid="peek-id">{props.data.id}</span>
       <button data-testid="peek-open" onClick={() => props.onOpenInEditor(props.data.id)}>open</button>
       <button data-testid="peek-focus" onClick={() => props.onFocus(props.data.id)}>focus</button>
       <button data-testid="peek-back" onClick={props.onBack}>back</button>
+      <button data-testid="peek-repeek" onClick={() => props.onPeekNote('n2')}>repeek</button>
     </div>
   ),
 }));
@@ -90,6 +92,15 @@ describe('<MobileMoreSheet />', () => {
     fireEvent.click(getByTestId('peek-focus'));
     expect(getByTestId('graph')).toBeTruthy();
     expect(queryByTestId('peek')).toBeNull();
+  });
+
+  it('verse→note re-peek: tapping a referenced note re-targets the peek', () => {
+    const { getByRole, getByTestId } = open();
+    fireEvent.click(getByRole('button', { name: 'Graph' }));
+    fireEvent.click(getByTestId('graph'));
+    expect(getByTestId('peek-id').textContent).toBe('n1');
+    fireEvent.click(getByTestId('peek-repeek'));
+    expect(getByTestId('peek-id').textContent).toBe('n2');
   });
 
   it('switching segments away from Graph clears an open peek', () => {

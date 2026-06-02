@@ -32,9 +32,13 @@ export function MobileMoreSheet({ open, onClose, onOpenNote }: MobileMoreSheetPr
     [peeked, notes, graph],
   );
 
-  // Reset any open peek when the sheet closes so it doesn't linger on reopen.
+  // Reset peek AND focus when the sheet closes, so a reopened sheet starts on a
+  // clean global graph rather than a stale peek or local-focus from last time.
   useEffect(() => {
-    if (!open) setPeeked(null);
+    if (!open) {
+      setPeeked(null);
+      setFocusId(null);
+    }
   }, [open]);
 
   const handleSegment = (next: DetailSegment) => {
