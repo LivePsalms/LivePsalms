@@ -522,6 +522,24 @@ img {
 }
 
 /* ============================================
+   DOCK LOGO TAP SPARKLE
+   Ring + rising embers fired from the mobile
+   bottom-dock logo tile. Per-particle drift is
+   supplied via inline --ex / --ey custom props.
+   ============================================ */
+
+@keyframes dock-sparkle-ring {
+  0%   { transform: scale(0.3); opacity: 0.8; }
+  100% { transform: scale(4);   opacity: 0; }
+}
+
+@keyframes dock-ember {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  16%  { opacity: 1; }
+  100% { transform: translate(var(--ex, 0), var(--ey, -44px)); opacity: 0; }
+}
+
+/* ============================================
    JOURNEY ARROW — gentle float animation
    ============================================ */
 
