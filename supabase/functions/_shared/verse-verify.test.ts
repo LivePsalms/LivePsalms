@@ -15,6 +15,12 @@ describe('parseRefToIds', () => {
   it('expands a range', () => {
     expect(parseRefToIds('John 3:16-17')).toEqual(['jhn.3.16', 'jhn.3.17']);
   });
+  it('expands an en-dash range (common in OCR output)', () => {
+    expect(parseRefToIds('John 3:16–17')).toEqual(['jhn.3.16', 'jhn.3.17']);
+  });
+  it('parses a multi-word, numbered book', () => {
+    expect(parseRefToIds('1 John 3:16')).toEqual(['1jn.3.16']);
+  });
   it('returns null on unknown book', () => {
     expect(parseRefToIds('Gandalf 1:1')).toBeNull();
   });

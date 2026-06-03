@@ -32,7 +32,9 @@ export const OSIS_BOOK_MAP: Record<string, string> = {
   '3 John': '3jn', 'Jude': 'jud', 'Revelation': 'rev',
 };
 
-// Accept "Psalm" (singular) as an alias of the canonical "Psalms".
+// Accept "Psalm" (singular) as an alias of the canonical "Psalms". This map is
+// exact-case only; the case-insensitive scan in canonicalBook() handles all
+// other casing variants (e.g. OCR output like "psalm 23:1").
 const BOOK_ALIASES: Record<string, string> = { 'Psalm': 'Psalms' };
 
 const REF_RE = /^(.+?)\s+(\d{1,3}):(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?$/;
