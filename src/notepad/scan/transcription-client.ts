@@ -51,14 +51,17 @@ export async function signedScanUrl(imageKey: string, expiresInSec = 600): Promi
 export async function discardScan(imageKey: string, transcriptionId: string): Promise<void> {
   if (!supabase) return;
   const path = imageKey.replace(/^note-scans\//, '');
-  await supabase.storage.from('note-scans').remove([path]);
-  await supabase.from('note_transcriptions').delete().eq('id', transcriptionId);
+  const { error: storageErr } = await supabase.storage.from('note-scans').remove([path]);
+  if (storageErr) throw new Error(`image delete failed: ${storageErr.message}`);
+  const { error: dbErr } = await supabase.from('note_transcriptions').delete().eq('id', transcriptionId);
+  if (dbErr) throw new Error(`row delete failed: ${dbErr.message}`);
 }
 
 /** On save: link the provenance row to the created note. */
 export async function markTranscriptionSaved(transcriptionId: string, noteId: string): Promise<void> {
   if (!supabase) return;
-  await supabase.from('note_transcriptions')
+  const { error } = await supabase.from('note_transcriptions')
     .update({ note_id: noteId, status: 'saved', updated_at: new Date().toISOString() })
     .eq('id', transcriptionId);
+  if (error) console.warn('[transcription] failed to link provenance row', error.message);
 }

@@ -8,6 +8,9 @@ import { extractVerseRefsFromNoteContent } from '../_shared/note-signals.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
 import { handleTranscribe } from './handler.ts';
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const CLAUDE_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -56,7 +59,10 @@ serve(async (req) => {
         const { data, error } = await supabase.storage.from('note-scans').download(key.replace(/^note-scans\//, ''));
         if (error || !data) throw new Error(`download failed: ${error?.message ?? 'no data'}`);
         const buf = new Uint8Array(await data.arrayBuffer());
-        return { base64: encodeBase64(buf), mimeType: mimeFromKey(key, data.type) };
+        if (buf.byteLength > MAX_IMAGE_BYTES) throw new Error('image exceeds 10 MB limit');
+        const mime = mimeFromKey(key, data.type);
+        if (!CLAUDE_IMAGE_MIME.has(mime)) throw new Error(`unsupported image type: ${mime}`);
+        return { base64: encodeBase64(buf), mimeType: mime };
       },
       insertRow: async (row) => {
         const { data, error } = await supabase.from('note_transcriptions').insert(row).select('id').single();
