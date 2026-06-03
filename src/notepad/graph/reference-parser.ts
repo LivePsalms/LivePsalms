@@ -107,7 +107,7 @@ export interface VerseResult {
 // and as the prefix of each row id (`{osis}.{chapter}.{verse}`). Kept in sync
 // with scripts/ingest-bsb.ts BOOK_ABBREV; differs only in "Psalms" vs "Psalm"
 // because the parser's canonical name is the plural form.
-const BOOK_TO_OSIS: Record<string, string> = {
+export const BOOK_TO_OSIS: Record<string, string> = {
   'Genesis': 'gen', 'Exodus': 'exo', 'Leviticus': 'lev', 'Numbers': 'num',
   'Deuteronomy': 'deu', 'Joshua': 'jos', 'Judges': 'jdg', 'Ruth': 'rut',
   '1 Samuel': '1sa', '2 Samuel': '2sa', '1 Kings': '1ki', '2 Kings': '2ki',
