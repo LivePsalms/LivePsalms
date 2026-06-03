@@ -17,6 +17,8 @@ export interface ConnectionCardsPanelProps {
   onOpenNote: (noteId: string) => void;
   /** When true, non-ready phases render a contextual empty state instead of nothing. */
   showEmptyStates?: boolean;
+  /** 'strip' = horizontal inline strip (desktop). 'stack' = vertical full-width cards (mobile). */
+  layout?: 'strip' | 'stack';
 }
 
 export function ConnectionCardsPanel({
@@ -27,6 +29,7 @@ export function ConnectionCardsPanel({
   loadNeighborNotes,
   onOpenNote,
   showEmptyStates = false,
+  layout = 'strip',
 }: ConnectionCardsPanelProps) {
   // Pull the server-authoritative similarity threshold so the panel never
   // renders a card the edge function will refuse to explain. While the fetch
@@ -84,51 +87,61 @@ export function ConnectionCardsPanel({
     }
   };
 
+  const isStack = layout === 'stack';
+
+  const renderWhy = (card: typeof cards[number]) => {
+    if (card.why.phase === 'loading') {
+      return (
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-xs"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          Lighting…
+        </p>
+      );
+    }
+    if (card.why.phase === 'shown') {
+      return (
+        <p
+          className="text-sm italic"
+          style={{ color: 'var(--deep-umber)', fontFamily: 'Cormorant Garamond, serif' }}
+          data-cached={card.why.cached}
+        >
+          {prefixWhyWithName(card.why.text, firstName)}
+        </p>
+      );
+    }
+    if (card.why.phase === 'error') {
+      return (
+        <div className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+          <p className="mb-1">Couldn't read this connection.</p>
+          <button
+            onClick={() => retryWhy(card.relatedNoteId)}
+            className="underline cursor-pointer"
+            style={{ color: 'var(--deep-umber)' }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <section
       aria-label="Connection cards"
       className="border-t px-4 py-3"
       style={{ borderColor: 'var(--pale-stone)', background: 'var(--plaster)' }}
     >
-      {activeCard && (
+      {!isStack && activeCard && (
         <div
           className="mb-2 border rounded px-3 py-2"
           style={{ borderColor: 'var(--pale-stone)', background: 'var(--alabaster)' }}
         >
-          {activeCard.why.phase === 'loading' && (
-            <p
-              role="status"
-              aria-live="polite"
-              className="text-xs"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-            >
-              Lighting…
-            </p>
-          )}
-          {activeCard.why.phase === 'shown' && (
-            <p
-              className="text-sm italic"
-              style={{ color: 'var(--deep-umber)', fontFamily: 'Cormorant Garamond, serif' }}
-              data-cached={activeCard.why.cached}
-            >
-              {prefixWhyWithName(activeCard.why.text, firstName)}
-            </p>
-          )}
-          {activeCard.why.phase === 'error' && (
-            <div
-              className="text-xs"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-            >
-              <p className="mb-1">Couldn't read this connection.</p>
-              <button
-                onClick={() => retryWhy(activeCard.relatedNoteId)}
-                className="underline cursor-pointer"
-                style={{ color: 'var(--deep-umber)' }}
-              >
-                Try again
-              </button>
-            </div>
-          )}
+          {renderWhy(activeCard)}
         </div>
       )}
       <p
@@ -137,7 +150,10 @@ export function ConnectionCardsPanel({
       >
         Connection Cards
       </p>
-      <div className="flex gap-2 overflow-x-auto pb-1" role="list">
+      <div
+        className={isStack ? 'flex flex-col gap-2' : 'flex gap-2 overflow-x-auto pb-1'}
+        role="list"
+      >
         {cards.map((c) => {
           const signals = [...c.sharedTags.map((t) => `#${t}`), ...c.sharedVerseRefs];
           const isActive = activeChipId === c.relatedNoteId;
@@ -145,7 +161,7 @@ export function ConnectionCardsPanel({
             <div
               key={c.relatedNoteId}
               role="listitem"
-              className="flex-none w-[220px] border rounded"
+              className={`${isStack ? 'w-full' : 'flex-none w-[220px]'} border rounded`}
               style={{
                 borderColor: isActive ? 'var(--deep-umber)' : 'var(--pale-stone)',
                 background: 'var(--alabaster)',
@@ -166,20 +182,32 @@ export function ConnectionCardsPanel({
                   </p>
                 )}
                 <p
-                  className="text-xs truncate"
-                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                  className={isStack ? 'text-base' : 'text-xs truncate'}
+                  style={{
+                    color: 'var(--deep-umber)',
+                    fontFamily: isStack ? 'Cormorant Garamond, serif' : 'Outfit, sans-serif',
+                  }}
                 >
                   {c.relatedNoteTitle}
                 </p>
               </button>
+              {isStack && isActive && (
+                <div className="px-3 pb-2">{renderWhy(c)}</div>
+              )}
               <button
                 aria-label={`Open note: ${c.relatedNoteTitle}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenNote(c.relatedNoteId);
                 }}
-                className="block w-full text-right px-3 pb-1 text-xs cursor-pointer hover:underline"
-                style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                className={`block w-full text-right px-3 text-xs cursor-pointer hover:underline ${
+                  isStack ? 'border-t pt-2 pb-2 mt-1' : 'pb-1'
+                }`}
+                style={{
+                  color: 'var(--deep-umber)',
+                  fontFamily: 'Outfit, sans-serif',
+                  ...(isStack ? { borderColor: 'var(--pale-stone)' } : {}),
+                }}
               >
                 Open ↗
               </button>

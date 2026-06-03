@@ -60,6 +60,15 @@ describe('<LamplightMobileView />', () => {
     );
   });
 
+  it('renders the connections panel with the vertical stack layout', () => {
+    panelSpy.mockClear();
+    const { getByRole } = render(<LamplightMobileView {...props} />);
+    fireEvent.click(getByRole('button', { name: 'Connection Cards' }));
+    expect(panelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ layout: 'stack' }),
+    );
+  });
+
   it('shows the sign-in fallback on the Connections segment when signed out', () => {
     const { getByRole, getByText, queryByTestId } = render(
       <LamplightMobileView {...props} userId={null} />,

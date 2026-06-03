@@ -54,6 +54,7 @@ export function LamplightMobileView({
               loadNeighborNotes={loadNeighborNotes}
               onOpenNote={onOpenNote}
               showEmptyStates
+              layout="stack"
             />
           ) : (
             <div
