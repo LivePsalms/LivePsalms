@@ -1,5 +1,6 @@
 // supabase/functions/transcribe-note/index.ts
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { serviceClient } from '../_shared/supabase.ts';
 import { createAnthropicAdapter } from '../_shared/anthropic.ts';
 import { verifyVerseRefs } from '../_shared/verse-verify.ts';
@@ -14,6 +15,17 @@ const CORS_HEADERS: Record<string, string> = {
 };
 const jsonResp = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, 'content-type': 'application/json' } });
+
+// Prefer the stored blob's content-type; fall back to the key's extension so a
+// PNG/WebP isn't mislabeled as JPEG (which Claude would reject).
+function mimeFromKey(key: string, blobType: string): string {
+  if (blobType && blobType !== 'application/octet-stream') return blobType;
+  const ext = key.split('.').pop()?.toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'heic' || ext === 'heif') return 'image/heic';
+  return 'image/jpeg';
+}
 
 // extractVerseRefsFromNoteContent expects TipTap JSON; wrap plain transcription
 // text into a one-paragraph doc so we can reuse the canonical extractor.
@@ -44,9 +56,7 @@ serve(async (req) => {
         const { data, error } = await supabase.storage.from('note-scans').download(key.replace(/^note-scans\//, ''));
         if (error || !data) throw new Error(`download failed: ${error?.message ?? 'no data'}`);
         const buf = new Uint8Array(await data.arrayBuffer());
-        let binary = '';
-        for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
-        return { base64: btoa(binary), mimeType: data.type || 'image/jpeg' };
+        return { base64: encodeBase64(buf), mimeType: mimeFromKey(key, data.type) };
       },
       insertRow: async (row) => {
         const { data, error } = await supabase.from('note_transcriptions').insert(row).select('id').single();

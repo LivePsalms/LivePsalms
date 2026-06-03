@@ -65,4 +65,21 @@ describe('handleTranscribe', () => {
     expect(res.status).toBe(200);
     expect(res.body.verseFlags).toEqual([]);
   });
+
+  it('rejects a path-traversal image_key', async () => {
+    const { d } = deps();
+    const res = await handleTranscribe(d as never, { user_id: 'u1', image_key: 'note-scans/u1/../u2/x.jpg' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 502 and logs an error when the LLM throws', async () => {
+    const calls: any[] = [];
+    const { d } = deps({
+      llm: { generate: async () => { throw new Error('timeout'); } },
+      recordUsage: async (row: any) => { calls.push(row); },
+    });
+    const res = await handleTranscribe(d as never, { user_id: 'u1', image_key: 'note-scans/u1/x.jpg' });
+    expect(res.status).toBe(502);
+    expect(calls.some((c) => c.status === 'error')).toBe(true);
+  });
 });

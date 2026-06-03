@@ -27,7 +27,7 @@ export interface TranscribeDeps {
 }
 
 export interface TranscribeBody { user_id?: string; image_key?: string }
-export interface HandlerResponse { status: number; body: Record<string, unknown> }
+export interface HandlerResponse { status: number; body: TranscribeResult | { error: string } }
 
 export async function handleTranscribe(
   deps: TranscribeDeps,
@@ -39,8 +39,12 @@ export async function handleTranscribe(
   if (typeof body.image_key !== 'string') {
     return { status: 400, body: { error: 'bad image_key' } };
   }
-  // IDOR guard: the key MUST live under note-scans/{user_id}/.
-  if (!body.image_key.startsWith(`note-scans/${body.user_id}/`)) {
+  // IDOR guard: key must be exactly note-scans/{user_id}/{single-safe-filename}.
+  // A plain startsWith() is not path-aware — `..` segments would escape the
+  // user's folder, and the service-role client bypasses storage RLS.
+  const prefix = `note-scans/${body.user_id}/`;
+  const rest = body.image_key.startsWith(prefix) ? body.image_key.slice(prefix.length) : null;
+  if (rest === null || !/^[A-Za-z0-9._-]+$/.test(rest)) {
     return { status: 403, body: { error: 'forbidden image_key' } };
   }
 
@@ -63,6 +67,9 @@ export async function handleTranscribe(
         ],
       }],
     });
+    if (!out.parsed || typeof out.parsed !== 'object') {
+      throw new Error('empty transcription result');
+    }
     parsed = out.parsed;
     modelUsed = out.modelUsed;
     tokensIn = out.promptTokens;
@@ -88,16 +95,26 @@ export async function handleTranscribe(
     verseFlags = [];
   }
 
-  const transcription_id = await deps.insertRow({
-    user_id: body.user_id,
-    image_key: body.image_key,
-    raw_transcription: transcription,
-    confidence,
-    uncertain_words: uncertainWords,
-    verse_flags: verseFlags,
-    model: modelUsed,
-    status: 'transcribed',
-  });
+  let transcription_id: string;
+  try {
+    transcription_id = await deps.insertRow({
+      user_id: body.user_id,
+      image_key: body.image_key,
+      raw_transcription: transcription,
+      confidence,
+      uncertain_words: uncertainWords,
+      verse_flags: verseFlags,
+      model: modelUsed,
+      status: 'transcribed',
+    });
+  } catch (err) {
+    await deps.recordUsage({
+      user_id: body.user_id, model: modelUsed, artifact_kind: 'note_transcription',
+      tokens_in: tokensIn, tokens_out: tokensOut, status: 'error',
+      error_code: err instanceof Error ? err.message.slice(0, 80) : 'insert_error',
+    });
+    return { status: 500, body: { error: 'failed to save transcription' } };
+  }
 
   await deps.recordUsage({
     user_id: body.user_id, model: modelUsed, artifact_kind: 'note_transcription',
