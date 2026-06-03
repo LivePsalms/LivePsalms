@@ -761,3 +761,15 @@
   opacity: 0.6;
   pointer-events: none;
 }
+
+
+/* =====================================================================
+   SCAN / TRANSCRIPTION REVIEW — Uncertain-word highlight decoration
+   Applied by the ProseMirror decoration plugin in uncertain-decoration.ts
+   ===================================================================== */
+
+.ProseMirror .uncertain-word {
+  background: rgba(224, 123, 167, 0.22);
+  border-bottom: 1px dashed rgba(224, 123, 167, 0.8);
+  border-radius: 2px;
+}
