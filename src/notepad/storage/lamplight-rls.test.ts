@@ -34,7 +34,7 @@ maybeDescribe('Lamplight RLS isolation (integration)', () => {
 
   it("user B cannot read user A's lamplight_settings", async () => {
     const adapterA = new SupabaseLamplightAdapter(userA.client);
-    await adapterA.upsertSettings(userA.userId, { enabled: true, voicePreference: 'Father' });
+    await adapterA.upsertSettings(userA.userId, { enabled: true });
 
     const adapterB = new SupabaseLamplightAdapter(userB.client);
     const leaked = await adapterB.getSettings(userA.userId);

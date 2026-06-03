@@ -4,8 +4,6 @@ import type {
   LamplightSettings,
   LamplightEntitlement,
   PromoConfig,
-  LamplightVoice,
-  LamplightTradition,
   LamplightTier,
   LamplightEntitlementSource,
   DailyDevotionGenerateResult,
@@ -59,8 +57,6 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
     const payload: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
     if (patch.enabled !== undefined) payload.enabled = patch.enabled;
     if (patch.quietMode !== undefined) payload.quiet_mode = patch.quietMode;
-    if (patch.voicePreference !== undefined) payload.voice_preference = patch.voicePreference;
-    if (patch.traditionHint !== undefined) payload.tradition_hint = patch.traditionHint;
     if (patch.inlineSuggestions !== undefined) payload.inline_suggestions = patch.inlineSuggestions;
     if (patch.weeklyEmail !== undefined) payload.weekly_email = patch.weeklyEmail;
     if (patch.consentDecidedAt !== undefined) payload.consent_decided_at = patch.consentDecidedAt;
@@ -249,8 +245,6 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
       userId: row.user_id as string,
       enabled: row.enabled as boolean,
       quietMode: row.quiet_mode as boolean,
-      voicePreference: row.voice_preference as LamplightVoice,
-      traditionHint: row.tradition_hint as LamplightTradition,
       inlineSuggestions: row.inline_suggestions as boolean,
       weeklyEmail: row.weekly_email as boolean,
       consentDecidedAt: (row.consent_decided_at as string) ?? null,

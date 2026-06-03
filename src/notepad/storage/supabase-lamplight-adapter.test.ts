@@ -6,8 +6,6 @@ interface SettingsRow {
   user_id: string;
   enabled: boolean;
   quiet_mode: boolean;
-  voice_preference: string;
-  tradition_hint: string;
   inline_suggestions: boolean;
   weekly_email: boolean;
   consent_decided_at: string | null;
@@ -82,8 +80,6 @@ function makeClient(backend: Backend): SupabaseClient {
                       user_id: userId,
                       enabled: false,
                       quiet_mode: false,
-                      voice_preference: 'Lord',
-                      tradition_hint: 'unspecified',
                       inline_suggestions: true,
                       weekly_email: false,
                       consent_decided_at: null,
@@ -140,8 +136,6 @@ describe('SupabaseLamplightAdapter — settings', () => {
       user_id: 'user-1',
       enabled: true,
       quiet_mode: false,
-      voice_preference: 'Father',
-      tradition_hint: 'evangelical',
       inline_suggestions: true,
       weekly_email: false,
       consent_decided_at: '2026-05-25T00:00:00Z',
@@ -153,8 +147,6 @@ describe('SupabaseLamplightAdapter — settings', () => {
       userId: 'user-1',
       enabled: true,
       quietMode: false,
-      voicePreference: 'Father',
-      traditionHint: 'evangelical',
       inlineSuggestions: true,
       weeklyEmail: false,
       consentDecidedAt: '2026-05-25T00:00:00Z',
@@ -166,13 +158,10 @@ describe('SupabaseLamplightAdapter — settings', () => {
   it('upserts settings with defaults on first write', async () => {
     const s = await adapter.upsertSettings('user-1', {
       enabled: true,
-      voicePreference: 'Abba',
       consentDecidedAt: '2026-05-25T00:00:00Z',
     });
     expect(s.userId).toBe('user-1');
     expect(s.enabled).toBe(true);
-    expect(s.voicePreference).toBe('Abba');
-    expect(s.traditionHint).toBe('unspecified');
     expect(s.consentDecidedAt).toBe('2026-05-25T00:00:00Z');
     expect(backend.settings).toHaveLength(1);
   });
@@ -180,7 +169,6 @@ describe('SupabaseLamplightAdapter — settings', () => {
   it('deletes settings + entitlements rows for the user via deleteAllUserData', async () => {
     backend.settings.push({
       user_id: 'user-1', enabled: true, quiet_mode: false,
-      voice_preference: 'Lord', tradition_hint: 'unspecified',
       inline_suggestions: true, weekly_email: false,
       consent_decided_at: null,
       created_at: '2026-05-25T00:00:00Z', updated_at: '2026-05-25T00:00:00Z',
