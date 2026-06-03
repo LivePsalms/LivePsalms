@@ -8,17 +8,16 @@ import { locateUncertainSpans, uncertainDecorationPlugin, uncertainPluginKey } f
 import { linkNotesByVerses } from '../import/document-importer';
 import type { TranscriptionResult } from '../scan/types';
 import type { Note } from '../types';
-import type { StorageAdapter } from '../storage/adapter';
 
 interface Props {
   result: TranscriptionResult;
   folderId: string;
-  adapter: StorageAdapter;
+  persistNotes: (notes: Note[]) => Promise<void>;
   onSaved: (note: Note) => void;
   onDiscarded: () => void;
 }
 
-export function TranscriptionReview({ result, folderId, adapter, onSaved, onDiscarded }: Props) {
+export function TranscriptionReview({ result, folderId, persistNotes, onSaved, onDiscarded }: Props) {
   const [title, setTitle] = useState(`Scanned note · ${new Date().toLocaleDateString()}`);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -64,9 +63,8 @@ export function TranscriptionReview({ result, folderId, adapter, onSaved, onDisc
     return () => { active = false; };
   }, [result.imageKey]);
 
-  // FIX 3b & 4a: save editor JSON (not flattened getText) and only reset saving
-  // on error (on success the parent unmounts this component so a finally would
-  // setState-after-unmount).
+  // Route save through the full import pipeline (importNote + refetchAll + syncAll)
+  // so the note appears in the sidebar without a reload.
   async function handleSave() {
     if (!editor) return;
     setSaving(true);
@@ -79,9 +77,10 @@ export function TranscriptionReview({ result, folderId, adapter, onSaved, onDisc
         autoDetectVerses: true,
       });
       const [linked] = linkNotesByVerses([note]);
-      const saved = await adapter.importNote(linked ?? note);
-      await markTranscriptionSaved(result.transcription_id, saved.id);
-      onSaved(saved);
+      const toSave = linked ?? note;
+      await persistNotes([toSave]);                 // runs importNote + refetchAll + syncAll
+      await markTranscriptionSaved(result.transcription_id, toSave.id); // id is preserved by importNote
+      onSaved(toSave);
     } catch {
       toast.error('Failed to save note — please try again.');
       setSaving(false);
