@@ -1,0 +1,68 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { UsernameSetup } from './UsernameSetup';
+
+afterEach(cleanup);
+
+function setup(overrides: Partial<React.ComponentProps<typeof UsernameSetup>> = {}) {
+  const checkAvailable = overrides.checkAvailable ?? vi.fn().mockResolvedValue(true);
+  const claim = overrides.claim ?? vi.fn().mockResolvedValue({ ok: true });
+  const onClaimed = overrides.onClaimed ?? vi.fn();
+  render(
+    <UsernameSetup
+      checkAvailable={checkAvailable}
+      claim={claim}
+      onClaimed={onClaimed}
+      debounceMs={0}
+      {...overrides}
+    />,
+  );
+  return { checkAvailable, claim, onClaimed };
+}
+
+describe('UsernameSetup', () => {
+  it('disables submit and shows a hint for too-short input', () => {
+    setup();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ab' } });
+    expect(screen.getByText(/at least 3/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim/i })).toBeDisabled();
+  });
+
+  it('shows availability and enables submit for a free valid name', async () => {
+    const { checkAvailable } = setup({ checkAvailable: vi.fn().mockResolvedValue(true) });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'natalie' } });
+    await waitFor(() => expect(checkAvailable).toHaveBeenCalledWith('natalie'));
+    expect(await screen.findByText(/available/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim/i })).toBeEnabled();
+  });
+
+  it('shows taken and disables submit when the name is taken', async () => {
+    setup({ checkAvailable: vi.fn().mockResolvedValue(false) });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'natalie' } });
+    expect(await screen.findByText(/taken/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim/i })).toBeDisabled();
+  });
+
+  it('calls onClaimed with the normalized name on successful submit', async () => {
+    const { onClaimed } = setup({
+      checkAvailable: vi.fn().mockResolvedValue(true),
+      claim: vi.fn().mockResolvedValue({ ok: true }),
+    });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Natalie' } });
+    await screen.findByText(/available/i);
+    fireEvent.click(screen.getByRole('button', { name: /claim/i }));
+    await waitFor(() => expect(onClaimed).toHaveBeenCalledWith('natalie'));
+  });
+
+  it('surfaces a race when the name is taken at submit time', async () => {
+    setup({
+      checkAvailable: vi.fn().mockResolvedValue(true),
+      claim: vi.fn().mockResolvedValue({ ok: false, reason: 'taken' }),
+    });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'natalie' } });
+    await screen.findByText(/available/i);
+    fireEvent.click(screen.getByRole('button', { name: /claim/i }));
+    expect(await screen.findByText(/just taken/i)).toBeInTheDocument();
+  });
+});
