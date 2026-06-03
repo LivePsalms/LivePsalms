@@ -13,6 +13,7 @@ interface AuthListener {
 
 interface ProfileRow {
   id: string;
+  username: string | null;
   full_name: string;
   date_of_birth: string | null;
   avatar_url: string | null;
@@ -25,6 +26,10 @@ interface ProfileRow {
 class FakeProfilesTable {
   rows: ProfileRow[] = [];
   fetchError: { message: string } | null = null;
+  updateError: { code?: string; message: string } | null = null;
+  rpcError: { message: string } | null = null;
+  usernameAvailable = true;
+  rpcCalls: Array<{ name: string; params: unknown }> = [];
   uploadCalls: Array<{ path: string; upsert: boolean }> = [];
   removeCalls: string[][] = [];
   updateCalls: Array<{ id: string; updates: Record<string, unknown> }> = [];
@@ -55,6 +60,7 @@ function makeFakeClient(table: FakeProfilesTable): { client: SupabaseClient; aut
           return {
             async eq(_col: string, id: string) {
               table.updateCalls.push({ id, updates });
+              if (table.updateError) return { error: table.updateError };
               const row = table.rows.find((r) => r.id === id);
               if (row) Object.assign(row, updates);
               return { error: null };
@@ -71,6 +77,14 @@ function makeFakeClient(table: FakeProfilesTable): { client: SupabaseClient; aut
           };
         },
       };
+    },
+    async rpc(name: string, params: unknown) {
+      table.rpcCalls.push({ name, params });
+      if (name === 'check_username_available') {
+        if (table.rpcError) return { data: null, error: table.rpcError };
+        return { data: table.usernameAvailable, error: null };
+      }
+      throw new Error(`Unexpected rpc: ${name}`);
     },
     storage: {
       from(_bucket: string) {
@@ -144,6 +158,7 @@ class FakeOAuthProbe {
 function makeRow(overrides: Partial<ProfileRow> = {}): ProfileRow {
   return {
     id: 'user-1',
+    username: null,
     full_name: 'Alice Doe',
     date_of_birth: null,
     avatar_url: null,
@@ -328,5 +343,85 @@ describe('AccountProfile — mutations', () => {
     profile.init();
     await profile.refreshProfile();
     expect(profile.getSnapshot().profileStatus).toBe('missing');
+  });
+});
+
+describe('AccountProfile — username', () => {
+  let local: StorageAdapter;
+  let table: FakeProfilesTable;
+
+  beforeEach(() => {
+    local = new FakeStorageAdapter();
+    table = new FakeProfilesTable();
+  });
+
+  async function signedInProfile() {
+    const { client, auth } = makeFakeClient(table);
+    table.rows.push(makeRow({ id: 'user-1' }));
+    const session = new AuthSession(client, local, new FakeOAuthProbe());
+    const profile = new AccountProfile(client, session);
+    session.init();
+    profile.init();
+    await flush();
+    auth.emit('SIGNED_IN', { user: makeUser('user-1') });
+    await flush();
+    return { profile };
+  }
+
+  it('checkUsernameAvailable returns true when the RPC says available', async () => {
+    const { profile } = await signedInProfile();
+    table.usernameAvailable = true;
+    await expect(profile.checkUsernameAvailable('Natalie')).resolves.toBe(true);
+    expect(table.rpcCalls[0]).toEqual({
+      name: 'check_username_available',
+      params: { candidate: 'natalie' },
+    });
+  });
+
+  it('checkUsernameAvailable returns false when the RPC says taken', async () => {
+    const { profile } = await signedInProfile();
+    table.usernameAvailable = false;
+    await expect(profile.checkUsernameAvailable('natalie')).resolves.toBe(false);
+  });
+
+  it('checkUsernameAvailable throws when the RPC errors', async () => {
+    const { profile } = await signedInProfile();
+    table.rpcError = { message: 'boom' };
+    await expect(profile.checkUsernameAvailable('natalie')).rejects.toBeDefined();
+  });
+
+  it('setUsername writes the normalized username and refetches', async () => {
+    const { profile } = await signedInProfile();
+    const result = await profile.setUsername('  Natalie  ');
+    expect(result).toEqual({ ok: true });
+    expect(table.updateCalls[0]).toEqual({ id: 'user-1', updates: { username: 'natalie' } });
+    expect(profile.getSnapshot().profile?.username).toBe('natalie');
+  });
+
+  it('setUsername maps a unique-violation to { ok: false, reason: "taken" }', async () => {
+    const { profile } = await signedInProfile();
+    table.updateError = { code: '23505', message: 'duplicate key' };
+    await expect(profile.setUsername('natalie')).resolves.toEqual({ ok: false, reason: 'taken' });
+  });
+
+  it('setUsername rejects invalid format without touching the DB', async () => {
+    const { profile } = await signedInProfile();
+    await expect(profile.setUsername('no')).resolves.toEqual({ ok: false, reason: 'invalid' });
+    expect(table.updateCalls).toHaveLength(0);
+  });
+
+  it('setUsername throws when not authenticated', async () => {
+    const { client } = makeFakeClient(table);
+    const session = new AuthSession(client, local, new FakeOAuthProbe());
+    const profile = new AccountProfile(client, session);
+    session.init();
+    profile.init();
+    await expect(profile.setUsername('natalie')).rejects.toThrow(/not authenticated/i);
+  });
+
+  it('checkUsernameAvailable returns false for invalid input without calling the RPC', async () => {
+    const { profile } = await signedInProfile();
+    await expect(profile.checkUsernameAvailable('no')).resolves.toBe(false);
+    expect(table.rpcCalls).toHaveLength(0);
   });
 });
