@@ -92,7 +92,7 @@ describe('ConnectionCardsPanel layout="stack"', () => {
       expect(screen.getByText('Both notes circle the same wilderness motif.')).toBeInTheDocument(),
     );
 
-    const item = screen.getByRole('listitem');
+    const [item] = screen.getAllByRole('listitem');
     expect(
       within(item).getByText('Both notes circle the same wilderness motif.'),
     ).toBeInTheDocument();
