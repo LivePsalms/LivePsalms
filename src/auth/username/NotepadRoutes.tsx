@@ -1,15 +1,17 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { Notepad } from '@/components/sections/Notepad';
+import { HeroLoadingOverlay } from '@/components/sections/HeroLoadingOverlay';
 import { useUsernameGate } from './username-gate';
 import { UsernameClaim } from './UsernameClaim';
 import { normalizeUsername } from './username-rules';
 
+/**
+ * While the username gate resolves (e.g. after a full page refresh on the
+ * notes route), show the app's heartbeat loading animation rather than a bare
+ * "Loading…" text screen, matching the loading visuals used everywhere else.
+ */
 function NotepadGateSpinner() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-mersi-dark/60">Loading…</p>
-    </div>
-  );
+  return <HeroLoadingOverlay active />;
 }
 
 /** /notepad/notes — legacy entry. Signed-out users stay here (local mode). */
