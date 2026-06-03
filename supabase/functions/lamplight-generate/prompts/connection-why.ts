@@ -12,7 +12,6 @@ export const CONNECTION_WHY_PROMPT = {
     '- Describe — do not advise. No "you should…", no "consider…", no "remember…".',
     '- Quote nothing verbatim from either note. Reference is fine; transcription is not.',
     '- If the shared signal is a Scripture reference, name it gently.',
-    '- Mirror the user\'s voice preference for divine names: use "{{voice_preference}}".',
     '',
     "You inherit the voice fragment's prohibitions — no prophetic claims, no streak language,",
     'no interpretation of contested passages beyond plain reading.',

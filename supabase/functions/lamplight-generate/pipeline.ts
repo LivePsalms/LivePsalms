@@ -36,8 +36,6 @@ export interface SmokeTestPassage {
 export interface SmokeTestContext {
   notes: SmokeTestNote[];
   passages: SmokeTestPassage[];
-  voicePreference: string;
-  traditionHint: string;
   allowedNoteIds: Set<string>;
   allowedVerseRefs: Set<string>;
   rerankUsed: boolean;
@@ -89,7 +87,6 @@ export async function runSmokeTestPipeline(args: {
     const system = composeSystem({
       base: LAMPLIGHT_SYSTEM_FRAGMENT,
       artifact: SMOKE_TEST_PROMPT.system,
-      voicePreference: ctx.voicePreference,
       stricter,
     });
 

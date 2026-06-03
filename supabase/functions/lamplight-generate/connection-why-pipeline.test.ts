@@ -11,7 +11,6 @@ function makeCtx(over: Partial<ConnectionWhyContext> = {}): ConnectionWhyContext
     source: { id: 'note-1', title: 'A', plaintext: 'wilderness fasting...' },
     related: { id: 'note-2', title: 'B', plaintext: 'wilderness exile...' },
     similarity: 0.91,
-    voicePreference: 'Lord',
     compositeHash: 'abc123',
     sharedTags: ['wilderness'],
     sharedVerseRefs: [],
@@ -206,17 +205,16 @@ describe('runConnectionWhyPipeline', () => {
     if (result.ok) expect(result.attempts).toBe(2);
   });
 
-  it('voice fragment composed in system prompt with token substituted', async () => {
+  it('voice fragment is composed in system prompt without a voice_preference token', async () => {
     const captured: string[] = [];
     const llm = makeLLM([{ why: 'wilderness theme.' }], captured);
     await runConnectionWhyPipeline({
       llm,
       supabase: makeSupabase({}) as unknown as Parameters<typeof runConnectionWhyPipeline>[0]['supabase'],
-      ctx: makeCtx({ voicePreference: 'Father' }),
+      ctx: makeCtx({}),
     });
     const sys = captured[0];
     expect(sys).toContain('Lamplight');
-    expect(sys).toContain('Father');
     expect(sys).not.toContain('{{voice_preference}}');
   });
 });

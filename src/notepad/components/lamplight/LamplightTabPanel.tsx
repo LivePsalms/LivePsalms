@@ -43,11 +43,9 @@ export function LamplightTabPanel({ lamplightAdapter, autoGenerate = true }: Lam
   if (settingsState.settings === null) {
     return (
       <ConsentCard
-        onTurnOn={({ voicePreference, traditionHint }) =>
+        onTurnOn={() =>
           settingsState.upsert({
             enabled: true,
-            voicePreference,
-            traditionHint,
             consentDecidedAt: new Date().toISOString(),
           })
         }
@@ -76,8 +74,6 @@ export function LamplightTabPanel({ lamplightAdapter, autoGenerate = true }: Lam
       adapter={lamplightAdapter}
       userId={user.id}
       localDate={localDate}
-      voicePreference={settingsState.settings.voicePreference}
-      traditionHint={settingsState.settings.traditionHint}
       firstName={firstName}
       autoGenerate={autoGenerate}
     />

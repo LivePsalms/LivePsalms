@@ -9,8 +9,6 @@ function makeCtx(overrides: Partial<SmokeTestContext> = {}): SmokeTestContext {
       source_id: 'psa.23.4', text: 'Even though I walk through the valley of the shadow of death…',
       ref: 'Psalm 23:4', metadata: { book: 'Psalm', chapter: 23 },
     }],
-    voicePreference: 'Lord',
-    traditionHint: 'unspecified',
     allowedNoteIds: new Set(['note-1']),
     allowedVerseRefs: new Set(['Psalm 23:4']),
     rerankUsed: false,

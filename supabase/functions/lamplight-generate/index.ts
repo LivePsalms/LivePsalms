@@ -81,7 +81,7 @@ async function handleGenerate(req: Request): Promise<Response> {
   const supabase = serviceClient();
   const { data: settings, error: sErr } = await supabase
     .from('lamplight_settings')
-    .select('enabled, voice_preference, tradition_hint')
+    .select('enabled')
     .eq('user_id', body.user_id)
     .maybeSingle();
   if (sErr) return jsonResp({ error: sErr.message }, 500);
@@ -90,12 +90,10 @@ async function handleGenerate(req: Request): Promise<Response> {
   const voyageDeps: VoyageDeps = { apiKey: voyageKey, fetch };
   const rerankEnabled = Deno.env.get('RERANK_ENABLED') === 'true';
   const llm = createAnthropicAdapter({ apiKey: anthropicKey, fetch });
-  const voicePreference = (settings.voice_preference as string) ?? 'Lord';
-  const traditionHint = (settings.tradition_hint as string) ?? 'unspecified';
 
   if (body.kind === 'smoke_test') {
     const ctx = await buildSmokeTestContext(supabase, {
-      userId: body.user_id, voicePreference, traditionHint, voyageDeps, rerankEnabled,
+      userId: body.user_id, voyageDeps, rerankEnabled,
     });
     const result = await runSmokeTestPipeline({ llm, ctx });
     return jsonResp(result);
@@ -108,7 +106,7 @@ async function handleGenerate(req: Request): Promise<Response> {
     const localDate = body.local_date;
     const userId = body.user_id;
     const ctx = await buildDailyDevotionContext(supabase, {
-      userId, localDate, voicePreference, traditionHint, voyageDeps, rerankEnabled,
+      userId, localDate, voyageDeps, rerankEnabled,
     });
     try {
       const result = await runDailyDevotionPipeline({
@@ -143,7 +141,6 @@ async function handleGenerate(req: Request): Promise<Response> {
       userId,
       sourceNoteId: body.source_note_id,
       relatedNoteId: body.related_note_id,
-      voicePreference,
       minSimilarity,
     });
     if (ctxResult.kind === 'no_embedding') {
@@ -205,7 +202,7 @@ function jsonResp(body: unknown, status = 200) {
 // ── Smoke-test context builder (unchanged from sub-project 3) ────────────
 async function buildSmokeTestContext(
   supabase: SupabaseClient,
-  args: { userId: string; voicePreference: string; traditionHint: string; voyageDeps: VoyageDeps; rerankEnabled: boolean },
+  args: { userId: string; voyageDeps: VoyageDeps; rerankEnabled: boolean },
 ): Promise<SmokeTestContext | null> {
   const { data: noteRows, error: nErr } = await supabase
     .from('notes')
@@ -256,8 +253,6 @@ async function buildSmokeTestContext(
 
   return {
     notes, passages,
-    voicePreference: args.voicePreference,
-    traditionHint: args.traditionHint,
     allowedNoteIds: new Set(notes.map(n => n.id)),
     allowedVerseRefs: new Set(passages.map(p => p.ref)),
     rerankUsed: args.rerankEnabled && passages.length > 0,
@@ -267,7 +262,7 @@ async function buildSmokeTestContext(
 // ── Daily devotion context builder ───────────────────────────────────────
 async function buildDailyDevotionContext(
   supabase: SupabaseClient,
-  args: { userId: string; localDate: string; voicePreference: string; traditionHint: string; voyageDeps: VoyageDeps; rerankEnabled: boolean },
+  args: { userId: string; localDate: string; voyageDeps: VoyageDeps; rerankEnabled: boolean },
 ): Promise<DailyDevotionContext | null> {
   const { data: noteRows, error: nErr } = await supabase
     .from('notes')
@@ -329,8 +324,6 @@ async function buildDailyDevotionContext(
 
   return {
     notes, passages,
-    voicePreference: args.voicePreference,
-    traditionHint: args.traditionHint,
     localDate: args.localDate,
     firstName,
     allowedNoteIds: new Set(notes.map(n => n.id)),
@@ -378,7 +371,6 @@ async function buildConnectionWhyContext(
     userId: string;
     sourceNoteId: string;
     relatedNoteId: string;
-    voicePreference: string;
     minSimilarity: number;
   },
 ): Promise<BuildConnectionWhyContextResult> {
@@ -469,7 +461,6 @@ async function buildConnectionWhyContext(
         plaintext: relatedPlaintext,
       },
       similarity: currentNeighbor.similarity,
-      voicePreference: args.voicePreference,
       compositeHash,
       sharedTags,
       sharedVerseRefs,

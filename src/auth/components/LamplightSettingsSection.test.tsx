@@ -29,16 +29,6 @@ describe('LamplightSettingsSection', () => {
     });
   });
 
-  it('updates voice preference via the dropdown', async () => {
-    await adapter.upsertSettings('user-1', { enabled: true });
-    render(<LamplightSettingsSection adapter={adapter} userId="user-1" />);
-    await waitFor(() => screen.getByLabelText(/voice preference/i));
-    fireEvent.change(screen.getByLabelText(/voice preference/i), { target: { value: 'Abba' } });
-    await waitFor(() => {
-      expect(adapter.settings.get('user-1')?.voicePreference).toBe('Abba');
-    });
-  });
-
   it('opens confirm + calls deleteAllUserData when Forget is confirmed', async () => {
     await adapter.upsertSettings('user-1', { enabled: true });
     render(<LamplightSettingsSection adapter={adapter} userId="user-1" />);

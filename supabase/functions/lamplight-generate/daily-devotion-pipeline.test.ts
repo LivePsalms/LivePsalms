@@ -12,8 +12,6 @@ function makeCtx(overrides: Partial<DailyDevotionContext> = {}): DailyDevotionCo
       ref: 'Psalm 23:4',
       metadata: { book: 'Psalm', chapter: 23 },
     }],
-    voicePreference: 'Lord',
-    traditionHint: 'unspecified',
     localDate: '2026-05-27',
     firstName: null,
     allowedNoteIds: new Set(['note-1']),

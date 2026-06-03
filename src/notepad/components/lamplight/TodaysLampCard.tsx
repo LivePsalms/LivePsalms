@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
 import { useTodaysLamp } from '../../hooks/useTodaysLamp';
-import type { LamplightAdapter, LamplightVoice, LamplightTradition } from '../../storage/lamplight-adapter';
+import type { LamplightAdapter } from '../../storage/lamplight-adapter';
 import type { DailyDevotion } from '../../storage/lamplight-artifacts';
 import { TodaysLampLoading } from './TodaysLampLoading';
 import { TodaysLampError } from './TodaysLampError';
@@ -10,14 +9,12 @@ export interface TodaysLampCardProps {
   adapter: LamplightAdapter;
   userId: string;
   localDate: string;
-  voicePreference: LamplightVoice;
-  traditionHint: LamplightTradition;
   firstName: string | null;
   autoGenerate?: boolean;
 }
 
 export function TodaysLampCard({
-  adapter, userId, localDate, voicePreference, traditionHint, firstName, autoGenerate = true,
+  adapter, userId, localDate, firstName, autoGenerate = true,
 }: TodaysLampCardProps) {
   const { state, start, retry } = useTodaysLamp({ adapter, userId, localDate, autoGenerate });
 
@@ -29,8 +26,6 @@ export function TodaysLampCard({
     <Devotion
       artifact={state.artifact}
       localDate={localDate}
-      voicePreference={voicePreference}
-      traditionHint={traditionHint}
     />
   );
 }
@@ -38,10 +33,8 @@ export function TodaysLampCard({
 function Devotion(props: {
   artifact: DailyDevotion;
   localDate: string;
-  voicePreference: LamplightVoice;
-  traditionHint: LamplightTradition;
 }) {
-  const { artifact, localDate, voicePreference, traditionHint } = props;
+  const { artifact, localDate } = props;
   return (
     <div
       className="px-6 py-6 max-w-[640px] mx-auto"
@@ -108,19 +101,6 @@ function Devotion(props: {
             <li key={`${c.note_id}-${i}`}>{c.reason}</li>
           ))}
         </ul>
-      </div>
-
-      <div
-        className="flex items-center gap-3 text-[11px]"
-        style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif', opacity: 0.7 }}
-      >
-        <span>Voice: {voicePreference}</span>
-        <span aria-hidden>·</span>
-        <span>Tradition: {traditionHint}</span>
-        <span aria-hidden>·</span>
-        <Link to="/profile" className="underline" style={{ color: 'var(--deep-umber)' }}>
-          Edit preferences →
-        </Link>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import { TodaysLampCard, formatLocalDate } from './TodaysLampCard';
 import { FakeLamplightAdapter } from '../../storage/fake-lamplight-adapter';
 import type { DailyDevotion } from '../../storage/lamplight-artifacts';
@@ -14,17 +13,13 @@ function renderCard(
 ) {
   const { autoGenerate = true, firstName = null } = overrides;
   return render(
-    <MemoryRouter>
-      <TodaysLampCard
-        adapter={adapter}
-        userId="user-1"
-        localDate="2026-05-27"
-        voicePreference="Lord"
-        traditionHint="unspecified"
-        firstName={firstName}
-        autoGenerate={autoGenerate}
-      />
-    </MemoryRouter>,
+    <TodaysLampCard
+      adapter={adapter}
+      userId="user-1"
+      localDate="2026-05-27"
+      firstName={firstName}
+      autoGenerate={autoGenerate}
+    />,
   );
 }
 
@@ -51,16 +46,6 @@ describe('TodaysLampCard', () => {
     expect(screen.getByText(/What part of this verse/)).toBeInTheDocument();
     expect(screen.getByText(/recurring rest/)).toBeInTheDocument();
     expect(screen.getByText(/evening anxiety/)).toBeInTheDocument();
-  });
-
-  it('renders the voice/tradition footer + edit-prefs link', async () => {
-    const adapter = new FakeLamplightAdapter();
-    adapter.__seedDailyDevotion('user-1', '2026-05-27', devotion);
-    renderCard(adapter);
-    await waitFor(() => expect(screen.getByText(/A quiet greeting/)).toBeInTheDocument());
-    expect(screen.getByText(/Voice: Lord/)).toBeInTheDocument();
-    expect(screen.getByText(/Tradition: unspecified/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Edit preferences/i })).toHaveAttribute('href', '/profile');
   });
 
   it('formatLocalDate is timezone-safe across boundary months', () => {

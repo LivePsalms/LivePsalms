@@ -3,12 +3,6 @@
 // (tests). This file is intentionally narrow — sub-projects 2-5 will extend
 // it; keep it free of implementation to minimise merge churn.
 
-export type LamplightVoice = 'Lord' | 'Father' | 'Abba' | 'Jesus';
-export type LamplightTradition =
-  | 'evangelical'
-  | 'catholic'
-  | 'orthodox'
-  | 'unspecified';
 export type LamplightTier = 'plus' | 'lite' | 'none';
 export type LamplightEntitlementSource =
   | 'promo'
@@ -19,8 +13,6 @@ export interface LamplightSettings {
   userId: string;
   enabled: boolean;
   quietMode: boolean;
-  voicePreference: LamplightVoice;
-  traditionHint: LamplightTradition;
   inlineSuggestions: boolean;
   weeklyEmail: boolean;
   consentDecidedAt: string | null;

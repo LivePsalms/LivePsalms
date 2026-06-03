@@ -20,21 +20,19 @@ describe('useLamplightSettings', () => {
   });
 
   it('returns existing settings when the row exists', async () => {
-    await adapter.upsertSettings('user-1', { enabled: true, voicePreference: 'Father' });
+    await adapter.upsertSettings('user-1', { enabled: true });
     const { result } = renderHook(() => useLamplightSettings({ adapter, userId: 'user-1' }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.settings?.enabled).toBe(true);
-    expect(result.current.settings?.voicePreference).toBe('Father');
   });
 
   it('upsert mutates the row and updates state', async () => {
     const { result } = renderHook(() => useLamplightSettings({ adapter, userId: 'user-1' }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => {
-      await result.current.upsert({ enabled: true, voicePreference: 'Abba' });
+      await result.current.upsert({ enabled: true });
     });
     expect(result.current.settings?.enabled).toBe(true);
-    expect(result.current.settings?.voicePreference).toBe('Abba');
   });
 
   it('deleteAll removes the row and resets settings to null', async () => {

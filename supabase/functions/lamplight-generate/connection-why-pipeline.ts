@@ -28,7 +28,6 @@ export interface ConnectionWhyContext {
   source: { id: string; title: string; plaintext: string };
   related: { id: string; title: string; plaintext: string };
   similarity: number;
-  voicePreference: string;
   compositeHash: string;
   sharedTags: string[];
   sharedVerseRefs: string[];
@@ -112,7 +111,6 @@ export async function runConnectionWhyPipeline(args: {
     const system = composeSystem({
       base: LAMPLIGHT_SYSTEM_FRAGMENT,
       artifact: CONNECTION_WHY_PROMPT.system,
-      voicePreference: ctx.voicePreference,
       stricter,
     });
 

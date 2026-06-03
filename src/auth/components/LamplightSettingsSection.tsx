@@ -12,8 +12,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import type {
   LamplightAdapter,
-  LamplightVoice,
-  LamplightTradition,
 } from '@/notepad/storage/lamplight-adapter';
 import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
 import { EntitlementBlock } from './EntitlementBlock';
@@ -23,9 +21,6 @@ export interface LamplightSettingsSectionProps {
   adapter: LamplightAdapter;
   userId: string;
 }
-
-const VOICES: LamplightVoice[] = ['Lord', 'Father', 'Abba', 'Jesus'];
-const TRADITIONS: LamplightTradition[] = ['evangelical', 'catholic', 'orthodox', 'unspecified'];
 
 export function LamplightSettingsSection({ adapter, userId }: LamplightSettingsSectionProps) {
   const { settings, upsert, deleteAll, isLoading } = useLamplightSettings({ adapter, userId });
@@ -64,9 +59,6 @@ export function LamplightSettingsSection({ adapter, userId }: LamplightSettingsS
   }
 
   const enabled = settings?.enabled ?? false;
-  const voice = settings?.voicePreference ?? 'Lord';
-  const tradition = settings?.traditionHint ?? 'unspecified';
-
   const handleToggle = async (next: boolean) => {
     if (!next && enabled) {
       setConfirmTurnOff(true);
@@ -108,44 +100,6 @@ export function LamplightSettingsSection({ adapter, userId }: LamplightSettingsS
           Lamplight on
         </span>
       </label>
-
-      <label className="block text-xs mb-1" htmlFor="lamplight-voice" style={{ color: 'var(--silica)' }}>
-        Voice preference
-      </label>
-      <select
-        id="lamplight-voice"
-        aria-label="Voice preference"
-        value={voice}
-        disabled={!enabled}
-        onChange={(e) => upsert({ voicePreference: e.target.value as LamplightVoice })}
-        className="block w-full mb-4 px-3 py-2 text-xs rounded"
-        style={{
-          background: 'var(--plaster)', color: 'var(--deep-umber)',
-          border: '1px solid var(--pale-stone)',
-          fontFamily: 'Outfit, sans-serif',
-        }}
-      >
-        {VOICES.map((v) => <option key={v} value={v}>{v}</option>)}
-      </select>
-
-      <label className="block text-xs mb-1" htmlFor="lamplight-tradition" style={{ color: 'var(--silica)' }}>
-        Tradition hint
-      </label>
-      <select
-        id="lamplight-tradition"
-        aria-label="Tradition hint"
-        value={tradition}
-        disabled={!enabled}
-        onChange={(e) => upsert({ traditionHint: e.target.value as LamplightTradition })}
-        className="block w-full mb-6 px-3 py-2 text-xs rounded"
-        style={{
-          background: 'var(--plaster)', color: 'var(--deep-umber)',
-          border: '1px solid var(--pale-stone)',
-          fontFamily: 'Outfit, sans-serif',
-        }}
-      >
-        {TRADITIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-      </select>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>

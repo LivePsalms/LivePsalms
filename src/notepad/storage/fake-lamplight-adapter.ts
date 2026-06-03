@@ -52,8 +52,6 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     const merged: LamplightSettings = {
       enabled: false,
       quietMode: false,
-      voicePreference: 'Lord',
-      traditionHint: 'unspecified',
       inlineSuggestions: true,
       weeklyEmail: false,
       consentDecidedAt: null,

@@ -8,8 +8,13 @@ import {
 } from './voice';
 
 describe('LAMPLIGHT_SYSTEM_FRAGMENT', () => {
-  it('contains the {{voice_preference}} substitution token', () => {
-    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toContain('{{voice_preference}}');
+  it('instructs the model to choose the divine name from the content', () => {
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/choose the divine name that best fits/i);
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).not.toContain('{{voice_preference}}');
+  });
+
+  it('frames reflection within historic Christian orthodoxy', () => {
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/historic, creedal Christian orthodoxy/i);
   });
 
   it('never contains a phrase that would trip its own banned-phrase regex', () => {
@@ -86,30 +91,19 @@ describe('GROWTH_BANNED_PHRASES', () => {
 });
 
 describe('composeSystem', () => {
-  it('substitutes {{voice_preference}} with the supplied value', () => {
+  it('does not define an implicit voice_preference token', () => {
     const out = composeSystem({
-      base: 'Use {{voice_preference}} for the divine name.',
+      base: 'Voice token: {{voice_preference}}.',
       artifact: '',
-      voicePreference: 'Abba',
     });
-    expect(out).toContain('Use Abba for the divine name.');
-    expect(out).not.toContain('{{voice_preference}}');
-  });
-
-  it('replaces every occurrence of the token', () => {
-    const out = composeSystem({
-      base: '{{voice_preference}} and {{voice_preference}}',
-      artifact: '',
-      voicePreference: 'Lord',
-    });
-    expect(out.startsWith('Lord and Lord')).toBe(true);
+    // No built-in substitution for voice_preference anymore — left as-is.
+    expect(out).toContain('Voice token: {{voice_preference}}.');
   });
 
   it('concatenates base + artifact + stricter with double newlines', () => {
     const out = composeSystem({
       base: 'BASE',
       artifact: 'ARTIFACT',
-      voicePreference: 'Lord',
       stricter: 'STRICT',
     });
     expect(out).toBe('BASE\n\nARTIFACT\n\nSTRICT');
@@ -119,30 +113,25 @@ describe('composeSystem', () => {
     const out = composeSystem({
       base: 'BASE',
       artifact: 'ARTIFACT',
-      voicePreference: 'Lord',
     });
     expect(out).toBe('BASE\n\nARTIFACT');
   });
 
   it('substitutes additional {{tokens}} in base and artifact', () => {
     const out = composeSystem({
-      base: 'Voice: {{voice_preference}}. Today: {{local_date}}.',
+      base: 'Today: {{local_date}}.',
       artifact: 'Date again: {{local_date}}.',
-      voicePreference: 'Lord',
       tokens: { local_date: '2026-05-27' },
     });
-    expect(out).toContain('Voice: Lord');
     expect(out).toContain('Today: 2026-05-27');
     expect(out).toContain('Date again: 2026-05-27');
   });
 
   it('leaves unknown {{tokens}} unsubstituted when tokens omitted', () => {
     const out = composeSystem({
-      base: 'Voice: {{voice_preference}}. Today: {{local_date}}.',
+      base: 'Today: {{local_date}}.',
       artifact: 'artifact',
-      voicePreference: 'Father',
     });
-    expect(out).toContain('Voice: Father');
     expect(out).toContain('Today: {{local_date}}');
   });
 });

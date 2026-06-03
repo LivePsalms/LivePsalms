@@ -64,8 +64,6 @@ describe('LamplightTabPanel', () => {
     useAuthSessionMock.mockReturnValue({ user: { id: 'user-1' } });
     await adapter.upsertSettings('user-1', {
       enabled: true,
-      voicePreference: 'Father',
-      traditionHint: 'evangelical',
       consentDecidedAt: new Date().toISOString(),
     });
     const today = new Date().toLocaleDateString('en-CA');
@@ -80,8 +78,6 @@ describe('LamplightTabPanel', () => {
     await waitFor(() => {
       expect(screen.getByText(/A quiet test greeting/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/Voice: Father/)).toBeInTheDocument();
-    expect(screen.getByText(/Tradition: evangelical/)).toBeInTheDocument();
   });
 
   it('shows PaywallCard for opted-in users when promo is off and tier=none', async () => {
