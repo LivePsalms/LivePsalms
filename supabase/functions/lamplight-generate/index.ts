@@ -50,6 +50,19 @@ serve(async (req) => {
   }
   if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
 
+  // Top-level guard. An uncaught throw makes the Supabase Edge runtime emit its
+  // own 500 response, which carries NONE of the CORS headers above — the browser
+  // then misreports it as a CORS error ("No 'Access-Control-Allow-Origin'
+  // header is present"). Routing every error through jsonResp keeps CORS on all
+  // responses and surfaces the real failure to the client.
+  try {
+    return await handleGenerate(req);
+  } catch (err) {
+    return jsonResp({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+});
+
+async function handleGenerate(req: Request): Promise<Response> {
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
   const voyageKey = Deno.env.get('VOYAGE_AI_KEY');
   if (!anthropicKey) return jsonResp({ error: 'ANTHROPIC_API_KEY missing' }, 500);
@@ -179,7 +192,7 @@ serve(async (req) => {
   }
 
   return jsonResp({ error: 'unknown kind' }, 400);
-});
+}
 
 
 function jsonResp(body: unknown, status = 200) {
