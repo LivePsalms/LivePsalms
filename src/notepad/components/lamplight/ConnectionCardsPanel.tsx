@@ -169,7 +169,7 @@ export function ConnectionCardsPanel({
             >
               <button
                 aria-label={`Show why this connects to ${c.relatedNoteTitle}`}
-                aria-pressed={isActive}
+                aria-expanded={isActive}
                 onClick={() => handleChipClick(c.relatedNoteId)}
                 className="block w-full text-left px-3 py-2 cursor-pointer"
               >
@@ -211,7 +211,7 @@ export function ConnectionCardsPanel({
                       style={{
                         display: 'inline-block',
                         transition: 'transform 0.2s',
-                        transform: isActive ? 'rotate(180deg)' : 'none',
+                        transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
                       }}
                     >
                       ⌄
