@@ -31,10 +31,17 @@ export interface ToolSchema {
   input_schema: Record<string, unknown>;
 }
 
+export type TextBlock = { type: 'text'; text: string };
+export type ImageBlock = {
+  type: 'image';
+  source: { type: 'base64'; media_type: string; data: string };
+};
+export type ContentBlock = TextBlock | ImageBlock;
+
 export interface GenerateInput {
   model: LLMModel;
   system: string;
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  messages: Array<{ role: 'user' | 'assistant'; content: string | ContentBlock[] }>;
   tool: ToolSchema;
   maxTokens?: number;
 }

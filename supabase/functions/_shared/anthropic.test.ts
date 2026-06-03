@@ -169,3 +169,37 @@ describe('createAnthropicAdapter.generate', () => {
     expect(attempts).toBe(1);
   });
 });
+
+describe('anthropic multimodal', () => {
+  it('serializes image content blocks into the request body', async () => {
+    let sentBody: any;
+    const fakeFetch = (async (_url: string, init: RequestInit) => {
+      sentBody = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({
+        content: [{ type: 'tool_use', name: 'record_transcription', input: { ok: true } }],
+        model: 'claude-sonnet-4-6',
+        usage: { input_tokens: 10, output_tokens: 5 },
+      }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const adapter = createAnthropicAdapter({ apiKey: 'k', fetch: fakeFetch });
+    const out = await adapter.generate<{ ok: boolean }>({
+      model: 'sonnet',
+      system: 'sys',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: 'read this' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'AAAA' } },
+        ],
+      }],
+      tool: { name: 'record_transcription', description: 'd', input_schema: { type: 'object' } },
+    });
+
+    expect(out.parsed).toEqual({ ok: true });
+    expect(sentBody.messages[0].content).toEqual([
+      { type: 'text', text: 'read this' },
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'AAAA' } },
+    ]);
+  });
+});
