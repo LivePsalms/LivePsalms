@@ -88,3 +88,22 @@ describe('VanityNotepadRoute (/notepad/u/:username)', () => {
     expect(screen.getByText('EDITOR')).toBeInTheDocument();
   });
 });
+
+describe('loading state', () => {
+  beforeEach(() => {
+    mockGate = { kind: 'loading' };
+  });
+
+  it('LegacyNotepadRoute shows the spinner, not the editor, while loading', () => {
+    renderAt('/notepad/notes');
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByText('EDITOR')).not.toBeInTheDocument();
+    expect(screen.queryByText('PICKER')).not.toBeInTheDocument();
+  });
+
+  it('VanityNotepadRoute shows the spinner, not the editor, while loading', () => {
+    renderAt('/notepad/u/natalie');
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByText('EDITOR')).not.toBeInTheDocument();
+  });
+});

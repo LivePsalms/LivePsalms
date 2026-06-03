@@ -65,4 +65,14 @@ describe('UsernameSetup', () => {
     fireEvent.click(screen.getByRole('button', { name: /claim/i }));
     expect(await screen.findByText(/just taken/i)).toBeInTheDocument();
   });
+
+  it('fails open (submit enabled) when the availability check rejects', async () => {
+    setup({ checkAvailable: vi.fn().mockRejectedValue(new Error('network')) });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'natalie' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /claim/i })).toBeEnabled(),
+    );
+    expect(screen.queryByText(/available/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/taken/i)).not.toBeInTheDocument();
+  });
 });
