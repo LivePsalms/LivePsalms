@@ -19,6 +19,10 @@ import { Upload, FileText, X } from 'lucide-react';
 import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { useNotepadActions } from '../context/useNotepadActions';
 import { filesToNotes } from '../import/document-importer';
+import { useAuthSession } from '@/auth/context/useAuthSession';
+import { ScanCapture } from './ScanCapture';
+import { TranscriptionReview } from './TranscriptionReview';
+import type { TranscriptionResult } from '../scan/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +32,8 @@ interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type ScanStage = null | 'capture' | { review: TranscriptionResult };
 
 // ---------------------------------------------------------------------------
 // Format file size
@@ -47,12 +53,14 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const { folders } = useFolderHierarchy();
   const actions = useNotepadActions();
   const importNotes = actions.importNotes;
+  const { user } = useAuthSession();
 
   const [files, setFiles] = useState<File[]>([]);
   const [folderId, setFolderId] = useState<string>('root');
   const [autoDetectVerses, setAutoDetectVerses] = useState(true);
   const [autoCreateLinks, setAutoCreateLinks] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [scan, setScan] = useState<ScanStage>(null);
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles((prev) => {
@@ -149,6 +157,23 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               Supports .md, .txt, .pdf, .docx
             </p>
           </div>
+
+          {/* Scan handwritten note entry point */}
+          {user && (
+            <button
+              type="button"
+              onClick={() => setScan('capture')}
+              className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[12px] font-medium transition-opacity hover:opacity-80"
+              style={{
+                border: '1px solid var(--pale-stone)',
+                color: 'var(--deep-umber)',
+                fontFamily: 'Outfit, sans-serif',
+                background: 'transparent',
+              }}
+            >
+              Scan handwritten note
+            </button>
+          )}
 
           {/* Options */}
           <div className="space-y-2.5">
@@ -292,6 +317,27 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             {uploading ? 'Processing…' : 'Upload & Process'}
           </button>
         </DialogFooter>
+
+        {/* Scan flow — overlays the normal dialog content when active */}
+        {scan === 'capture' && user && (
+          <ScanCapture
+            userId={user.id}
+            onResult={(result) => setScan({ review: result })}
+            onCancel={() => setScan(null)}
+          />
+        )}
+        {scan !== null && scan !== 'capture' && (
+          <TranscriptionReview
+            result={(scan as { review: TranscriptionResult }).review}
+            folderId={folderId}
+            adapter={actions.getAdapter()}
+            onSaved={() => {
+              setScan(null);
+              onOpenChange(false);
+            }}
+            onDiscarded={() => setScan(null)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
