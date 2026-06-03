@@ -1,5 +1,6 @@
 // src/notepad/components/ScanCapture.tsx
 import { useEffect, useRef, useState } from 'react';
+import '../scan/scan.css';
 import { preprocessImage } from '../scan/image-preprocess';
 import { uploadScan, transcribe, isAcceptedImage, MAX_IMAGE_BYTES } from '../scan/transcription-client';
 import type { TranscriptionResult } from '../scan/types';

@@ -1,22 +1,25 @@
 // src/components/sections/notepad/mobile/MobileFabMenu.tsx
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Plus, Pencil, Upload } from 'lucide-react';
+import { Plus, Pencil, Upload, Camera } from 'lucide-react';
 
 export interface MobileFabMenuProps {
   /** Create a new note (existing devotion-create-and-edit flow). */
   onNewNote: () => void;
+  /** Open the handwriting scan flow (camera / photo → transcription review). */
+  onScanNote: () => void;
   /** Receives the picked files; may be async (resolves when import finishes). */
   onUploadFiles: (files: File[]) => void | Promise<void>;
 }
 
 /**
  * Mobile-only floating action button that expands into a small menu offering
- * "New note" and "Upload note". Rotates + → × on open, dismisses on option
- * select / re-tap / backdrop tap / Escape, and shows a spinner while an upload
- * import is in flight. Respects prefers-reduced-motion.
+ * "New note", "Scan note" (handwriting → camera/photo), and "Upload note".
+ * Rotates + → × on open, dismisses on option select / re-tap / backdrop tap /
+ * Escape, and shows a spinner while an upload import is in flight. Respects
+ * prefers-reduced-motion.
  */
-export function MobileFabMenu({ onNewNote, onUploadFiles }: MobileFabMenuProps) {
+export function MobileFabMenu({ onNewNote, onScanNote, onUploadFiles }: MobileFabMenuProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const reduce = useReducedMotion();
@@ -34,6 +37,11 @@ export function MobileFabMenu({ onNewNote, onUploadFiles }: MobileFabMenuProps) 
   const handleNewNote = () => {
     setOpen(false);
     onNewNote();
+  };
+
+  const handleScanNote = () => {
+    setOpen(false);
+    onScanNote();
   };
 
   const handleUploadClick = () => {
@@ -56,6 +64,7 @@ export function MobileFabMenu({ onNewNote, onUploadFiles }: MobileFabMenuProps) 
 
   const options = [
     { key: 'new', label: 'New note', Icon: Pencil, onClick: handleNewNote },
+    { key: 'scan', label: 'Scan note', Icon: Camera, onClick: handleScanNote },
     { key: 'upload', label: 'Upload note', Icon: Upload, onClick: handleUploadClick },
   ] as const;
 

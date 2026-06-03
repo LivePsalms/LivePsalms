@@ -18,7 +18,12 @@ import { MobileAuthModal } from './MobileAuthModal';
 import { MobileAccountSheet } from './MobileAccountSheet';
 import { useMobileWorkspaceModel } from './useMobileWorkspaceModel';
 import { useHasConnections } from './useHasConnections';
+import { ScanCapture } from '../../../../notepad/components/ScanCapture';
+import { TranscriptionReview } from '../../../../notepad/components/TranscriptionReview';
+import type { TranscriptionResult } from '../../../../notepad/scan/types';
 import type { MobileTab } from './types';
+
+type ScanStage = null | 'capture' | { review: TranscriptionResult };
 
 export function MobileNotepadWorkspace() {
   const navigate = useNavigate();
@@ -32,6 +37,7 @@ export function MobileNotepadWorkspace() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [scan, setScan] = useState<ScanStage>(null);
 
   const openAccount = useCallback(() => {
     if (model.user) {
@@ -94,6 +100,16 @@ export function MobileNotepadWorkspace() {
     [actions],
   );
 
+  // Scanning writes to a per-user storage bucket and calls an authed edge
+  // function, so it requires a signed-in user; prompt sign-in otherwise.
+  const handleScanNote = useCallback(() => {
+    if (!model.user) {
+      setAuthOpen(true);
+      return;
+    }
+    setScan('capture');
+  }, [model.user]);
+
   return (
     <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--plaster)' }}>
       {!model.isOnline && model.user && (
@@ -117,6 +133,7 @@ export function MobileNotepadWorkspace() {
             onExit={() => navigate('/')}
             onOpenSearch={openSearch}
             onNewNote={handleNewNote}
+            onScanNote={handleScanNote}
             onUploadFiles={handleUploadFiles}
             onOpenNote={handleOpenNote}
             onOpenAccount={openAccount}
@@ -168,6 +185,29 @@ export function MobileNotepadWorkspace() {
         }}
         onSignOut={handleSignOut}
       />
+
+      {scan !== null && model.user && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col overflow-y-auto"
+          style={{ background: 'var(--plaster)' }}
+        >
+          {scan === 'capture' ? (
+            <ScanCapture
+              userId={model.user.id}
+              onResult={(result) => setScan({ review: result })}
+              onCancel={() => setScan(null)}
+            />
+          ) : (
+            <TranscriptionReview
+              result={scan.review}
+              folderId="root"
+              persistNotes={(notes) => actions.importNotes(notes)}
+              onSaved={() => setScan(null)}
+              onDiscarded={() => setScan(null)}
+            />
+          )}
+        </div>
+      )}
 
       <SearchDialog />
       <MigrationDialog

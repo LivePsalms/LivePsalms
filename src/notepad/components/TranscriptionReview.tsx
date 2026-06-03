@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { toast } from 'sonner';
+import '../scan/scan.css';
 import { signedScanUrl, markTranscriptionSaved, discardScan } from '../scan/transcription-client';
 import { buildNoteFromTranscriptionDoc } from '../scan/build-note-from-transcription';
 import { locateUncertainSpans, uncertainDecorationPlugin, uncertainPluginKey } from '../scan/uncertain-decoration';

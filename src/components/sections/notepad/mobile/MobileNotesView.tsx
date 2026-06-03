@@ -7,6 +7,8 @@ export interface MobileNotesViewProps {
   onExit: () => void;
   onOpenSearch: () => void;
   onNewNote: () => void;
+  /** Opens the handwriting scan flow via the FAB "Scan note" option. */
+  onScanNote: () => void;
   /** Receives files chosen via the FAB "Upload note" option. */
   onUploadFiles: (files: File[]) => void | Promise<void>;
   onOpenNote: (id: string) => void;
@@ -20,6 +22,7 @@ export function MobileNotesView({
   onExit,
   onOpenSearch,
   onNewNote,
+  onScanNote,
   onUploadFiles,
   onOpenNote,
   onOpenAccount,
@@ -66,7 +69,7 @@ export function MobileNotesView({
         <NotepadSidebar hideCollectionHeader={false} onOpenNote={onOpenNote} />
       </div>
 
-      <MobileFabMenu onNewNote={onNewNote} onUploadFiles={onUploadFiles} />
+      <MobileFabMenu onNewNote={onNewNote} onScanNote={onScanNote} onUploadFiles={onUploadFiles} />
     </div>
   );
 }

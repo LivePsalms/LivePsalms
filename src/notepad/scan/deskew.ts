@@ -11,7 +11,11 @@ let scannerPromise: Promise<unknown> | null = null;
 async function getScanner(): Promise<{ extractPaper: Function; getCornerPoints?: Function } | null> {
   if (!scannerPromise) {
     scannerPromise = (async () => {
-      const mod: any = await import('jscanify');
+      // Import jscanify's BROWSER build (the `./client` export → src/jscanify.js).
+      // The default `main` is a Node build that bundles ~9 MB of OpenCV; the
+      // client build is ~7 KB and relies on the global `cv` we load from the CDN
+      // below. This keeps the lazy deskew chunk tiny.
+      const mod: any = await import('jscanify/client');
       const JscanifyCtor = mod.default ?? mod;
       // jscanify expects a global `cv` (OpenCV.js). Load it once from CDN.
       if (!(globalThis as any).cv) {

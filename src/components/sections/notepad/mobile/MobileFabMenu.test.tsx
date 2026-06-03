@@ -22,23 +22,33 @@ describe('MobileFabMenu', () => {
   beforeEach(() => setReducedMotion(false));
 
   it('hides the options until the trigger is tapped', () => {
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     expect(screen.queryByLabelText('New note')).toBeNull();
     const trigger = screen.getByLabelText('New note menu');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('reveals both options and sets aria-expanded when tapped', () => {
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('New note menu'));
     expect(screen.getByLabelText('New note')).not.toBeNull();
+    expect(screen.getByLabelText('Scan note')).not.toBeNull();
     expect(screen.getByLabelText('Upload note')).not.toBeNull();
     expect(screen.getByLabelText('Close menu').getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('fires onScanNote and closes when Scan note is chosen', () => {
+    const onScanNote = vi.fn();
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={onScanNote} onUploadFiles={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText('New note menu'));
+    fireEvent.click(screen.getByLabelText('Scan note'));
+    expect(onScanNote).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('New note menu').getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('fires onNewNote and closes when New note is chosen', () => {
     const onNewNote = vi.fn();
-    render(<MobileFabMenu onNewNote={onNewNote} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={onNewNote} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('New note menu'));
     fireEvent.click(screen.getByLabelText('New note'));
     expect(onNewNote).toHaveBeenCalledTimes(1);
@@ -47,7 +57,7 @@ describe('MobileFabMenu', () => {
 
   it('fires onUploadFiles with the selected files', () => {
     const onUploadFiles = vi.fn();
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={onUploadFiles} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={onUploadFiles} />);
     const input = screen.getByTestId('fab-file-input') as HTMLInputElement;
     const file = new File(['x'], 'note.txt', { type: 'text/plain' });
     fireEvent.change(input, { target: { files: [file] } });
@@ -56,14 +66,14 @@ describe('MobileFabMenu', () => {
   });
 
   it('closes when the backdrop is tapped', () => {
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('New note menu'));
     fireEvent.click(screen.getByTestId('fab-backdrop'));
     expect(screen.getByLabelText('New note menu').getAttribute('aria-expanded')).toBe('false');
   });
 
   it('closes when Escape is pressed', () => {
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('New note menu'));
     act(() => {
       fireEvent.keyDown(window, { key: 'Escape' });
@@ -73,7 +83,7 @@ describe('MobileFabMenu', () => {
 
   it('renders both options under prefers-reduced-motion', () => {
     setReducedMotion(true);
-    render(<MobileFabMenu onNewNote={vi.fn()} onUploadFiles={vi.fn()} />);
+    render(<MobileFabMenu onNewNote={vi.fn()} onScanNote={vi.fn()} onUploadFiles={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('New note menu'));
     expect(screen.getByLabelText('New note')).not.toBeNull();
     expect(screen.getByLabelText('Upload note')).not.toBeNull();

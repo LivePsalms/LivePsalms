@@ -14,6 +14,7 @@ describe('<MobileNotesView />', () => {
     onExit: vi.fn(),
     onOpenSearch: vi.fn(),
     onNewNote: vi.fn(),
+    onScanNote: vi.fn(),
     onUploadFiles: vi.fn(),
     onOpenNote: vi.fn(),
   };
