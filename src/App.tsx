@@ -12,8 +12,8 @@ import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
 import { PurposeStack } from '@/components/sections/PurposeStack';
 import { PurposeDetail } from '@/components/sections/PurposeDetail';
-import { Notepad } from '@/components/sections/Notepad';
 import { NotepadLanding } from '@/notepad-landing';
+import { LegacyNotepadRoute, VanityNotepadRoute } from '@/auth/username/NotepadRoutes';
 import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
 import { Contact } from '@/components/sections/Contact';
 import { PrivacyPolicy } from '@/components/sections/PrivacyPolicy';
@@ -113,7 +113,9 @@ function App() {
   const isDetailPage = location.pathname.startsWith('/purpose/');
   const isPurposePage = location.pathname === '/purpose';
   const isNotepadLanding = location.pathname === '/notepad';
-  const isNotepadEditor = location.pathname.startsWith('/notepad/notes');
+  const isNotepadEditor =
+    location.pathname.startsWith('/notepad/notes') ||
+    location.pathname.startsWith('/notepad/u/');
   const isNotepadAny = isNotepadLanding || isNotepadEditor;
   const isLoginPage = location.pathname === '/login';
   const isProfilePage = location.pathname === '/profile';
@@ -185,7 +187,8 @@ function App() {
               }
             />
             <Route path="/notepad" element={<NotepadLanding />} />
-            <Route path="/notepad/notes" element={<Notepad />} />
+            <Route path="/notepad/notes" element={<LegacyNotepadRoute />} />
+            <Route path="/notepad/u/:username" element={<VanityNotepadRoute />} />
             <Route path="/community" element={<CommunityComingSoon />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
