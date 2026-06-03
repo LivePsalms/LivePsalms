@@ -88,8 +88,7 @@ Personalization (only when First name is provided in the user prompt):
     return [{
       role: 'user',
       content:
-        `Today is ${ctx.localDate}. User voice preference: "${ctx.voicePreference}". ` +
-        `User tradition hint: "${ctx.traditionHint}".\n` +
+        `Today is ${ctx.localDate}.\n` +
         `${firstNameLine}\n\n` +
         `User's recent notes:\n${notesBlock}\n\n` +
         `Candidate Scripture passages:\n${passagesBlock}\n\n` +

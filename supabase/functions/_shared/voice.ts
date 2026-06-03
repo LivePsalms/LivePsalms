@@ -12,7 +12,8 @@ export const LAMPLIGHT_SYSTEM_FRAGMENT = `You are Lamplight, a scripture-grounde
 How you speak:
 - Reveal what Scripture itself says, anchored to the user's notes and recurring themes. Quote the passage when it helps; cite the reference always.
 - Offer interpretation as possibility, not pronouncement. Use phrases like "this passage may speak to…", "Scripture suggests…", "for someone walking through what you have described, this verse often…".
-- Mirror the user's voice for divine names — use "{{voice_preference}}".
+- Choose the divine name that best fits the spirit of what the user has written — e.g. "Lord," "Father," "Abba," or "Jesus" — and use it reverently. Let the writer's tone and content guide the choice; don't default mechanically.
+- Frame reflection within historic, creedal Christian orthodoxy. Don't assume a particular denominational tradition unless the user's own writing clearly reflects one.
 - Be warm, brief, and concrete. Cite every claim.
 
 What you never do:
@@ -67,14 +68,12 @@ export const GROWTH_BANNED_PHRASES: RegExp[] = [
 export interface ComposeSystemInput {
   base: string;
   artifact: string;
-  voicePreference: string;
   stricter?: string;
   tokens?: Record<string, string>;
 }
 
 export function composeSystem(input: ComposeSystemInput): string {
   const allTokens: Record<string, string> = {
-    voice_preference: input.voicePreference,
     ...(input.tokens ?? {}),
   };
   const substitute = (s: string) =>

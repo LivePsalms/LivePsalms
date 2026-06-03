@@ -57,7 +57,7 @@ export const SMOKE_TEST_PROMPT = {
     const passagesBlock = ctx.passages.map(p => `[${p.ref}] ${p.text}`).join('\n\n');
     return [{
       role: 'user',
-      content: `User recent notes:\n${notesBlock}\n\nRetrieved passages:\n${passagesBlock}\n\nUser settings: voice="${ctx.voicePreference}", tradition_hint="${ctx.traditionHint}".\n\nReflect briefly. Cite passages using these exact refs: ${[...ctx.allowedVerseRefs].join(', ')}.`,
+      content: `User recent notes:\n${notesBlock}\n\nRetrieved passages:\n${passagesBlock}\n\nReflect briefly. Cite passages using these exact refs: ${[...ctx.allowedVerseRefs].join(', ')}.`,
     }];
   },
 } as const;

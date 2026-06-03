@@ -33,8 +33,6 @@ export interface DailyDevotionPassage {
 export interface DailyDevotionContext {
   notes: Array<{ id: string; title: string; plaintext: string }>;
   passages: DailyDevotionPassage[];
-  voicePreference: string;
-  traditionHint: string;
   localDate: string;
   firstName: string | null;  // sanitizeFirstName(profiles.full_name)
   allowedNoteIds: Set<string>;
@@ -107,7 +105,6 @@ export async function runDailyDevotionPipeline(args: {
     const system = composeSystem({
       base: LAMPLIGHT_SYSTEM_FRAGMENT,
       artifact: DAILY_DEVOTION_PROMPT.system,
-      voicePreference: ctx.voicePreference,
       stricter,
       tokens: { local_date: ctx.localDate },
     });
