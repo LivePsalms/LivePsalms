@@ -74,10 +74,6 @@ export class NotepadActions {
     await this.referenceGraph.syncAll(this.notes.getSnapshot().notes);
   };
 
-  getAdapter(): StorageAdapter {
-    return this.adapter;
-  }
-
   async rebindAdapter(next: StorageAdapter): Promise<void> {
     this.adapter = next;
     this.notes.rebindAdapter(next);
