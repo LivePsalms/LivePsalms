@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { toast } from 'sonner';
 import { signedScanUrl, markTranscriptionSaved, discardScan } from '../scan/transcription-client';
-import { buildNoteFromTranscription } from '../scan/build-note-from-transcription';
-import { locateUncertainSpans, uncertainDecorationPlugin } from '../scan/uncertain-decoration';
+import { buildNoteFromTranscriptionDoc } from '../scan/build-note-from-transcription';
+import { locateUncertainSpans, uncertainDecorationPlugin, uncertainPluginKey } from '../scan/uncertain-decoration';
 import { linkNotesByVerses } from '../import/document-importer';
 import type { TranscriptionResult } from '../scan/types';
 import type { Note } from '../types';
@@ -20,6 +21,7 @@ interface Props {
 export function TranscriptionReview({ result, folderId, adapter, onSaved, onDiscarded }: Props) {
   const [title, setTitle] = useState(`Scanned note · ${new Date().toLocaleDateString()}`);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const spans = useMemo(
@@ -27,54 +29,87 @@ export function TranscriptionReview({ result, folderId, adapter, onSaved, onDisc
     [result.transcription, result.uncertainWords],
   );
 
+  // FIX 2: seed a valid doc (≥1 block) — empty transcription would produce
+  // { type:'doc', content:[] } which violates ProseMirror's block+ schema.
   const editor = useEditor({
     extensions: [StarterKit],
-    content: {
-      type: 'doc',
-      content: result.transcription.split(/\n\n+/).filter(Boolean).map((p) => ({
+    content: (() => {
+      const paras = result.transcription.split(/\n\n+/).filter(Boolean).map((p) => ({
         type: 'paragraph', content: [{ type: 'text', text: p }],
-      })),
-    },
+      }));
+      return { type: 'doc', content: paras.length ? paras : [{ type: 'paragraph' }] };
+    })(),
   });
 
+  // FIX 1: return a cleanup that unregisters the plugin to prevent StrictMode
+  // double-register crash ("Adding different instances of a keyed plugin").
   useEffect(() => {
     if (!editor) return;
     editor.registerPlugin(uncertainDecorationPlugin(spans));
+    return () => {
+      if (!editor.isDestroyed) editor.unregisterPlugin(uncertainPluginKey);
+    };
   }, [editor, spans]);
 
   useEffect(() => {
     let active = true;
-    signedScanUrl(result.imageKey).then((url) => { if (active) setImageUrl(url); });
+    signedScanUrl(result.imageKey).then((url) => {
+      if (!active) return;
+      if (url) {
+        setImageUrl(url);
+      } else {
+        setImageError(true);
+      }
+    });
     return () => { active = false; };
   }, [result.imageKey]);
 
+  // FIX 3b & 4a: save editor JSON (not flattened getText) and only reset saving
+  // on error (on success the parent unmounts this component so a finally would
+  // setState-after-unmount).
   async function handleSave() {
     if (!editor) return;
     setSaving(true);
     try {
-      const text = editor.getText();
-      const note = buildNoteFromTranscription({ title, text, folderId, autoDetectVerses: true });
+      const note = buildNoteFromTranscriptionDoc({
+        title,
+        doc: editor.getJSON(),
+        plainText: editor.getText(),
+        folderId,
+        autoDetectVerses: true,
+      });
       const [linked] = linkNotesByVerses([note]);
       const saved = await adapter.importNote(linked ?? note);
       await markTranscriptionSaved(result.transcription_id, saved.id);
       onSaved(saved);
-    } finally {
+    } catch {
+      toast.error('Failed to save note — please try again.');
       setSaving(false);
     }
   }
 
+  // FIX 4b: guard with saving + error feedback
   async function handleDiscard() {
-    await discardScan(result.imageKey, result.transcription_id);
-    onDiscarded();
+    setSaving(true);
+    try {
+      await discardScan(result.imageKey, result.transcription_id);
+      onDiscarded();
+    } catch {
+      toast.error("Couldn't discard — please try again.");
+      setSaving(false);
+    }
   }
 
   return (
     <div className="transcription-review">
       <div className="transcription-review__panes">
         <figure className="transcription-review__image">
+          {/* FIX 4c: imageError state for stuck "Loading image…" spinner */}
           {imageUrl
             ? <img src={imageUrl} alt="Your scanned note" />
-            : <div aria-busy="true">Loading image…</div>}
+            : imageError
+              ? <p className="transcription-review__image-error">Couldn't load the original image.</p>
+              : <div aria-busy="true">Loading image…</div>}
         </figure>
         <div className="transcription-review__text">
           <input
@@ -91,8 +126,9 @@ export function TranscriptionReview({ result, folderId, adapter, onSaved, onDisc
           <EditorContent editor={editor} />
           {result.verseFlags.length > 0 && (
             <ul className="transcription-review__verse-flags">
-              {result.verseFlags.map((f) => (
-                <li key={f.ref} className={f.status === 'found' ? 'is-found' : 'is-missing'}>
+              {/* FIX 5: use index in key to avoid duplicate-key warnings if a ref repeats */}
+              {result.verseFlags.map((f, i) => (
+                <li key={`${f.ref}-${i}`} className={f.status === 'found' ? 'is-found' : 'is-missing'}>
                   {f.status === 'found'
                     ? <span title={f.canonicalText}>{f.ref} ✓</span>
                     : <span>{f.ref} — couldn't find this, check the photo</span>}
