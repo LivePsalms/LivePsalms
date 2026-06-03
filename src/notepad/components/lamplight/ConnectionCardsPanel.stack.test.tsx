@@ -97,4 +97,62 @@ describe('ConnectionCardsPanel layout="stack"', () => {
       within(item).getByText('Both notes circle the same wilderness motif.'),
     ).toBeInTheDocument();
   });
+
+  it('shows a "Why these connect" hint in the footer at rest', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyPanel();
+    render(
+      <ConnectionCardsPanel
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+        layout="stack"
+      />,
+    );
+    expect(
+      await screen.findByRole('button', { name: /why these connect/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('tapping the hint reveals the why and switches its label to "Hide"', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyPanel();
+    render(
+      <ConnectionCardsPanel
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+        layout="stack"
+      />,
+    );
+    const hint = await screen.findByRole('button', { name: /why these connect/i });
+    fireEvent.click(hint);
+
+    await waitFor(() =>
+      expect(screen.getByText('Both notes circle the same wilderness motif.')).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('button', { name: /^hide$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /why these connect/i })).not.toBeInTheDocument();
+  });
+
+  it('does not render the hint in strip layout', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyPanel();
+    render(
+      <ConnectionCardsPanel
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+        layout="strip"
+      />,
+    );
+    await screen.findByText('Note note-2');
+    expect(screen.queryByRole('button', { name: /why these connect/i })).not.toBeInTheDocument();
+  });
 });

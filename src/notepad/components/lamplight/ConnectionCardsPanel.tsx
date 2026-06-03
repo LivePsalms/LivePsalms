@@ -194,23 +194,54 @@ export function ConnectionCardsPanel({
               {isStack && isActive && (
                 <div className="px-3 pb-2">{renderWhy(c)}</div>
               )}
-              <button
-                aria-label={`Open note: ${c.relatedNoteTitle}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenNote(c.relatedNoteId);
-                }}
-                className={`block w-full text-right px-3 text-xs cursor-pointer hover:underline ${
-                  isStack ? 'border-t pt-2 pb-2 mt-1' : 'pb-1'
-                }`}
-                style={{
-                  color: 'var(--deep-umber)',
-                  fontFamily: 'Outfit, sans-serif',
-                  ...(isStack ? { borderColor: 'var(--pale-stone)' } : {}),
-                }}
-              >
-                Open ↗
-              </button>
+              {isStack ? (
+                <div
+                  className="flex items-center justify-between border-t px-3 pt-2 pb-2 mt-1"
+                  style={{ borderColor: 'var(--pale-stone)' }}
+                >
+                  <button
+                    aria-expanded={isActive}
+                    onClick={() => handleChipClick(c.relatedNoteId)}
+                    className="inline-flex items-center gap-1 text-xs cursor-pointer"
+                    style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    {isActive ? 'Hide' : 'Why these connect'}
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        display: 'inline-block',
+                        transition: 'transform 0.2s',
+                        transform: isActive ? 'rotate(180deg)' : 'none',
+                      }}
+                    >
+                      ⌄
+                    </span>
+                  </button>
+                  <button
+                    aria-label={`Open note: ${c.relatedNoteTitle}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenNote(c.relatedNoteId);
+                    }}
+                    className="text-xs cursor-pointer hover:underline"
+                    style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    Open ↗
+                  </button>
+                </div>
+              ) : (
+                <button
+                  aria-label={`Open note: ${c.relatedNoteTitle}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenNote(c.relatedNoteId);
+                  }}
+                  className="block w-full text-right px-3 text-xs cursor-pointer hover:underline pb-1"
+                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                >
+                  Open ↗
+                </button>
+              )}
             </div>
           );
         })}
