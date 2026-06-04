@@ -39,6 +39,16 @@ maybeDescribe('profiles privileged-column guard (integration)', () => {
     expect(data?.is_admin).toBe(false);
   });
 
+  it('blocks an authenticated client from escalating is_admin via upsert', async () => {
+    const { error } = await userA.client
+      .from('profiles').upsert({ id: userA.userId, is_admin: true });
+    expect(error).not.toBeNull();
+
+    const { data } = await serviceClient()
+      .from('profiles').select('is_admin').eq('id', userA.userId).single();
+    expect(data?.is_admin).toBe(false);
+  });
+
   it('blocks an authenticated client from setting note_count', async () => {
     const { error } = await userA.client
       .from('profiles').update({ note_count: 999999 }).eq('id', userA.userId);

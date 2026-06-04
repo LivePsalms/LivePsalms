@@ -44,3 +44,30 @@ $$;
 create trigger profiles_protect_privileged
   before update on public.profiles
   for each row execute function public.protect_privileged_profile_columns();
+
+-- Defense-in-depth companion: block client roles from SETTING privileged columns
+-- to non-default values on INSERT (e.g. a crafted upsert/insert of is_admin=true).
+-- handle_new_user() is SECURITY DEFINER, so current_user is the owner there and
+-- the normal signup insert passes. A legitimate client self-insert uses defaults
+-- (is_admin=false, counts=0), which also passes.
+create or replace function public.protect_privileged_profile_insert()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if current_user in ('authenticated', 'anon') then
+    if new.is_admin is distinct from false
+       or new.note_count is distinct from 0
+       or new.highest_note_count is distinct from 0
+       or new.last_acknowledged_tier_threshold is distinct from 0 then
+      raise exception 'cannot set privileged profile columns on insert';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_protect_privileged_insert
+  before insert on public.profiles
+  for each row execute function public.protect_privileged_profile_insert();
