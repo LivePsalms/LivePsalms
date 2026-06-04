@@ -31,6 +31,8 @@ import {
   type ConnectionWhyContext,
 } from './connection-why-pipeline.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
+import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
+import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
 import { classifyGenerateError } from './classify-error.ts';
 export { classifyGenerateError };
 
@@ -70,33 +72,68 @@ async function handleGenerate(req: Request): Promise<Response> {
 
   let body: {
     kind?: string;
-    user_id?: string;
     local_date?: string;
     source_note_id?: string;
     related_note_id?: string;
   };
   try { body = await req.json(); } catch { return jsonResp({ error: 'bad json' }, 400); }
-  if (typeof body.user_id !== 'string') return jsonResp({ error: 'bad payload' }, 400);
 
   const supabase = serviceClient();
+
+  // Identity comes from the verified JWT, never from body.user_id.
+  const userId = await deriveUserId(supabase, bearerToken(req));
+  if (!userId) return jsonResp({ error: 'unauthorized' }, 401);
+
   const { data: settings, error: sErr } = await supabase
     .from('lamplight_settings')
     .select('enabled')
-    .eq('user_id', body.user_id)
+    .eq('user_id', userId)
     .maybeSingle();
   if (sErr) return jsonResp({ error: sErr.message }, 500);
   if (!settings?.enabled) return jsonResp({ error: 'not opted in' }, 403);
+
+  // Quota: per-user (by tier) + global daily ceiling. Counts lamplight_usage
+  // rows in a rolling 24h window. Runs before any model/context work. A failed
+  // count throws and is surfaced as a 500 by the top-level catch (fail closed).
+  // Note: the quota caps MODEL SPEND. Cache-hit paths (e.g. an already-generated
+  // daily_devotion) return without calling Anthropic/Voyage and intentionally do
+  // not record a usage row, so they don't consume quota — they incur no cost.
+  const quota = await checkQuota(
+    supabaseQuotaDeps(supabase),
+    resolveQuotaLimits(Deno.env),
+    { userId, nowMs: Date.now() },
+  );
+  if (!quota.ok) return jsonResp({ error: 'quota_exceeded', reason: quota.reason }, 429);
 
   const voyageDeps: VoyageDeps = { apiKey: voyageKey, fetch };
   const rerankEnabled = Deno.env.get('RERANK_ENABLED') === 'true';
   const llm = createAnthropicAdapter({ apiKey: anthropicKey, fetch });
 
   if (body.kind === 'smoke_test') {
-    const ctx = await buildSmokeTestContext(supabase, {
-      userId: body.user_id, voyageDeps, rerankEnabled,
-    });
-    const result = await runSmokeTestPipeline({ llm, ctx });
-    return jsonResp(result);
+    try {
+      const ctx = await buildSmokeTestContext(supabase, { userId, voyageDeps, rerankEnabled });
+      const result = await runSmokeTestPipeline({ llm, ctx });
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'smoke_test',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'ok',
+      }).catch(() => {});
+      return jsonResp(result);
+    } catch (err) {
+      void recordLamplightUsage(supabase, {
+        user_id: userId,
+        model: 'claude-haiku-4-5-20251001',
+        artifact_kind: 'smoke_test',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: classifyGenerateError(err),
+      }).catch(() => {});
+      throw err;
+    }
   }
 
   if (body.kind === 'daily_devotion') {
@@ -104,7 +141,6 @@ async function handleGenerate(req: Request): Promise<Response> {
       return jsonResp({ error: 'bad local_date' }, 400);
     }
     const localDate = body.local_date;
-    const userId = body.user_id;
     const ctx = await buildDailyDevotionContext(supabase, {
       userId, localDate, voyageDeps, rerankEnabled,
     });
@@ -135,7 +171,6 @@ async function handleGenerate(req: Request): Promise<Response> {
     ) {
       return jsonResp({ error: 'bad payload' }, 400);
     }
-    const userId = body.user_id;
     const minSimilarity = await loadConnectionMinSimilarity(supabase);
     const ctxResult = await buildConnectionWhyContext(supabase, {
       userId,
