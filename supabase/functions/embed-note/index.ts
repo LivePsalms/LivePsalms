@@ -25,6 +25,7 @@ import {
   claimAndRun, processJobs,
   type Job, type DbOps, type ClaimFn, type EmbedFn, type ReplaceArgs,
 } from '../_shared/process-job.ts';
+import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
 
 // CLAIM_LIMIT is the max jobs drained per Edge Function invocation. With pg_cron
 // firing the sweep every minute and a typical embed latency of 1-2s per job,
@@ -36,17 +37,15 @@ const CLAIM_LIMIT = 5;
 // browser path requires CORS preflight + allow-origin echoed on every
 // response; without it the browser silently drops the invocation and the
 // queue only ever drains when pg_cron fires.
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
+    return new Response('ok', { headers: cors });
   }
-  if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: CORS_HEADERS });
+  if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: cors });
 
   const apiKey = Deno.env.get('VOYAGE_AI_KEY');
   if (!apiKey) return jsonResp({ error: 'VOYAGE_AI_KEY missing' }, 500);
@@ -72,13 +71,6 @@ serve(async (req) => {
 
   return jsonResp({ error: 'missing job_id or sweep flag' }, 400);
 });
-
-function jsonResp(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
-  });
-}
 
 async function claimQueued(supabase: ReturnType<typeof serviceClient>, limit: number): Promise<Job[]> {
   const { data, error } = await supabase.rpc('claim_lamplight_jobs', { p_limit: limit });

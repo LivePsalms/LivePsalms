@@ -33,22 +33,17 @@ import {
 import { recordLamplightUsage } from '../_shared/usage.ts';
 import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
 import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
+import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
 import { classifyGenerateError } from './classify-error.ts';
 export { classifyGenerateError };
 
-// Today's Lamp is invoked from the browser via supabase.functions.invoke, so
-// the function must answer CORS preflights and echo the allow-origin header
-// on every response. embed-note doesn't need this because it's only ever
-// invoked server-to-server (pg_cron + queue RPC).
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
+    return new Response('ok', { headers: cors });
   }
   if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
 
@@ -65,6 +60,10 @@ serve(async (req) => {
 });
 
 async function handleGenerate(req: Request): Promise<Response> {
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
   const voyageKey = Deno.env.get('VOYAGE_AI_KEY');
   if (!anthropicKey) return jsonResp({ error: 'ANTHROPIC_API_KEY missing' }, 500);
@@ -228,13 +227,6 @@ async function handleGenerate(req: Request): Promise<Response> {
   return jsonResp({ error: 'unknown kind' }, 400);
 }
 
-
-function jsonResp(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
-  });
-}
 
 // ── Smoke-test context builder (unchanged from sub-project 3) ────────────
 async function buildSmokeTestContext(

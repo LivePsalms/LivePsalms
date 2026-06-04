@@ -9,17 +9,10 @@ import { recordLamplightUsage } from '../_shared/usage.ts';
 import { handleTranscribe } from './handler.ts';
 import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
 import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
+import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const CLAUDE_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-const jsonResp = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, 'content-type': 'application/json' } });
 
 // Prefer the stored blob's content-type; fall back to the key's extension so a
 // PNG/WebP isn't mislabeled as JPEG (which Claude would reject).
@@ -40,7 +33,11 @@ function extractVerseRefsFromText(text: string): string[] {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
   try {
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
