@@ -66,10 +66,12 @@ Three changes across two Edge-Function files and one new migration:
 New migration `021_protect_privileged_profile_columns.sql`:
 
 ```sql
+-- Intentionally SECURITY INVOKER (the default — do NOT add `security definer`).
+-- A SECURITY DEFINER function runs as its owner, so current_user would become
+-- the owner and the guard below would never match — rendering it inert.
 create or replace function public.protect_privileged_profile_columns()
 returns trigger
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin
@@ -163,6 +165,13 @@ boundary. If exact enforcement is later required, migrate to the atomic SECURITY
 **Counting policy:** all `lamplight_usage` rows in the window count toward quota, including
 early-return error paths (`no_embedding`, `not_neighbor`). This is deliberate — it also throttles
 abusive looping of cheap error paths. Can be refined later if it proves too strict.
+
+**Cache hits are intentionally not counted.** The quota caps *model spend*. When a
+`daily_devotion` (or `connection_card_why`) is already cached, the pipeline returns the stored
+artifact without calling Anthropic/Voyage, records no `lamplight_usage` row, and therefore does
+not consume quota — it incurs no cost. Raw invocation flooding of free cache-hit reads is a
+function-compute concern, not a model-spend one, and is addressed by per-IP edge limiting in a
+later batch (Batch D), not here.
 
 ## Testing
 
