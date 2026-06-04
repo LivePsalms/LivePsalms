@@ -66,10 +66,12 @@ Three changes across two Edge-Function files and one new migration:
 New migration `021_protect_privileged_profile_columns.sql`:
 
 ```sql
+-- Intentionally SECURITY INVOKER (the default — do NOT add `security definer`).
+-- A SECURITY DEFINER function runs as its owner, so current_user would become
+-- the owner and the guard below would never match — rendering it inert.
 create or replace function public.protect_privileged_profile_columns()
 returns trigger
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin

@@ -153,11 +153,14 @@ Create `supabase/migrations/021_protect_privileged_profile_columns.sql`:
 -- note_count during ordinary authenticated note inserts. Inside that SECURITY
 -- DEFINER function current_user becomes the function owner, so it passes; a
 -- direct browser UPDATE runs as 'authenticated'/'anon' and is blocked.
+--
+-- Intentionally SECURITY INVOKER (the default — do NOT add `security definer`).
+-- A SECURITY DEFINER function executes as its owner, so current_user would be
+-- the owner and the guard below would never match, rendering the trigger inert.
 
 create or replace function public.protect_privileged_profile_columns()
 returns trigger
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin
