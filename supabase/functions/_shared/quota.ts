@@ -1,28 +1,40 @@
 // supabase/functions/_shared/quota.ts
 //
-// Per-user (by tier) + global daily quota for billable Lamplight AI calls.
-// Approach A from the Batch A security spec: count lamplight_usage rows in a
-// rolling 24h window. No new infra. Accepts a small race-window overage under
-// concurrency (documented in the spec) — acceptable for a spend cap.
+// Per-user (by tier, kind-scoped) + global daily quota for billable Lamplight
+// AI calls. Counts lamplight_usage rows in a rolling 24h window. No new infra.
+// Accepts a small race-window overage under concurrency — fine for a spend cap.
+//
+// Buckets are INDEPENDENT and scoped by artifact_kind: the generation bucket
+// counts generation kinds; the transcription bucket counts note_transcription.
+// The global ceiling counts ALL kinds across all users (absolute wallet guard).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type Tier = 'none' | 'lite' | 'plus';
 
-export interface QuotaLimits {
+export interface QuotaScope {
+  kinds: string[];                 // artifact_kinds this bucket counts
   perUser: Record<Tier, number>;
-  global: number;
 }
 
-const DEFAULT_LIMITS: QuotaLimits = {
-  perUser: { none: 10, lite: 50, plus: 200 },
+export interface QuotaConfig {
+  generation: QuotaScope;
+  transcription: QuotaScope;
+  global: number;                  // all-kinds daily ceiling
+}
+
+const GENERATION_KINDS = ['smoke_test', 'daily_devotion', 'connection_card_why'];
+const TRANSCRIPTION_KINDS = ['note_transcription'];
+
+const DEFAULTS = {
+  generation: { none: 10, lite: 50, plus: 200 },
+  transcription: { none: 5, lite: 20, plus: 50 },
   global: 2000,
 };
 
-// Per-environment overrides without a code change. Invalid/missing → default.
-export function resolveQuotaLimits(env: { get(key: string): string | undefined }): QuotaLimits {
-  // A value of 0 is a valid, intentional override (disables a tier / sets a hard
-  // zero ceiling). Only non-numeric or negative values fall back to the default.
+// Per-environment overrides without a code change. Invalid/negative → default;
+// 0 is a valid, intentional override (disables a tier / sets a hard ceiling).
+export function resolveQuotaLimits(env: { get(key: string): string | undefined }): QuotaConfig {
   const num = (key: string, fallback: number): number => {
     const raw = env.get(key);
     if (raw === undefined || raw === '') return fallback;
@@ -30,18 +42,29 @@ export function resolveQuotaLimits(env: { get(key: string): string | undefined }
     return Number.isFinite(n) && n >= 0 ? n : fallback;
   };
   return {
-    perUser: {
-      none: num('LAMPLIGHT_QUOTA_NONE', DEFAULT_LIMITS.perUser.none),
-      lite: num('LAMPLIGHT_QUOTA_LITE', DEFAULT_LIMITS.perUser.lite),
-      plus: num('LAMPLIGHT_QUOTA_PLUS', DEFAULT_LIMITS.perUser.plus),
+    generation: {
+      kinds: GENERATION_KINDS,
+      perUser: {
+        none: num('LAMPLIGHT_QUOTA_NONE', DEFAULTS.generation.none),
+        lite: num('LAMPLIGHT_QUOTA_LITE', DEFAULTS.generation.lite),
+        plus: num('LAMPLIGHT_QUOTA_PLUS', DEFAULTS.generation.plus),
+      },
     },
-    global: num('LAMPLIGHT_QUOTA_GLOBAL', DEFAULT_LIMITS.global),
+    transcription: {
+      kinds: TRANSCRIPTION_KINDS,
+      perUser: {
+        none: num('LAMPLIGHT_QUOTA_TRANSCRIPTION_NONE', DEFAULTS.transcription.none),
+        lite: num('LAMPLIGHT_QUOTA_TRANSCRIPTION_LITE', DEFAULTS.transcription.lite),
+        plus: num('LAMPLIGHT_QUOTA_TRANSCRIPTION_PLUS', DEFAULTS.transcription.plus),
+      },
+    },
+    global: num('LAMPLIGHT_QUOTA_GLOBAL', DEFAULTS.global),
   };
 }
 
 export interface QuotaDeps {
   getTier(userId: string): Promise<Tier>;
-  countUserUsage(userId: string, sinceIso: string): Promise<number>;
+  countUserUsage(userId: string, sinceIso: string, kinds: string[]): Promise<number>;
   countGlobalUsage(sinceIso: string): Promise<number>;
 }
 
@@ -53,20 +76,27 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function checkQuota(
   deps: QuotaDeps,
-  limits: QuotaLimits,
+  scope: QuotaScope,
+  global: number,
   args: { userId: string; nowMs: number },
 ): Promise<QuotaResult> {
+  // Refuse an empty kinds scope: `.in('artifact_kind', [])` matches zero rows,
+  // which would silently fail OPEN. A misconfigured scope must block, not pass.
+  if (scope.kinds.length === 0) {
+    throw new Error('quota scope has no kinds — refusing to fail open');
+  }
   const sinceIso = new Date(args.nowMs - DAY_MS).toISOString();
-  const tier = await deps.getTier(args.userId);
-  const userLimit = limits.perUser[tier];
-
-  const userUsed = await deps.countUserUsage(args.userId, sinceIso);
+  const [tier, userUsed] = await Promise.all([
+    deps.getTier(args.userId),
+    deps.countUserUsage(args.userId, sinceIso, scope.kinds),
+  ]);
+  const userLimit = scope.perUser[tier];
   if (userUsed >= userLimit) {
     return { ok: false, reason: 'user_quota', tier, userUsed, userLimit };
   }
 
   const globalUsed = await deps.countGlobalUsage(sinceIso);
-  if (globalUsed >= limits.global) {
+  if (globalUsed >= global) {
     return { ok: false, reason: 'global_quota', tier, userUsed, userLimit };
   }
 
@@ -86,11 +116,12 @@ export function supabaseQuotaDeps(client: SupabaseClient): QuotaDeps {
       const tier = data?.tier;
       return tier === 'lite' || tier === 'plus' ? tier : 'none';
     },
-    async countUserUsage(userId, sinceIso) {
+    async countUserUsage(userId, sinceIso, kinds) {
       const { count, error } = await client
         .from('lamplight_usage')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
+        .in('artifact_kind', kinds)
         .gte('created_at', sinceIso);
       // Fail closed: a broken quota check must block, never silently allow.
       if (error) throw new Error(`quota countUserUsage failed: ${error.message}`);

@@ -98,9 +98,11 @@ async function handleGenerate(req: Request): Promise<Response> {
   // Note: the quota caps MODEL SPEND. Cache-hit paths (e.g. an already-generated
   // daily_devotion) return without calling Anthropic/Voyage and intentionally do
   // not record a usage row, so they don't consume quota — they incur no cost.
+  const quotaCfg = resolveQuotaLimits(Deno.env);
   const quota = await checkQuota(
     supabaseQuotaDeps(supabase),
-    resolveQuotaLimits(Deno.env),
+    quotaCfg.generation,
+    quotaCfg.global,
     { userId, nowMs: Date.now() },
   );
   if (!quota.ok) return jsonResp({ error: 'quota_exceeded', reason: quota.reason }, 429);

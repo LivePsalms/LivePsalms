@@ -26,23 +26,28 @@ export interface TranscribeDeps {
   supabase: unknown;
 }
 
-export interface TranscribeBody { user_id?: string; image_key?: string }
+export interface TranscribeBody { image_key?: string }
 export interface HandlerResponse { status: number; body: TranscribeResult | { error: string } }
 
 export async function handleTranscribe(
   deps: TranscribeDeps,
   body: TranscribeBody,
+  userId: string,
 ): Promise<HandlerResponse> {
-  if (typeof body.user_id !== 'string' || body.user_id.length === 0) {
-    return { status: 400, body: { error: 'bad user_id' } };
+  // Defense in depth: the caller (index.ts) derives userId from the verified JWT
+  // and 401s on null, but never trust that — an empty userId would make the IDOR
+  // prefix `note-scans//` and accept any double-slashed key. Refuse it here too.
+  if (!userId) {
+    return { status: 401, body: { error: 'unauthenticated' } };
   }
   if (typeof body.image_key !== 'string') {
     return { status: 400, body: { error: 'bad image_key' } };
   }
-  // IDOR guard: key must be exactly note-scans/{user_id}/{single-safe-filename}.
-  // A plain startsWith() is not path-aware — `..` segments would escape the
-  // user's folder, and the service-role client bypasses storage RLS.
-  const prefix = `note-scans/${body.user_id}/`;
+  // IDOR guard: key must be exactly note-scans/{userId}/{single-safe-filename}.
+  // userId is the JWT-verified caller (never client-supplied). A plain
+  // startsWith() is not path-aware — `..` segments would escape the user's
+  // folder, and the service-role client bypasses storage RLS.
+  const prefix = `note-scans/${userId}/`;
   const rest = body.image_key.startsWith(prefix) ? body.image_key.slice(prefix.length) : null;
   if (rest === null || !/^[A-Za-z0-9._-]+$/.test(rest)) {
     return { status: 403, body: { error: 'forbidden image_key' } };
@@ -76,7 +81,7 @@ export async function handleTranscribe(
     tokensOut = out.completionTokens;
   } catch (err) {
     await deps.recordUsage({
-      user_id: body.user_id, model: modelUsed, artifact_kind: 'note_transcription',
+      user_id: userId, model: modelUsed, artifact_kind: 'note_transcription',
       tokens_in: 0, tokens_out: 0, status: 'error',
       error_code: err instanceof Error ? err.message.slice(0, 80) : 'llm_error',
     });
@@ -98,7 +103,7 @@ export async function handleTranscribe(
   let transcription_id: string;
   try {
     transcription_id = await deps.insertRow({
-      user_id: body.user_id,
+      user_id: userId,
       image_key: body.image_key,
       raw_transcription: transcription,
       confidence,
@@ -109,7 +114,7 @@ export async function handleTranscribe(
     });
   } catch (err) {
     await deps.recordUsage({
-      user_id: body.user_id, model: modelUsed, artifact_kind: 'note_transcription',
+      user_id: userId, model: modelUsed, artifact_kind: 'note_transcription',
       tokens_in: tokensIn, tokens_out: tokensOut, status: 'error',
       error_code: err instanceof Error ? err.message.slice(0, 80) : 'insert_error',
     });
@@ -117,7 +122,7 @@ export async function handleTranscribe(
   }
 
   await deps.recordUsage({
-    user_id: body.user_id, model: modelUsed, artifact_kind: 'note_transcription',
+    user_id: userId, model: modelUsed, artifact_kind: 'note_transcription',
     tokens_in: tokensIn, tokens_out: tokensOut, status: 'ok',
   });
 
