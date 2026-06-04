@@ -7,6 +7,8 @@ import { verifyVerseRefs } from '../_shared/verse-verify.ts';
 import { extractVerseRefsFromNoteContent } from '../_shared/note-signals.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
 import { handleTranscribe } from './handler.ts';
+import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
+import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const CLAUDE_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -44,10 +46,23 @@ serve(async (req) => {
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicKey) return jsonResp({ error: 'ANTHROPIC_API_KEY missing' }, 500);
 
-    let body: { user_id?: string; image_key?: string };
+    let body: { image_key?: string };
     try { body = await req.json(); } catch { return jsonResp({ error: 'bad json' }, 400); }
 
     const supabase = serviceClient();
+
+    // Identity from the verified JWT, never from the request body.
+    const userId = await deriveUserId(supabase, bearerToken(req));
+    if (!userId) return jsonResp({ error: 'unauthorized' }, 401);
+
+    // Transcription quota — a separate bucket from generation (counts only
+    // note_transcription rows). A count error throws and is surfaced as a 500
+    // by the top-level catch (fail closed). Every call that reaches the model
+    // records exactly one usage row, so the count is reliable.
+    const cfg = resolveQuotaLimits(Deno.env);
+    const quota = await checkQuota(supabaseQuotaDeps(supabase), cfg.transcription, cfg.global, { userId, nowMs: Date.now() });
+    if (!quota.ok) return jsonResp({ error: 'quota_exceeded', reason: quota.reason }, 429);
+
     const llm = createAnthropicAdapter({ apiKey: anthropicKey, fetch });
 
     const res = await handleTranscribe({
@@ -70,7 +85,7 @@ serve(async (req) => {
         return data!.id as string;
       },
       recordUsage: (usageRow) => recordLamplightUsage(supabase, usageRow),
-    }, body);
+    }, body, userId);
 
     return jsonResp(res.body, res.status);
   } catch (err) {
