@@ -105,6 +105,7 @@ describe('runConnectionWhyPipeline', () => {
       expect(result.cached).toBe(true);
       expect(result.why).toBe('cached!');
       expect(result.attempts).toBe(0);
+      expect(result.usage).toBeNull();
     }
     expect(captured.length).toBe(0);
   });
@@ -123,6 +124,12 @@ describe('runConnectionWhyPipeline', () => {
     if (result.ok) {
       expect(result.cached).toBe(false);
       expect(result.attempts).toBe(1);
+      expect(result.usage).toEqual({
+        model: 'claude-haiku-4-5-20251001',
+        tokens_in: 100,
+        tokens_out: 20,
+        status: 'ok',
+      });
     }
     expect(upsertCalls.length).toBe(1);
     const row = upsertCalls[0];
@@ -187,6 +194,13 @@ describe('runConnectionWhyPipeline', () => {
     if (!result.ok) {
       expect(result.reason).toBe('validators_failed');
       expect(result.attempts).toBe(2);
+      expect(result.usage).toEqual({
+        model: 'claude-haiku-4-5-20251001',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: 'validators_failed',
+      });
     }
     expect(upsertCalls.length).toBe(0);
   });

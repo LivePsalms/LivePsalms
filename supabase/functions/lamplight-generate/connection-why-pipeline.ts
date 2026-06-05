@@ -22,6 +22,7 @@ import {
 } from '../_shared/voice.ts';
 import { CONNECTION_WHY_PROMPT } from './prompts/connection-why.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
+import type { UsageCore } from '../_shared/usage.ts';
 
 export interface ConnectionWhyContext {
   userId: string;
@@ -41,6 +42,7 @@ export type ConnectionWhyPipelineResult =
       model_used?: string;
       prompt_version: string;
       attempts: number;
+      usage: UsageCore | null;
     }
   | {
       ok: false;
@@ -52,6 +54,7 @@ export type ConnectionWhyPipelineResult =
       model_used?: string;
       prompt_version: string;
       attempts: number;
+      usage: UsageCore | null;
     };
 
 function formatConnectionStricterSuffix(violations: {
@@ -94,6 +97,7 @@ export async function runConnectionWhyPipeline(args: {
       cached: true,
       prompt_version: promptVersion,
       attempts: 0,
+      usage: null,
     };
   }
 
@@ -161,6 +165,7 @@ export async function runConnectionWhyPipeline(args: {
         model_used: modelUsed,
         prompt_version: promptVersion,
         attempts,
+        usage: { model: modelUsed, tokens_in: promptTokens ?? 0, tokens_out: completionTokens ?? 0, status: 'ok' },
       };
     }
     lastViolations = { shape: shape.violations, content: content.violations };
@@ -182,5 +187,6 @@ export async function runConnectionWhyPipeline(args: {
     model_used: lastModelUsed,
     prompt_version: promptVersion,
     attempts,
+    usage: { model: lastModelUsed, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'validators_failed' },
   };
 }
