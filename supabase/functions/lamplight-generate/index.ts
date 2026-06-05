@@ -31,6 +31,7 @@ import {
   type ConnectionWhyContext,
 } from './connection-why-pipeline.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
+import { runGeneration, type GenerationLifecycleDeps } from '../_shared/generation-lifecycle.ts';
 import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
 import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
 import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
@@ -98,43 +99,38 @@ async function handleGenerate(req: Request): Promise<Response> {
   // daily_devotion) return without calling Anthropic/Voyage and intentionally do
   // not record a usage row, so they don't consume quota — they incur no cost.
   const quotaCfg = resolveQuotaLimits(Deno.env);
-  const quota = await checkQuota(
-    supabaseQuotaDeps(supabase),
-    quotaCfg.generation,
-    quotaCfg.global,
-    { userId, nowMs: Date.now() },
-  );
-  if (!quota.ok) return jsonResp({ error: 'quota_exceeded', reason: quota.reason }, 429);
-
   const voyageDeps: VoyageDeps = { apiKey: voyageKey, fetch };
   const rerankEnabled = Deno.env.get('RERANK_ENABLED') === 'true';
   const llm = createAnthropicAdapter({ apiKey: anthropicKey, fetch });
 
+  // The coordinator seam owns quota + usage recording + error classification.
+  // checkQuota maps the internal QuotaResult.reason onto the lifecycle's shape;
+  // recordUsage is the single recording site for the whole function.
+  const lifecycleDeps: GenerationLifecycleDeps = {
+    checkQuota: async (uid) => {
+      const quota = await checkQuota(
+        supabaseQuotaDeps(supabase),
+        quotaCfg.generation,
+        quotaCfg.global,
+        { userId: uid, nowMs: Date.now() },
+      );
+      return quota.ok ? { ok: true } : { ok: false, reason: quota.reason };
+    },
+    recordUsage: (row) => recordLamplightUsage(supabase, row),
+    classifyError: classifyGenerateError,
+  };
+
   if (body.kind === 'smoke_test') {
-    try {
-      const ctx = await buildSmokeTestContext(supabase, { userId, voyageDeps, rerankEnabled });
-      const result = await runSmokeTestPipeline({ llm, ctx });
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'smoke_test',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'ok',
-      }).catch(() => {});
-      return jsonResp(result);
-    } catch (err) {
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'smoke_test',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'error',
-        error_code: classifyGenerateError(err),
-      }).catch(() => {});
-      throw err;
-    }
+    const { status, response } = await runGeneration(
+      lifecycleDeps,
+      { userId, artifactKind: 'smoke_test' },
+      async () => {
+        const ctx = await buildSmokeTestContext(supabase, { userId, voyageDeps, rerankEnabled });
+        const result = await runSmokeTestPipeline({ llm, ctx });
+        return { response: result, usage: result.usage };
+      },
+    );
+    return jsonResp(response, status);
   }
 
   if (body.kind === 'daily_devotion') {
@@ -142,26 +138,18 @@ async function handleGenerate(req: Request): Promise<Response> {
       return jsonResp({ error: 'bad local_date' }, 400);
     }
     const localDate = body.local_date;
-    const ctx = await buildDailyDevotionContext(supabase, {
-      userId, localDate, voyageDeps, rerankEnabled,
-    });
-    try {
-      const result = await runDailyDevotionPipeline({
-        llm, supabase, ctx, userId, localDate,
-      });
-      return jsonResp(result);
-    } catch (err) {
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'daily_devotion',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'error',
-        error_code: classifyGenerateError(err),
-      }).catch(() => {});
-      throw err;
-    }
+    const { status, response } = await runGeneration(
+      lifecycleDeps,
+      { userId, artifactKind: 'daily_devotion' },
+      async () => {
+        const ctx = await buildDailyDevotionContext(supabase, {
+          userId, localDate, voyageDeps, rerankEnabled,
+        });
+        const result = await runDailyDevotionPipeline({ llm, supabase, ctx, userId, localDate });
+        return { response: result, usage: result.usage };
+      },
+    );
+    return jsonResp(response, status);
   }
 
   if (body.kind === 'connection_card_why') {
@@ -172,56 +160,33 @@ async function handleGenerate(req: Request): Promise<Response> {
     ) {
       return jsonResp({ error: 'bad payload' }, 400);
     }
-    const minSimilarity = await loadConnectionMinSimilarity(supabase);
-    const ctxResult = await buildConnectionWhyContext(supabase, {
-      userId,
-      sourceNoteId: body.source_note_id,
-      relatedNoteId: body.related_note_id,
-      minSimilarity,
-    });
-    if (ctxResult.kind === 'no_embedding') {
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'connection_card_why',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'error',
-        error_code: 'no_embedding',
-      }).catch(() => {});
-      return jsonResp({ ok: false, reason: 'no_embedding', attempts: 0 });
-    }
-    if (ctxResult.kind === 'not_neighbor') {
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'connection_card_why',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'error',
-        error_code: 'not_neighbor',
-      }).catch(() => {});
-      return jsonResp({ ok: false, reason: 'not_neighbor', attempts: 0 });
-    }
-    try {
-      const result = await runConnectionWhyPipeline({
-        llm,
-        supabase,
-        ctx: ctxResult.context,
-      });
-      return jsonResp(result);
-    } catch (err) {
-      void recordLamplightUsage(supabase, {
-        user_id: userId,
-        model: 'claude-haiku-4-5-20251001',
-        artifact_kind: 'connection_card_why',
-        tokens_in: 0,
-        tokens_out: 0,
-        status: 'error',
-        error_code: classifyGenerateError(err),
-      }).catch(() => {});
-      throw err;
-    }
+    const sourceNoteId = body.source_note_id;
+    const relatedNoteId = body.related_note_id;
+    const { status, response } = await runGeneration(
+      lifecycleDeps,
+      { userId, artifactKind: 'connection_card_why' },
+      async (): Promise<{ response: unknown; usage: import('../_shared/usage.ts').UsageCore | null }> => {
+        const minSimilarity = await loadConnectionMinSimilarity(supabase);
+        const ctxResult = await buildConnectionWhyContext(supabase, {
+          userId, sourceNoteId, relatedNoteId, minSimilarity,
+        });
+        if (ctxResult.kind === 'no_embedding') {
+          return {
+            response: { ok: false, reason: 'no_embedding', attempts: 0 },
+            usage: { model: null, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'no_embedding' },
+          };
+        }
+        if (ctxResult.kind === 'not_neighbor') {
+          return {
+            response: { ok: false, reason: 'not_neighbor', attempts: 0 },
+            usage: { model: null, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'not_neighbor' },
+          };
+        }
+        const result = await runConnectionWhyPipeline({ llm, supabase, ctx: ctxResult.context });
+        return { response: result, usage: result.usage };
+      },
+    );
+    return jsonResp(response, status);
   }
 
   return jsonResp({ error: 'unknown kind' }, 400);

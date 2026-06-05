@@ -137,9 +137,9 @@ describe('runConnectionWhyPipeline', () => {
     expect(row.related_note_id).toBe('note-2');
     expect(row.content_hash).toBe('abc123');
     expect(row.why).toBe('Both notes return to wilderness.');
-    await Promise.resolve(); // let the fire-and-forget recordUsage microtask drain
-    expect(usageInserts).toHaveLength(1);
-    expect(usageInserts[0]).toMatchObject({ artifact_kind: 'connection_card_why', status: 'ok' });
+    await Promise.resolve(); // drain any stray microtask
+    // The pipeline no longer records usage — the lifecycle (runGeneration) does.
+    expect(usageInserts).toHaveLength(0);
   });
 
   it('cache row with stale content_hash falls through to generation', async () => {

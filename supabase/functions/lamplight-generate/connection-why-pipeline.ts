@@ -21,7 +21,6 @@ import {
   composeSystem,
 } from '../_shared/voice.ts';
 import { CONNECTION_WHY_PROMPT } from './prompts/connection-why.ts';
-import { recordLamplightUsage } from '../_shared/usage.ts';
 import type { UsageCore } from '../_shared/usage.ts';
 
 export interface ConnectionWhyContext {
@@ -150,14 +149,6 @@ export async function runConnectionWhyPipeline(args: {
         );
       if (upsertRes.error) throw upsertRes.error;
 
-      void recordLamplightUsage(supabase, {
-        user_id: ctx.userId,
-        model: modelUsed,
-        artifact_kind: 'connection_card_why',
-        tokens_in: promptTokens ?? 0,
-        tokens_out: completionTokens ?? 0,
-        status: 'ok',
-      }).catch(() => {});
       return {
         ok: true,
         why: parsed.why,
@@ -171,15 +162,6 @@ export async function runConnectionWhyPipeline(args: {
     lastViolations = { shape: shape.violations, content: content.violations };
   }
 
-  void recordLamplightUsage(supabase, {
-    user_id: ctx.userId,
-    model: lastModelUsed,
-    artifact_kind: 'connection_card_why',
-    tokens_in: 0,
-    tokens_out: 0,
-    status: 'error',
-    error_code: 'validators_failed',
-  }).catch(() => {});
   return {
     ok: false,
     reason: 'validators_failed',

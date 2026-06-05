@@ -182,9 +182,9 @@ describe('runDailyDevotionPipeline', () => {
       source_verses: ['Psalm 23:4'],
       prompt_version: 'daily-devotion-2026-05-28-v2',
     });
-    await Promise.resolve(); // let the fire-and-forget recordUsage microtask drain
-    expect(usageInserts).toHaveLength(1);
-    expect(usageInserts[0]).toMatchObject({ artifact_kind: 'daily_devotion', status: 'ok' });
+    await Promise.resolve(); // drain any stray microtask
+    // The pipeline no longer records usage — the lifecycle (runGeneration) does.
+    expect(usageInserts).toHaveLength(0);
   });
 
   it('composed system prompt: LAMPLIGHT_SYSTEM_FRAGMENT first, artifact stance second, {{local_date}} substituted, stricter suffix only on retry', async () => {

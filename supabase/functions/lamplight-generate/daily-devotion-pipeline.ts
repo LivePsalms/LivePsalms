@@ -21,7 +21,6 @@ import {
   type ContentRuleViolation,
 } from '../_shared/validators.ts';
 import { DAILY_DEVOTION_PROMPT } from './prompts/daily-devotion.ts';
-import { recordLamplightUsage } from '../_shared/usage.ts';
 import type { UsageCore } from '../_shared/usage.ts';
 
 export interface DailyDevotionPassage {
@@ -170,14 +169,6 @@ export async function runDailyDevotionPipeline(args: {
         if (refetch.error || !refetch.data) {
           throw insertRes.error ?? refetch.error ?? new Error('insert + re-read both failed');
         }
-        void recordLamplightUsage(args.supabase, {
-          user_id: args.userId,
-          model: modelUsed,
-          artifact_kind: 'daily_devotion',
-          tokens_in: promptTokens ?? 0,
-          tokens_out: completionTokens ?? 0,
-          status: 'ok',
-        }).catch(() => {});
         return {
           ok: true,
           artifact: refetch.data.body as DailyDevotion,
@@ -190,14 +181,6 @@ export async function runDailyDevotionPipeline(args: {
         };
       }
 
-      void recordLamplightUsage(args.supabase, {
-        user_id: args.userId,
-        model: modelUsed,
-        artifact_kind: 'daily_devotion',
-        tokens_in: promptTokens ?? 0,
-        tokens_out: completionTokens ?? 0,
-        status: 'ok',
-      }).catch(() => {});
       return {
         ok: true,
         artifact: parsed,
@@ -218,15 +201,6 @@ export async function runDailyDevotionPipeline(args: {
     lastViolations = { citation: citation.violations, content: allContentViolations };
   }
 
-  void recordLamplightUsage(args.supabase, {
-    user_id: args.userId,
-    model: lastModelUsed,
-    artifact_kind: 'daily_devotion',
-    tokens_in: 0,
-    tokens_out: 0,
-    status: 'error',
-    error_code: 'validators_failed',
-  }).catch(() => {});
   return {
     ok: false,
     reason: 'validators_failed',
