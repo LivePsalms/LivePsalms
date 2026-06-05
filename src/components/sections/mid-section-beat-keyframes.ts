@@ -9,14 +9,6 @@ import { mapBeatProgressWebGPU } from './mid-section-intensity';
 // Targets are the abstract names 'beat1'..'beat5'; the harness maps them to the
 // five beat <p> elements via applyKeyframes' `targets` arg.
 //
-// The original imperative effect pre-set ALL beats to {opacity:0, y:20} up-front,
-// then tweened each in/out. Here that initial hidden state is folded into each
-// beat's enter keyframe as a `fromTo` (`from: {opacity:0, y:20}`). This shifts WHEN
-// each beat's initial state is established on the timeline — from time 0 to the
-// beat's own `enter` position. Because this is a scrub timeline (inactive fromTo
-// targets sit at their `from` state) and the beats never overlap visually, the
-// rendered output is identical.
-//
 // webgpu mode offsets/scales beat positions into the reading band via
 // mapBeatProgressWebGPU (intro/outro bookends); video mode uses raw positions.
 export function buildMidSectionBeatKeyframes(mode: 'webgpu' | 'video'): Keyframe[] {
@@ -32,8 +24,9 @@ export function buildMidSectionBeatKeyframes(mode: 'webgpu' | 'video'): Keyframe
     const holdEnd = mapPos(raw.holdEnd);
     const exit = mapPos(raw.exit);
 
-    // Enter — fade in + rise from y:20 to y:0. The initial hidden state is folded
-    // into the `from` here (replacing the original standalone gsap.set pre-pass).
+    // Enter — fade in + rise from y:20 to y:0. The hidden state is folded into the
+    // `from` (replacing the original up-front gsap.set); equivalent because on a
+    // scrub timeline inactive fromTo targets sit at `from` and beats never overlap.
     if (enter < holdStart) {
       keyframes.push({
         target: key,
