@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useConnectionCards } from '../../hooks/useConnectionCards';
+import { useConnectionDiscovery } from '../../hooks/useConnectionDiscovery';
+import { useConnectionWhy } from '../../hooks/useConnectionWhy';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { firstNameOf } from '../../first-load/notepad-first-load';
 import { sanitizeFirstName } from '../../utils/personalization';
@@ -23,7 +24,6 @@ export interface ConnectionCardsPanelProps {
 
 export function ConnectionCardsPanel({
   adapter,
-  userId,
   activeNote,
   totalNoteCount,
   loadNeighborNotes,
@@ -51,19 +51,25 @@ export function ConnectionCardsPanel({
     };
   }, [adapter]);
 
-  const { state, expandCard, retryWhy, retry } = useConnectionCards({
+  const { state, retry } = useConnectionDiscovery({
     adapter,
-    userId,
     activeNote,
     totalNoteCount,
     loadNeighborNotes,
+    mode: 'full',
     qualifyingMinSimilarity: minSimilarity,
+  });
+  const { whyState, expand, retry: retryWhy } = useConnectionWhy({
+    adapter,
+    sourceNoteId: activeNote?.id ?? null,
   });
   const { user } = useAuthSession();
   const firstName = user ? sanitizeFirstName(firstNameOf(user)) : null;
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
 
   if (state.phase !== 'ready') {
+    // 'present' is a presence-mode-only phase; full mode never emits it.
+    if (state.phase === 'present') return null;
     if (showEmptyStates) {
       return <ConnectionCardsEmpty state={state} onRetry={retry} />;
     }
@@ -81,16 +87,16 @@ export function ConnectionCardsPanel({
       return;
     }
     setActiveChipId(relatedNoteId);
-    const card = cards.find((c) => c.relatedNoteId === relatedNoteId);
-    if (card && card.why.phase === 'collapsed') {
-      await expandCard(relatedNoteId);
+    if (whyState(relatedNoteId).phase === 'collapsed') {
+      await expand(relatedNoteId);
     }
   };
 
   const isStack = layout === 'stack';
 
   const renderWhy = (card: typeof cards[number]) => {
-    if (card.why.phase === 'loading') {
+    const why = whyState(card.relatedNoteId);
+    if (why.phase === 'loading') {
       return (
         <p
           role="status"
@@ -102,18 +108,18 @@ export function ConnectionCardsPanel({
         </p>
       );
     }
-    if (card.why.phase === 'shown') {
+    if (why.phase === 'shown') {
       return (
         <p
           className="text-sm italic"
           style={{ color: 'var(--deep-umber)', fontFamily: 'Cormorant Garamond, serif' }}
-          data-cached={card.why.cached}
+          data-cached={why.cached}
         >
-          {prefixWhyWithName(card.why.text, firstName)}
+          {prefixWhyWithName(why.text, firstName)}
         </p>
       );
     }
-    if (card.why.phase === 'error') {
+    if (why.phase === 'error') {
       return (
         <div className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
           <p className="mb-1">Couldn't read this connection.</p>

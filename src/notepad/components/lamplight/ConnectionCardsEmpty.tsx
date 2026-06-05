@@ -6,9 +6,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import type { ConnectionCardsState } from '../../hooks/useConnectionCards';
+import type { ConnectionDiscoveryState } from '../../connection-cards/connection-discovery';
 
-type EmptyState = Exclude<ConnectionCardsState, { phase: 'ready' }>;
+type EmptyState = Exclude<ConnectionDiscoveryState, { phase: 'ready' } | { phase: 'present' }>;
 
 export interface ConnectionCardsEmptyProps {
   state: EmptyState;
