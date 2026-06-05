@@ -120,6 +120,7 @@ describe('runDailyDevotionPipeline', () => {
       expect(result.cached).toBe(true);
       expect(result.attempts).toBe(0);
       expect(result.artifact_id).toBe('cached-id');
+      expect(result.usage).toBeNull();
     }
     expect(llmCalls).toBe(0);
     expect(inserts).toHaveLength(0);
@@ -165,6 +166,12 @@ describe('runDailyDevotionPipeline', () => {
       expect(result.attempts).toBe(1);
       expect(result.cached).toBe(false);
       expect(result.artifact.scripture.ref).toBe('Psalm 23:4');
+      expect(result.usage).toEqual({
+        model: 'claude-sonnet-4-6',
+        tokens_in: 10,
+        tokens_out: 20,
+        status: 'ok',
+      });
     }
     expect(inserts).toHaveLength(1);
     expect(inserts[0]).toMatchObject({
@@ -318,6 +325,13 @@ describe('runDailyDevotionPipeline', () => {
       expect(result.reason).toBe('validators_failed');
       expect(result.attempts).toBe(2);
       expect(result.violations?.content.some(v => v.family === 'banned')).toBe(true);
+      expect(result.usage).toEqual({
+        model: 'claude-sonnet-4-6',
+        tokens_in: 0,
+        tokens_out: 0,
+        status: 'error',
+        error_code: 'validators_failed',
+      });
     }
     expect(inserts).toHaveLength(0);
   });

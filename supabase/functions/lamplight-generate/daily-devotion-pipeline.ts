@@ -22,6 +22,7 @@ import {
 } from '../_shared/validators.ts';
 import { DAILY_DEVOTION_PROMPT } from './prompts/daily-devotion.ts';
 import { recordLamplightUsage } from '../_shared/usage.ts';
+import type { UsageCore } from '../_shared/usage.ts';
 
 export interface DailyDevotionPassage {
   source_id: string;
@@ -49,6 +50,7 @@ export type DailyDevotionPipelineResult =
       prompt_version: string;
       attempts: number;
       cached: boolean;
+      usage: UsageCore | null;
       retrieval?: { note_neighbors: number; bible_passages: number; reranked: boolean };
     }
   | {
@@ -58,6 +60,7 @@ export type DailyDevotionPipelineResult =
       model_used?: string;
       prompt_version: string;
       attempts: number;
+      usage: UsageCore | null;
     };
 
 export async function runDailyDevotionPipeline(args: {
@@ -86,11 +89,12 @@ export async function runDailyDevotionPipeline(args: {
       prompt_version: (existing.data.prompt_version as string) ?? promptVersion,
       attempts: 0,
       cached: true,
+      usage: null,
     };
   }
 
   if (!args.ctx) {
-    return { ok: false, reason: 'no_notes', prompt_version: promptVersion, attempts: 0 };
+    return { ok: false, reason: 'no_notes', prompt_version: promptVersion, attempts: 0, usage: null };
   }
   const ctx = args.ctx;
 
@@ -182,6 +186,7 @@ export async function runDailyDevotionPipeline(args: {
           prompt_version: (refetch.data.prompt_version as string) ?? promptVersion,
           attempts,
           cached: true,
+          usage: { model: modelUsed, tokens_in: promptTokens ?? 0, tokens_out: completionTokens ?? 0, status: 'ok' },
         };
       }
 
@@ -201,6 +206,7 @@ export async function runDailyDevotionPipeline(args: {
         prompt_version: promptVersion,
         attempts,
         cached: false,
+        usage: { model: modelUsed, tokens_in: promptTokens ?? 0, tokens_out: completionTokens ?? 0, status: 'ok' },
         retrieval: {
           note_neighbors: ctx.notes.length,
           bible_passages: ctx.passages.length,
@@ -228,6 +234,7 @@ export async function runDailyDevotionPipeline(args: {
     model_used: lastModelUsed,
     prompt_version: promptVersion,
     attempts,
+    usage: { model: lastModelUsed, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'validators_failed' },
   };
 }
 
