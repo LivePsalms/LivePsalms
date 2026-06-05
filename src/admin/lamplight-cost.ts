@@ -9,8 +9,8 @@ const PRICE_PER_M_TOKENS_CENTS: Record<string, { in: number; out: number }> = {
   'claude-sonnet-4-6-20251001': { in: 300,  out: 1500 },  // alias (defensive — may not be in use yet)
 };
 
-export function estCostCents(model: string, tokensIn: number, tokensOut: number): number {
-  const p = PRICE_PER_M_TOKENS_CENTS[model] ?? { in: 0, out: 0 };
+export function estCostCents(model: string | null, tokensIn: number, tokensOut: number): number {
+  const p = (model && PRICE_PER_M_TOKENS_CENTS[model]) || { in: 0, out: 0 };
   return Math.round((tokensIn * p.in + tokensOut * p.out) / 1_000_000);
 }
 

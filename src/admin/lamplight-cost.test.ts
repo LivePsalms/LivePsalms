@@ -18,6 +18,10 @@ describe('lamplight-cost', () => {
     expect(estCostCents('mystery-model', 9_999_999, 9_999_999)).toBe(0);
   });
 
+  it('null model (no model ran) defaults to 0 cents', () => {
+    expect(estCostCents(null, 9_999_999, 9_999_999)).toBe(0);
+  });
+
   it('formatCents renders dollars with two decimals', () => {
     expect(formatCents(1050)).toBe('$10.50');
     expect(formatCents(0)).toBe('$0.00');
