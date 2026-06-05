@@ -32,7 +32,7 @@ export class UsernameAvailability extends Observable<AvailabilityStatus> {
   }
 
   setInputs(inputs: UsernameAvailabilityInputs): void {
-    const gen = this.bump();
+    const gen = this.cancelAndBump();
     const { name, eligible, debounceMs } = inputs;
 
     if (!eligible) {
@@ -58,16 +58,17 @@ export class UsernameAvailability extends Observable<AvailabilityStatus> {
 
   /** Submit-time reconciliation: force 'taken' so it sticks past any in-flight check. */
   markTaken(): void {
-    this.bump();
+    // Synchronous write after cancelAndBump → no fence needed; bypassing emit is what makes it stick.
+    this.cancelAndBump();
     this.setState(() => 'taken');
   }
 
   /** Bumps the generation + cancels any pending timer so late resolves are dropped. */
   dispose(): void {
-    this.bump();
+    this.cancelAndBump();
   }
 
-  private bump(): number {
+  private cancelAndBump(): number {
     if (this.cancelTimer) {
       this.cancelTimer();
       this.cancelTimer = null;
