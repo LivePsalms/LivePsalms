@@ -58,7 +58,7 @@ export class UsernameAvailability extends Observable<AvailabilityStatus> {
 
   /** Submit-time reconciliation: force 'taken' so it sticks past any in-flight check. */
   markTaken(): void {
-    // Synchronous write after cancelAndBump → no fence needed; bypassing emit is what makes it stick.
+    // cancelAndBump fences any in-flight check (that's what makes 'taken' stick); the direct setState writes the verdict.
     this.cancelAndBump();
     this.setState(() => 'taken');
   }
