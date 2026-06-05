@@ -36,12 +36,6 @@ export function AdminLamplightPage() {
   const [sinceDays, setSinceDays] = useState(7);
   const [usageWindowDays, setUsageWindowDays] = useState(7);
 
-  const sinceIso = useMemo(
-    // eslint-disable-next-line react-hooks/purity
-    () => new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString(),
-    [sinceDays],
-  );
-
   // Hooks must be called unconditionally per React rules-of-hooks.
   // When no real adapter is available, noopAdapter is used above.
   const counts = useAdminJobCounts({
@@ -50,12 +44,9 @@ export function AdminLamplightPage() {
   });
   const failed = useAdminFailedJobs({
     adapter,
-    filters: {
-      status: ['failed'],
-      kind: kindFilter ? [kindFilter] : undefined,
-      userSearch: emailFilter || undefined,
-      since: sinceIso,
-    },
+    sinceDays,
+    kind: kindFilter || undefined,
+    userSearch: emailFilter || undefined,
   });
   const usage = useAdminUsageTop({
     adapter,
