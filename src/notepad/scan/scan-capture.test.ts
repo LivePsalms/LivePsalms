@@ -6,6 +6,7 @@ import {
   type ScanCaptureDeps,
 } from './scan-capture';
 import type { TranscriptionResult } from './types';
+import { MAX_IMAGE_BYTES } from './transcription-client';
 
 const RESULT: TranscriptionResult = {
   transcription: 'hello',
@@ -54,5 +55,76 @@ describe('ScanCapture initial state', () => {
   it('starts idle with no error', () => {
     const sc = new ScanCapture(makeDeps());
     expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+});
+
+describe('ScanCapture.submitFile validation', () => {
+  it('rejects a wrong file type into the error phase and does not run the pipeline', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('application/pdf', 100));
+    expect(sc.getSnapshot()).toEqual({
+      phase: 'error',
+      error: SCAN_ERROR_MESSAGES.wrong_type,
+    });
+    expect(deps.preprocess).not.toHaveBeenCalled();
+    expect(deps.upload).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized file into the error phase', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('image/jpeg', MAX_IMAGE_BYTES + 1));
+    expect(sc.getSnapshot()).toEqual({
+      phase: 'error',
+      error: SCAN_ERROR_MESSAGES.too_large,
+    });
+    expect(deps.preprocess).not.toHaveBeenCalled();
+  });
+});
+
+describe('ScanCapture pipeline (happy path)', () => {
+  it('runs preprocess → upload → transcribe → onResult, ending idle', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('image/jpeg', 1000));
+    expect(deps.preprocess).toHaveBeenCalledTimes(1);
+    expect(deps.upload).toHaveBeenCalledTimes(1);
+    expect(deps.transcribe).toHaveBeenCalledWith('note-scans/u1/x.jpg');
+    expect(deps.onResult).toHaveBeenCalledWith(RESULT);
+    expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+
+  it('maps a preprocess failure to the preprocess stage message', async () => {
+    const deps = makeDeps({ preprocess: vi.fn(async () => { throw new Error('boom'); }) });
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('image/jpeg', 1000));
+    expect(sc.getSnapshot()).toEqual({
+      phase: 'error',
+      error: SCAN_ERROR_MESSAGES.preprocess,
+    });
+    expect(deps.upload).not.toHaveBeenCalled();
+  });
+
+  it('maps an upload failure to the upload stage message', async () => {
+    const deps = makeDeps({ upload: vi.fn(async () => { throw new Error('net'); }) });
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('image/jpeg', 1000));
+    expect(sc.getSnapshot()).toEqual({
+      phase: 'error',
+      error: SCAN_ERROR_MESSAGES.upload,
+    });
+    expect(deps.transcribe).not.toHaveBeenCalled();
+  });
+
+  it('maps a transcribe failure to the transcribe stage message', async () => {
+    const deps = makeDeps({ transcribe: vi.fn(async () => { throw new Error('ocr'); }) });
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('image/jpeg', 1000));
+    expect(sc.getSnapshot()).toEqual({
+      phase: 'error',
+      error: SCAN_ERROR_MESSAGES.transcribe,
+    });
+    expect(deps.onResult).not.toHaveBeenCalled();
   });
 });

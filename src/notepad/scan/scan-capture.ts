@@ -57,4 +57,57 @@ export class ScanCapture extends Observable<ScanCaptureState> {
     (this as unknown as { setState: (u: (prev: ScanCaptureState) => ScanCaptureState) => void })
       .setState(() => next);
   }
+
+  submitFile = async (file: File): Promise<void> => {
+    if (!isAcceptedImage(file.type)) {
+      this.set({ phase: 'error', error: classifyScanError('wrong_type') });
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      this.set({ phase: 'error', error: classifyScanError('too_large') });
+      return;
+    }
+    await this.runPipeline(file);
+  };
+
+  private async runPipeline(blob: Blob): Promise<void> {
+    const gen = ++this.generation;
+
+    let cleaned: Blob;
+    try {
+      this.set({ phase: 'cleaning', error: null });
+      cleaned = await this.deps.preprocess(blob);
+    } catch {
+      this.fail(gen, 'preprocess');
+      return;
+    }
+    if (gen !== this.generation) return;
+
+    let key: string;
+    try {
+      this.set({ phase: 'transcribing', error: null });
+      key = await this.deps.upload(cleaned);
+    } catch {
+      this.fail(gen, 'upload');
+      return;
+    }
+    if (gen !== this.generation) return;
+
+    let result: TranscriptionResult;
+    try {
+      result = await this.deps.transcribe(key);
+    } catch {
+      this.fail(gen, 'transcribe');
+      return;
+    }
+    if (gen !== this.generation) return;
+
+    this.set({ phase: 'idle', error: null });
+    this.deps.onResult(result);
+  }
+
+  private fail(gen: number, stage: ScanErrorStage): void {
+    if (gen !== this.generation) return;
+    this.set({ phase: 'error', error: classifyScanError(stage) });
+  }
 }
