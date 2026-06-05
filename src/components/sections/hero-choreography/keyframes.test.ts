@@ -75,3 +75,29 @@ describe('applyKeyframes', () => {
     expect(calls[0].args[0]).toEqual({ opacity: 1, duration: 1 });
   });
 });
+
+import { projectFinalFrame } from './keyframes';
+
+describe('projectFinalFrame', () => {
+  it('returns each target\'s merged final values, later keyframes overriding', () => {
+    const kfs: Keyframe[] = [
+      // text1: enter (visible) then exit (faded) — final = faded but at rest.
+      { target: 't1', from: { opacity: 0, y: 40 }, to: { opacity: 1, y: 0, filter: 'blur(0px)' }, at: 0, duration: 0.1 },
+      { target: 't1', to: { opacity: 0 }, at: 0.32, duration: 0.08 },
+    ];
+    expect(projectFinalFrame(kfs)).toEqual({
+      t1: { opacity: 0, y: 0, filter: 'blur(0px)' },
+    });
+  });
+
+  it('merges multiple same-position tweens for one target', () => {
+    const kfs: Keyframe[] = [
+      { target: 's2', to: { x: -1076.4 }, at: 0.15, duration: 0.227 },
+      { target: 's2', to: { opacity: 0 }, at: 0.15, duration: 0.227 },
+      { target: 's2', to: { filter: 'blur(6px)' }, at: 0.15, duration: 0.227 },
+    ];
+    expect(projectFinalFrame(kfs)).toEqual({
+      s2: { x: -1076.4, opacity: 0, filter: 'blur(6px)' },
+    });
+  });
+});

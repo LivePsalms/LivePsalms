@@ -46,3 +46,15 @@ export function applyKeyframes(
     }
   }
 }
+
+// Reduced-motion projection: each target's final visual state = its `to` vars
+// merged in timeline order (later keyframes override earlier keys). Used by the
+// fade-only reduced paths (quote, mask) and by invariant tests that assert a
+// scene's reduced state equals its scrub's last frame.
+export function projectFinalFrame(keyframes: Keyframe[]): Record<string, GsapVars> {
+  const result: Record<string, GsapVars> = {};
+  for (const kf of keyframes) {
+    result[kf.target] = { ...(result[kf.target] ?? {}), ...kf.to };
+  }
+  return result;
+}
