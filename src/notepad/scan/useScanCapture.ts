@@ -18,8 +18,8 @@ export interface UseScanCapture {
   backToIdle: () => void;
   reset: () => void;
   cancel: () => void;
-  videoRef: React.RefObject<HTMLVideoElement>;
-  fileRef: React.RefObject<HTMLInputElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  fileRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function useScanCapture({ userId, onResult, onCancel }: Options): UseScanCapture {
