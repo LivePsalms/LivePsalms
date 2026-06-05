@@ -34,6 +34,7 @@
   "// exclude": "Pure-Node regression tests (read files via node:fs); type-checked under tsconfig.node so their node globals don't leak into the DOM-scoped app build.",
   "exclude": [
     "src/components/sections/moodboard-assets.test.ts",
-    "src/components/sections/moodboard-aspect.test.ts"
+    "src/components/sections/moodboard-aspect.test.ts",
+    "src/data/devotion-moodboards.test.ts"
   ]
 }

@@ -421,3 +421,88 @@ Hook responsibilities:
 - Returns `{ showMigration, dismissMigration }` to the consumer; the migration dialog's `onClose` wires to `dismissMigration`.
 
 Does **not** own: identity (that's `AuthSession`), the migration workflow itself (that's `MigrationWorkflow`), or the WelcomePage UI flow (the page calls `markWelcomed` directly when the user submits the form).
+
+## DevotionMoodBoard
+
+The data model that describes one devotion's moodboard as a `DevotionMoodBoard`. **All 11 devotions are now migrated** — the hand-written `*Zones` / `*Mobile` functions are deleted from `MoodBoard.tsx`, which renders every devotion from these data objects. The model and node-testable helpers live in `src/data/devotion-moodboards/_shared.ts`; each devotion is **one file per board** (`peace.tsx`, `hope.tsx`, `strength.tsx`, `wholeness.tsx`, `purpose.tsx`, `connection.tsx`, `identity.tsx`, `joy.tsx`, `forgiveness.tsx`, `surrender.tsx`, `trust.tsx`) carrying its own prose constants; and `src/data/devotion-moodboards.tsx` is a **thin barrel** that re-exports `_shared` and assembles the 11 boards into `moodBoards: Record<string, DevotionMoodBoard>`. The import path `@/data/devotion-moodboards` is unchanged. Boards are keyed by `Project.id` and lean on `devotions.ts` for shared metadata (they do not restate `title`/`scriptureRef`).
+
+A board carries **two independent arrangements, not one** (the load-bearing decision): a desktop `sections: DesktopSection[]` and a separate `mobile: MobileSection[]`. They do **not** share section membership — Peace desktop puts "quiet waters" in the `principle` zone while mobile puts it in the `scripture` section — so they cannot be one list walked twice. What they share is **prose**: `SectionText = { full: ReactNode; mobile? }` constants, authored once and referenced from both arrangements. `mobile` carries **intentionally condensed copy** (shorter by design, not drift) and defaults to `full` when omitted. Body text is `ReactNode` so inline markup (`<em>shub</em>`, entities) authors naturally in the `.tsx`.
+
+The desktop `sections` are the assertable spine: `board.sections.map(s => s.role)` equals `CANONICAL_ROLE_ARC` (`title` → `opening` → `scripture` → `principle` → `application` → `prayer`), verified by test. A `DesktopSection` is `{ role, width, bg?: BlendRecipe, elements }`; a `MobileSection` is `{ role | 'gallery', className, bg?: BlendRecipe | 'base', elements }`.
+
+The geometry is **art-directed and preserved verbatim as data, not normalized**. Each element is a tagged node (`{ kind: 'image' | 'text' | 'divider', … }`) that carries its **exact class/style tokens as strings** — a desktop image holds its `pos` (`top-[10%] left-[5%] w-[42vw] h-[78vh]`) and any `style`; a text node holds its full `className` (`font-['Cormorant_Garamond'] italic … text-white/70`) and `tag` (`h2`/`h3`/`p`/`div`). This verbatim-token approach is **required**, not stylistic: the GSAP engine sniffs exact class tokens (`text-sm`, `text-white`, `mb-text`, the `w-[45vw]`/`w-[35vw]`/`w-[50vw]`/`w-[40vw]` scale-effect set), so byte-identical classes are the only way to guarantee zero animation change. The win is node-testability + one grammar, **not** line reduction or style derivation.
+
+`BlendRecipe` concentrates the `color-mix(in srgb, ${overlay} N%, …)` background formula: `{ mix, toward: 'app-bg' }` or `{ mix, toward: 'black', amount }`, expanded by `blendRecipeToColor(recipe, overlay)`. `overlayColor` defaults to `project.overlayColor` — retiring Peace's hardcoded `ov = '#8B8378'`.
+
+`purposeWord?: string` is **per-board data**, not derived from the label: it feeds the `RestorationCTA`. Most boards use their capitalized id (`Peace`, `Hope`, …) but the Serenity trio (`forgiveness`, `surrender`, `trust`) all carry `'Serenity'`, which a label-split could not produce. The renderers read `board.purposeWord ?? purposeWord` (the latter being the old label-derived fallback).
+
+Node-testable helpers (`collectImageSources`, `collectSectionTexts`, `collectBlendRecipes`, `isValidBlendRecipe`, `collectMobileImageSlots`, `CANONICAL_ROLE_ARC`) back the invariants in `devotion-moodboards.test.ts`: every image resolves under `/public`, every text has a non-empty `full`, every background is a valid recipe, every board follows the role arc. `collectMobileImageSlots(board)` (returning `{ where, src, aspectClass }[]`) feeds the data-driven `moodboard-aspect.test.ts`, which reads each mobile image's real pixel dimensions and asserts the `object-cover` crop factor stays under 1.45 — the guard that caught an identity mobile-principle src pointing at the wrong (portrait) asset. The `_shared.ts` helpers import `node:fs` only in tests, but the boards are `.tsx`; the three node-env tests (`-assets`, `-aspect`, the data test) are excluded from `tsconfig.app` and type-checked under `tsconfig.node` — which now also carries the `@/* → ./src/*` path alias (added so the aspect test's `@/data/devotion-moodboards` import resolves under `tsc -b`, not just Vitest).
+
+Does **not** own: the animation engine (stays in `MoodBoard`, unchanged), the CTA (`RestorationCTA`) or `NextDevotionHandoff` (appended by the renderers, already shared), or the handoff metadata in `devotions.ts`.
+
+## MoodBoardZones / MoodBoardStack
+
+The two renderers in `MoodBoard.tsx` that are the seam between a `DevotionMoodBoard` and the DOM. They do **not** walk the same data: `MoodBoardZones` (desktop) walks `board.sections` into absolute-positioned horizontal zones; `MoodBoardStack` (mobile) walks the separate `board.mobile` into the vertical `<section>` stack. Each delegates per-element work to a small `renderDesktopElement` / `renderMobileElement` helper.
+
+The renderers own only the **constant wrapper grammar**, never per-kind styling (the elements already carry their full class tokens). For a desktop element the renderer composes `mb-elem absolute {pos} overflow-hidden`, applies the element's `style`, and stamps `data-speed="0.5"` — the exact shell the GSAP `querySelectorAll('.mb-elem')` reveal/parallax pass keys off; text tags are emitted via `createElement(tag, …, text.full)`. The mobile renderer emits each element's verbatim `className` and renders `text.mobile ?? text.full`. Passing an absent `PhotoDevelopImage` prop as `undefined` keeps the emitted props byte-identical to the old hand-written JSX (no conditional spreading).
+
+The parent `MoodBoard` keeps the GSAP+ScrollTrigger engine and the horizontal-pin lifecycle. The old `isPeace…isTrust` dispatch ladder, the eleven `isX` consts, and `isCustomDevotion` are **all gone**: because every devotion now has a board, the dispatch collapses to `board ? <MoodBoardStack/Zones …> : <MoodBoardMobile/DefaultZones …>` (the non-board fallback remains only for any project without an entry), and the handoff gate is `{board && <NextDevotionHandoff … inHorizontalTrack/>}`. The renderers compute `const word = board.purposeWord ?? purposeWord` and pass `purposeWord={word}` to `RestorationCTA` — `purposeWord` is now board **data**, not derived from `devotions[id].label`.
+
+Migration is **complete — all 11 devotions** render from data; the ~4,000 lines of hand-written `*Zones`/`*Mobile` JSX (20 functions) and their nine dead image-map consts are deleted, shrinking `MoodBoard.tsx` from ~4,989 to ~983 lines. Faithfulness is guarded three ways: `moodboard-assets.test.ts` (every referenced `/public` image exists; scans the whole `devotion-moodboards/` dir), `moodboard-aspect.test.ts` (no mobile image severely cropped), and `devotion-moodboards.test.ts` (role arc, prose, recipes). Verified green across the suite plus `npm run build`, and visually spot-checked (hope desktop, identity mobile) with the all-11 route sweep showing 0 broken images and no console errors.
+
+Does **not** own: the animation engine, the horizontal-scroll pin, or the progress bar — those stay in `MoodBoard`.
+
+---
+
+# Lamplight (edge functions)
+
+The server-side AI surface lives in `supabase/functions/`. These concepts name the seams in the `lamplight-generate` Edge Function. Use them exactly; variants ("the generate handler", "the AI dispatcher", "the usage logger") drift the conversation.
+
+## Artifact
+
+A persisted, model-generated output keyed by a `kind`: `daily_devotion` (a `DailyDevotion` object in `lamplight_artifacts`, idempotent on `(user_id, 'daily_devotion', period_key)`), `connection_card_why` (a short `why` string in `lamplight_connections`, keyed by composite `content_hash`), or `smoke_test` (throwaway, slated for removal per follow-up P1-1; carries no persistence). Each kind has its own model (Sonnet for daily devotion, Haiku for connection-why), context builder, validators, and result shape — that per-kind logic does not generalize and is not meant to.
+
+## lamplight_usage
+
+The fire-and-forget audit row for a single generation attempt: `{ user_id, model, artifact_kind, tokens_in, tokens_out, status, error_code? }`. A usage-table outage must never break the primary work path, so `recordLamplightUsage` swallows insert failures to a `console.error`.
+
+`model` is **nullable** (migration 022): a `null` model means *no model was invoked* — the honest record for a pre-model failure (`quota_exceeded`, `no_embedding`, `not_neighbor`). The admin cost map (`src/admin/lamplight-cost.ts`) resolves a `null` model to `$0`. Before migration 022 these rows fictitiously recorded a hardcoded Haiku model id and `0` tokens, which silently overcounted Haiku spend in the admin leaderboard; that fiction is retired.
+
+Cache-hit success paths (an already-generated `daily_devotion`, a `content_hash`-matched `connection_card_why`) spend nothing and record **no** usage row. The daily-devotion *race path* (a concurrent insert won between pre-check and INSERT) is the subtle exception: it returns `cached: true` to the client but **did** spend tokens, so it records a real usage row. "Cached" therefore cannot gate "skip usage" — the `GenerationOutcome.usage` field carries the decision explicitly.
+
+## GenerationLifecycle
+
+The deepened module that owns the cross-cutting envelope around every artifact generation — the stateless coordinator that concentrates what was previously smeared across `index.ts` and the three pipelines. Surfaced as `runGeneration(deps, meta, body)` in `supabase/functions/_shared/generation-lifecycle.ts`.
+
+Mirrors the stateless-coordinator pattern of `NotepadActions` / `AccountActions` (cross-module knowledge concentrates in one place), but takes the shape of a higher-order wrapper: the per-kind work is an injected `body` that returns a `GenerationOutcome` — **data, not side effects**.
+
+```ts
+interface GenerationOutcome {
+  response: unknown;          // JSON body for the client
+  usage: UsageRow | null;     // null = nothing to record (cache hit)
+}
+
+interface GenerationLifecycleDeps {
+  checkQuota: (userId: string) => Promise<{ ok: true } | { ok: false; reason: string }>;
+  recordUsage: (row: UsageRow) => Promise<void>;   // the single insert site
+  classifyError: (err: unknown) => string;
+}
+
+function runGeneration(
+  deps: GenerationLifecycleDeps,
+  meta: { userId: string; artifactKind: string },
+  body: () => Promise<GenerationOutcome>,
+): Promise<{ status: number; response: unknown }>;
+```
+
+Responsibilities (the one place each of these now lives):
+
+- **Quota gate.** Runs `checkQuota` before the body. On `!ok`: records one `error` usage row (`model: null`, `error_code: 'quota_exceeded'`) and returns `{ status: 429 }`. This *adds* a usage row where `index.ts` previously recorded nothing on quota rejection — deliberate failure-rate telemetry.
+- **Single-site usage recording.** Records `outcome.usage` exactly once when non-null; skips when `null`. No pipeline calls `recordLamplightUsage` anymore — they surface real `{ model, tokens_in, tokens_out, status }` in their result and the lifecycle writes it.
+- **Error classification.** Genuine throws are caught, recorded as an `error` row (`model: null`, `error_code: classifyError(err)`), and rethrown so `serve()`'s top-level catch emits the CORS-bearing 500. `validators_failed` is a *returned* `ok:false`, not a throw — the body maps that result's reason into its `usage` row directly; only thrown errors reach `classifyError`. `classifyGenerateError` is the sole error-code source; pipelines no longer hardcode error codes.
+
+Does **not** own: HTTP/CORS, env-key checks, JSON parsing, JWT→`userId` derivation, the `lamplight_settings.enabled` opt-in gate, or per-kind payload validation — those stay in `index.ts`, which shrinks to transport + auth + three `runGeneration(...)` dispatch calls. It also does not own context building, the per-kind generate→validate→retry loop, or persistence — those stay in the per-kind bodies and pipelines.
+
+Pure of HTTP and Supabase wiring: `checkQuota` / `recordUsage` / `classifyError` are injected, so the envelope is node-testable with fakes. The invariants that were previously un-assertable at the dispatcher level — quota-exceeded records exactly one error row and never calls the body; success records exactly one row; a `usage:null` body records nothing; a thrown body records one `model:null` error row with the classified code — get one focused test instead of being re-proven piecemeal across three pipeline suites.
+
+The P2-5 `pg_cron` daily-devotion trigger composes through this seam: the cron calls `runGeneration(deps, meta, dailyDevotionBody)` and inherits quota + usage accounting without re-implementing them. That is the leverage the seam buys — the reason it is not just `index.ts` tidied.

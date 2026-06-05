@@ -4,11 +4,21 @@
 // updates the desktop zones but leaves a mobile image map pointing at deleted
 // filenames — which renders as broken images on mobile only.
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = process.cwd();
-const moodboardSource = path.join(repoRoot, 'src/components/sections/MoodBoard.tsx');
+// All devotions carry their image paths in src/data/devotion-moodboards/
+// (one file per board). MoodBoard.tsx + the barrel are still scanned for any
+// stray fallback/default image paths that live outside the per-board files.
+const moodboardDir = path.join(repoRoot, 'src/data/devotion-moodboards');
+const moodboardSources = [
+  path.join(repoRoot, 'src/components/sections/MoodBoard.tsx'),
+  path.join(repoRoot, 'src/data/devotion-moodboards.tsx'),
+  ...readdirSync(moodboardDir)
+    .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'))
+    .map((f) => path.join(moodboardDir, f)),
+];
 const publicDir = path.join(repoRoot, 'public');
 
 // Match single- or double-quoted absolute public paths ending in an image ext.
@@ -23,7 +33,7 @@ function referencedImagePaths(source: string): string[] {
 }
 
 describe('MoodBoard image assets', () => {
-  const source = readFileSync(moodboardSource, 'utf8');
+  const source = moodboardSources.map((f) => readFileSync(f, 'utf8')).join('\n');
   const paths = referencedImagePaths(source);
 
   it('references at least one image (sanity check the extractor works)', () => {
