@@ -128,3 +128,60 @@ describe('ScanCapture pipeline (happy path)', () => {
     expect(deps.onResult).not.toHaveBeenCalled();
   });
 });
+
+describe('ScanCapture camera commands', () => {
+  it('startCamera opens the camera and moves to the camera phase', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.startCamera();
+    expect(deps.openCamera).toHaveBeenCalledTimes(1);
+    expect(sc.getSnapshot()).toEqual({ phase: 'camera', error: null });
+  });
+
+  it('startCamera falls back to the file picker and stays idle when the camera is denied', async () => {
+    const deps = makeDeps({ openCamera: vi.fn(async () => { throw new Error('denied'); }) });
+    const sc = new ScanCapture(deps);
+    await sc.startCamera();
+    expect(deps.requestFileFallback).toHaveBeenCalledTimes(1);
+    expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+
+  it('capture grabs a frame, stops the camera, and runs the pipeline to onResult', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.startCamera();
+    await sc.capture();
+    expect(deps.captureFrame).toHaveBeenCalledTimes(1);
+    expect(deps.stopCamera).toHaveBeenCalled();
+    expect(deps.onResult).toHaveBeenCalledWith(RESULT);
+    expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+
+  it('backToIdle stops the camera and returns to idle without cancelling', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.startCamera();
+    sc.backToIdle();
+    expect(deps.stopCamera).toHaveBeenCalled();
+    expect(deps.onCancel).not.toHaveBeenCalled();
+    expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+
+  it('reset clears an error back to idle', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.submitFile(fileOf('application/pdf', 10));
+    expect(sc.getSnapshot().phase).toBe('error');
+    sc.reset();
+    expect(sc.getSnapshot()).toEqual({ phase: 'idle', error: null });
+  });
+
+  it('cancel stops the camera and calls onCancel', async () => {
+    const deps = makeDeps();
+    const sc = new ScanCapture(deps);
+    await sc.startCamera();
+    sc.cancel();
+    expect(deps.stopCamera).toHaveBeenCalled();
+    expect(deps.onCancel).toHaveBeenCalledTimes(1);
+  });
+});

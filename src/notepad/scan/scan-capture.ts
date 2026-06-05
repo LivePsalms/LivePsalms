@@ -70,6 +70,36 @@ export class ScanCapture extends Observable<ScanCaptureState> {
     await this.runPipeline(file);
   };
 
+  startCamera = async (): Promise<void> => {
+    try {
+      await this.deps.openCamera();
+      this.set({ phase: 'camera', error: null });
+    } catch {
+      this.deps.requestFileFallback();
+    }
+  };
+
+  capture = async (): Promise<void> => {
+    const blob = await this.deps.captureFrame();
+    this.deps.stopCamera();
+    await this.runPipeline(blob);
+  };
+
+  backToIdle = (): void => {
+    this.deps.stopCamera();
+    this.set({ phase: 'idle', error: null });
+  };
+
+  reset = (): void => {
+    this.set({ phase: 'idle', error: null });
+  };
+
+  cancel = (): void => {
+    this.generation++;
+    this.deps.stopCamera();
+    this.deps.onCancel();
+  };
+
   private async runPipeline(blob: Blob): Promise<void> {
     const gen = ++this.generation;
 
