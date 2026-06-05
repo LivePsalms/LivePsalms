@@ -367,6 +367,26 @@ img {
   height: 100vh;
   overflow: hidden;
   background: var(--app-bg); /* shown until the video has its first frame */
+
+  /* The canvas background is the same taupe as the page, so at full pin the
+     stage is seamless. But during the brightness outro the canvas blooms, and
+     as the pin releases the canvas's hard rectangular top/bottom edge shows as
+     a line against the un-bloomed adjacent sections. Feather those edges so the
+     render dissolves into the page instead of ending at a hard border. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 10%,
+    #000 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 10%,
+    #000 86%,
+    transparent 100%
+  );
 }
 
 .mid-section-video {
@@ -437,6 +457,14 @@ img {
     font-size: clamp(26px, 4.2vw, 42px);
     max-width: 720px;
     text-shadow: 0 0 28px rgba(var(--app-bg-rgb), 0.75);
+  }
+
+  /* The closing beat is the longest line; at the mobile size above it wraps
+     to ~14 lines and overflows the stage. Shrink only this beat (and tighten
+     its leading) so it reads as a compact block. Desktop is unaffected. */
+  .mid-section-beat--long {
+    font-size: clamp(25px, 4vw, 35px);
+    line-height: 1.4;
   }
 }
 

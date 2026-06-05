@@ -32,7 +32,7 @@ describe('BEATS', () => {
 
   it('beat 5 — no matter what', () => {
     expect(BEATS[4]).toBe(
-      "No matter what the day is doing. No matter what the news is doing. The peace you've been looking for isn't out there. It's a room inside you have the capability to return to, anytime.",
+      "No matter what the day is doing. No matter what the news is saying. The peace you've been looking for isn't out there. It's a room inside you, that you can return to anytime.",
     );
   });
 });
