@@ -34,6 +34,7 @@ export interface ConnectionDiscoveryDeps {
     minSimilarity: number,
   ) => Promise<ConnectionNeighbor[]>;
   loadNeighborNotes: (ids: string[]) => Promise<Note[]>;
+  /** Test seam; production code uses the default. */
   computeSharedSignals?: (active: Note, related: Note) => SharedSignals;
 }
 

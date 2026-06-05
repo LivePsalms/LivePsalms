@@ -135,4 +135,25 @@ describe('ConnectionDiscovery', () => {
     await tick();
     expect(c.getSnapshot()).toEqual({ phase: 'inactive', reason: 'no_active_note', meetsDepth: false, meetsVault: true });
   });
+
+  it('emits inactive (vault_too_small) when the vault is below minVaultSize', async () => {
+    const c = new ConnectionDiscovery(depsFromAdapter(new FakeLamplightAdapter()), 'full');
+    c.setInputs({ ...INPUTS, totalNoteCount: 1 });
+    await tick();
+    expect(c.getSnapshot()).toEqual({ phase: 'inactive', reason: 'vault_too_small', meetsDepth: true, meetsVault: false });
+  });
+
+  it('maps a loadNeighborNotes failure to error/network', async () => {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [{ relatedNoteId: 'note-2', similarity: 0.95 }]);
+    const deps: ConnectionDiscoveryDeps = {
+      ...depsFromAdapter(adapter),
+      loadNeighborNotes: async () => { throw new Error('boom'); },
+    };
+    const c = new ConnectionDiscovery(deps, 'full');
+    c.setInputs(INPUTS);
+    await tick();
+    expect(c.getSnapshot()).toEqual({ phase: 'error', reason: 'network' });
+  });
 });
