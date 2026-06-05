@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { normalizeUsername, validateUsername } from './username-rules';
 import type { UsernameClaimResult } from './username-rules';
-
-type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'error';
+import { useUsernameAvailability } from './useUsernameAvailability';
 
 export interface UsernameSetupProps {
   checkAvailable: (name: string) => Promise<boolean>;
@@ -14,35 +13,18 @@ export interface UsernameSetupProps {
 
 export function UsernameSetup({ checkAvailable, claim, onClaimed, debounceMs = 300 }: UsernameSetupProps) {
   const [value, setValue] = useState('');
-  const [availability, setAvailability] = useState<Availability>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const normalized = normalizeUsername(value);
   const format = validateUsername(value);
 
-  useEffect(() => {
-    if (!format.valid) {
-      setAvailability('idle'); // eslint-disable-line react-hooks/set-state-in-effect -- reset stale availability when input becomes invalid
-      return;
-    }
-    let cancelled = false;
-    setAvailability('checking');  
-    const handle = setTimeout(() => {
-      checkAvailable(normalized)
-        .then((ok) => {
-          if (!cancelled) setAvailability(ok ? 'available' : 'taken');
-        })
-        .catch(() => {
-          // Fail open — the submit-time unique constraint is the real guard.
-          if (!cancelled) setAvailability('error');
-        });
-    }, debounceMs);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [normalized, format.valid, checkAvailable, debounceMs]);
+  const { status: availability, markTaken } = useUsernameAvailability({
+    checkAvailable,
+    name: normalized,
+    eligible: format.valid,
+    debounceMs,
+  });
 
   const canSubmit =
     format.valid && !submitting && availability !== 'taken' && availability !== 'checking';
@@ -59,7 +41,7 @@ export function UsernameSetup({ checkAvailable, claim, onClaimed, debounceMs = 3
       return;
     }
     if (result.reason === 'taken') {
-      setAvailability('taken');
+      markTaken();
       setSubmitError('That username was just taken. Try another.');
     } else {
       setSubmitError('That username isn’t valid.');
