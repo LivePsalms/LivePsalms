@@ -1,33 +1,16 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  forceSimulation,
-  forceLink,
-  forceManyBody,
-  forceCenter,
-  forceCollide,
-  type SimulationNodeDatum,
-  type SimulationLinkDatum,
-} from 'd3-force';
-import { forceSharedTags } from '@/notepad/graph/force-shared-tags';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2, Settings2 } from 'lucide-react';
 import { useNoteCollection } from '@/notepad/context/useNoteCollection';
-import { useGraph } from '@/notepad/graph/use-graph';
-
-interface SimNode extends SimulationNodeDatum {
-  id: string;
-  type: 'devotion' | 'sermon' | 'theme' | 'scripture';
-  title: string;
-  weight: number;
-  radius: number;
-  tags: string[];
-  scriptureText: string;
-  scriptureTranslation: string;
-}
-
-interface SimLink extends SimulationLinkDatum<SimNode> {
-  edgeType: 'explicit' | 'scripture_reference' | 'cross_reference';
-  weight: number;
-}
+import { useReferenceGraph } from '@/notepad/context/useReferenceGraph';
+import { projectGraph } from '@/notepad/graph/project-graph';
+import {
+  GraphView,
+  DEFAULT_FILTERS,
+  DEFAULT_SETTINGS,
+  type NodeTypeFilters,
+  type GraphSettings,
+} from '@/notepad/graph/graph-view';
+import type { GraphNode } from '@/notepad/graph/types';
 
 const NODE_COLORS: Record<string, string> = {
   scripture: '#C49A78',
@@ -43,509 +26,110 @@ const NODE_ICONS: Record<string, typeof BookOpen> = {
   theme: Sparkles,
 };
 
-function computeRadius(type: string, weight: number, sizeMultiplier: number = 1): number {
-  const base = type === 'scripture' ? 22 : 18;
-  return Math.min(70, Math.max(12, (base + weight * 5) * sizeMultiplier));
-}
-
 interface GraphPaneProps {
   graphOpen: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /**
+   * Render for an embedded context (e.g. the mobile "More" sheet) instead of the
+   * desktop right-hand sidebar. Drops the `hidden md:flex` breakpoint hiding and
+   * the desktop flex/opacity sizing so the graph fills its parent on small screens.
+   */
+  embedded?: boolean;
+  /** Mobile/embedded only: route node taps to a peek view instead of opening the note / popover. */
+  onNodePeek?: (node: { id: string; type: GraphNode['type']; title: string }) => void;
+  /** Mobile/embedded only: center local mode on this node id (e.g. from a peek "Focus" action). */
+  focusNodeId?: string | null;
 }
 
-export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: GraphPaneProps) {
+export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedded = false, onNodePeek, focusNodeId = null }: GraphPaneProps) {
   const { notes, activeNoteId, collection } = useNoteCollection();
-  const { nodes: graphNodes, edges: graphEdges, activeNodeId: graphActiveNodeId, isLoading: graphLoading, getNeighborhood } = useGraph(notes, activeNoteId);
+  const { references, scriptureNodes, graph } = useReferenceGraph();
   const openNote = collection.openNote;
+
+  const { nodes, edges } = useMemo(
+    () => projectGraph(notes, references, scriptureNodes),
+    [notes, references, scriptureNodes],
+  );
+
+  // Kept in a ref so the memoized GraphView stays stable while always seeing the
+  // latest callback. onNodeTap returns true (handled) only when a peek handler exists.
+  const onNodePeekRef = useRef(onNodePeek);
+  onNodePeekRef.current = onNodePeek;
+
+  const view = useMemo(() => new GraphView({
+    onNodeOpen: (id) => openNote(id),
+    devicePixelRatio: () => window.devicePixelRatio || 1,
+    onNodeTap: (n) => {
+      const cb = onNodePeekRef.current;
+      if (cb) { cb(n); return true; }
+      return false;
+    },
+  }), [openNote]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const simRef = useRef<ReturnType<typeof forceSimulation<SimNode>> | null>(null);
-  const nodesRef = useRef<SimNode[]>([]);
-  const linksRef = useRef<SimLink[]>([]);
-  const hasInitialFitRef = useRef(false);
-  const tickCountRef = useRef(0);
 
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [popoverNodeId, setPopoverNodeId] = useState<string | null>(null);
-  const transformRef = useRef({ x: 0, y: 0, scale: 1 });
-  const dragRef = useRef({
-    dragging: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
-  });
+  // Attach / detach
+  useEffect(() => {
+    if (!canvasRef.current || !containerRef.current) return;
+    view.attach(canvasRef.current, containerRef.current);
+    return () => view.detach();
+  }, [view]);
 
-  const [graphFilters, setGraphFilters] = useState({
-    scripture: true, sermon: true, devotion: true, theme: true,
-  });
+  // Forward neighborhood lookup
+  useEffect(() => {
+    view.setNeighborhoodFn(graph.getNeighborhood);
+  }, [view, graph.getNeighborhood]);
 
-  const toggleFilter = (key: keyof typeof graphFilters) => {
-    setGraphFilters((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  // Forward data
+  useEffect(() => {
+    view.setData(nodes, edges, activeNoteId);
+  }, [view, nodes, edges, activeNoteId]);
 
+  // Controls — React state, forwarded into the view on each change.
   const [graphMode, setGraphMode] = useState<'global' | 'local'>('global');
+  const [filters, setFilters] = useState<NodeTypeFilters>(DEFAULT_FILTERS);
+  const [settings, setSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [graphSettings, setGraphSettings] = useState({
-    depth: 1,
-    linkDistance: 30,
-    linkForce: 0.01,
-    repelForce: 120,
-    centerForce: 0.15,
-    nodeSize: 1,
-    edgeThickness: 1,
-  });
 
-  const defaultSettings = {
-    depth: 1,
-    linkDistance: 30,
-    linkForce: 0.01,
-    repelForce: 120,
-    centerForce: 0.15,
-    nodeSize: 1,
-    edgeThickness: 1,
+  useEffect(() => { view.setMode(graphMode); }, [view, graphMode]);
+  useEffect(() => { view.setFilters(filters); }, [view, filters]);
+  useEffect(() => { view.setSettings(settings); }, [view, settings]);
+  useEffect(() => {
+    view.setFocus(focusNodeId);
+    if (focusNodeId) setGraphMode('local');
+  }, [view, focusNodeId]);
+
+  // Popover state subscribed via useSyncExternalStore.
+  const state = useSyncExternalStore(view.subscribe, view.getSnapshot);
+  const popover = state.popover;
+
+  const toggleFilter = (key: keyof NodeTypeFilters) => {
+    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
-
-  const drawPopover = useCallback((ctx: CanvasRenderingContext2D, node: SimNode) => {
-    if (node.x == null || node.y == null) return;
-
-    const maxWidth = 250;
-    const padding = 12;
-    const lineHeight = 16;
-    const headerFont = 'bold 12px Outfit, sans-serif';
-    const bodyFont = '11px Outfit, sans-serif';
-    const smallFont = '9px Outfit, sans-serif';
-
-    // Measure and wrap body text
-    ctx.font = bodyFont;
-    const bodyText = node.scriptureText || 'Verse text unavailable.';
-    const words = bodyText.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    for (const word of words) {
-      const test = currentLine ? `${currentLine} ${word}` : word;
-      if (ctx.measureText(test).width > maxWidth - padding * 2) {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = test;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-
-    const headerHeight = 20;
-    const bodyHeight = lines.length * lineHeight;
-    const translationHeight = 16;
-    const totalHeight = padding + headerHeight + bodyHeight + translationHeight + padding;
-
-    ctx.font = headerFont;
-    const headerWidth = ctx.measureText(node.title).width;
-    ctx.font = bodyFont;
-    const maxLineWidth = Math.max(...lines.map((l) => ctx.measureText(l).width), headerWidth);
-    const boxWidth = Math.min(maxWidth, maxLineWidth + padding * 2);
-
-    const boxX = node.x - boxWidth / 2;
-    const boxY = node.y - node.radius - totalHeight - 12;
-
-    // Background rounded rect
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.strokeStyle = 'rgba(188, 179, 163, 0.5)';
-    ctx.lineWidth = 1;
-    const r = 8;
-    ctx.beginPath();
-    ctx.moveTo(boxX + r, boxY);
-    ctx.lineTo(boxX + boxWidth - r, boxY);
-    ctx.quadraticCurveTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + r);
-    ctx.lineTo(boxX + boxWidth, boxY + totalHeight - r);
-    ctx.quadraticCurveTo(boxX + boxWidth, boxY + totalHeight, boxX + boxWidth - r, boxY + totalHeight);
-    ctx.lineTo(boxX + r, boxY + totalHeight);
-    ctx.quadraticCurveTo(boxX, boxY + totalHeight, boxX, boxY + totalHeight - r);
-    ctx.lineTo(boxX, boxY + r);
-    ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Pointer triangle
-    ctx.beginPath();
-    ctx.moveTo(node.x - 6, boxY + totalHeight);
-    ctx.lineTo(node.x, boxY + totalHeight + 8);
-    ctx.lineTo(node.x + 6, boxY + totalHeight);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(node.x - 6, boxY + totalHeight);
-    ctx.lineTo(node.x, boxY + totalHeight + 8);
-    ctx.lineTo(node.x + 6, boxY + totalHeight);
-    ctx.strokeStyle = 'rgba(188, 179, 163, 0.5)';
-    ctx.stroke();
-
-    // Header
-    ctx.font = headerFont;
-    ctx.fillStyle = 'rgba(62, 50, 40, 1)';
-    ctx.textAlign = 'left';
-    ctx.fillText(node.title, boxX + padding, boxY + padding + 12);
-
-    // Body lines
-    ctx.font = bodyFont;
-    ctx.fillStyle = 'rgba(62, 50, 40, 0.8)';
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], boxX + padding, boxY + padding + headerHeight + (i + 1) * lineHeight);
-    }
-
-    // Translation label
-    ctx.font = smallFont;
-    ctx.fillStyle = 'rgba(62, 50, 40, 0.5)';
-    ctx.fillText(node.scriptureTranslation || 'WEB', boxX + padding, boxY + padding + headerHeight + bodyHeight + translationHeight);
-  }, []);
-
-  // --- Drawing ---
-  const drawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const { x: tx, y: ty, scale } = transformRef.current;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
-
-    const hovered = hoveredNodeId;
-    const activeId = graphActiveNodeId;
-
-    // Connected IDs for hover highlight
-    const connectedIds = new Set<string>();
-    if (hovered) {
-      connectedIds.add(hovered);
-      for (const link of linksRef.current) {
-        const src = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
-        const tgt = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
-        if (src === hovered) connectedIds.add(tgt);
-        if (tgt === hovered) connectedIds.add(src);
-      }
-    }
-
-    // Draw edges
-    for (const link of linksRef.current) {
-      const src = link.source as SimNode;
-      const tgt = link.target as SimNode;
-      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
-
-      const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
-
-      ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(tgt.x, tgt.y);
-      ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (2 + link.weight * 2) * graphSettings.edgeThickness;
-      ctx.stroke();
-    }
-
-    // Draw nodes
-    for (const node of nodesRef.current) {
-      if (node.x == null || node.y == null) continue;
-
-      const isConnected = !hovered || connectedIds.has(node.id);
-      const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
-      const color = NODE_COLORS[node.type] ?? '#999';
-
-      // Active note glow
-      if (node.id === activeId) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 10, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}30`;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 5, 0, Math.PI * 2);
-        ctx.fillStyle = `${color}20`;
-        ctx.fill();
-      }
-
-      // Node circle
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.globalAlpha = alpha;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Label
-      ctx.font = `${node.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(node.title, node.x, node.y + node.radius + 14);
-    }
-
-    // Hover tooltip (above node, in addition to the label below)
-    if (hovered) {
-      const node = nodesRef.current.find((n) => n.id === hovered);
-      if (node && node.x != null && node.y != null) {
-        // Draw a subtle highlight ring around the hovered node
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = `${NODE_COLORS[node.type] ?? '#999'}80`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-
-    // Scripture popover
-    if (popoverNodeId) {
-      const pNode = nodesRef.current.find((n) => n.id === popoverNodeId);
-      if (pNode && pNode.x != null && pNode.y != null) {
-        drawPopover(ctx, pNode);
-      }
-    }
-
-    ctx.restore();
-  }, [hoveredNodeId, graphActiveNodeId, popoverNodeId, drawPopover]);
-
-  // Redraw on hover change
-  useEffect(() => {
-    drawCanvas();
-  }, [hoveredNodeId, drawCanvas]);
-
-  // --- Build simulation from graph data ---
-  useEffect(() => {
-    if (graphLoading) return;
-
-    let filtered = graphNodes;
-    if (graphMode === 'local') {
-      if (graphActiveNodeId) {
-        const neighborhood = getNeighborhood(graphActiveNodeId, graphSettings.depth);
-        filtered = filtered.filter((n) => neighborhood.has(n.id));
-      } else {
-        filtered = [];
-      }
-    }
-    filtered = filtered.filter((n) => graphFilters[n.type]);
-    const filteredIds = new Set(filtered.map((n) => n.id));
-
-    // Preserve positions
-    const prevPos = new Map<string, { x: number; y: number }>();
-    for (const node of nodesRef.current) {
-      if (node.x != null && node.y != null) prevPos.set(node.id, { x: node.x, y: node.y });
-    }
-
-    const simNodes: SimNode[] = filtered.map((n) => {
-      const prev = prevPos.get(n.id);
-      return {
-        id: n.id, type: n.type, title: n.title, weight: n.weight,
-        radius: computeRadius(n.type, n.weight, graphSettings.nodeSize),
-        tags: n.tags,
-        scriptureText: n.scriptureText,
-        scriptureTranslation: n.scriptureTranslation,
-        x: prev?.x, y: prev?.y,
-      };
-    });
-
-    const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
-
-    const simLinks: SimLink[] = graphEdges
-      .filter((e) => filteredIds.has(e.source) && filteredIds.has(e.target))
-      .map((e) => ({
-        source: nodeMap.get(e.source)!,
-        target: nodeMap.get(e.target)!,
-        edgeType: e.type,
-        weight: e.weight,
-      }))
-      .filter((l) => l.source && l.target);
-
-    nodesRef.current = simNodes;
-    linksRef.current = simLinks;
-
-    if (simRef.current) simRef.current.stop();
-    tickCountRef.current = 0;
-
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-
-    // Ensure canvas is sized to container before creating simulation
-    if (canvas && container) {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      if (canvas.width === 300 && canvas.height === 150) {
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
-      }
-    }
-
-    const width = canvas?.width ? canvas.width / (window.devicePixelRatio || 1) : 400;
-    const height = canvas?.height ? canvas.height / (window.devicePixelRatio || 1) : 400;
-
-    const sim = forceSimulation<SimNode>(simNodes)
-      .force('link',
-        forceLink<SimNode, SimLink>(simLinks)
-          .id((d) => d.id)
-          .distance((d) => graphSettings.linkDistance / d.weight)
-          .strength((d) => graphSettings.linkForce * d.weight)
-      )
-      .force('charge', forceManyBody<SimNode>().strength(-graphSettings.repelForce))
-      .force('center', forceCenter(width / 2, height / 2).strength(graphSettings.centerForce))
-      .force('collide', forceCollide<SimNode>().radius((d) => d.radius * 0.8))
-      .force('tags', forceSharedTags<SimNode>(0.0003))
-      .alphaDecay(0.015)
-      .velocityDecay(0.15)
-      .on('tick', () => {
-        tickCountRef.current++;
-        drawCanvas();
-
-        // Auto-fit after enough ticks for simulation to roughly settle
-        if (!hasInitialFitRef.current && tickCountRef.current === 80) {
-          hasInitialFitRef.current = true;
-
-          const activeNodes = nodesRef.current.filter((n) => n.x != null && n.y != null);
-          if (activeNodes.length === 0) return;
-
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          for (const n of activeNodes) {
-            minX = Math.min(minX, n.x! - n.radius - 20);
-            minY = Math.min(minY, n.y! - n.radius - 20);
-            maxX = Math.max(maxX, n.x! + n.radius + 20);
-            maxY = Math.max(maxY, n.y! + n.radius + 20);
-          }
-
-          const graphW = maxX - minX;
-          const graphH = maxY - minY;
-          if (graphW <= 0 || graphH <= 0) return;
-
-          const padding = 30;
-          const scaleX = (width - padding * 2) / graphW;
-          const scaleY = (height - padding * 2) / graphH;
-          const fitScale = Math.min(scaleX, scaleY, 1.5);
-
-          const cx = (minX + maxX) / 2;
-          const cy = (minY + maxY) / 2;
-          transformRef.current = {
-            x: width / 2 - cx * fitScale,
-            y: height / 2 - cy * fitScale,
-            scale: fitScale,
-          };
-        }
-      });
-
-    simRef.current = sim;
-
-    return () => { sim.stop(); };
-  }, [graphNodes, graphEdges, graphLoading, graphFilters, graphMode, graphSettings, graphActiveNodeId, getNeighborhood, drawCanvas]);
-
-  // --- Canvas resize ---
-  useEffect(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return;
-
-    const observer = new ResizeObserver(() => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
-
-      if (simRef.current) {
-        const cf = simRef.current.force('center') as ReturnType<typeof forceCenter> | undefined;
-        if (cf) cf.x(rect.width / 2).y(rect.height / 2);
-        simRef.current.alpha(0.3).restart();
-      }
-      drawCanvas();
-    });
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [drawCanvas]);
-
-
-  // --- Mouse interactions ---
-  const screenToWorld = useCallback((clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const { x: tx, y: ty, scale } = transformRef.current;
-    return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
-  }, []);
-
-  const findNodeAt = useCallback((wx: number, wy: number): SimNode | null => {
-    for (let i = nodesRef.current.length - 1; i >= 0; i--) {
-      const node = nodesRef.current[i];
-      if (node.x == null || node.y == null) continue;
-      const dx = wx - node.x, dy = wy - node.y;
-      if (dx * dx + dy * dy <= (node.radius + 4) ** 2) return node;
-    }
-    return null;
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragRef.current.dragging) {
-      transformRef.current.x = dragRef.current.origTx + (e.clientX - dragRef.current.startX);
-      transformRef.current.y = dragRef.current.origTy + (e.clientY - dragRef.current.startY);
-      drawCanvas();
-      return;
-    }
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-    setHoveredNodeId(findNodeAt(x, y)?.id ?? null);
-  }, [screenToWorld, findNodeAt, drawCanvas]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-    if (!findNodeAt(x, y)) {
-      dragRef.current = {
-        dragging: true, startX: e.clientX, startY: e.clientY,
-        origTx: transformRef.current.x, origTy: transformRef.current.y,
-      };
-    }
-  }, [screenToWorld, findNodeAt]);
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (dragRef.current.dragging) { dragRef.current.dragging = false; return; }
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-    const node = findNodeAt(x, y);
-    if (node) {
-      if (node.type === 'scripture') {
-        setPopoverNodeId((prev) => prev === node.id ? null : node.id);
-      } else {
-        setPopoverNodeId(null);
-        openNote(node.id);
-      }
-    } else {
-      setPopoverNodeId(null);
-    }
-  }, [screenToWorld, findNodeAt, openNote]);
-
-  // Attach wheel listener with { passive: false } to allow preventDefault
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      const factor = e.deltaY > 0 ? 0.92 : 1.08;
-      const t = transformRef.current;
-      const newScale = Math.min(5, Math.max(0.1, t.scale * factor));
-      t.x = mx - (mx - t.x) * (newScale / t.scale);
-      t.y = my - (my - t.y) * (newScale / t.scale);
-      t.scale = newScale;
-      drawCanvas();
-    };
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', onWheel);
-  }, [drawCanvas]);
 
   return (
     <aside
-      className="overflow-hidden border-l flex-col hidden md:flex"
-      style={{
-        flex: expanded ? '1 1 0%' : graphOpen ? '0 0 35%' : '0 0 0px',
-        borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
-        background: 'rgba(240, 236, 232, 0.4)',
-        opacity: graphOpen ? 1 : 0,
-        transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-      }}
+      className={
+        embedded
+          ? 'overflow-hidden flex flex-col h-full'
+          : 'overflow-hidden border-l flex-col hidden md:flex'
+      }
+      style={
+        embedded
+          ? // A definite height is required so the flex-1 canvas container below
+            // resolves to a real size — the sheet parent is height-indefinite, so
+            // `h-full` alone would collapse the canvas to 0 and draw nothing.
+            { background: 'rgba(240, 236, 232, 0.4)', minHeight: '60vh' }
+          : {
+              flex: expanded ? '1 1 0%' : graphOpen ? '0 0 35%' : '0 0 0px',
+              borderColor: graphOpen ? 'var(--pale-stone)' : 'transparent',
+              background: 'rgba(240, 236, 232, 0.4)',
+              opacity: graphOpen ? 1 : 0,
+              transition: 'flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+            }
+      }
     >
       <div className="p-4 space-y-3 shrink-0">
         <h3 className="text-[10px] font-medium tracking-[0.2em]" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
@@ -554,53 +138,31 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
 
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--pale-stone)' }}>
-            <button
-              onClick={() => setGraphMode('global')}
-              className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
-              style={{
-                background: graphMode === 'global' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
-                color: 'var(--deep-umber)',
-                fontFamily: 'Outfit, sans-serif',
-              }}
-            >
+            <button onClick={() => setGraphMode('global')} className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
+              style={{ background: graphMode === 'global' ? 'rgba(188, 179, 163, 0.35)' : 'transparent', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
               Global
             </button>
-            <button
-              onClick={() => setGraphMode('local')}
-              className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
-              style={{
-                background: graphMode === 'local' ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
-                color: 'var(--deep-umber)',
-                fontFamily: 'Outfit, sans-serif',
-              }}
-            >
+            <button onClick={() => setGraphMode('local')} className="px-3 py-1.5 text-[10px] font-medium tracking-wider"
+              style={{ background: graphMode === 'local' ? 'rgba(188, 179, 163, 0.35)' : 'transparent', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
               Local
             </button>
           </div>
-          <button
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className="p-1.5 rounded hover:bg-black/5 transition-colors"
-            title="Graph settings"
-          >
+          <button onClick={() => setSettingsOpen(!settingsOpen)} className="p-1.5 rounded hover:bg-black/5 transition-colors" title="Graph settings">
             <Settings2 className="w-3.5 h-3.5" style={{ color: 'var(--silica)' }} />
           </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {(Object.keys(graphFilters) as Array<keyof typeof graphFilters>).map((key) => {
+          {(Object.keys(filters) as Array<keyof NodeTypeFilters>).map((key) => {
             const Icon = NODE_ICONS[key];
             return (
-              <button
-                key={key}
-                onClick={() => toggleFilter(key)}
-                className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium tracking-wider transition-all"
+              <button key={key} onClick={() => toggleFilter(key)} className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium tracking-wider transition-all"
                 style={{
-                  border: `1px solid ${graphFilters[key] ? NODE_COLORS[key] : 'var(--pale-stone)'}`,
-                  background: graphFilters[key] ? `${NODE_COLORS[key]}15` : 'transparent',
-                  color: graphFilters[key] ? NODE_COLORS[key] : 'var(--silica)',
+                  border: `1px solid ${filters[key] ? NODE_COLORS[key] : 'var(--pale-stone)'}`,
+                  background: filters[key] ? `${NODE_COLORS[key]}15` : 'transparent',
+                  color: filters[key] ? NODE_COLORS[key] : 'var(--silica)',
                   fontFamily: 'Outfit, sans-serif',
-                }}
-              >
+                }}>
                 <Icon className="w-3 h-3" />
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </button>
@@ -611,61 +173,24 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         {settingsOpen && (
           <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--pale-stone)' }}>
             {graphMode === 'local' && (
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Depth</label>
-                <input type="range" min={1} max={3} step={1} value={graphSettings.depth}
-                  onChange={(e) => setGraphSettings((s) => ({ ...s, depth: Number(e.target.value) }))}
-                  className="flex-1 h-1 accent-[#C49A78]" />
-                <span className="text-[10px] w-8 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.depth}</span>
-              </div>
+              <SettingRow label="Depth" min={1} max={3} step={1} value={settings.depth}
+                onChange={(v) => setSettings((s) => ({ ...s, depth: v }))} format={(v) => String(v)} />
             )}
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Node Size</label>
-              <input type="range" min={0.5} max={2} step={0.1} value={graphSettings.nodeSize}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, nodeSize: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.nodeSize.toFixed(1)}x</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Edge Width</label>
-              <input type="range" min={0.5} max={3} step={0.1} value={graphSettings.edgeThickness}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, edgeThickness: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.edgeThickness.toFixed(1)}x</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Link Distance</label>
-              <input type="range" min={60} max={300} step={10} value={graphSettings.linkDistance}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, linkDistance: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-8 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.linkDistance}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Link Force</label>
-              <input type="range" min={0.001} max={0.01} step={0.001} value={graphSettings.linkForce}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, linkForce: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.linkForce.toFixed(3)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Repel Force</label>
-              <input type="range" min={100} max={2000} step={50} value={graphSettings.repelForce}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, repelForce: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.repelForce}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-medium tracking-wider w-24 shrink-0" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Center Force</label>
-              <input type="range" min={0.001} max={0.3} step={0.005} value={graphSettings.centerForce}
-                onChange={(e) => setGraphSettings((s) => ({ ...s, centerForce: Number(e.target.value) }))}
-                className="flex-1 h-1 accent-[#C49A78]" />
-              <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{graphSettings.centerForce.toFixed(4)}</span>
-            </div>
-            <button
-              onClick={() => setGraphSettings(defaultSettings)}
+            <SettingRow label="Node Size" min={0.5} max={2} step={0.1} value={settings.nodeSize}
+              onChange={(v) => setSettings((s) => ({ ...s, nodeSize: v }))} format={(v) => `${v.toFixed(1)}x`} />
+            <SettingRow label="Edge Width" min={0.5} max={3} step={0.1} value={settings.edgeThickness}
+              onChange={(v) => setSettings((s) => ({ ...s, edgeThickness: v }))} format={(v) => `${v.toFixed(1)}x`} />
+            <SettingRow label="Link Distance" min={60} max={300} step={10} value={settings.linkDistance}
+              onChange={(v) => setSettings((s) => ({ ...s, linkDistance: v }))} format={(v) => String(v)} />
+            <SettingRow label="Link Force" min={0.001} max={0.01} step={0.001} value={settings.linkForce}
+              onChange={(v) => setSettings((s) => ({ ...s, linkForce: v }))} format={(v) => v.toFixed(3)} />
+            <SettingRow label="Repel Force" min={100} max={2000} step={50} value={settings.repelForce}
+              onChange={(v) => setSettings((s) => ({ ...s, repelForce: v }))} format={(v) => String(v)} />
+            <SettingRow label="Center Force" min={0.001} max={0.3} step={0.005} value={settings.centerForce}
+              onChange={(v) => setSettings((s) => ({ ...s, centerForce: v }))} format={(v) => v.toFixed(4)} />
+            <button onClick={() => setSettings(DEFAULT_SETTINGS)}
               className="text-[10px] font-medium tracking-wider px-2 py-1 rounded hover:bg-black/5 transition-colors"
-              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-            >
+              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
               Reset Defaults
             </button>
           </div>
@@ -676,44 +201,75 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand }: Graph
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          style={{ cursor: hoveredNodeId ? 'pointer' : 'grab' }}
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
+          style={{ touchAction: 'none' }}
+          onPointerDown={(e) => view.handleMouseDown(e)}
+          onPointerMove={(e) => view.handleMouseMove(e)}
+          onPointerUp={(e) => view.handleMouseUp(e)}
         />
-        {graphLoading && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[11px] tracking-wider" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              Building graph...
-            </span>
-          </div>
-        )}
-        {!graphLoading && (graphNodes.length === 0 || (graphMode === 'local' && !graphActiveNodeId)) && (
+        {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
             <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              {graphMode === 'local' && !graphActiveNodeId
-                ? 'Select a note to see its local graph.'
-                : 'Create notes with [[links]] or Bible verse references to see your knowledge graph.'}
+              Create notes with [[links]] or Bible verse references to see your knowledge graph.
             </p>
+          </div>
+        )}
+        {graphMode === 'local' && !activeNoteId && !focusNodeId && (
+          <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
+            <p className="text-[11px] tracking-wider text-center" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+              Select a note to see its local graph.
+            </p>
+          </div>
+        )}
+        {popover && (
+          <div
+            className="absolute z-10 max-w-[250px] p-3 rounded-md shadow-lg pointer-events-none"
+            style={{
+              left: 0, top: 0,
+              transform: `translate(calc(${popover.screenX}px - 50%), calc(${popover.screenY}px - 100% - 14px))`,
+              background: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid rgba(188, 179, 163, 0.5)',
+              fontFamily: 'Outfit, sans-serif',
+            }}
+          >
+            <div className="text-[12px] font-bold mb-1" style={{ color: 'rgba(62, 50, 40, 1)' }}>{popover.title}</div>
+            <div className="text-[11px]" style={{ color: 'rgba(62, 50, 40, 0.8)' }}>{popover.text}</div>
+            <div className="text-[9px] mt-1" style={{ color: 'rgba(62, 50, 40, 0.5)' }}>{popover.translation}</div>
           </div>
         )}
       </div>
 
-      <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
-        <button
-          onClick={onToggleExpand}
-          className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors"
-        >
-          {expanded ? (
-            <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
-          ) : (
-            <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
-          )}
-          <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
-            {expanded ? 'COLLAPSE' : 'EXPAND'}
-          </span>
-        </button>
-      </div>
+      {!embedded && (
+        <div className="p-4 shrink-0" style={{ borderTop: '1px solid rgba(206, 204, 202, 0.5)' }}>
+          <button onClick={onToggleExpand} className="flex items-center gap-2 w-full justify-center py-2 rounded-md hover:bg-black/5 transition-colors">
+            {expanded
+              ? <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />
+              : <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--deep-umber)' }} />}
+            <span className="text-[10px] font-medium tracking-widest" style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}>
+              {expanded ? 'COLLAPSE' : 'EXPAND'}
+            </span>
+          </button>
+        </div>
+      )}
     </aside>
+  );
+}
+
+function SettingRow(props: {
+  label: string;
+  min: number; max: number; step: number;
+  value: number;
+  onChange: (v: number) => void;
+  format: (v: number) => string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="text-[10px] font-medium tracking-wider w-24 shrink-0"
+        style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>{props.label}</label>
+      <input type="range" min={props.min} max={props.max} step={props.step} value={props.value}
+        onChange={(e) => props.onChange(Number(e.target.value))} className="flex-1 h-1 accent-[#C49A78]" />
+      <span className="text-[10px] w-10 text-right" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+        {props.format(props.value)}
+      </span>
+    </div>
   );
 }

@@ -1,0 +1,570 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseLamplightAdapter } from './supabase-lamplight-adapter';
+
+interface SettingsRow {
+  user_id: string;
+  enabled: boolean;
+  quiet_mode: boolean;
+  inline_suggestions: boolean;
+  weekly_email: boolean;
+  consent_decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EntitlementRow {
+  user_id: string;
+  tier: string;
+  source: string | null;
+  granted_at: string | null;
+  expires_at: string | null;
+}
+
+interface ConfigRow {
+  key: string;
+  value: unknown;
+}
+
+interface Backend {
+  settings: SettingsRow[];
+  entitlements: EntitlementRow[];
+  config: ConfigRow[];
+  deletes: { table: string; userId: string }[];
+}
+
+function makeClient(backend: Backend): SupabaseClient {
+  return {
+    from(table: string) {
+      return {
+        select() {
+          return {
+            eq(_col: string, val: string) {
+              return {
+                async maybeSingle() {
+                  if (table === 'lamplight_settings') {
+                    return { data: backend.settings.find((r) => r.user_id === val) ?? null, error: null };
+                  }
+                  if (table === 'lamplight_entitlements') {
+                    return { data: backend.entitlements.find((r) => r.user_id === val) ?? null, error: null };
+                  }
+                  if (table === 'app_config') {
+                    return { data: backend.config.find((r) => r.key === val) ?? null, error: null };
+                  }
+                  return { data: null, error: null };
+                },
+              };
+            },
+            in(_col: string, vals: string[]) {
+              return {
+                async then(resolve: (v: { data: unknown[]; error: null }) => void) {
+                  if (table === 'app_config') {
+                    resolve({ data: backend.config.filter((r) => vals.includes(r.key)), error: null });
+                  }
+                },
+              };
+            },
+          };
+        },
+        upsert(payload: Record<string, unknown>) {
+          return {
+            select() {
+              return {
+                async single() {
+                  if (table === 'lamplight_settings') {
+                    const userId = payload.user_id as string;
+                    const idx = backend.settings.findIndex((r) => r.user_id === userId);
+                    const now = new Date().toISOString();
+                    const existing = idx >= 0 ? backend.settings[idx] : null;
+                    const row: SettingsRow = {
+                      user_id: userId,
+                      enabled: false,
+                      quiet_mode: false,
+                      inline_suggestions: true,
+                      weekly_email: false,
+                      consent_decided_at: null,
+                      created_at: existing?.created_at ?? now,
+                      updated_at: now,
+                      ...(existing ?? {}),
+                      ...payload,
+                    } as SettingsRow;
+                    if (idx >= 0) backend.settings[idx] = row;
+                    else backend.settings.push(row);
+                    return { data: row, error: null };
+                  }
+                  return { data: null, error: null };
+                },
+              };
+            },
+          };
+        },
+        delete() {
+          return {
+            async eq(_col: string, val: string) {
+              backend.deletes.push({ table, userId: val });
+              if (table === 'lamplight_settings') backend.settings = backend.settings.filter((r) => r.user_id !== val);
+              if (table === 'lamplight_entitlements') backend.entitlements = backend.entitlements.filter((r) => r.user_id !== val);
+              return { error: null };
+            },
+            // lamplight_connections has no user_id; delete via tautology predicate.
+            async not(_col: string, _op: string, _val: unknown) {
+              backend.deletes.push({ table, userId: '<rls-scoped>' });
+              return { error: null };
+            },
+          };
+        },
+      };
+    },
+  } as unknown as SupabaseClient;
+}
+
+describe('SupabaseLamplightAdapter — settings', () => {
+  let backend: Backend;
+  let adapter: SupabaseLamplightAdapter;
+
+  beforeEach(() => {
+    backend = { settings: [], entitlements: [], config: [], deletes: [] };
+    adapter = new SupabaseLamplightAdapter(makeClient(backend));
+  });
+
+  it('returns null when no settings row exists for the user', async () => {
+    expect(await adapter.getSettings('user-1')).toBeNull();
+  });
+
+  it('returns mapped settings when a row exists', async () => {
+    backend.settings.push({
+      user_id: 'user-1',
+      enabled: true,
+      quiet_mode: false,
+      inline_suggestions: true,
+      weekly_email: false,
+      consent_decided_at: '2026-05-25T00:00:00Z',
+      created_at: '2026-05-25T00:00:00Z',
+      updated_at: '2026-05-25T00:00:00Z',
+    });
+    const s = await adapter.getSettings('user-1');
+    expect(s).toEqual({
+      userId: 'user-1',
+      enabled: true,
+      quietMode: false,
+      inlineSuggestions: true,
+      weeklyEmail: false,
+      consentDecidedAt: '2026-05-25T00:00:00Z',
+      createdAt: '2026-05-25T00:00:00Z',
+      updatedAt: '2026-05-25T00:00:00Z',
+    });
+  });
+
+  it('upserts settings with defaults on first write', async () => {
+    const s = await adapter.upsertSettings('user-1', {
+      enabled: true,
+      consentDecidedAt: '2026-05-25T00:00:00Z',
+    });
+    expect(s.userId).toBe('user-1');
+    expect(s.enabled).toBe(true);
+    expect(s.consentDecidedAt).toBe('2026-05-25T00:00:00Z');
+    expect(backend.settings).toHaveLength(1);
+  });
+
+  it('deletes settings + entitlements rows for the user via deleteAllUserData', async () => {
+    backend.settings.push({
+      user_id: 'user-1', enabled: true, quiet_mode: false,
+      inline_suggestions: true, weekly_email: false,
+      consent_decided_at: null,
+      created_at: '2026-05-25T00:00:00Z', updated_at: '2026-05-25T00:00:00Z',
+    });
+    backend.entitlements.push({
+      user_id: 'user-1', tier: 'plus', source: 'grant',
+      granted_at: '2026-05-25T00:00:00Z', expires_at: null,
+    });
+    await adapter.deleteAllUserData('user-1');
+    expect(backend.settings).toHaveLength(0);
+    expect(backend.entitlements).toHaveLength(0);
+    const deletedTables = backend.deletes.map((d) => d.table).sort();
+    expect(deletedTables).toEqual([
+      'lamplight_artifacts',
+      'lamplight_connections',
+      'lamplight_embeddings',
+      'lamplight_entitlements',
+      'lamplight_jobs',
+      'lamplight_settings',
+      'lamplight_suggestions_log',
+    ]);
+  });
+});
+
+describe('SupabaseLamplightAdapter — entitlement + promo', () => {
+  let backend: Backend;
+  let adapter: SupabaseLamplightAdapter;
+
+  beforeEach(() => {
+    backend = { settings: [], entitlements: [], config: [], deletes: [] };
+    adapter = new SupabaseLamplightAdapter(makeClient(backend));
+  });
+
+  it('returns null when no entitlement row exists', async () => {
+    expect(await adapter.getEntitlement('user-1')).toBeNull();
+  });
+
+  it('returns mapped entitlement when a row exists', async () => {
+    backend.entitlements.push({
+      user_id: 'user-1', tier: 'plus', source: 'grant',
+      granted_at: '2026-05-25T00:00:00Z', expires_at: null,
+    });
+    const e = await adapter.getEntitlement('user-1');
+    expect(e).toEqual({
+      userId: 'user-1',
+      tier: 'plus',
+      source: 'grant',
+      grantedAt: '2026-05-25T00:00:00Z',
+      expiresAt: null,
+    });
+  });
+
+  it('returns { promoActive: false, promoEndsAt: null } when config rows are absent', async () => {
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: false, promoEndsAt: null });
+  });
+
+  it('returns promo config values from app_config', async () => {
+    backend.config.push({ key: 'lamplight_promo_active', value: true });
+    backend.config.push({ key: 'lamplight_promo_ends_at', value: null });
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: true, promoEndsAt: null });
+  });
+
+  it('does NOT treat JSON string "false" as promoActive=true', async () => {
+    backend.config.push({ key: 'lamplight_promo_active', value: 'false' });
+    expect(await adapter.getPromoConfig()).toEqual({ promoActive: false, promoEndsAt: null });
+  });
+});
+
+describe('SupabaseLamplightAdapter.getConnectionCardThresholds', () => {
+  let backend: Backend;
+  let adapter: SupabaseLamplightAdapter;
+
+  beforeEach(() => {
+    backend = { settings: [], entitlements: [], config: [], deletes: [] };
+    adapter = new SupabaseLamplightAdapter(makeClient(backend));
+  });
+
+  it('falls back to spec value (0.78) when row is absent', async () => {
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+
+  it('returns the configured similarity when row is present', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 0.3 });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.3 });
+  });
+
+  it('falls back to 0.78 when value is non-numeric', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 'oops' });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+
+  it('falls back to 0.78 when value is out of [0, 1]', async () => {
+    backend.config.push({ key: 'lamplight_min_similarity', value: 1.5 });
+    expect(await adapter.getConnectionCardThresholds()).toEqual({ minSimilarity: 0.78 });
+  });
+});
+
+import type { DailyDevotion } from './lamplight-artifacts';
+
+describe('SupabaseLamplightAdapter.getDailyDevotion', () => {
+  it('returns the body field from the matching row', async () => {
+    const devotion: DailyDevotion = {
+      opening: 'opening', scripture: { ref: 'Psalm 23:4', text: 't' },
+      reflection: 'r', prompt: 'p',
+      note_citations: [{ note_id: 'n1', reason: 'rest' }],
+    };
+    const client = {
+      from(table: string) {
+        expect(table).toBe('lamplight_artifacts');
+        return {
+          select: (cols: string) => {
+            expect(cols).toBe('body');
+            return {
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    async maybeSingle() {
+                      return { data: { body: devotion }, error: null };
+                    },
+                  }),
+                }),
+              }),
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.getDailyDevotion('user-1', '2026-05-27')).toEqual(devotion);
+  });
+
+  it('returns null when no row exists', async () => {
+    const client = {
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ eq: () => ({ async maybeSingle() { return { data: null, error: null }; } }) }) }),
+          }),
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.getDailyDevotion('user-1', '2026-05-27')).toBeNull();
+  });
+});
+
+describe('SupabaseLamplightAdapter.generateDailyDevotion', () => {
+  const devotion: DailyDevotion = {
+    opening: 'op', scripture: { ref: 'Psalm 23:4', text: 't' },
+    reflection: 'r', prompt: 'p',
+    note_citations: [{ note_id: 'n1', reason: 'rest' }],
+  };
+
+  it('returns ok:true with artifact and cached flag from the function response', async () => {
+    const client = {
+      functions: {
+        async invoke(name: string, opts: { body: unknown }) {
+          expect(name).toBe('lamplight-generate');
+          expect(opts.body).toEqual({ kind: 'daily_devotion', user_id: 'user-1', local_date: '2026-05-27' });
+          return { data: { ok: true, artifact: devotion, cached: false }, error: null };
+        },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateDailyDevotion('user-1', '2026-05-27');
+    expect(result).toEqual({ ok: true, artifact: devotion, cached: false });
+  });
+
+  it('maps ok:false reasons through unchanged', async () => {
+    for (const reason of ['no_notes', 'validators_failed'] as const) {
+      const client = {
+        functions: {
+          async invoke() { return { data: { ok: false, reason }, error: null }; },
+        },
+      };
+      const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+      expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason });
+    }
+  });
+
+  it('returns network reason on functions.invoke error', async () => {
+    const client = {
+      functions: {
+        async invoke() { return { data: null, error: { message: 'transport' } }; },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason: 'network' });
+  });
+
+  it('returns network reason on thrown error', async () => {
+    const client = {
+      functions: {
+        async invoke() { throw new Error('boom'); },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateDailyDevotion('user-1', '2026-05-27')).toEqual({ ok: false, reason: 'network' });
+  });
+});
+
+describe('SupabaseLamplightAdapter.getConnectionNeighbors', () => {
+  it('calls match_my_note_neighbors with k and maps rows', async () => {
+    const rpcCalls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      async rpc(name: string, args: unknown) {
+        rpcCalls.push({ name, args });
+        return {
+          data: [
+            { related_note_id: 'note-2', similarity: 0.91 },
+            { related_note_id: 'note-3', similarity: 0.83 },
+          ],
+          error: null,
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.getConnectionNeighbors('note-1', 5);
+    expect(result).toEqual([
+      { relatedNoteId: 'note-2', similarity: 0.91 },
+      { relatedNoteId: 'note-3', similarity: 0.83 },
+    ]);
+    expect(rpcCalls[0]).toEqual({
+      name: 'match_my_note_neighbors',
+      args: { p_source_note_id: 'note-1', p_k: 5 },
+    });
+  });
+
+  it('defaults k=5 when omitted', async () => {
+    const rpcCalls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      async rpc(name: string, args: unknown) {
+        rpcCalls.push({ name, args });
+        return { data: [], error: null };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    await adapter.getConnectionNeighbors('note-1');
+    expect(rpcCalls[0].args).toEqual({ p_source_note_id: 'note-1', p_k: 5 });
+  });
+
+  it('throws on RPC error', async () => {
+    const client = {
+      async rpc() {
+        return { data: null, error: { message: 'not authorized' } };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    await expect(adapter.getConnectionNeighbors('note-1')).rejects.toBeTruthy();
+  });
+});
+
+describe('SupabaseLamplightAdapter.hasNoteEmbedding', () => {
+  it('returns true when count > 0', async () => {
+    const client = {
+      from(_table: string) {
+        return {
+          select(_col: string, _opts: unknown) {
+            return {
+              eq(_col2: string, _val: string) {
+                return {
+                  async eq(_col3: string, _val3: string) {
+                    return { count: 1, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(true);
+  });
+
+  it('returns false when count = 0', async () => {
+    const client = {
+      from(_table: string) {
+        return {
+          select(_col: string, _opts: unknown) {
+            return {
+              eq(_col2: string, _val: string) {
+                return {
+                  async eq(_col3: string, _val3: string) {
+                    return { count: 0, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.hasNoteEmbedding('note-1')).toBe(false);
+  });
+});
+
+describe('SupabaseLamplightAdapter.generateConnectionWhy', () => {
+  function makeClient(invokeResult: { data: unknown; error: unknown }) {
+    return {
+      auth: {
+        async getUser() {
+          return { data: { user: { id: 'user-1' } } };
+        },
+      },
+      functions: {
+        async invoke(_name: string, _opts: { body: unknown }) {
+          return invokeResult;
+        },
+      },
+    };
+  }
+
+  it('returns ok with cached=false on success', async () => {
+    const client = makeClient({
+      data: { ok: true, why: 'They share a shepherd image.', cached: false },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({ ok: true, why: 'They share a shepherd image.', cached: false });
+  });
+
+  it('returns cached=true when function says so', async () => {
+    const client = makeClient({
+      data: { ok: true, why: 'cached why', cached: true },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    const result = await adapter.generateConnectionWhy('note-1', 'note-2');
+    expect(result).toEqual({ ok: true, why: 'cached why', cached: true });
+  });
+
+  it('maps no_embedding reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'no_embedding' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'no_embedding',
+    });
+  });
+
+  it('maps not_neighbor reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'not_neighbor' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'not_neighbor',
+    });
+  });
+
+  it('maps validators_failed reason', async () => {
+    const client = makeClient({
+      data: { ok: false, reason: 'validators_failed' },
+      error: null,
+    });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'validators_failed',
+    });
+  });
+
+  it('returns network on transport error', async () => {
+    const client = makeClient({ data: null, error: { message: 'boom' } });
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'network',
+    });
+  });
+
+  it('returns network when auth.getUser returns null', async () => {
+    const client = {
+      auth: {
+        async getUser() {
+          return { data: { user: null } };
+        },
+      },
+      functions: {
+        async invoke() {
+          return { data: { ok: true, why: 'x' }, error: null };
+        },
+      },
+    };
+    const adapter = new SupabaseLamplightAdapter(client as unknown as SupabaseClient);
+    expect(await adapter.generateConnectionWhy('note-1', 'note-2')).toEqual({
+      ok: false,
+      reason: 'network',
+    });
+  });
+});

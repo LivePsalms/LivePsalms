@@ -1,0 +1,106 @@
+// supabase/functions/_shared/verse-verify.ts
+//
+// Verify detected verse references against bible_passages. Cross-runtime mirror
+// of the client's BOOK_TO_OSIS (src/notepad/graph/reference-parser.ts); a parity
+// test asserts they stay identical. Verification is enhancement, never a hard
+// dependency — callers treat a throw as "skipped".
+
+export interface VerseFlag {
+  ref: string;
+  status: 'found' | 'not_found';
+  canonicalText?: string;
+}
+
+// Keep identical to BOOK_TO_OSIS in src/notepad/graph/reference-parser.ts.
+export const OSIS_BOOK_MAP: Record<string, string> = {
+  'Genesis': 'gen', 'Exodus': 'exo', 'Leviticus': 'lev', 'Numbers': 'num',
+  'Deuteronomy': 'deu', 'Joshua': 'jos', 'Judges': 'jdg', 'Ruth': 'rut',
+  '1 Samuel': '1sa', '2 Samuel': '2sa', '1 Kings': '1ki', '2 Kings': '2ki',
+  '1 Chronicles': '1ch', '2 Chronicles': '2ch', 'Ezra': 'ezr', 'Nehemiah': 'neh',
+  'Esther': 'est', 'Job': 'job', 'Psalms': 'psa', 'Proverbs': 'pro',
+  'Ecclesiastes': 'ecc', 'Song of Solomon': 'sng', 'Isaiah': 'isa', 'Jeremiah': 'jer',
+  'Lamentations': 'lam', 'Ezekiel': 'ezk', 'Daniel': 'dan', 'Hosea': 'hos',
+  'Joel': 'jol', 'Amos': 'amo', 'Obadiah': 'oba', 'Jonah': 'jon',
+  'Micah': 'mic', 'Nahum': 'nam', 'Habakkuk': 'hab', 'Zephaniah': 'zep',
+  'Haggai': 'hag', 'Zechariah': 'zec', 'Malachi': 'mal',
+  'Matthew': 'mat', 'Mark': 'mrk', 'Luke': 'luk', 'John': 'jhn',
+  'Acts': 'act', 'Romans': 'rom', '1 Corinthians': '1co', '2 Corinthians': '2co',
+  'Galatians': 'gal', 'Ephesians': 'eph', 'Philippians': 'php', 'Colossians': 'col',
+  '1 Thessalonians': '1th', '2 Thessalonians': '2th', '1 Timothy': '1ti', '2 Timothy': '2ti',
+  'Titus': 'tit', 'Philemon': 'phm', 'Hebrews': 'heb', 'James': 'jas',
+  '1 Peter': '1pe', '2 Peter': '2pe', '1 John': '1jn', '2 John': '2jn',
+  '3 John': '3jn', 'Jude': 'jud', 'Revelation': 'rev',
+};
+
+// Accept "Psalm" (singular) as an alias of the canonical "Psalms". This map is
+// exact-case only; the case-insensitive scan in canonicalBook() handles all
+// other casing variants (e.g. OCR output like "psalm 23:1").
+const BOOK_ALIASES: Record<string, string> = { 'Psalm': 'Psalms' };
+
+const REF_RE = /^(.+?)\s+(\d{1,3}):(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?$/;
+
+function canonicalBook(raw: string): string | null {
+  const collapsed = raw.replace(/\s+/g, ' ').trim();
+  const aliased = BOOK_ALIASES[collapsed] ?? collapsed;
+  for (const key of Object.keys(OSIS_BOOK_MAP)) {
+    if (key.toLowerCase() === aliased.toLowerCase()) return key;
+  }
+  return null;
+}
+
+/** Parse "Psalm 23:1" → ['psa.23.1']; ranges expand. Null if unparseable/unknown. */
+export function parseRefToIds(ref: string): string[] | null {
+  const m = ref.trim().match(REF_RE);
+  if (!m) return null;
+  const book = canonicalBook(m[1]);
+  if (!book) return null;
+  const osis = OSIS_BOOK_MAP[book];
+  const chapter = parseInt(m[2], 10);
+  const start = parseInt(m[3], 10);
+  const end = m[4] ? parseInt(m[4], 10) : start;
+  if (end < start) return null;
+  const ids: string[] = [];
+  for (let v = start; v <= end; v++) ids.push(`${osis}.${chapter}.${v}`);
+  return ids;
+}
+
+interface MinimalSupabase {
+  from(table: 'bible_passages'): {
+    select(cols: string): {
+      in(col: string, ids: string[]): {
+        order(col: string, opts: { ascending: boolean }): Promise<{
+          data: { id: string; verse_start: number; text: string }[] | null;
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  };
+}
+
+/**
+ * For each ref: 'found' (with joined canonical text) when bible_passages has the
+ * rows, else 'not_found'. Unparseable/unknown-book refs are silently skipped
+ * (no flag). Lookups run per-ref so one bad ref can't poison the others.
+ */
+export async function verifyVerseRefs(
+  supabase: MinimalSupabase,
+  refs: string[],
+): Promise<VerseFlag[]> {
+  const flags: VerseFlag[] = [];
+  for (const ref of refs) {
+    const ids = parseRefToIds(ref);
+    if (!ids) continue;
+    const { data, error } = await supabase
+      .from('bible_passages')
+      .select('id, verse_start, text')
+      .in('id', ids)
+      .order('verse_start', { ascending: true });
+    if (error || !data || data.length === 0) {
+      flags.push({ ref, status: 'not_found' });
+      continue;
+    }
+    const canonicalText = data.map((r) => r.text ?? '').join(' ').trim();
+    flags.push({ ref, status: 'found', canonicalText });
+  }
+  return flags;
+}

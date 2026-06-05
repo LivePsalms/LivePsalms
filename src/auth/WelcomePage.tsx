@@ -22,7 +22,7 @@ export function WelcomePage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--plaster)' }}
+        style={{ background: 'var(--app-bg)' }}
       >
         <p style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
           Loading...
@@ -30,12 +30,6 @@ export function WelcomePage() {
       </div>
     );
   }
-
-  const markWelcomed = () => {
-    if (user) {
-      localStorage.setItem(`welcomed_${user.id}`, 'true');
-    }
-  };
 
   const handleContinue = async () => {
     if (!fullName.trim()) {
@@ -48,19 +42,13 @@ export function WelcomePage() {
         fullName: fullName.trim(),
         dateOfBirth: dateOfBirth || null,
       });
-      markWelcomed();
       toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
-      navigate('/notepad');
+      navigate('/notepad/notes');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save your profile.');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSkip = () => {
-    markWelcomed();
-    navigate('/notepad');
   };
 
   const inputStyle = {
@@ -73,7 +61,7 @@ export function WelcomePage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: 'var(--plaster)' }}
+      style={{ background: 'var(--app-bg)' }}
     >
       <div
         className="w-full max-w-sm rounded-xl p-8"
@@ -170,14 +158,6 @@ export function WelcomePage() {
             {saving ? 'Saving...' : 'Continue'}
           </button>
 
-          <button
-            onClick={handleSkip}
-            disabled={saving}
-            className="w-full text-xs hover:opacity-70 transition-opacity"
-            style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-          >
-            Skip for now
-          </button>
         </div>
       </div>
     </div>

@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useState, useCallback, useMemo } from 'react';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { useNotepadActions } from '@/notepad/context/useNotepadActions';
+import { useNoteCollection } from '@/notepad/context/useNoteCollection';
 import { NotepadToolbar } from '@/notepad/components/NotepadToolbar';
 import { NotepadSidebar } from '@/notepad/components/Sidebar';
 import { NotepadEditor } from '@/notepad/components/Editor';
@@ -14,60 +13,69 @@ import { SearchDialog } from '@/notepad/components/SearchDialog';
 import { MigrationDialog } from '@/notepad/components/MigrationDialog';
 import { GraphPane } from './notepad/GraphPane';
 import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
+import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
+import { LamplightTabPanel } from '@/notepad/components/lamplight/LamplightTabPanel';
+import { ConnectionCardsStrip } from '@/notepad/components/lamplight/ConnectionCardsStrip';
+import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
+import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
+import { useLamplightEmbeddingTrigger } from '@/notepad/hooks/useLamplightEmbeddingTrigger';
+import { supabase } from '@/lib/supabase';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileNotepadWorkspace } from './notepad/mobile/MobileNotepadWorkspace';
 
-function NotepadWorkspace() {
+function DesktopNotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [graphOpen, setGraphOpen] = useState(true);
   const [graphExpanded, setGraphExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info' | 'lamplight'>('content');
 
-  const navigate = useNavigate();
-  const { user, adapter, loading: authLoading } = useAuthSession();
+  const { user, adapter } = useAuthSession();
+  const lamplightAdapter = useMemo(
+    () => (supabase ? new SupabaseLamplightAdapter(supabase) : null),
+    []
+  );
+
+  // useLamplightSettings requires a non-null adapter. When Supabase is not
+  // configured, lamplightAdapter is null — pass userId=null to skip the fetch.
+  const { settings: lamplightSettings } = useLamplightSettings({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adapter: lamplightAdapter as any,
+    userId: lamplightAdapter ? (user?.id ?? null) : null,
+  });
+
+  // useLamplightEmbeddingTrigger also requires a non-null adapter. Guard enabled
+  // so that when Supabase/adapter is absent the returned callback is always a no-op.
+  const onAfterSave = useLamplightEmbeddingTrigger({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adapter: lamplightAdapter as any,
+    enabled: !!(lamplightAdapter && lamplightSettings?.enabled),
+    userId: lamplightAdapter ? (user?.id ?? null) : null,
+    invoke: (name, options) => supabase!.functions.invoke(name, options),
+  });
+
   const actions = useNotepadActions();
+  const { notes, activeNote, collection } = useNoteCollection();
   const refresh = useCallback(() => actions.init(), [actions]);
-  const [showMigration, setShowMigration] = useState(false);
+  const { showMigration, dismissMigration } = useNotepadFirstLoad();
 
   const isOnline = useOnlineStatus();
   const isLoggedIn = !!user;
   const isOfflineAndLoggedIn = !isOnline && isLoggedIn;
 
-  // First-time user: redirect to welcome screen, then show signed-in toast
-  useEffect(() => {
-    if (authLoading || !user) return;
-    const welcomedKey = `welcomed_${user.id}`;
-    if (!localStorage.getItem(welcomedKey)) {
-      navigate('/welcome');
-      return;
-    }
-    const greetedKey = `greeted_${user.id}_${new Date().toDateString()}`;
-    if (!sessionStorage.getItem(greetedKey)) {
-      sessionStorage.setItem(greetedKey, 'true');
-      const firstName = user.user_metadata?.full_name?.split(' ')[0]
-        ?? user.email?.split('@')[0]
-        ?? 'friend';
-      toast.success(`Welcome back, ${firstName}!`);
-    }
-  }, [user, authLoading, navigate]);
-
-  // Check for local notes when user logs in
-  useEffect(() => {
-    if (user) {
-      const localNotes = localStorage.getItem('notepad_notes');
-      if (localNotes) {
-        const parsed = JSON.parse(localNotes);
-        if (parsed.length > 0) {
-          setShowMigration(true);
-        }
-      }
-    }
-  }, [user]);
-
   const handleOpenSearch = useCallback(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   }, []);
 
+  const handleOpenNoteFromSidebar = useCallback(
+    (id: string) => {
+      collection.openNote(id);
+      setActiveTab('content');
+    },
+    [collection],
+  );
+
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ top: 0 }}>
+    <div className="fixed inset-0 flex flex-col" style={{ top: 0, background: 'var(--plaster)' }}>
       <NotepadToolbar
         graphOpen={graphOpen}
         onToggleGraph={() => setGraphOpen(!graphOpen)}
@@ -136,7 +144,12 @@ function NotepadWorkspace() {
               pointerEvents: sidebarOpen ? 'auto' : 'none',
             }}
           >
-            {sidebarOpen && <NotepadSidebar hideCollectionHeader />}
+            {sidebarOpen && (
+              <NotepadSidebar
+                hideCollectionHeader
+                onOpenNote={handleOpenNoteFromSidebar}
+              />
+            )}
           </div>
         </div>
 
@@ -151,7 +164,10 @@ function NotepadWorkspace() {
           }}
         >
           {/* Tab Bar */}
-          <div className="flex items-center gap-0 border-b shrink-0" style={{ borderColor: 'var(--pale-stone)' }}>
+          <div
+            className="flex items-center gap-0 border-b shrink-0"
+            style={{ borderColor: 'var(--pale-stone)' }}
+          >
             {(['content', 'backlinks', 'info'] as const).map((tab) => (
               <button
                 key={tab}
@@ -164,16 +180,72 @@ function NotepadWorkspace() {
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {activeTab === tab && (
-                  <div className="absolute bottom-0 left-5 right-5 h-px" style={{ background: 'var(--deep-umber)' }} />
+                  <div
+                    className="absolute bottom-0 left-5 right-5 h-px"
+                    style={{ background: 'var(--deep-umber)' }}
+                  />
                 )}
               </button>
             ))}
+            <span
+              aria-hidden
+              className="mx-2"
+              style={{ color: 'var(--silica)', opacity: 0.3 }}
+            >
+              |
+            </span>
+            <button
+              onClick={() => setActiveTab('lamplight')}
+              className="px-5 py-3 text-[11px] font-medium tracking-wider transition-colors relative"
+              style={{
+                color: activeTab === 'lamplight' ? 'var(--deep-umber)' : '#b8843a',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              🕯 Lamplight
+              {activeTab === 'lamplight' && (
+                <div
+                  className="absolute bottom-0 left-5 right-5 h-px"
+                  style={{ background: 'var(--deep-umber)' }}
+                />
+              )}
+            </button>
           </div>
 
           {/* Tab Content */}
-          {activeTab === 'content' && <NotepadEditor />}
+          {activeTab === 'content' && <NotepadEditor onAfterSave={onAfterSave} />}
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
+          {activeTab === 'lamplight' && lamplightAdapter && (
+            <LamplightTabPanel lamplightAdapter={lamplightAdapter} />
+          )}
+          {activeTab === 'lamplight' && !lamplightAdapter && (
+            <div
+              className="flex items-center justify-center min-h-[420px]"
+              style={{ background: 'var(--alabaster)' }}
+            >
+              <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+                Lamplight unavailable — Supabase not configured.
+              </p>
+            </div>
+          )}
+
+          {/* Connection Cards strip — only on the Content tab, only when the
+              active note qualifies and has neighbors. The strip self-hides
+              for every other state (no empty-state placeholders here; the
+              Lamplight tab handles those for users who go looking). */}
+          {activeTab === 'content' && lamplightAdapter && user && (
+            <ConnectionCardsStrip
+              adapter={lamplightAdapter}
+              userId={user.id}
+              activeNote={activeNote}
+              totalNoteCount={notes.length}
+              loadNeighborNotes={async (ids) =>
+                notes.filter((n) => ids.includes(n.id))
+              }
+              onOpenNote={(id) => collection.openNote(id)}
+            />
+          )}
         </main>
 
         {/* Graph Pane (static placeholder — functionality deferred) */}
@@ -183,12 +255,17 @@ function NotepadWorkspace() {
       <SearchDialog />
       <MigrationDialog
         open={showMigration}
-        onClose={() => setShowMigration(false)}
+        onClose={dismissMigration}
         targetAdapter={adapter}
         onMigrationComplete={refresh}
       />
     </div>
   );
+}
+
+function NotepadWorkspace() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileNotepadWorkspace /> : <DesktopNotepadWorkspace />;
 }
 
 export function Notepad() {

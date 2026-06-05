@@ -22,7 +22,12 @@ import {
 } from '../sidebar/tree-view-state';
 import { formatTag } from '../utils/tags';
 
-export function NotepadSidebar(props: { hideCollectionHeader?: boolean } = {}) {
+type NotepadSidebarProps = {
+  hideCollectionHeader?: boolean;
+  onOpenNote?: (id: string) => void;
+};
+
+export function NotepadSidebar(props: NotepadSidebarProps = {}) {
   return (
     <TreeViewStateProvider>
       <NotepadSidebarInner {...props} />
@@ -30,13 +35,14 @@ export function NotepadSidebar(props: { hideCollectionHeader?: boolean } = {}) {
   );
 }
 
-function NotepadSidebarInner({ hideCollectionHeader = false }: { hideCollectionHeader?: boolean }) {
+function NotepadSidebarInner({ hideCollectionHeader = false, onOpenNote }: NotepadSidebarProps) {
   const { notes, activeNoteId, collection } = useNoteCollection();
   const { folders, hierarchy } = useFolderHierarchy();
   const actions = useNotepadActions();
   const treeView = useTreeViewState();
 
-  const { openNote, createNote, moveNote, renameNote, duplicateNote } = collection;
+  const { createNote, moveNote, renameNote, duplicateNote } = collection;
+  const openNote = onOpenNote ?? collection.openNote;
   const { createFolder, renameFolder } = hierarchy;
   const { deleteNote, deleteFolder } = actions;
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Observable } from '@/notepad/collection/observable';
 import type { UserProfile, ProfileStatus } from '../types';
 import type { AuthSession } from '../session/auth-session';
+import { normalizeUsername, validateUsername, type UsernameClaimResult } from '@/auth/username/username-rules';
 
 export interface AccountProfileState {
   profile: UserProfile | null;
@@ -79,6 +80,32 @@ export class AccountProfile extends Observable<AccountProfileState> {
     return url;
   };
 
+  checkUsernameAvailable = async (name: string): Promise<boolean> => {
+    if (!this.client) throw new Error('Supabase not configured');
+    const candidate = normalizeUsername(name);
+    if (!validateUsername(candidate).valid) return false;
+    const { data, error } = await this.client.rpc('check_username_available', { candidate });
+    if (error) throw error;
+    return data === true;
+  };
+
+  setUsername = async (name: string): Promise<UsernameClaimResult> => {
+    const userId = this.session.getSnapshot().user?.id;
+    if (!this.client || !userId) throw new Error('Not authenticated');
+    const candidate = normalizeUsername(name);
+    if (!validateUsername(candidate).valid) return { ok: false, reason: 'invalid' };
+    const { error } = await this.client
+      .from('profiles')
+      .update({ username: candidate })
+      .eq('id', userId);
+    if (error) {
+      if ((error as { code?: string }).code === '23505') return { ok: false, reason: 'taken' };
+      throw error;
+    }
+    await this.fetchProfile(userId);
+    return { ok: true };
+  };
+
   private handleSessionChange(): void {
     const userId = this.session.getSnapshot().user?.id ?? null;
     if (userId === this.currentUserId) return;
@@ -124,6 +151,7 @@ export class AccountProfile extends Observable<AccountProfileState> {
 function mapProfile(row: Record<string, unknown>): UserProfile {
   return {
     id: row.id as string,
+    username: (row.username as string | null) ?? null,
     fullName: row.full_name as string,
     dateOfBirth: (row.date_of_birth as string | null) ?? null,
     avatarUrl: (row.avatar_url as string | null) ?? null,

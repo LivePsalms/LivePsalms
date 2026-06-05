@@ -1,0 +1,209 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest';
+
+// Stub window.matchMedia before any module loads (GSAP ScrollTrigger reads it
+// at register time, which happens at the top of NextDevotionHandoff.tsx).
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock GSAP and ScrollTrigger so no DOM/browser APIs beyond matchMedia are hit.
+vi.mock('gsap', () => ({
+  default: {
+    registerPlugin: vi.fn(),
+    set: vi.fn(),
+    to: vi.fn(),
+    context: vi.fn(() => ({ revert: vi.fn() })),
+    timeline: vi.fn(() => ({ scrollTrigger: null, fromTo: vi.fn(), to: vi.fn(), set: vi.fn(), kill: vi.fn() })),
+  },
+}));
+vi.mock('gsap/all', () => ({ ScrollTrigger: {} }));
+
+// Mock router and transition hooks — they're not exercised by the helper test.
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+vi.mock('@/transitions/usePillExpandNavigation', () => ({
+  usePillExpandNavigation: () => ({ startFromPill: vi.fn() }),
+}));
+vi.mock('@/utils/extractDominantColor', () => ({
+  extractDominantColor: () => Promise.resolve('#000'),
+}));
+
+import { applyCuratedBreak } from './NextDevotionHandoff';
+
+describe('applyCuratedBreak', () => {
+  it('returns the original title when breakAfter is undefined', () => {
+    expect(applyCuratedBreak('Beside Still Waters', undefined)).toBe('Beside Still Waters');
+  });
+
+  it('returns the original title when breakAfter is 0', () => {
+    expect(applyCuratedBreak('Beside Still Waters', 0)).toBe('Beside Still Waters');
+  });
+
+  it('splits at word index 2 into two segments', () => {
+    expect(applyCuratedBreak('Beside Still Waters', 2)).toEqual(['Beside Still', 'Waters']);
+  });
+
+  it('splits at word index 1 (forces 2-line break on a 2-word title)', () => {
+    expect(applyCuratedBreak('Brought Near', 1)).toEqual(['Brought', 'Near']);
+  });
+
+  it('splits a long title at word index 3', () => {
+    expect(applyCuratedBreak('A Future You Cannot See Yet', 3)).toEqual([
+      'A Future You',
+      'Cannot See Yet',
+    ]);
+  });
+
+  it('returns the original title when breakAfter equals word count', () => {
+    expect(applyCuratedBreak('Beside Still Waters', 3)).toBe('Beside Still Waters');
+  });
+
+  it('returns the original title when breakAfter exceeds word count', () => {
+    expect(applyCuratedBreak('Beside Still Waters', 99)).toBe('Beside Still Waters');
+  });
+});
+
+import { render, screen, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach } from 'vitest';
+import { NextDevotionHandoff } from './NextDevotionHandoff';
+import type { Project } from '@/types';
+import type { Devotion } from '@/data/devotions';
+
+afterEach(cleanup);
+
+const baseProject: Project = {
+  id: 'peace',
+  name: 'Peace',
+  thumbnail: '/restoration1/image1.png',
+  overlayColor: '#6b7370',
+} as unknown as Project;
+
+const peaceDevotion: Devotion = {
+  id: 'peace',
+  label: 'Restoration of Peace',
+  title: 'Beside Still Waters',
+  scriptureRef: 'Psalm 23:2–3',
+  monogram: 'PE',
+  firstMoodboardImage: '/restoration1/image1.png',
+  mobileTitleBreak: 2,
+};
+
+function renderHandoff(devotion: Devotion = peaceDevotion) {
+  return render(
+    <MemoryRouter>
+      <NextDevotionHandoff
+        currentProject={baseProject}
+        nextProject={baseProject}
+        nextDevotion={devotion}
+        variant="mobile"
+      />
+    </MemoryRouter>,
+  );
+}
+
+describe('NextDevotionHandoff mobile pill — curated break', () => {
+  it('renders the title as two segments split at the configured word index', () => {
+    renderHandoff();
+    // Both segments should appear separately in the DOM
+    expect(screen.getByText('Beside Still')).toBeInTheDocument();
+    expect(screen.getByText('Waters')).toBeInTheDocument();
+    // And the un-split title should NOT appear as a single text node
+    expect(screen.queryByText('Beside Still Waters')).toBeNull();
+  });
+
+  it('renders the title as one node when mobileTitleBreak is undefined', () => {
+    renderHandoff({ ...peaceDevotion, mobileTitleBreak: undefined });
+    expect(screen.getByText('Beside Still Waters')).toBeInTheDocument();
+  });
+});
+
+describe('NextDevotionHandoff mobile pill — title scale', () => {
+  it('uses 21px title by default on mobile', () => {
+    renderHandoff();
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title).toBeTruthy();
+    expect(title.style.fontSize).toBe('21px');
+    expect(title.style.lineHeight).toBe('1.1');
+  });
+
+  it('shrinks the title to 17px when mobileTitleScale is "shrink"', () => {
+    renderHandoff({
+      ...peaceDevotion,
+      title: 'A Future You Cannot See Yet',
+      mobileTitleBreak: 3,
+      mobileTitleScale: 'shrink',
+    });
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title).toBeTruthy();
+    expect(title.style.fontSize).toBe('17px');
+    expect(title.style.lineHeight).toBe('1.1');
+  });
+});
+
+describe('NextDevotionHandoff mobile pill — visual tokens', () => {
+  it('uses 11/4 aspect ratio and 0 10% padding on mobile', () => {
+    renderHandoff();
+    const pill = document.querySelector('.next-handoff-pill') as HTMLElement;
+    const content = document.querySelector('.next-handoff-pill-content') as HTMLElement;
+    expect(pill.style.aspectRatio).toBe('11 / 4');
+    // jsdom normalises the unitless 0 to 0px when reading back inline padding
+    expect(content.style.padding).toMatch(/^0(px)? 10%$/);
+  });
+
+  it('uses 9px eyebrow and 9px scripture metadata on mobile', () => {
+    renderHandoff();
+    const eyebrow = document.querySelector('.next-handoff-label') as HTMLElement;
+    expect(eyebrow.style.fontSize).toBe('9px');
+    // Right-column meta lines also at 9px
+    const rightColMeta = document.querySelectorAll(
+      '.next-handoff-pill-content > div:last-child > span',
+    );
+    expect(rightColMeta).toHaveLength(2);
+    rightColMeta.forEach((el) => {
+      expect((el as HTMLElement).style.fontSize).toBe('9px');
+    });
+  });
+});
+
+describe('NextDevotionHandoff — desktop guard', () => {
+  it('renders 28px title and 11/3.2 aspect on desktop, ignoring mobileTitleBreak', () => {
+    render(
+      <MemoryRouter>
+        <NextDevotionHandoff
+          currentProject={baseProject}
+          nextProject={baseProject}
+          nextDevotion={peaceDevotion}
+          variant="desktop"
+          inHorizontalTrack
+        />
+      </MemoryRouter>,
+    );
+
+    // Desktop must NOT split the title — the curated break is mobile-only
+    expect(screen.getByText('Beside Still Waters')).toBeInTheDocument();
+    expect(screen.queryByText('Waters')).toBeNull();
+
+    const pill = document.querySelector('.next-handoff-pill') as HTMLElement;
+    expect(pill.style.aspectRatio).toBe('11 / 3.2');
+
+    const title = document.querySelector('.next-handoff-title') as HTMLElement;
+    expect(title.style.fontSize).toBe('28px');
+
+    const eyebrow = document.querySelector('.next-handoff-label') as HTMLElement;
+    expect(eyebrow.style.fontSize).toBe('10px');
+  });
+});

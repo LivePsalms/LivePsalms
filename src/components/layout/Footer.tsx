@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Link } from 'react-router-dom';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -91,12 +92,20 @@ export function Footer() {
 
               {/* Bottom bar */}
               <div className="footer-animate w-full flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10 pt-6">
-                <a
-                  href="#"
-                  className="text-white/50 text-xs md:text-sm font-sans tracking-wide hover:text-white/80 transition-colors duration-300"
-                >
-                  Privacy
-                </a>
+                <div className="flex items-center gap-6">
+                  <Link
+                    to="/privacy"
+                    className="text-white/50 text-xs md:text-sm font-sans tracking-wide hover:text-white/80 transition-colors duration-300"
+                  >
+                    Privacy
+                  </Link>
+                  <Link
+                    to="/terms"
+                    className="text-white/50 text-xs md:text-sm font-sans tracking-wide hover:text-white/80 transition-colors duration-300"
+                  >
+                    Terms
+                  </Link>
+                </div>
 
                 <p className="text-white/40 text-xs md:text-sm font-sans tracking-wide">
                   &copy;2026 Live Psalms

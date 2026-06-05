@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { extractVerseRefs } from '../extensions/bible-verse-utils';
-import { countWordsFromTipTapJSON } from '../utils/word-count';
+import { countWordsFromTipTapJSON, extractTextFromNote } from '../utils/tiptap-text';
 import type { Note } from '../types';
 
 /**
@@ -133,28 +133,44 @@ export function linkNotesByVerses(notes: Note[]): Note[] {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers (exported for tests)
-// ---------------------------------------------------------------------------
-
-export function extractTextFromNote(note: Note): string {
-  try {
-    const doc = JSON.parse(note.content) as Record<string, unknown>;
-    return extractTextRecursive(doc);
-  } catch {
-    return note.content;
-  }
+export interface FilesToNotesOpts {
+  folderId: string;
+  /** When true, scrape verse references out of the plain text and use them as tags (capped at 10). */
+  autoDetectVerses?: boolean;
+  /** When true, append a cross-linking "Related Notes" pass via linkNotesByVerses. */
+  autoCreateLinks?: boolean;
 }
 
-function extractTextRecursive(node: Record<string, unknown>): string {
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return node.text;
+/**
+ * Orchestrates the full upload import: parse each File to text, build a Note
+ * per file (title = filename without extension), then optionally cross-link by
+ * shared verse refs. Returns Notes ready for `importNotes`. Shared by the
+ * desktop UploadModal and the mobile FAB upload flow.
+ */
+export async function filesToNotes(
+  files: File[],
+  opts: FilesToNotesOpts,
+): Promise<Note[]> {
+  const { folderId, autoDetectVerses = false, autoCreateLinks = false } = opts;
+  const parsed = await Promise.all(
+    files.map(async (file) => {
+      const text = await parseFile(file);
+      const title = file.name.replace(/\.[^.]+$/, '');
+      return { title, text };
+    }),
+  );
+  let notes = parsed.map(({ title, text }) =>
+    buildNoteFromText({ title, text, folderId, autoDetectVerses }),
+  );
+  if (autoCreateLinks) {
+    notes = linkNotesByVerses(notes);
   }
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractTextRecursive).join(' ');
-  }
-  return '';
+  return notes;
 }
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 function appendRelatedNoteLinks(note: Note, related: Note[]): Note {
   if (related.length === 0) return note;

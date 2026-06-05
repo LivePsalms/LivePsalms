@@ -1,6 +1,54 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Shadows+Into+Light&family=Permanent+Marker&family=Sacramento&family=Homemade+Apple&family=Patrick+Hand&family=Indie+Flower&family=Just+Another+Hand&family=Architects+Daughter&family=Dancing+Script:wght@400;700&family=Pacifico&family=Amatic+SC:wght@400;700&family=Marck+Script&family=Cookie&display=swap');
 
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Slant.ttf') format('truetype');
+  font-weight: 400;
+  font-style: oblique;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-Condensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-ItalicCondensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Softly Serif Condensed';
+  src: url('/The-Softly-Serif/Fonts/TheSoftlySerif-SlantCondensed.ttf') format('truetype');
+  font-weight: 400;
+  font-style: oblique;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,9 +72,25 @@
   :root {
     /* PSALMS Brand Colors */
     --plaster: #F0ECE8;
+    --app-bg: #988F80;
+    --app-bg-rgb: 152, 143, 128;   /* RGB triplet of --app-bg for use in rgba() */
+    --deep-umber-rgb: 58, 52, 38;   /* RGB triplet of --deep-umber for use in rgba() */
+    --mid-section-scrim-opacity: 1; /* Tunable knob for mid-section legibility scrim (0 = no scrim) */
     --pale-stone: #CECCCA;
     --warm-sand: #BCB3A3;
+    /* Floating mobile bottom dock — height (h-11 = 44px) + outer pb minimum
+       + iOS home-indicator safe-area + 1rem breathing buffer. Drives the
+       mobile-only padding-bottom on the App wrapper so content never sits
+       under the dock. Single source of truth. */
+    --mobile-dock-clearance: calc(44px + 0.75rem + env(safe-area-inset-bottom, 0px) + 1rem);
+    --text-muted: #FBF6EA;
     --deep-umber: #3A3426;
+    /* Mobile dock's "dark" surface — matches the notepad landing hero's
+       --np-bg-dark so the dock reads as the same near-black across both
+       its default state (over light pages) and inverted-label state (over
+       dark sections). Defined globally so the dock CSS doesn't depend on
+       landing.css being loaded. */
+    --dock-bg-dark: #0e0e0e;
     --charred: #19130C;
     --silica: #8A8B90;
     --alabaster: #F5F0E8;
@@ -73,11 +137,31 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--plaster);
+    background: var(--app-bg);
     color: var(--deep-umber);
+    position: relative;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
+}
+
+.psalms-nav-link {
+  color: var(--c-rest, currentColor);
+  text-decoration: underline transparent;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1.5px;
+  /* Glass quality: a hairline white highlight stacked over a soft black
+     shadow. Both alphas stay low so the effect reads as "frosted edge"
+     not "drop shadow." Works on both light and dark backgrounds because
+     the two layers cancel into neutral lift. */
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 10px rgba(0, 0, 0, 0.08);
+}
+
+.psalms-nav-link:hover {
+  color: var(--c-hover, currentColor);
+  text-decoration-color: currentColor;
 }
 
 @layer utilities {
@@ -189,9 +273,217 @@ img {
   font-size: 11px;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--warm-sand);
+  color: var(--text-muted);
   position: relative;
   z-index: 1;
+}
+
+/* ============================================
+   HERO BRIDGE STYLES - pinned spatial sequence
+   ============================================ */
+
+/* Typography variants — side beat (text 1) and center beat (text 3) share
+   the same base type ramp but differ in max-width because the side beats
+   live in a narrower column on the desktop stage. */
+.bridge-line-side {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--deep-umber);
+  max-width: min(440px, 80vw);
+}
+
+.bridge-line-center {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--deep-umber);
+  max-width: min(560px, 80vw);
+}
+
+.bridge-thesis {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--deep-umber);
+  max-width: min(440px, 80vw);
+}
+
+/* Stage positioning utilities. All viewports: .bridge-beat (no suffix) is
+   the base — absolutely positioned, centered on the stage (left:50%,
+   translate(-50%,-50%)). .bridge-beat-left and -right pin to the viewport
+   edges (8vw inset). .bridge-beat-center is a marker class — it inherits
+   the .bridge-beat default centering, so it has no rules of its own. The
+   three beats overlap by design; kiss-handoff opacity timing in the GSAP
+   timeline keeps exactly one visible at a time. */
+.bridge-beat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* No media query — applies at every viewport. Side offsets tightened from
+   10vw to 8vw at every width. At 360px viewports the inset is ~29px instead
+   of ~36px, giving the side beats more text width within the typography
+   cap; at 1440px the inset is ~115px instead of ~144px — a marginal
+   compositional shift that the 440px text cap absorbs comfortably. */
+.bridge-beat-left {
+  left: 8vw;
+  right: auto;
+  transform: translate(0, -50%);
+  text-align: left;
+}
+.bridge-beat-right {
+  left: auto;
+  right: 8vw;
+  transform: translate(0, -50%);
+  text-align: right;
+}
+/* .bridge-beat-center keeps the default 50/50 centering established by .bridge-beat */
+
+/* ───── Mid-section motion (scroll-scrubbed video + 5 text beats) ─────
+   Renders between the Psalm 23:2-3 verse and PurposeGrid on the home route.
+   Architecture: 500vh outer wrapper defines pin distance; 100vh sticky stage
+   stays glued to viewport during the pin; video and beats are positioned
+   absolutely within the stage. */
+
+.mid-section-wrapper {
+  position: relative;
+  /* height is driven by inline style: 500vh (video) or 600vh (webgpu overture+outro). */
+  background: var(--app-bg);
+}
+
+.mid-section-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--app-bg); /* shown until the video has its first frame */
+}
+
+.mid-section-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.mid-section-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--app-bg-rgb), 0)    0%,
+    rgba(var(--app-bg-rgb), 0.32) 50%,
+    rgba(var(--app-bg-rgb), 0.55) 100%
+  );
+  opacity: var(--mid-section-scrim-opacity, 1);
+  pointer-events: none;
+}
+
+.mid-section-beats {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mid-section-beat {
+  /* Family inherits from Hero bridge — same italic Cormorant voice. */
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--deep-umber);
+
+  /* Departures from bridge type ramp for sustained prose reading. */
+  font-size: clamp(22px, 3.4vw, 36px);
+  line-height: 1.5;
+  max-width: 680px;
+
+  /* Soft taupe halo so deep-umber letters lift off the bright Cosmic particles
+     in the WebGPU path. No visible darkening of surrounding particles. */
+  text-shadow: 0 0 24px rgba(var(--app-bg-rgb), 0.6);
+
+  /* Absolute-center on the stage. GSAP tweens y and opacity from there. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 0 24px;
+  margin: 0;
+
+  /* Initial state — invisible until GSAP's first tick. */
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+/* Mobile (< 768px): darker + larger so beats stay legible against the
+   WebGPU particles on small screens. Desktop keeps the lighter weight. */
+@media (max-width: 767px) {
+  .mid-section-beat {
+    font-weight: 400;
+    color: #1A1612;
+    font-size: clamp(26px, 4.2vw, 42px);
+    max-width: 720px;
+    text-shadow: 0 0 28px rgba(var(--app-bg-rgb), 0.75);
+  }
+}
+
+/* ───── Reduced-motion fallback: no pin, no scrub, stacked beats ───── */
+.mid-section-reduced {
+  position: relative;
+  background: var(--app-bg);
+}
+
+.mid-section-reduced-block {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mid-section-reduced-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.mid-section-reduced-beat {
+  position: relative;
+  z-index: 1;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--deep-umber);
+  font-size: clamp(22px, 3.4vw, 36px);
+  line-height: 1.5;
+  max-width: 680px;
+  text-align: center;
+  padding: 0 24px;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+
+.mid-section-reduced-beat[data-visible='true'] {
+  opacity: 1;
 }
 
 .divider {
@@ -227,6 +519,24 @@ img {
 }
 .water-ripple-ring-3 {
   animation: water-ripple-ring-3 var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ============================================
+   DOCK LOGO TAP SPARKLE
+   Ring + rising embers fired from the mobile
+   bottom-dock logo tile. Per-particle drift is
+   supplied via inline --ex / --ey custom props.
+   ============================================ */
+
+@keyframes dock-sparkle-ring {
+  0%   { transform: scale(0.3); opacity: 0.8; }
+  100% { transform: scale(4);   opacity: 0; }
+}
+
+@keyframes dock-ember {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  16%  { opacity: 1; }
+  100% { transform: translate(var(--ex, 0), var(--ey, -44px)); opacity: 0; }
 }
 
 /* ============================================
@@ -326,6 +636,33 @@ img {
   }
 }
 
+/* Decorative "Devotions" watermark in the top-left of the Purpose Grid
+   section. Sits in the section's top padding band, above the filter row.
+   Starts invisible — GSAP scroll-linked reveal in PurposeGrid.tsx tweens
+   opacity to its resting decorative value of 0.32. */
+.pg-devotions-watermark {
+  position: absolute;
+  top: 1.5rem;
+  left: 2.5rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 4.2rem;
+  line-height: 0.9;
+  letter-spacing: 0.005em;
+  color: var(--deep-umber);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .pg-devotions-watermark {
+    top: 3rem;
+    left: 6rem;
+    font-size: 7.2rem;
+  }
+}
+
 /* TipTap Notepad Editor */
 .notepad-editor .tiptap {
   font-family: 'Outfit', sans-serif;
@@ -385,4 +722,503 @@ img {
 
 .notepad-editor .tiptap p {
   margin-bottom: 0.75rem;
+}
+
+/* ─────────────── Two-Path Interlude ─────────────── */
+.two-path-interlude {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12vw;
+  min-height: 100vh;
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.two-path-hairline {
+  position: absolute;
+  top: 28%;
+  bottom: 28%;
+  left: 50%;
+  width: 1px;
+  background: rgba(var(--deep-umber-rgb), 0.22);
+  transform-origin: center;
+  /* Initial state — set explicitly so GSAP has a clean baseline to tween from. */
+  transform: scaleY(0);
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Desktop (≥ 768px): bump alpha so the vertical hairline reads against the
+   textured taupe background. Mobile stub keeps the lighter 0.22 because it's
+   a short 64px horizontal line that doesn't need the extra weight. */
+@media (min-width: 768px) {
+  .two-path-hairline {
+    background: rgba(var(--deep-umber-rgb), 0.5);
+  }
+}
+
+.two-path-col {
+  max-width: 380px;
+  text-align: center;
+  padding: 0 16px;
+  /* Initial state — entrance animation tweens these to 0 / 1. */
+  opacity: 0;
+}
+.two-path-col-left { justify-self: end; transform: translateY(60px); }
+.two-path-col-right { justify-self: start; transform: translateY(-60px); }
+
+.two-path-statement {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  color: var(--deep-umber);
+  font-size: clamp(22px, 2.4vw, 28px);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Shared CTA structure: button + Link both use this. */
+.two-path-cta {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 36px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--deep-umber);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.two-path-cta:focus-visible {
+  outline: 2px solid var(--deep-umber);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.two-path-cta-label { line-height: 1; }
+
+/* Read Below — vertical line + chevron, paused until entrance completes. */
+.two-path-arrow {
+  position: relative;
+  display: inline-block;
+  width: 1px;
+  height: 28px;
+  background: currentColor;
+  animation: two-path-arrow-bob 2.6s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.two-path-arrow::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: translateX(-50%) rotate(45deg);
+}
+.two-path-interlude[data-entered="true"] .two-path-arrow {
+  animation-play-state: running;
+}
+
+@keyframes two-path-arrow-bob {
+  0%, 100% { transform: translateY(-4px); opacity: 0.55; }
+  50% { transform: translateY(4px); opacity: 1; }
+}
+
+/* Open your Notepad — pill border (matches FinalReflectionCta's notepad pill).
+   Overrides the shared .two-path-cta column flex + zero padding + no border. */
+.two-path-cta-notepad {
+  flex-direction: row;
+  gap: 0;
+  padding: 14px 28px;
+  border: 1px solid rgba(var(--deep-umber-rgb), 0.30);
+  border-radius: 9999px;
+  background: rgba(var(--deep-umber-rgb), 0.05);
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+.two-path-cta-notepad:hover,
+.two-path-cta-notepad:focus-visible {
+  background: rgba(var(--deep-umber-rgb), 0.10);
+  border-color: rgba(var(--deep-umber-rgb), 0.50);
+}
+.two-path-cta-notepad:focus-visible {
+  /* Override the shared :focus-visible square outline — the pill has its own
+     visible focus state via border-color + a rounded outline match. */
+  outline-offset: 4px;
+  border-radius: 9999px;
+}
+
+/* Default (desktop): hide the mobile-only "— or —" label. */
+.two-path-or-label { display: none; }
+
+/* ─── Mobile (< 768px): stack vertically, horizontal hairline stub between columns ─── */
+@media (max-width: 767px) {
+  .two-path-interlude {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 64px;
+    min-height: auto;
+    padding: 12vh 24px;
+  }
+  /* Explicit row assignment so the hairline ends up between the columns
+     regardless of DOM order. On mobile we flip the order: Notepad first,
+     Read Below last. DOM order is preserved (tab order + entrance
+     choreography unchanged); only grid rows swap. */
+  .two-path-col-right { grid-row: 1; }
+  .two-path-hairline { grid-row: 2; }
+  .two-path-col-left { grid-row: 3; }
+
+  .two-path-hairline {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    width: 64px;
+    height: 1px;
+    margin: 0 auto;
+    justify-self: center;
+    transform: scaleX(0);
+  }
+  /* Layout-only override on mobile; let the desktop transforms (translateY(+60px) /
+     translateY(-60px)) carry over so the rise/fall entrance still works on mobile. */
+  .two-path-col,
+  .two-path-col-left,
+  .two-path-col-right {
+    justify-self: center;
+  }
+
+  /* Mobile-only "— or —" label that sits with the hairline between columns. */
+  .two-path-or-label {
+    display: block;
+    grid-row: 2;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    color: currentColor;
+    margin-top: -16px;
+  }
+}
+
+/* ─── Reduced-motion path: no draw, no drift, simple cross-fade ─── */
+@media (prefers-reduced-motion: reduce) {
+  .two-path-hairline {
+    transform: scaleY(1);
+    opacity: 0;
+    transition: opacity 600ms ease-out;
+  }
+  .two-path-col,
+  .two-path-col-left,
+  .two-path-col-right {
+    transform: none;
+    transition: opacity 600ms ease-out;
+  }
+  .two-path-interlude[data-entered="true"] .two-path-hairline,
+  .two-path-interlude[data-entered="true"] .two-path-col {
+    opacity: 1;
+  }
+  /* Arrow remains static — no bob. */
+  .two-path-interlude[data-entered="true"] .two-path-arrow,
+  .two-path-arrow {
+    animation: none;
+    transform: none;
+    opacity: 0.7;
+  }
+}
+
+/* FinalReflectionCta — focus state lifts the form's hairline to full ink */
+.final-reflection-form:focus-within {
+  border-bottom-color: hsl(var(--mersi-dark)) !important;
+}
+
+/* FinalReflectionCta — pill CTA hover/focus lift (mirrors Zone 7 notepad CTA) */
+.final-reflection-notepad-cta:hover {
+  background-color: hsl(var(--mersi-dark) / 0.10) !important;
+  border-color: hsl(var(--mersi-dark) / 0.50) !important;
+}
+.final-reflection-notepad-cta:focus-visible {
+  box-shadow: 0 0 0 1px hsl(var(--mersi-dark) / 0.40);
+}
+
+/* Global — darker, more legible placeholder for all email inputs across the app */
+input[type="email"]::placeholder {
+  color: currentColor;
+  opacity: 0.75; /* Firefox lowers placeholder opacity by default; pin it explicitly */
+}
+
+/* ───── MobileBottomDock disclosure menu ───── */
+
+.menu-panel {
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  background: var(--dock-bg-dark);
+  border-radius: 16px;
+  overflow: hidden;
+  /* Padding stays constant across closed/open states so the corner radius
+     doesn't deform mid-animation. Tailwind preflight forces
+     box-sizing: border-box, so max-height: 0 clips the padding cleanly
+     when closed. If padding were moved into the [data-panel-state="open"]
+     rule, the corners would visibly snap when opening. */
+  padding: 24px 0;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 400ms ease,
+    background-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-panel-state="open"] .menu-panel {
+  max-height: 420px;
+  opacity: 1;
+}
+
+.menu-toggle {
+  position: relative;
+  min-width: 110px;
+  background: var(--dock-bg-dark);
+  transition:
+    min-width 300ms ease-out,
+    background-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-panel-state="open"] .menu-toggle {
+  min-width: 150px;
+}
+
+.menu-toggle .text-close { display: none; }
+[data-panel-state="open"] .menu-toggle .text-menu { display: none; }
+[data-panel-state="open"] .menu-toggle .text-close { display: inline; }
+
+/* Home tile — default state. The img filter inverts a dark-source logo
+   to white-on-dark. The data-bg="dark" override below cross-fades the
+   invert back to 0 so the mark renders dark on the cream surface. */
+.dock-home {
+  background: var(--dock-bg-dark);
+  transition: background-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dock-home img {
+  filter: invert(1);
+  transition: filter 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-links a,
+.menu-links .social-toggle {
+  transition: color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Adaptive dock theme — when the page content behind the dock is dark
+   (detected per-scroll by useAdaptiveDockTheme), the entire dock inverts:
+   cream surfaces, dark labels, un-inverted logo. The transitions defined
+   above cross-fade between the two states. Driven entirely by data-bg on
+   the dock root, so the rule works on any route (notepad landing's
+   hero/CTA dark sections, any future dark-section pages, etc.). */
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .menu-toggle,
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .menu-panel,
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .dock-home {
+  background: #f4f0e8;
+}
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .menu-toggle,
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .menu-links a,
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .menu-links .social-toggle {
+  color: var(--dock-bg-dark);
+}
+[data-testid="mobile-bottom-dock"][data-bg="dark"] .dock-home img {
+  filter: invert(0);
+}
+
+.menu-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+
+.menu-links > li {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+[data-panel-state="open"] .menu-links > li {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) calc(100ms * var(--i, 1)),
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1) calc(100ms * var(--i, 1));
+}
+
+.menu-links a,
+.menu-links .social-toggle {
+  display: inline-block;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 4px 8px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.social-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-sub {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 250ms ease;
+}
+
+.social-row[data-social-state="open"] .social-sub {
+  max-height: 40px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-panel,
+  .menu-links > li,
+  .menu-links a,
+  .menu-links .social-toggle,
+  .social-sub,
+  .menu-toggle,
+  .dock-home,
+  .dock-home img {
+    transition: none !important;
+  }
+}
+
+/* ── Legal pages (Privacy Policy, Terms & Conditions) ───────────────── */
+.legal-prose {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: hsl(var(--mersi-dark) / 0.85);
+}
+
+.legal-prose h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  line-height: 1.2;
+  color: hsl(var(--mersi-dark));
+  margin: 2.5rem 0 1rem;
+}
+
+.legal-prose h3 {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: hsl(var(--mersi-dark));
+  margin: 1.75rem 0 0.75rem;
+}
+
+.legal-prose p {
+  margin: 0 0 1rem;
+}
+
+.legal-prose ul,
+.legal-prose ol {
+  margin: 0 0 1rem;
+  padding-left: 1.4rem;
+}
+
+.legal-prose li {
+  margin: 0 0 0.4rem;
+}
+
+.legal-prose a {
+  color: #6f4e37;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.legal-prose a:hover {
+  opacity: 0.7;
+}
+
+.legal-prose strong {
+  font-weight: 600;
+  color: hsl(var(--mersi-dark));
+}
+
+.legal-prose blockquote {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid rgba(111, 78, 55, 0.6);
+  background: hsl(var(--mersi-dark) / 0.04);
+  border-radius: 0 6px 6px 0;
+}
+
+.legal-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-prose hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--mersi-dark) / 0.12);
+  margin: 2.5rem 0;
+}
+
+/* Tables: wrapped for horizontal scroll on narrow viewports */
+.legal-prose .table-wrap {
+  overflow-x: auto;
+  margin: 0 0 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 520px;
+}
+
+.legal-prose th,
+.legal-prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid hsl(var(--mersi-dark) / 0.15);
+}
+
+.legal-prose th {
+  font-weight: 600;
+  color: hsl(var(--mersi-dark));
+  background: hsl(var(--mersi-dark) / 0.05);
+}
+
+.legal-prose code {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.875em;
+  background: hsl(var(--mersi-dark) / 0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
 }

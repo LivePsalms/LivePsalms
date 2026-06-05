@@ -24,9 +24,20 @@ import { useNoteLinkPopup } from '../editor/use-note-link-popup';
 import { useVerseTooltip } from '../editor/use-verse-tooltip';
 import { useJournalTheme } from '../hooks/use-journal-theme';
 import { formatTag } from '../utils/tags';
+import { useAccountProfile } from '../../auth/context/useAccountProfile';
+import { emptyStateMessage } from '../utils/empty-state-message';
 import { JOURNAL_THEMES } from '../types';
-import type { JournalTheme } from '../types';
+import type { JournalTheme, Note } from '../types';
 import '../journal-themes.css';
+
+export interface NotepadEditorProps {
+  onAfterSave?: (note: Note) => void;
+  /** 'top' (default, desktop) renders the toolbar above the content. 'bottom'
+   *  pins it to the bottom of the editor (mobile accessory bar). */
+  toolbarPlacement?: 'top' | 'bottom';
+  /** When toolbarPlacement is 'bottom', px to lift the bar above the keyboard. */
+  toolbarBottomOffset?: number;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,16 +56,21 @@ function formatDate(iso: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function NotepadEditor() {
+export function NotepadEditor({
+  onAfterSave,
+  toolbarPlacement = 'top',
+  toolbarBottomOffset = 0,
+}: NotepadEditorProps = {}) {
   const { notes, activeNote, collection } = useNoteCollection();
   const actions = useNotepadActions();
   const { graph } = useReferenceGraph();
   const updateNote = actions.updateNote;
   const openNote = collection.openNote;
   const [journalTheme, setJournalTheme] = useJournalTheme();
+  const { profile } = useAccountProfile();
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
-  const { editor } = useNoteEditor({ activeNote, updateNote });
+  const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
   const {
@@ -120,7 +136,7 @@ export function NotepadEditor() {
           fontSize: '0.95rem',
         }}
       >
-        Select a note or create a new one
+        {emptyStateMessage(profile?.fullName)}
       </div>
     );
   }
@@ -129,17 +145,24 @@ export function NotepadEditor() {
   // Main render
   // -------------------------------------------------------------------------
 
+  const isBottomToolbar = toolbarPlacement === 'bottom';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: isBottomToolbar ? 'column-reverse' : 'column', height: '100%', position: 'relative' }}>
       {/* Fixed formatting toolbar */}
       {editor && (
         <div
-          className="shrink-0 flex items-center gap-0.5 px-3 border-b"
+          data-toolbar-placement={toolbarPlacement}
+          className="shrink-0 flex items-center gap-0.5 px-3"
           style={{
             height: 40,
             background: 'rgba(240, 236, 232, 0.97)',
             borderColor: 'var(--pale-stone)',
+            borderBottom: isBottomToolbar ? 'none' : '1px solid var(--pale-stone)',
+            borderTop: isBottomToolbar ? '1px solid var(--pale-stone)' : 'none',
             fontFamily: 'Outfit, sans-serif',
+            position: isBottomToolbar ? 'sticky' : undefined,
+            bottom: isBottomToolbar ? `${toolbarBottomOffset}px` : undefined,
+            zIndex: isBottomToolbar ? 20 : undefined,
           }}
         >
           {/* Undo / Redo */}
@@ -173,7 +196,7 @@ export function NotepadEditor() {
             </ToolbarButton>
             {headingOpen && (
               <div
-                className="absolute top-full left-0 mt-1 rounded-md shadow-lg z-50 py-1"
+                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 rounded-md shadow-lg z-50 py-1`}
                 style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
               >
                 {([1, 2, 3] as const).map((level) => (
@@ -277,7 +300,7 @@ export function NotepadEditor() {
             </ToolbarButton>
             {themeOpen && (
               <div
-                className="absolute top-full right-0 mt-1 rounded-md shadow-lg z-50 py-1"
+                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 rounded-md shadow-lg z-50 py-1`}
                 style={{
                   background: 'rgba(240, 236, 232, 0.97)',
                   border: '1px solid var(--pale-stone)',
@@ -410,7 +433,13 @@ export function NotepadEditor() {
           <div
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
-            onClick={handleClick}
+            onClick={(e) => {
+              handleClick(e);
+              // On mobile (bottom toolbar) there is no hover; a tap shows/dismisses
+              // the verse tooltip. handleMouseOver reads e.target.closest(...) so a
+              // click event drives it correctly and clears it when tapping off a verse.
+              if (isBottomToolbar) handleMouseOver(e);
+            }}
             style={{ flex: 1 }}
           >
             <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />

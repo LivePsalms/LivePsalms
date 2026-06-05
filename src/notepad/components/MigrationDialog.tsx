@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Check } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +7,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { localAdapter } from '../storage/local-storage';
-import { migrateAdapter } from '../storage/migration';
+import { useMigrationWorkflow } from '../storage/useMigrationWorkflow';
+import type { MigrationWorkflowState } from '../storage/migration-workflow';
 import type { StorageAdapter } from '../storage/adapter';
 
 interface MigrationDialogProps {
@@ -18,30 +18,27 @@ interface MigrationDialogProps {
   onMigrationComplete: () => void;
 }
 
-type Phase =
-  | { kind: 'idle' }
-  | { kind: 'loading' }
-  | { kind: 'folders'; current: number; total: number }
-  | { kind: 'notes'; current: number; total: number }
-  | { kind: 'cleanup' }
-  | { kind: 'done' }
-  | { kind: 'error'; message: string };
-
-const phaseMessage = (p: Phase): string => {
-  switch (p.kind) {
+const phaseMessage = (s: MigrationWorkflowState): string => {
+  switch (s.status) {
     case 'idle':    return '';
     case 'loading': return 'Reading your local notes…';
-    case 'folders': return p.total === 1
+    case 'folders': return s.total === 1
       ? 'Syncing your folder…'
-      : `Syncing folder ${p.current} of ${p.total}…`;
-    case 'notes':   return p.total === 1
+      : `Syncing folder ${s.current} of ${s.total}…`;
+    case 'notes':   return s.total === 1
       ? 'Importing your note…'
-      : `Importing note ${p.current} of ${p.total}…`;
+      : `Importing note ${s.current} of ${s.total}…`;
     case 'cleanup': return 'Almost done — tidying up…';
     case 'done':    return 'All set. Your notes are now in your account.';
-    case 'error':   return p.message;
+    case 'error':   return s.message;
   }
 };
+
+const isInProgress = (s: MigrationWorkflowState): boolean =>
+  s.status === 'loading' ||
+  s.status === 'folders' ||
+  s.status === 'notes' ||
+  s.status === 'cleanup';
 
 export function MigrationDialog({
   open,
@@ -49,7 +46,11 @@ export function MigrationDialog({
   targetAdapter,
   onMigrationComplete,
 }: MigrationDialogProps) {
-  const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const { state, start, dismissError } = useMigrationWorkflow({
+    target: targetAdapter,
+    onMigrationComplete,
+    onClose,
+  });
   const [noteCount, setNoteCount] = useState(0);
 
   // Read the current local note count when the dialog opens. Source-side
@@ -60,46 +61,7 @@ export function MigrationDialog({
     localAdapter.getNotes().then((notes) => setNoteCount(notes.length));
   }, [open]);
 
-  const inProgress =
-    phase.kind === 'loading' ||
-    phase.kind === 'folders' ||
-    phase.kind === 'notes' ||
-    phase.kind === 'cleanup';
-
-  const handleImport = async () => {
-    setPhase({ kind: 'loading' });
-    try {
-      const result = await migrateAdapter(localAdapter, targetAdapter, {
-        onEvent: (e) => setPhase(e),
-      });
-
-      setPhase({ kind: 'cleanup' });
-      localAdapter.clearAll();
-      // Refresh the active adapter's view so the imported notes appear
-      // under the user's account immediately.
-      onMigrationComplete();
-
-      setPhase({ kind: 'done' });
-      toast.success(
-        result.notes === 1
-          ? '1 note imported to your account.'
-          : `${result.notes} notes imported to your account.`
-      );
-      // Brief celebratory pause so the success state is perceptible.
-      window.setTimeout(() => {
-        setPhase({ kind: 'idle' });
-        onClose();
-      }, 1400);
-    } catch (err) {
-      console.error('Migration failed:', err);
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Something went wrong importing your notes. Your local copy was left untouched.';
-      toast.error(message);
-      setPhase({ kind: 'error', message });
-    }
-  };
+  const inProgress = isInProgress(state);
 
   return (
     <Dialog
@@ -115,9 +77,9 @@ export function MigrationDialog({
           border: '1px solid var(--pale-stone)',
         }}
       >
-        {inProgress || phase.kind === 'done' ? (
+        {inProgress || state.status === 'done' ? (
           <div className="flex flex-col items-center gap-4 py-2">
-            {phase.kind === 'done' ? (
+            {state.status === 'done' ? (
               <div
                 className="w-11 h-11 rounded-full flex items-center justify-center"
                 style={{ border: '1.5px solid var(--deep-umber)' }}
@@ -139,7 +101,7 @@ export function MigrationDialog({
                 fontFamily: 'Cormorant Garamond, serif',
               }}
             >
-              {phase.kind === 'done' ? 'Done' : 'Importing your notes'}
+              {state.status === 'done' ? 'Done' : 'Importing your notes'}
             </DialogTitle>
 
             <DialogDescription
@@ -151,10 +113,10 @@ export function MigrationDialog({
                 lineHeight: 1.5,
               }}
             >
-              {phaseMessage(phase)}
+              {phaseMessage(state)}
             </DialogDescription>
 
-            {(phase.kind === 'folders' || phase.kind === 'notes') && (
+            {(state.status === 'folders' || state.status === 'notes') && (
               <div
                 className="w-full h-1 rounded-full overflow-hidden"
                 style={{ background: 'var(--pale-stone)' }}
@@ -163,13 +125,13 @@ export function MigrationDialog({
                   className="h-full rounded-full transition-[width] duration-300 ease-out"
                   style={{
                     background: 'var(--deep-umber)',
-                    width: `${(phase.current / Math.max(phase.total, 1)) * 100}%`,
+                    width: `${(state.current / Math.max(state.total, 1)) * 100}%`,
                   }}
                 />
               </div>
             )}
           </div>
-        ) : phase.kind === 'error' ? (
+        ) : state.status === 'error' ? (
           <>
             <DialogTitle
               className="text-lg font-medium text-center"
@@ -187,14 +149,11 @@ export function MigrationDialog({
                 fontFamily: 'Outfit, sans-serif',
               }}
             >
-              {phase.message}
+              {state.message}
             </DialogDescription>
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => {
-                  setPhase({ kind: 'idle' });
-                  onClose();
-                }}
+                onClick={dismissError}
                 className="flex-1 py-2.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
                 style={{
                   border: '1px solid var(--pale-stone)',
@@ -205,10 +164,7 @@ export function MigrationDialog({
                 Close
               </button>
               <button
-                onClick={() => {
-                  setPhase({ kind: 'idle' });
-                  handleImport();
-                }}
+                onClick={start}
                 className="flex-1 py-2.5 rounded-lg text-xs font-medium transition-opacity"
                 style={{
                   background: 'var(--deep-umber)',
@@ -255,7 +211,7 @@ export function MigrationDialog({
                 No Thanks
               </button>
               <button
-                onClick={handleImport}
+                onClick={start}
                 className="flex-1 py-2.5 rounded-lg text-xs font-medium transition-opacity"
                 style={{
                   background: 'var(--deep-umber)',

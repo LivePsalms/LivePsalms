@@ -116,6 +116,42 @@ Pure copy — does **not** mutate the source. Source-side cleanup (e.g., `LocalS
 
 Folders are imported before Notes so each Note's `folderId` reference resolves at the destination at write time. Note ids are preserved so embedded `noteLink` marks keep resolving — otherwise every cross-Note edge in the graph would break after migration.
 
+## MigrationWorkflow
+
+The deepened module that owns the multi-phase orchestration around `migrateAdapter` — the stateful coordinator that the pure `AdapterMigration` module's "caller's concern" is referring to. Surfaced as the `useMigrationWorkflow({ source, target, onMigrationComplete, onClose })` hook returning `{ state, start, dismissError }`. Mounted by `MigrationDialog`.
+
+Seven-state status machine:
+
+```
+idle ──(start)──> loading ──> folders(c,t) ──> notes(c,t) ──> cleanup ──> done(folders,notes)
+                                                                              │
+                                                                  (TIMELINE.celebratoryPause)
+                                                                              ▼
+                                                                            idle  (fires onClose)
+
+(any step) ──(throw)──> error(message)
+                            │
+                            ├──(start)──────────> loading (retry)
+                            └──(dismissError)───> idle  (fires onClose)
+```
+
+Class responsibilities:
+
+- The seven-state status (idle / loading / folders / notes / cleanup / done / error) and the per-status payload (progress counts on folders/notes, result counts on done, message on error)
+- `start()` — `idle | error → loading`; runs the migrate→clearSource→onMigrationComplete→done sequence; schedules the celebratory close timer
+- `dismissError()` — `error → idle`; fires `onClose`
+- `dispose()` — clears any pending celebratory timer (called on hook unmount); guards against the stale-fire race
+- Guarded transitions: `start` no-ops from any in-progress status; mid-migration progress events from `migrateAdapter` flow through a private `setPhaseFromEvent` translator
+- Side-effect orchestration via injected `MigrationWorkflowDeps`: `migrate`, `clearSource`, `toastSuccess`, `toastError`, `setTimer`, `clearTimer`, `onMigrationComplete`, `onClose`. Pure-state-and-deps, testable in node — fakes substitute for the storage adapters, toast, and timers at test time.
+
+Owns the timeline as `MIGRATION_TIMELINE`: `celebratoryPauseMs` (default 1400). Single source of truth for the dialog's pause-then-close timing.
+
+Composes with `AdapterMigration`: `start()` calls `deps.migrate(source, target, { onEvent })`, translating each `MigrationEvent` into a status mutation. The result `{ folders, notes }` flows into the `done` payload so the toast message ("1 note imported" vs "N notes imported") is computed inside the workflow, not the dialog.
+
+Does **not** own: the dialog's `open` prop, the source-side `noteCount` shown on the intro panel (one-shot fetch, lives in the dialog's `useEffect`), the JSX panels themselves (intro / in-progress / error), or the in-progress click-outside guard (`open && !inProgress` is a view concern reading `state.status` from the workflow).
+
+The fallback error message ("Something went wrong importing your notes. Your local copy was left untouched.") lives in the workflow, not the dialog — it is part of the lifecycle's contract that source data is preserved on failure.
+
 ## DocumentImporter
 
 The module that turns uploaded files into full `Note` records, ready for `adapter.importNote` (id-preserving). Three exports:
@@ -125,6 +161,55 @@ The module that turns uploaded files into full `Note` records, ready for `adapte
 - `linkNotesByVerses(notes)` — sync, pure. Optional cross-link pass that appends a "Related Notes" section pointing at each peer that shares at least one verse reference, using real `noteLink` marks. Because the ids exist before this pass runs, the inserted marks become genuine Reference edges in `ReferenceGraph` after `syncAll` — i.e. proper Backlinks.
 
 The upload path uses `NotepadActions.importNotes(notes: Note[])`, which preserves ids via `adapter.importNote`. The id-preserving contract is what makes `linkNotesByVerses` work: the cross-link marks reference peers by their final ids, so `ReferenceGraph.syncNote` recognizes them as `explicit` References and they appear as Backlinks per §Backlink.
+
+## tiptap-text
+
+The canonical TipTap-text-extraction utility, lifted out of five inline copies that had drifted across the codebase (`word-count.ts`, `reference-parser.ts`, `SearchDialog.tsx`, `InfoPanel.tsx`, `document-importer.ts`). Lives at `src/notepad/utils/tiptap-text.ts`.
+
+Three exports:
+
+- `extractPlainText(node)` — recursive walker over a parsed TipTap JSON tree. Defensive on `unknown` input: returns `''` for non-objects. Joins child text on a single space.
+- `extractTextFromNote(note)` — `extractPlainText(JSON.parse(note.content))` with a try/catch fallback to the raw `note.content` string for non-JSON. The shape `document-importer.ts` already exposed; promoted here so every caller goes through the same path.
+- `countWordsFromTipTapJSON(jsonString)` — preserved from the original `word-count.ts`. Implementation now reuses `extractPlainText`.
+
+The five previous copies had minor drift — `InfoPanel.tsx`'s version was missing the `type === 'text'` gate (theoretically buggy on TipTap docs with stray `text` fields on non-text nodes; in practice harmless on valid docs). The canonical version uses the gate; the migration is effectively a defensive bug fix.
+
+Does **not** own: verse extraction (that's `extractVerseRefs` in `bible-verse-utils`), tag parsing (that's `tags.ts`), or any TipTap *editor* coupling — these are pure utilities operating on parsed JSON.
+
+## SearchIndex
+
+The deepened module that builds the deduped verse-and-tag index `SearchDialog` renders. Surfaced as `buildSearchIndex(notes): { verses, tags }`, each entry shaped `{ <key>, noteId, noteTitle }`.
+
+Responsibilities:
+
+- For each Note: extract plain text via `extractTextFromNote` (§tiptap-text), then run `extractVerseRefs` over the result.
+- Dedup verses by ref string, **first-occurrence-wins**: the first Note in `notes` order containing a given verse owns the entry. Same dedup logic for tags, reading from `note.tags` directly (tags are pre-stored on the Note, not parsed from content).
+- Pure of React, DOM, and persistence; tested in node.
+
+Does **not** own: the cmdk command-palette UI (lives in `SearchDialog`), the keyboard shortcut binding (`useEffect` listener in the dialog), or full-text note search (the dialog leans on cmdk's substring-on-`value` matching for the Notes group).
+
+## dominant-color
+
+The deepened pure module that owns the dominant-color extraction algorithm previously buried inside `extractDominantColor`'s canvas `onload` handler. Lives at `src/utils/dominant-color.ts`.
+
+One public export:
+
+- `dominantColorFromPixels(pixels: Uint8ClampedArray): string` — takes an RGBA pixel buffer (any size; algorithm walks `pixels.length / 4` pixels), returns a muted overlay-friendly hex color.
+
+Algorithm steps (preserved from the original):
+
+1. Walk every pixel, skip transparent (alpha < 128), too-dark/too-bright (brightness < 25 or > 230), and near-grey (HSL saturation < 0.08).
+2. Quantise the survivors into 32-step RGB buckets; track count and running RGB sum per bucket.
+3. If the filtered pass produced no buckets, do a second pass over **every** opaque pixel (skipping only the alpha gate) — this is the "fully grey image" rescue.
+4. Pick the bucket with the highest count (initial `best` is the algorithm's neutral starting RGB, hardcoded to `(0x8B, 0x83, 0x78)` — not to be confused with `FALLBACK_OVERLAY_COLOR`, which is the project-data fallback used by the DOM wrapper for image-load failures).
+5. Average the real RGB values inside that bucket.
+6. Mute via HSL: saturation × 0.45, lightness blended toward 0.45 (`l × 0.55 + 0.45 × 0.45`).
+
+Internal helpers (`rgbToHsl`, `hslToRgb`, `toHex`) stay private to the module — they are algorithm support, not a public color-math API.
+
+`extractDominantColor` is now a thin DOM wrapper around this: load `Image`, draw to a 50×50 canvas, `getImageData`, hand the buffer to `dominantColorFromPixels`. Image-load failures and missing canvas context resolve to `FALLBACK_OVERLAY_COLOR` directly without calling the algorithm.
+
+Pure of DOM, canvas, and React. Tested in node by constructing synthetic `Uint8ClampedArray` pixel buffers — the previous embedded algorithm had zero test coverage despite four magic numbers and a two-pass fallback structure.
 
 ## Reference
 
@@ -158,6 +243,36 @@ Responsibilities:
 Does **not** own: visualization shape (`GraphNode`/`GraphEdge` for `GraphPane` belong to the view layer), TipTap mark rendering (marks stay in `src/notepad/extensions/` and import from this module), the `StorageAdapter` (graph is pure of persistence — note mutations from `repairNoteLinks` flow back through `NoteCollection`), or any awareness of `NoteCollection` or `FolderHierarchy`.
 
 The localStorage keys (`notepad_graph_references`, `notepad_scripture_nodes`) are a **derivation cache**, not a source of truth. Source of truth is Note content + the bundled TSK dataset + the Bible API. Deleting the cache and re-running sync rebuilds the same state. Cross-device sync is intentionally out of scope.
+
+## projectGraph
+
+The pure function that turns `(Note[], Reference[], ScriptureNode[])` into `{ nodes: GraphNode[], edges: GraphEdge[] }` for `GraphView`. Owns three load-bearing rules:
+
+- Edge weights are summed per node id (both endpoints accumulate).
+- A `ScriptureNode` is emitted only if it participates in at least one edge — verses fetched lazily during `ReferenceGraph.syncNote` but never actually referenced from a Note are omitted from the view.
+- Reference type strings (`'scripture-reference'`, `'cross-reference'`, `'explicit'`) are mapped to view-side edge types (`'scripture_reference'`, `'cross_reference'`, `'explicit'`).
+
+Lives next to `reference-graph.ts` because the rules are about References, not layout. The previous `useGraph` hook collapses to a thin `useMemo` around this function, or is dropped entirely if the shell prefers to project inline.
+
+## GraphView
+
+The deepened module that owns the d3-force simulation, canvas rendering, and pointer interaction for the knowledge graph. Surfaced as a `GraphView` class extending `Observable<GraphViewState>`, instantiated by `GraphPane` and attached to a canvas element. `GraphPane` becomes the view shell: controls panel, canvas + popover-overlay markup, and `useEffect`-bound forwarders to `view.setData`, `view.setMode`, `view.setFilters`, `view.setSettings`.
+
+Responsibilities:
+
+- d3-force simulation lifecycle (rebuild on data / mode / filter changes, preserve `(x, y)` of surviving node ids across rebuilds)
+- Canvas drawing of edges, nodes, labels, and the active-node glow ring
+- Pan/zoom transform — internal, mutated by pointer/wheel handlers without React rerenders
+- Pointer handling: hover detection, drag-vs-click discrimination, wheel zoom anchored at cursor
+- Scripture popover state on the observable snapshot. Rendered by the shell as a positioned DOM element over the canvas, not via `ctx.fillText` — the previous in-canvas `drawPopover` is removed
+- Auto-fit camera once at tick 80
+- `ResizeObserver` coupling (canvas DPR sizing + sim recenter)
+
+Construction takes `GraphViewDeps`: `onNodeOpen(noteId)` is the sole outbound callback (what to do on a non-scripture node click is the shell's concern). Optional `now()` and `devicePixelRatio()` deps make tick counting and DPR injectable for tests.
+
+Pure of React, persistence, and `NoteCollection` knowledge. Consumes `GraphNode[] / GraphEdge[]` produced by `projectGraph`; knows nothing about `Reference` shapes. Tested in node with a `MockCanvasContext` (recorder of draw calls) and a `MockResizeObserver`, mirroring the `RouteTransition` testing pattern.
+
+`GraphPane` (the view shell) keeps mode/filter/settings React state because those are bound to form inputs; on every change it forwards the new value to the matching `setX` method. Position preservation is `GraphView`'s concern, not the shell's — the shell can rerender without losing dragged positions.
 
 ## AuthSession
 
@@ -232,3 +347,162 @@ Class responsibilities:
 Does **not** own: the popstate listener itself, `history.pushState` for the back-button trap, or knowledge of which paths are detail pages. Those live in `useRouteTransition` because they are window-event coupling.
 
 The status value is a four-state superset of `SplitTransition`'s three-state `phase` prop. App-level rendering maps `'exiting' → SplitTransition is hidden` and the other three pass through directly.
+
+## PurposeDetailReveal
+
+The deepened module that owns the entry + exit reveal lifecycle for the purpose detail page. Surfaced as the `useDetailReveal({ project, exiting, onExitComplete })` hook returning `{ isVisible, textReady, contentRef, imageRef }`. Mounted by `PurposeDetail`.
+
+Five-state status machine:
+
+```
+idle ──(start)──> entering ──(textReadyTimer @ TIMELINE.textReadyAt)──> revealed
+                     │                                                     │
+                     └──────────────(requestExit)─────────────────────────-┤
+                                                                           ▼
+                                                                        exiting
+                                                                           │
+                                                              (TIMELINE.exitCompleteAt)
+                                                                           ▼
+                                                                        exited  (fires onExitComplete)
+```
+
+Class responsibilities:
+
+- The five-state status and the derived `isVisible` / `textReady` booleans the JSX consumes
+- `start()` — `idle → entering`; schedules the text-ready timer
+- `reset()` — for project change; cancels any pending timer and re-enters
+- `requestExit()` — `entering | revealed → exiting`; calls `applyExitStyles` for `'content'` and `'image'` with the styles from `DETAIL_REVEAL_TIMELINE`; schedules the exit-complete timer that fires `onExitComplete` and transitions to `exited`
+- `dispose()` — clears any pending timers (called on hook unmount)
+- Guarded transitions: each method no-ops from the wrong status, mirroring `RouteTransition.beginNavigation` / `beginExit` defense
+- Side-effect orchestration via injected `DetailRevealDeps`: `applyExitStyles`, `setTimer`, `clearTimer`, `onExitComplete`. The class is pure-state-and-deps, testable in node — fakes substitute for DOM mutation and timers at test time.
+
+Owns the timeline as `DETAIL_REVEAL_TIMELINE` exported from the module: `textReadyAt`, `exitCompleteAt`, `easing`, and the `contentExit` / `imageExit` style objects. JSX imports the easing string for the inline `<h1>` / small-text transitions.
+
+Composes with `RouteTransition`: `RouteTransition.beginExit()` flows down as the `exiting` prop, the controller plays the fade, then `onExitComplete` (= `RouteTransition.completeExit`) hands back. The two halves of the back-from-detail handshake.
+
+Does **not** own: scroll reset on project change (stays a `useLayoutEffect` in `PurposeDetail` because it is layout-effect-coupled), per-reveal animation durations on `<LineMaskReveal>` / `<ImageReveal>` (those are aesthetic, not lifecycle), or the Restoration1/3-vs-standard layout branching (pure JSX).
+
+## NotepadFirstLoad
+
+The deepened module that owns the three first-load decisions fired when a signed-in user lands on `/notepad`: welcome redirect, daily greeting, and local-notes migration prompt. Surfaced as the `useNotepadFirstLoad()` hook returning `{ showMigration, dismissMigration }`. Mounted by `NotepadWorkspace`.
+
+Unlike the other deepened modules in this file, this one is **not a state machine** — there are no timers, no async sequencing, no observable status to react to. The shape is a pure decision module:
+
+```ts
+decideFirstLoadActions({
+  user, authLoading,
+  hasBeenWelcomed, hasBeenGreetedToday, localNoteCount
+}): FirstLoadAction[]
+
+// FirstLoadAction =
+//   | { kind: 'redirect-welcome' }
+//   | { kind: 'greet'; firstName: string }
+//   | { kind: 'offer-migration' }
+```
+
+The hook coordinates the storage reads (sync localStorage / sessionStorage; async `localAdapter.getNotes()`), invokes the decision, and dispatches each returned action to its side-effect target (`navigate`, `toast`, `setShowMigration`).
+
+Module responsibilities:
+
+- `decideFirstLoadActions(input)` — pure rule evaluation. Empty list when `authLoading || !user`. Returns `redirect-welcome` first when `!hasBeenWelcomed` (and short-circuits the greet decision); always evaluates the migration decision independently. `greet` carries the resolved `firstName` so the toast string is computed inside the decision, not at the call site.
+- `firstNameOf(user)` — pure name extraction with the canonical fallback chain: `user_metadata.full_name` first word → email local-part → `'friend'`.
+- `welcomedKey(userId)` and `greetedKey(userId, today)` — single source of truth for the storage key formats. Previously templated inline in two places (`WelcomePage` writer, `Notepad` reader); both now import from here.
+- `hasBeenWelcomed` / `markWelcomed` and `hasBeenGreetedToday` / `markGreetedToday` — sync read/write helpers taking `Pick<Storage, 'getItem' | 'setItem'>` so they're testable without a DOM (mirrors the `TreeViewState` and `ReferenceGraph` cache pattern).
+- `todayDateString(now)` — pure thin wrapper over `Date.toDateString()`, parameterized for fake-clock tests.
+
+Hook responsibilities:
+
+- Owns the `showMigration` boolean previously held in `NotepadWorkspace`
+- Reads the local note count via `localAdapter.getNotes()` (async). The previous direct `localStorage.getItem('notepad_notes')` read leaked the storage key past `LocalStorageAdapter`'s seam — that leak is closed.
+- Dispatches each `FirstLoadAction` in order:
+  - `redirect-welcome` → `navigate('/welcome')`
+  - `greet` → `markGreetedToday(...)` then `toast.success('Welcome back, {firstName}!')` (write-marker-then-toast order matches the original)
+  - `offer-migration` → `setShowMigration(true)`
+- Returns `{ showMigration, dismissMigration }` to the consumer; the migration dialog's `onClose` wires to `dismissMigration`.
+
+Does **not** own: identity (that's `AuthSession`), the migration workflow itself (that's `MigrationWorkflow`), or the WelcomePage UI flow (the page calls `markWelcomed` directly when the user submits the form).
+
+## DevotionMoodBoard
+
+The data model that describes one devotion's moodboard as a `DevotionMoodBoard`. **All 11 devotions are now migrated** — the hand-written `*Zones` / `*Mobile` functions are deleted from `MoodBoard.tsx`, which renders every devotion from these data objects. The model and node-testable helpers live in `src/data/devotion-moodboards/_shared.ts`; each devotion is **one file per board** (`peace.tsx`, `hope.tsx`, `strength.tsx`, `wholeness.tsx`, `purpose.tsx`, `connection.tsx`, `identity.tsx`, `joy.tsx`, `forgiveness.tsx`, `surrender.tsx`, `trust.tsx`) carrying its own prose constants; and `src/data/devotion-moodboards.tsx` is a **thin barrel** that re-exports `_shared` and assembles the 11 boards into `moodBoards: Record<string, DevotionMoodBoard>`. The import path `@/data/devotion-moodboards` is unchanged. Boards are keyed by `Project.id` and lean on `devotions.ts` for shared metadata (they do not restate `title`/`scriptureRef`).
+
+A board carries **two independent arrangements, not one** (the load-bearing decision): a desktop `sections: DesktopSection[]` and a separate `mobile: MobileSection[]`. They do **not** share section membership — Peace desktop puts "quiet waters" in the `principle` zone while mobile puts it in the `scripture` section — so they cannot be one list walked twice. What they share is **prose**: `SectionText = { full: ReactNode; mobile? }` constants, authored once and referenced from both arrangements. `mobile` carries **intentionally condensed copy** (shorter by design, not drift) and defaults to `full` when omitted. Body text is `ReactNode` so inline markup (`<em>shub</em>`, entities) authors naturally in the `.tsx`.
+
+The desktop `sections` are the assertable spine: `board.sections.map(s => s.role)` equals `CANONICAL_ROLE_ARC` (`title` → `opening` → `scripture` → `principle` → `application` → `prayer`), verified by test. A `DesktopSection` is `{ role, width, bg?: BlendRecipe, elements }`; a `MobileSection` is `{ role | 'gallery', className, bg?: BlendRecipe | 'base', elements }`.
+
+The geometry is **art-directed and preserved verbatim as data, not normalized**. Each element is a tagged node (`{ kind: 'image' | 'text' | 'divider', … }`) that carries its **exact class/style tokens as strings** — a desktop image holds its `pos` (`top-[10%] left-[5%] w-[42vw] h-[78vh]`) and any `style`; a text node holds its full `className` (`font-['Cormorant_Garamond'] italic … text-white/70`) and `tag` (`h2`/`h3`/`p`/`div`). This verbatim-token approach is **required**, not stylistic: the GSAP engine sniffs exact class tokens (`text-sm`, `text-white`, `mb-text`, the `w-[45vw]`/`w-[35vw]`/`w-[50vw]`/`w-[40vw]` scale-effect set), so byte-identical classes are the only way to guarantee zero animation change. The win is node-testability + one grammar, **not** line reduction or style derivation.
+
+`BlendRecipe` concentrates the `color-mix(in srgb, ${overlay} N%, …)` background formula: `{ mix, toward: 'app-bg' }` or `{ mix, toward: 'black', amount }`, expanded by `blendRecipeToColor(recipe, overlay)`. `overlayColor` defaults to `project.overlayColor` — retiring Peace's hardcoded `ov = '#8B8378'`.
+
+`purposeWord?: string` is **per-board data**, not derived from the label: it feeds the `RestorationCTA`. Most boards use their capitalized id (`Peace`, `Hope`, …) but the Serenity trio (`forgiveness`, `surrender`, `trust`) all carry `'Serenity'`, which a label-split could not produce. The renderers read `board.purposeWord ?? purposeWord` (the latter being the old label-derived fallback).
+
+Node-testable helpers (`collectImageSources`, `collectSectionTexts`, `collectBlendRecipes`, `isValidBlendRecipe`, `collectMobileImageSlots`, `CANONICAL_ROLE_ARC`) back the invariants in `devotion-moodboards.test.ts`: every image resolves under `/public`, every text has a non-empty `full`, every background is a valid recipe, every board follows the role arc. `collectMobileImageSlots(board)` (returning `{ where, src, aspectClass }[]`) feeds the data-driven `moodboard-aspect.test.ts`, which reads each mobile image's real pixel dimensions and asserts the `object-cover` crop factor stays under 1.45 — the guard that caught an identity mobile-principle src pointing at the wrong (portrait) asset. The `_shared.ts` helpers import `node:fs` only in tests, but the boards are `.tsx`; the three node-env tests (`-assets`, `-aspect`, the data test) are excluded from `tsconfig.app` and type-checked under `tsconfig.node` — which now also carries the `@/* → ./src/*` path alias (added so the aspect test's `@/data/devotion-moodboards` import resolves under `tsc -b`, not just Vitest).
+
+Does **not** own: the animation engine (stays in `MoodBoard`, unchanged), the CTA (`RestorationCTA`) or `NextDevotionHandoff` (appended by the renderers, already shared), or the handoff metadata in `devotions.ts`.
+
+## MoodBoardZones / MoodBoardStack
+
+The two renderers in `MoodBoard.tsx` that are the seam between a `DevotionMoodBoard` and the DOM. They do **not** walk the same data: `MoodBoardZones` (desktop) walks `board.sections` into absolute-positioned horizontal zones; `MoodBoardStack` (mobile) walks the separate `board.mobile` into the vertical `<section>` stack. Each delegates per-element work to a small `renderDesktopElement` / `renderMobileElement` helper.
+
+The renderers own only the **constant wrapper grammar**, never per-kind styling (the elements already carry their full class tokens). For a desktop element the renderer composes `mb-elem absolute {pos} overflow-hidden`, applies the element's `style`, and stamps `data-speed="0.5"` — the exact shell the GSAP `querySelectorAll('.mb-elem')` reveal/parallax pass keys off; text tags are emitted via `createElement(tag, …, text.full)`. The mobile renderer emits each element's verbatim `className` and renders `text.mobile ?? text.full`. Passing an absent `PhotoDevelopImage` prop as `undefined` keeps the emitted props byte-identical to the old hand-written JSX (no conditional spreading).
+
+The parent `MoodBoard` keeps the GSAP+ScrollTrigger engine and the horizontal-pin lifecycle. The old `isPeace…isTrust` dispatch ladder, the eleven `isX` consts, and `isCustomDevotion` are **all gone**: because every devotion now has a board, the dispatch collapses to `board ? <MoodBoardStack/Zones …> : <MoodBoardMobile/DefaultZones …>` (the non-board fallback remains only for any project without an entry), and the handoff gate is `{board && <NextDevotionHandoff … inHorizontalTrack/>}`. The renderers compute `const word = board.purposeWord ?? purposeWord` and pass `purposeWord={word}` to `RestorationCTA` — `purposeWord` is now board **data**, not derived from `devotions[id].label`.
+
+Migration is **complete — all 11 devotions** render from data; the ~4,000 lines of hand-written `*Zones`/`*Mobile` JSX (20 functions) and their nine dead image-map consts are deleted, shrinking `MoodBoard.tsx` from ~4,989 to ~983 lines. Faithfulness is guarded three ways: `moodboard-assets.test.ts` (every referenced `/public` image exists; scans the whole `devotion-moodboards/` dir), `moodboard-aspect.test.ts` (no mobile image severely cropped), and `devotion-moodboards.test.ts` (role arc, prose, recipes). Verified green across the suite plus `npm run build`, and visually spot-checked (hope desktop, identity mobile) with the all-11 route sweep showing 0 broken images and no console errors.
+
+Does **not** own: the animation engine, the horizontal-scroll pin, or the progress bar — those stay in `MoodBoard`.
+
+---
+
+# Lamplight (edge functions)
+
+The server-side AI surface lives in `supabase/functions/`. These concepts name the seams in the `lamplight-generate` Edge Function. Use them exactly; variants ("the generate handler", "the AI dispatcher", "the usage logger") drift the conversation.
+
+## Artifact
+
+A persisted, model-generated output keyed by a `kind`: `daily_devotion` (a `DailyDevotion` object in `lamplight_artifacts`, idempotent on `(user_id, 'daily_devotion', period_key)`), `connection_card_why` (a short `why` string in `lamplight_connections`, keyed by composite `content_hash`), or `smoke_test` (throwaway, slated for removal per follow-up P1-1; carries no persistence). Each kind has its own model (Sonnet for daily devotion, Haiku for connection-why), context builder, validators, and result shape — that per-kind logic does not generalize and is not meant to.
+
+## lamplight_usage
+
+The fire-and-forget audit row for a single generation attempt: `{ user_id, model, artifact_kind, tokens_in, tokens_out, status, error_code? }`. A usage-table outage must never break the primary work path, so `recordLamplightUsage` swallows insert failures to a `console.error`.
+
+`model` is **nullable** (migration 022): a `null` model means *no model was invoked* — the honest record for a pre-model failure (`quota_exceeded`, `no_embedding`, `not_neighbor`). The admin cost map (`src/admin/lamplight-cost.ts`) resolves a `null` model to `$0`. Before migration 022 these rows fictitiously recorded a hardcoded Haiku model id and `0` tokens, which silently overcounted Haiku spend in the admin leaderboard; that fiction is retired.
+
+Cache-hit success paths (an already-generated `daily_devotion`, a `content_hash`-matched `connection_card_why`) spend nothing and record **no** usage row. The daily-devotion *race path* (a concurrent insert won between pre-check and INSERT) is the subtle exception: it returns `cached: true` to the client but **did** spend tokens, so it records a real usage row. "Cached" therefore cannot gate "skip usage" — the `GenerationOutcome.usage` field carries the decision explicitly.
+
+## GenerationLifecycle
+
+The deepened module that owns the cross-cutting envelope around every artifact generation — the stateless coordinator that concentrates what was previously smeared across `index.ts` and the three pipelines. Surfaced as `runGeneration(deps, meta, body)` in `supabase/functions/_shared/generation-lifecycle.ts`.
+
+Mirrors the stateless-coordinator pattern of `NotepadActions` / `AccountActions` (cross-module knowledge concentrates in one place), but takes the shape of a higher-order wrapper: the per-kind work is an injected `body` that returns a `GenerationOutcome` — **data, not side effects**.
+
+```ts
+interface GenerationOutcome {
+  response: unknown;          // JSON body for the client
+  usage: UsageRow | null;     // null = nothing to record (cache hit)
+}
+
+interface GenerationLifecycleDeps {
+  checkQuota: (userId: string) => Promise<{ ok: true } | { ok: false; reason: string }>;
+  recordUsage: (row: UsageRow) => Promise<void>;   // the single insert site
+  classifyError: (err: unknown) => string;
+}
+
+function runGeneration(
+  deps: GenerationLifecycleDeps,
+  meta: { userId: string; artifactKind: string },
+  body: () => Promise<GenerationOutcome>,
+): Promise<{ status: number; response: unknown }>;
+```
+
+Responsibilities (the one place each of these now lives):
+
+- **Quota gate.** Runs `checkQuota` before the body. On `!ok`: records one `error` usage row (`model: null`, `error_code: 'quota_exceeded'`) and returns `{ status: 429 }`. This *adds* a usage row where `index.ts` previously recorded nothing on quota rejection — deliberate failure-rate telemetry.
+- **Single-site usage recording.** Records `outcome.usage` exactly once when non-null; skips when `null`. No pipeline calls `recordLamplightUsage` anymore — they surface real `{ model, tokens_in, tokens_out, status }` in their result and the lifecycle writes it.
+- **Error classification.** Genuine throws are caught, recorded as an `error` row (`model: null`, `error_code: classifyError(err)`), and rethrown so `serve()`'s top-level catch emits the CORS-bearing 500. `validators_failed` is a *returned* `ok:false`, not a throw — the body maps that result's reason into its `usage` row directly; only thrown errors reach `classifyError`. `classifyGenerateError` is the sole error-code source; pipelines no longer hardcode error codes.
+
+Does **not** own: HTTP/CORS, env-key checks, JSON parsing, JWT→`userId` derivation, the `lamplight_settings.enabled` opt-in gate, or per-kind payload validation — those stay in `index.ts`, which shrinks to transport + auth + three `runGeneration(...)` dispatch calls. It also does not own context building, the per-kind generate→validate→retry loop, or persistence — those stay in the per-kind bodies and pipelines.
+
+Pure of HTTP and Supabase wiring: `checkQuota` / `recordUsage` / `classifyError` are injected, so the envelope is node-testable with fakes. The invariants that were previously un-assertable at the dispatcher level — quota-exceeded records exactly one error row and never calls the body; success records exactly one row; a `usage:null` body records nothing; a thrown body records one `model:null` error row with the classified code — get one focused test instead of being re-proven piecemeal across three pipeline suites.
+
+The P2-5 `pg_cron` daily-devotion trigger composes through this seam: the cron calls `runGeneration(deps, meta, dailyDevotionBody)` and inherits quota + usage accounting without re-implementing them. That is the leverage the seam buys — the reason it is not just `index.ts` tidied.

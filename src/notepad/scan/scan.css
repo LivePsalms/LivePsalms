@@ -1,0 +1,217 @@
+/* Styling for the handwriting scan flow (ScanCapture + TranscriptionReview).
+   Imported directly by those components so it loads wherever they mount —
+   the desktop UploadModal dialog and the mobile full-screen overlay alike,
+   independent of whether the notepad editor stylesheet has loaded. Uses the
+   app's design tokens; gold accent matches the FAB (#b8843a). */
+
+/* ── ScanCapture ──────────────────────────────────────────────────────── */
+.scan-capture {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  gap: 16px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  font-family: 'Outfit', sans-serif;
+  color: var(--deep-umber);
+}
+
+.scan-capture__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: auto 0;
+}
+
+.scan-capture__choices button,
+.scan-capture__camera-actions button,
+.scan-capture__error button {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--pale-stone);
+  background: var(--plaster);
+  color: var(--deep-umber);
+  cursor: pointer;
+}
+
+/* First action in each cluster is the primary (gold) one. */
+.scan-capture__choices button:first-child,
+.scan-capture__camera-actions button:first-child {
+  background: #b8843a;
+  border-color: #b8843a;
+  color: #fff;
+}
+
+.scan-capture__camera {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: auto 0;
+  width: 100%;
+}
+
+.scan-capture__camera video {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 16px;
+  background: #000;
+  object-fit: contain;
+}
+
+.scan-capture__camera-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.scan-capture__camera-actions button { flex: 1; }
+
+.scan-capture__busy {
+  margin: auto;
+  text-align: center;
+  font-size: 15px;
+  color: var(--silica);
+}
+
+.scan-capture__error {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: auto;
+  max-width: 360px;
+  text-align: center;
+  font-size: 15px;
+}
+
+/* ── TranscriptionReview ──────────────────────────────────────────────── */
+.transcription-review {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  gap: 14px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  font-family: 'Outfit', sans-serif;
+  color: var(--deep-umber);
+}
+
+.transcription-review__panes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.transcription-review__image { margin: 0; }
+.transcription-review__image img {
+  width: 100%;
+  max-height: 40vh;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid var(--pale-stone);
+  background: #fff;
+}
+.transcription-review__image > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: var(--silica);
+  font-size: 14px;
+}
+
+.transcription-review__text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transcription-review__title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--pale-stone);
+  background: var(--plaster);
+  color: var(--deep-umber);
+}
+
+.transcription-review__text .ProseMirror {
+  min-height: 140px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--pale-stone);
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.transcription-review__low-conf {
+  margin: 0;
+  font-size: 13px;
+  color: #9a3b63;
+  background: rgba(224, 123, 167, 0.12);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.transcription-review__verse-flags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.transcription-review__verse-flags li {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.transcription-review__verse-flags .is-found { background: rgba(91, 175, 196, 0.15); color: #2b6b78; }
+.transcription-review__verse-flags .is-missing { background: rgba(224, 123, 167, 0.15); color: #9a3b63; }
+
+.transcription-review__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.transcription-review__actions button {
+  flex: 1;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.transcription-review__actions button:first-child {
+  background: #b8843a;
+  border: 1px solid #b8843a;
+  color: #fff;
+}
+.transcription-review__actions button:last-child {
+  background: var(--plaster);
+  border: 1px solid var(--pale-stone);
+  color: var(--deep-umber);
+}
+.transcription-review__actions button:disabled { opacity: 0.6; cursor: default; }
+
+/* Uncertain-word highlight — self-contained here (the decoration applies a
+   .uncertain-word class inside the review's ProseMirror editor) so it works
+   regardless of the editor stylesheet's load order. */
+.transcription-review .uncertain-word {
+  background: rgba(224, 123, 167, 0.22);
+  border-bottom: 1px dashed rgba(224, 123, 167, 0.8);
+  border-radius: 2px;
+}
+
+/* Side-by-side image + transcript on wider screens (desktop modal). */
+@media (min-width: 720px) {
+  .transcription-review__panes { flex-direction: row; align-items: flex-start; }
+  .transcription-review__image,
+  .transcription-review__text { flex: 1; min-width: 0; }
+  .transcription-review__image img { max-height: 60vh; }
+}

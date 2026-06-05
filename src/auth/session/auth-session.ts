@@ -123,7 +123,7 @@ export class AuthSession extends Observable<AuthSessionState> {
   signInWithGoogle = async (): Promise<void> => {
     if (!this.client) throw new Error('Supabase not configured');
     const redirectTo =
-      typeof window !== 'undefined' ? `${window.location.origin}/notepad` : undefined;
+      typeof window !== 'undefined' ? `${window.location.origin}/notepad/notes` : undefined;
     const { error } = await this.client.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
@@ -134,7 +134,7 @@ export class AuthSession extends Observable<AuthSessionState> {
   signInWithApple = async (): Promise<void> => {
     if (!this.client) throw new Error('Supabase not configured');
     const redirectTo =
-      typeof window !== 'undefined' ? `${window.location.origin}/notepad` : undefined;
+      typeof window !== 'undefined' ? `${window.location.origin}/notepad/notes` : undefined;
     const { error } = await this.client.auth.signInWithOAuth({
       provider: 'apple',
       options: { redirectTo },

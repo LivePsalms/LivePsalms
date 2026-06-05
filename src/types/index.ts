@@ -1,7 +1,7 @@
 export interface Project {
   id: string;
   name: string;
-  category: 'residential' | 'retail' | 'hospitality';
+  category: 'residential' | 'hospitality';
   location?: string;
   year?: string;
   description?: string;
@@ -18,7 +18,7 @@ export interface Service {
   number: string;
 }
 
-export type FilterCategory = 'all' | 'residential' | 'retail' | 'hospitality';
+export type FilterCategory = 'all' | 'residential' | 'hospitality';
 
 export interface NavItem {
   label: string;

@@ -1,9 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { Project } from '@/types';
 import { MoodBoard } from '@/components/sections/MoodBoard';
 import { LineMaskReveal } from '@/components/ui-custom/LineMaskReveal';
 import { PhotoDevelopImage } from '@/components/ui-custom/PhotoDevelopImage';
 import { ImageReveal } from '@/components/ui-custom/ImageReveal';
+import { useDetailReveal } from '@/transitions/useDetailReveal';
+import { DETAIL_REVEAL_TIMELINE } from '@/transitions/purpose-detail-reveal';
+
+// TODO(handoff): devotion-specific strings below (label, title, scripture)
+// are duplicated in src/data/devotions.ts. A future refactor should make
+// this component consume that data instead.
 
 interface PurposeDetailProps {
   project: Project;
@@ -13,15 +19,35 @@ interface PurposeDetailProps {
 
 
 export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetailProps) {
-  const isRestoration1 = project.id === 'restoration1';
-  const isRestoration3 = project.id === 'restoration3';
-  const [isVisible, setIsVisible] = useState(false);
-  const [textReady, setTextReady] = useState(false);
+  const isPeace = project.id === 'peace';
+  const isHope = project.id === 'hope';
+  const isStrength = project.id === 'strength';
+  const isWholeness = project.id === 'wholeness';
+  const isPurpose = project.id === 'purpose';
+  const isConnection = project.id === 'connection';
+  const isIdentity = project.id === 'identity';
+  const isJoy = project.id === 'joy';
+  const isForgiveness = project.id === 'forgiveness';
+  const isSurrender = project.id === 'surrender';
+  const isTrust = project.id === 'trust';
+  const isDevotion =
+    isPeace ||
+    isHope ||
+    isStrength ||
+    isWholeness ||
+    isPurpose ||
+    isConnection ||
+    isIdentity ||
+    isJoy ||
+    isForgiveness ||
+    isSurrender ||
+    isTrust;
   const sectionRef = useRef<HTMLDivElement>(null);
-  const heroContentRef = useRef<HTMLDivElement>(null);
-  const heroImageRef = useRef<HTMLDivElement>(null);
 
-  // Reset scroll before paint so the page always starts at the top
+  const { isVisible, textReady, contentRef: heroContentRef, imageRef: heroImageRef } =
+    useDetailReveal({ project, exiting: !!exiting, onExitComplete });
+
+  // Scroll reset before paint stays here — useLayoutEffect timing is the point.
   useLayoutEffect(() => {
     document.documentElement.style.scrollBehavior = 'auto';
     window.scrollTo(0, 0);
@@ -29,39 +55,6 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
       document.documentElement.style.scrollBehavior = '';
     });
   }, [project]);
-
-  useEffect(() => {
-    setIsVisible(true);
-    setTextReady(false);
-    const timer = setTimeout(() => setTextReady(true), 1400);
-    return () => clearTimeout(timer);
-  }, [project]);
-
-  // Exit animation: text slides down + fades, image fades, then notify parent
-  useEffect(() => {
-    if (!exiting) return;
-
-    const content = heroContentRef.current;
-    const image = heroImageRef.current;
-
-    if (content) {
-      content.style.transition = 'opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1), filter 0.6s cubic-bezier(0.22,1,0.36,1)';
-      content.style.opacity = '0';
-      content.style.transform = 'translateY(40px)';
-      content.style.filter = 'blur(8px)';
-    }
-
-    if (image) {
-      image.style.transition = 'opacity 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s';
-      image.style.opacity = '0';
-    }
-
-    const timer = setTimeout(() => {
-      onExitComplete?.();
-    }, 650);
-
-    return () => clearTimeout(timer);
-  }, [exiting, onExitComplete]);
 
   return (
     <section
@@ -74,7 +67,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen overflow-hidden">
         {/* Left Content */}
         <div ref={heroContentRef} className="relative flex flex-col justify-start px-6 lg:px-16 pt-24 lg:pt-28 pb-32 lg:pb-20 order-2 lg:order-1">
-          {(isRestoration1 || isRestoration3) ? (
+          {isDevotion ? (
             <>
               {/* Label */}
               <LineMaskReveal
@@ -84,7 +77,29 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                 threshold={0.1}
                 enabled={textReady}
               >
-                <span>{isRestoration1 ? 'Restoration of Peace' : 'The Restoration of Hope'}</span>
+                <span>
+                  {isPeace
+                    ? 'Restoration of Peace'
+                    : isHope
+                    ? 'The Restoration of Hope'
+                    : isStrength
+                    ? 'The Restoration of Strength'
+                    : isWholeness
+                    ? 'The Restoration of Wholeness'
+                    : isPurpose
+                    ? 'The Restoration of Purpose'
+                    : isConnection
+                    ? 'The Restoration of Connection'
+                    : isIdentity
+                    ? 'The Restoration of Identity'
+                    : isJoy
+                    ? 'The Restoration of Joy'
+                    : isForgiveness
+                    ? 'The Serenity of Forgiveness'
+                    : isSurrender
+                    ? 'The Serenity of Surrender'
+                    : 'The Serenity of Trust'}
+                </span>
               </LineMaskReveal>
 
               {/* Title */}
@@ -95,11 +110,43 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   style={{
                     fontSize: 'clamp(2.5rem, 5.5vw, 5.5rem)',
                     lineHeight: 0.95,
+                    paddingBottom:
+                      isStrength ||
+                      isWholeness ||
+                      isPurpose ||
+                      isConnection ||
+                      isIdentity ||
+                      isJoy ||
+                      isForgiveness ||
+                      isSurrender ||
+                      isTrust
+                        ? '0.22em'
+                        : undefined,
                     transform: textReady ? 'translateY(0)' : 'translateY(110%)',
-                    transition: 'transform 1.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                    transition: `transform 1.6s ${DETAIL_REVEAL_TIMELINE.easing}`,
                   }}
                 >
-                  {isRestoration1 ? 'Beside Still Waters' : 'A Future You Cannot See Yet'}
+                  {isPeace
+                    ? 'Beside Still Waters'
+                    : isHope
+                    ? 'A Future You Cannot See Yet'
+                    : isStrength
+                    ? 'Wings Like Eagles'
+                    : isWholeness
+                    ? 'The Years Restored'
+                    : isPurpose
+                    ? 'All Things Working'
+                    : isConnection
+                    ? 'Brought Near'
+                    : isIdentity
+                    ? 'The New Has Come'
+                    : isJoy
+                    ? 'Mouths Filled with Laughter'
+                    : isForgiveness
+                    ? 'Let It Fall From Your Hands'
+                    : isSurrender
+                    ? 'Be Still and Know'
+                    : 'The Path He Makes Straight'}
                 </h1>
               </div>
 
@@ -112,18 +159,87 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   threshold={0.1}
                   enabled={textReady}
                 >
-                  {isRestoration1 ? (
+                  {isPeace ? (
                     <>
                       <p>&ldquo;He makes me lie down in green pastures,</p>
                       <p>he leads me beside quiet waters,</p>
                       <p>he refreshes my soul.&rdquo;</p>
                     </>
-                  ) : (
+                  ) : isHope ? (
                     <>
                       <p>&ldquo;For I know the plans I have for you,&rdquo;</p>
                       <p>declares the Lord, &ldquo;plans to prosper you</p>
                       <p>and not to harm you, plans to give you</p>
                       <p>hope and a future.&rdquo;</p>
+                    </>
+                  ) : isStrength ? (
+                    <>
+                      <p>&ldquo;But those who hope in the Lord</p>
+                      <p>will renew their strength.</p>
+                      <p>They will soar on wings like eagles;</p>
+                      <p>they will run and not grow weary,</p>
+                      <p>they will walk and not be faint.&rdquo;</p>
+                    </>
+                  ) : isWholeness ? (
+                    <>
+                      <p>&ldquo;I will repay you for the years</p>
+                      <p>the locusts have eaten&hellip;</p>
+                      <p>You will have plenty to eat,</p>
+                      <p>until you are full, and you will</p>
+                      <p>praise the name of the Lord.&rdquo;</p>
+                    </>
+                  ) : isPurpose ? (
+                    <>
+                      <p>&ldquo;And we know that in all things</p>
+                      <p>God works for the good of those</p>
+                      <p>who love him, who have been called</p>
+                      <p>according to his purpose.&rdquo;</p>
+                    </>
+                  ) : isConnection ? (
+                    <>
+                      <p>&ldquo;But now in Christ Jesus</p>
+                      <p>you who once were far away</p>
+                      <p>have been brought near</p>
+                      <p>by the blood of Christ.&rdquo;</p>
+                    </>
+                  ) : isIdentity ? (
+                    <>
+                      <p>&ldquo;Therefore, if anyone is in Christ,</p>
+                      <p>the new creation has come:</p>
+                      <p>The old has gone,</p>
+                      <p>the new is here!&rdquo;</p>
+                    </>
+                  ) : isJoy ? (
+                    <>
+                      <p>&ldquo;When the Lord restored</p>
+                      <p>the fortunes of Zion,</p>
+                      <p>we were like those who dreamed.</p>
+                      <p>Our mouths were filled with laughter,</p>
+                      <p>our tongues with songs of joy.&rdquo;</p>
+                    </>
+                  ) : isForgiveness ? (
+                    <>
+                      <p>&ldquo;Be kind and compassionate</p>
+                      <p>to one another,</p>
+                      <p>forgiving each other,</p>
+                      <p>just as in Christ</p>
+                      <p>God forgave you.&rdquo;</p>
+                    </>
+                  ) : isSurrender ? (
+                    <>
+                      <p>&ldquo;Be still, and know</p>
+                      <p>that I am God;</p>
+                      <p>I will be exalted</p>
+                      <p>among the nations,</p>
+                      <p>I will be exalted in the earth.&rdquo;</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>&ldquo;Trust in the Lord</p>
+                      <p>with all your heart</p>
+                      <p>and lean not on</p>
+                      <p>your own understanding;</p>
+                      <p>he will make your paths straight.&rdquo;</p>
                     </>
                   )}
                 </LineMaskReveal>
@@ -131,10 +247,32 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                   className="mt-3 not-italic text-xs tracking-[0.25em] uppercase text-white/40"
                   style={{
                     opacity: textReady ? 1 : 0,
-                    transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.6s',
+                    transition: `opacity 1.2s ${DETAIL_REVEAL_TIMELINE.easing} 0.6s`,
                   }}
                 >
-                  {isRestoration1 ? <>Psalm 23:2&ndash;3</> : 'Jeremiah 29:11'}
+                  {isPeace ? (
+                    <>Psalm 23:2&ndash;3</>
+                  ) : isHope ? (
+                    'Jeremiah 29:11'
+                  ) : isStrength ? (
+                    'Isaiah 40:31'
+                  ) : isWholeness ? (
+                    <>Joel 2:25&ndash;26</>
+                  ) : isPurpose ? (
+                    'Romans 8:28'
+                  ) : isConnection ? (
+                    'Ephesians 2:13'
+                  ) : isIdentity ? (
+                    '2 Corinthians 5:17'
+                  ) : isJoy ? (
+                    <>Psalm 126:1&ndash;2</>
+                  ) : isForgiveness ? (
+                    <>Ephesians 4:31&ndash;32</>
+                  ) : isSurrender ? (
+                    'Psalm 46:10'
+                  ) : (
+                    <>Proverbs 3:5&ndash;6</>
+                  )}
                 </p>
               </div>
 
@@ -143,7 +281,7 @@ export function PurposeDetail({ project, exiting, onExitComplete }: PurposeDetai
                 className="self-end flex items-center gap-3 text-white/50 mt-auto"
                 style={{
                   opacity: textReady ? 1 : 0,
-                  transition: 'opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1s',
+                  transition: `opacity 1.4s ${DETAIL_REVEAL_TIMELINE.easing} 1s`,
                 }}
               >
                 <svg

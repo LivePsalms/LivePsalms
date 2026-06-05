@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, LogOut, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,12 +17,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { LamplightSettingsSection } from './components/LamplightSettingsSection';
+import { AdminEntryLink } from './components/AdminEntryLink';
+import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, loading, session } = useAuthSession();
   const { profile, account } = useAccountProfile();
   const accountActions = useAccountActions();
+  const lamplightAdapter = useMemo(
+    () => (supabaseClient ? new SupabaseLamplightAdapter(supabaseClient) : null),
+    []
+  );
 
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(profile?.dateOfBirth ?? '');
@@ -40,7 +48,7 @@ export function ProfilePage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--plaster)' }}
+        style={{ background: 'var(--app-bg)' }}
       >
         <p style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>Loading...</p>
       </div>
@@ -122,14 +130,14 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--plaster)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--app-bg)' }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-6 py-4 border-b"
         style={{ borderColor: 'var(--pale-stone)' }}
       >
         <button
-          onClick={() => navigate('/notepad')}
+          onClick={() => navigate('/notepad/notes')}
           className="flex items-center justify-center w-8 h-8 rounded hover:bg-black/5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" style={{ color: 'var(--deep-umber)' }} />
@@ -210,11 +218,19 @@ export function ProfilePage() {
             >
               {profile?.fullName}
             </p>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+            <p
+              className="text-xs"
+              style={{
+                color: 'rgba(var(--deep-umber-rgb), 0.8)',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
               {user?.email}
             </p>
           </div>
         </div>
+
+        <AdminEntryLink />
 
         {/* Tier Display */}
         <div style={sectionStyle}>
@@ -318,6 +334,11 @@ export function ProfilePage() {
             </p>
           </div>
         </div>
+
+        {/* Lamplight */}
+        {user && lamplightAdapter && (
+          <LamplightSettingsSection adapter={lamplightAdapter} userId={user.id} />
+        )}
 
         {/* Account Actions */}
         <div style={sectionStyle}>

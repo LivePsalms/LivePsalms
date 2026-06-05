@@ -5,10 +5,29 @@ interface InlineEditProps {
   onSave: (next: string) => void;
   className?: string;
   style?: React.CSSProperties;
+  /** Controlled edit mode. When provided, the parent drives editing (e.g. a menu
+   *  "Rename" action). When omitted, editing is internal (double-click to edit). */
+  editing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
 }
 
-export function InlineEdit({ value, onSave, className, style }: InlineEditProps) {
-  const [editing, setEditing] = useState(false);
+export function InlineEdit({
+  value,
+  onSave,
+  className,
+  style,
+  editing: editingProp,
+  onEditingChange,
+}: InlineEditProps) {
+  const [editingInternal, setEditingInternal] = useState(false);
+  const editing = editingProp ?? editingInternal;
+  const setEditing = useCallback(
+    (next: boolean) => {
+      if (editingProp === undefined) setEditingInternal(next);
+      onEditingChange?.(next);
+    },
+    [editingProp, onEditingChange],
+  );
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,12 +42,12 @@ export function InlineEdit({ value, onSave, className, style }: InlineEditProps)
     const trimmed = draft.trim();
     if (trimmed && trimmed !== value) onSave(trimmed);
     setEditing(false);
-  }, [draft, value, onSave]);
+  }, [draft, value, onSave, setEditing]);
 
   const cancel = useCallback(() => {
     setDraft(value);
     setEditing(false);
-  }, [value]);
+  }, [value, setEditing]);
 
   if (editing) {
     return (

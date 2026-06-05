@@ -1,3 +1,6 @@
+import { extractPlainText } from '../utils/tiptap-text';
+import { supabase } from '@/lib/supabase';
+
 // Bible book patterns: each entry is a pipe-separated list of accepted names/abbreviations
 export const BOOK_PATTERNS: string[] = [
   // Old Testament
@@ -99,31 +102,76 @@ export interface VerseResult {
   translation: string;
 }
 
+// Maps the canonical book name (first entry of each BOOK_PATTERNS line) to the
+// OSIS-style 3-letter abbreviation used as the `book` column in bible_passages
+// and as the prefix of each row id (`{osis}.{chapter}.{verse}`). Kept in sync
+// with scripts/ingest-bsb.ts BOOK_ABBREV; differs only in "Psalms" vs "Psalm"
+// because the parser's canonical name is the plural form.
+export const BOOK_TO_OSIS: Record<string, string> = {
+  'Genesis': 'gen', 'Exodus': 'exo', 'Leviticus': 'lev', 'Numbers': 'num',
+  'Deuteronomy': 'deu', 'Joshua': 'jos', 'Judges': 'jdg', 'Ruth': 'rut',
+  '1 Samuel': '1sa', '2 Samuel': '2sa', '1 Kings': '1ki', '2 Kings': '2ki',
+  '1 Chronicles': '1ch', '2 Chronicles': '2ch', 'Ezra': 'ezr', 'Nehemiah': 'neh',
+  'Esther': 'est', 'Job': 'job', 'Psalms': 'psa', 'Proverbs': 'pro',
+  'Ecclesiastes': 'ecc', 'Song of Solomon': 'sng', 'Isaiah': 'isa', 'Jeremiah': 'jer',
+  'Lamentations': 'lam', 'Ezekiel': 'ezk', 'Daniel': 'dan', 'Hosea': 'hos',
+  'Joel': 'jol', 'Amos': 'amo', 'Obadiah': 'oba', 'Jonah': 'jon',
+  'Micah': 'mic', 'Nahum': 'nam', 'Habakkuk': 'hab', 'Zephaniah': 'zep',
+  'Haggai': 'hag', 'Zechariah': 'zec', 'Malachi': 'mal',
+  'Matthew': 'mat', 'Mark': 'mrk', 'Luke': 'luk', 'John': 'jhn',
+  'Acts': 'act', 'Romans': 'rom', '1 Corinthians': '1co', '2 Corinthians': '2co',
+  'Galatians': 'gal', 'Ephesians': 'eph', 'Philippians': 'php', 'Colossians': 'col',
+  '1 Thessalonians': '1th', '2 Thessalonians': '2th', '1 Timothy': '1ti', '2 Timothy': '2ti',
+  'Titus': 'tit', 'Philemon': 'phm', 'Hebrews': 'heb', 'James': 'jas',
+  '1 Peter': '1pe', '2 Peter': '2pe', '1 John': '1jn', '2 John': '2jn',
+  '3 John': '3jn', 'Jude': 'jud', 'Revelation': 'rev',
+};
+
 /**
- * Fetches verse text from bible-api.com.
- * Returns { text, reference, translation } or null on error.
+ * Fetches verse text from the local `bible_passages` table (BSB, ingested in
+ * sub-project 2). Returns { text, reference, translation } or null on:
+ *   - missing supabase client (env not configured)
+ *   - unparseable ref
+ *   - unknown book
+ *   - zero matching rows
+ *   - query error or abort
+ * Replaces an earlier bible-api.com fetch that browsers blocked via CORS.
  * Optional `signal` lets callers cancel a stale request (e.g. on hover changes).
  */
 export async function fetchVerseText(
   ref: string,
   options?: { signal?: AbortSignal },
 ): Promise<VerseResult | null> {
+  if (!supabase) return null;
+  const parsed = parseVerseRef(ref);
+  if (!parsed) return null;
+  const osisBook = BOOK_TO_OSIS[parsed.book];
+  if (!osisBook) return null;
+
+  const start = parsed.verseStart;
+  const end = parsed.verseEnd ?? parsed.verseStart;
+  const ids: string[] = [];
+  for (let v = start; v <= end; v++) ids.push(`${osisBook}.${parsed.chapter}.${v}`);
+
   try {
-    const normalized = normalizeVerseRef(ref);
-    const response = await fetch(`https://bible-api.com/${normalized}`, {
-      signal: options?.signal,
-    });
-    if (!response.ok) return null;
-    const data = await response.json() as {
-      text?: string;
-      reference?: string;
-      translation_name?: string;
-    };
-    if (!data.text || !data.reference) return null;
+    let query = supabase
+      .from('bible_passages')
+      .select('id, verse_start, text')
+      .in('id', ids)
+      .order('verse_start', { ascending: true });
+    if (options?.signal) query = query.abortSignal(options.signal);
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) return null;
+
+    const text = data.map(r => (r.text as string) ?? '').join(' ').trim();
+    if (!text) return null;
+
+    const refSuffix = end !== start ? `${start}-${end}` : `${start}`;
     return {
-      text: data.text.trim(),
-      reference: data.reference,
-      translation: data.translation_name ?? 'WEB',
+      text,
+      reference: `${parsed.book} ${parsed.chapter}:${refSuffix}`,
+      translation: 'BSB',
     };
   } catch {
     return null;
@@ -185,22 +233,6 @@ export function parseVerseRef(ref: string): {
 }
 
 // Private helpers
-
-function extractPlainText(doc: unknown): string {
-  const parts: string[] = [];
-  function walk(node: unknown): void {
-    if (!node || typeof node !== 'object') return;
-    const n = node as Record<string, unknown>;
-    if (n.type === 'text' && typeof n.text === 'string') {
-      parts.push(n.text);
-    }
-    if (Array.isArray(n.content)) {
-      for (const child of n.content) walk(child);
-    }
-  }
-  walk(doc);
-  return parts.join(' ');
-}
 
 export function walkMarks(doc: unknown, markType: string): Array<Record<string, unknown>> {
   const found: Array<Record<string, unknown>> = [];

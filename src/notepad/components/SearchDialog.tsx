@@ -9,18 +9,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useNoteCollection } from '../context/useNoteCollection';
-import { extractVerseRefs } from '../extensions/bible-verse-utils';
-
-// Recursively extracts plain text from a TipTap JSON node
-function extractText(node: Record<string, unknown>): string {
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return node.text;
-  }
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractText).join(' ');
-  }
-  return '';
-}
+import { buildSearchIndex } from './search-index';
 
 export function SearchDialog() {
   const { notes, collection } = useNoteCollection();
@@ -39,46 +28,10 @@ export function SearchDialog() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Parse each note's content JSON and extract plain text + verse refs
-  const searchData = useMemo(() => {
-    return notes.map((note) => {
-      let plainText = '';
-      try {
-        const json = JSON.parse(note.content) as Record<string, unknown>;
-        plainText = extractText(json);
-      } catch {
-        plainText = note.content;
-      }
-      const verseRefs = extractVerseRefs(plainText);
-      return { note, plainText, verseRefs };
-    });
-  }, [notes]);
-
-  // Unique verse refs across all notes, each mapped to the first note that contains it
-  const uniqueVerses = useMemo(() => {
-    const seen = new Map<string, { ref: string; noteId: string; noteTitle: string }>();
-    for (const { note, verseRefs } of searchData) {
-      for (const ref of verseRefs) {
-        if (!seen.has(ref)) {
-          seen.set(ref, { ref, noteId: note.id, noteTitle: note.title });
-        }
-      }
-    }
-    return [...seen.values()];
-  }, [searchData]);
-
-  // Unique tags across all notes, each mapped to the first note that has it
-  const uniqueTags = useMemo(() => {
-    const seen = new Map<string, { tag: string; noteId: string; noteTitle: string }>();
-    for (const { note } of searchData) {
-      for (const tag of note.tags) {
-        if (!seen.has(tag)) {
-          seen.set(tag, { tag, noteId: note.id, noteTitle: note.title });
-        }
-      }
-    }
-    return [...seen.values()];
-  }, [searchData]);
+  const { verses: uniqueVerses, tags: uniqueTags } = useMemo(
+    () => buildSearchIndex(notes),
+    [notes],
+  );
 
   const handleSelectNote = (id: string) => {
     openNote(id);

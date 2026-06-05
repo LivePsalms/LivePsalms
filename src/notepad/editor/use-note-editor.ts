@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
 import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
 import { TagMark } from '../extensions/tag-mark';
@@ -14,6 +13,10 @@ interface UseNoteEditorOpts {
   activeNote: Note | null;
   updateNote: (id: string, updates: Partial<Pick<Note, 'content' | 'tags'>>) => unknown;
   saveDebounceMs?: number;
+  // NEW: callback invoked once per debounced save with the just-saved note state.
+  // Used by Lamplight Signal Layer to enqueue embedding refresh. Errors are
+  // swallowed inside the callback; this prop never rejects.
+  onAfterSave?: (note: Note) => void;
 }
 
 /**
@@ -33,14 +36,22 @@ export function useNoteEditor({
   activeNote,
   updateNote,
   saveDebounceMs = 500,
+  onAfterSave,
 }: UseNoteEditorOpts): { editor: Editor | null } {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep a stable ref so the setTimeout closure always sees the latest callback
+  // without needing to re-create the editor.
+  const onAfterSaveRef = useRef(onAfterSave);
+  onAfterSaveRef.current = onAfterSave;
+  // Same for activeNote — allows the setTimeout to capture the note state that
+  // was current when the debounce fired, not the stale closure value.
+  const activeNoteRef = useRef(activeNote);
+  activeNoteRef.current = activeNote;
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Start writing...' }),
-      Underline,
       BibleVerse,
       NoteLink,
       TagMark,
@@ -54,8 +65,17 @@ export function useNoteEditor({
       const json = JSON.stringify(ed.getJSON());
 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        updateNote(id, { content: json, tags });
+      saveTimerRef.current = setTimeout(async () => {
+        const patch = { content: json, tags };
+        await updateNote(id, patch);
+        const cb = onAfterSaveRef.current;
+        if (cb) {
+          // Reconstruct the just-saved note shape from activeNote + patch.
+          const note = activeNoteRef.current;
+          if (note && note.id === id) {
+            cb({ ...note, ...patch });
+          }
+        }
       }, saveDebounceMs);
     },
   });
