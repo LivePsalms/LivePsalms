@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
+import { bridgeCascadeKeyframes } from './hero-bridge-content';
+import { projectFinalFrame } from './hero-choreography/keyframes';
 
 describe('BRIDGE_COPY', () => {
   it('exports the invitation beat', () => {
@@ -71,5 +73,34 @@ describe('BRIDGE_PIN_TIMING', () => {
 
   it('uses kiss-handoff: text3 enters exactly where text2 exits', () => {
     expect(BRIDGE_PIN_TIMING.text3.enter).toBe(BRIDGE_PIN_TIMING.text2.exit);
+  });
+});
+
+describe('bridgeCascadeKeyframes', () => {
+  const desktop = bridgeCascadeKeyframes({ enterX2: 120 });
+
+  it('seeds the three initial states at t=0 (set keyframes)', () => {
+    const sets = desktop.filter((k) => k.duration === 0);
+    expect(sets).toEqual([
+      { target: 't1', to: { opacity: 0, y: 40, filter: 'blur(10px)' }, at: 0, duration: 0 },
+      { target: 't2', to: { opacity: 0, x: 120, filter: 'blur(10px)' }, at: 0, duration: 0 },
+      { target: 't3', to: { opacity: 0, y: 80, filter: 'blur(10px)' }, at: 0, duration: 0 },
+    ]);
+  });
+
+  it('uses the BRIDGE_PIN_TIMING kiss-handoff fractions for the enter tweens', () => {
+    const enters = desktop.filter((k) => k.duration > 0 && k.to.opacity === 1);
+    expect(enters.map((k) => k.at)).toEqual([0, 0.40, 0.70]);
+  });
+
+  it('threads the configurable text-2 enter offset into both the set and the slide', () => {
+    const mobile = bridgeCascadeKeyframes({ enterX2: 30 });
+    const set2 = mobile.find((k) => k.target === 't2' && k.duration === 0);
+    expect(set2?.to.x).toBe(30);
+  });
+
+  it('reduced projection leaves text-2/3 settled at rest (carve-out hides them in JSX, not here)', () => {
+    const final = projectFinalFrame(desktop);
+    expect(final.t3).toMatchObject({ opacity: 0, y: 0, filter: 'blur(0px)' });
   });
 });
