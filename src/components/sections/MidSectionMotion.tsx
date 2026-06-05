@@ -262,7 +262,11 @@ export function MidSectionMotion() {
               ref={(el) => {
                 beatRefs.current[i] = el;
               }}
-              className="mid-section-beat"
+              className={
+                i === BEATS.length - 1
+                  ? 'mid-section-beat mid-section-beat--long'
+                  : 'mid-section-beat'
+              }
             >
               {text}
             </p>
