@@ -100,6 +100,11 @@ export class ScanCapture extends Observable<ScanCaptureState> {
     this.deps.onCancel();
   };
 
+  dispose = (): void => {
+    this.generation++;
+    this.deps.stopCamera();
+  };
+
   private async runPipeline(blob: Blob): Promise<void> {
     const gen = ++this.generation;
 

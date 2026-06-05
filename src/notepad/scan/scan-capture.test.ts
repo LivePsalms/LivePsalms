@@ -185,3 +185,48 @@ describe('ScanCapture camera commands', () => {
     expect(deps.onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+/** A promise plus its resolver, so a test can hold a dep mid-flight. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe('ScanCapture generation fence', () => {
+  it('dispose stops the camera and drops an in-flight pipeline result', async () => {
+    const gate = deferred<TranscriptionResult>();
+    const deps = makeDeps({ transcribe: vi.fn(() => gate.promise) });
+    const sc = new ScanCapture(deps);
+
+    const running = sc.submitFile(fileOf('image/jpeg', 1000));
+    await flush(); // advance to the awaited transcribe()
+    expect(sc.getSnapshot().phase).toBe('transcribing');
+
+    sc.dispose();
+    gate.resolve(RESULT); // late resolution after dispose
+    await running;
+
+    expect(deps.stopCamera).toHaveBeenCalled();
+    expect(deps.onResult).not.toHaveBeenCalled();
+    // state is left as-is on dispose; the key point is the result was dropped
+    expect(sc.getSnapshot().phase).toBe('transcribing');
+  });
+
+  it('cancel during a pipeline drops the result', async () => {
+    const gate = deferred<TranscriptionResult>();
+    const deps = makeDeps({ transcribe: vi.fn(() => gate.promise) });
+    const sc = new ScanCapture(deps);
+
+    const running = sc.submitFile(fileOf('image/jpeg', 1000));
+    await flush();
+    sc.cancel();
+    gate.resolve(RESULT);
+    await running;
+
+    expect(deps.onResult).not.toHaveBeenCalled();
+    expect(deps.onCancel).toHaveBeenCalledTimes(1);
+  });
+});
