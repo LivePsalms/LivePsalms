@@ -452,6 +452,112 @@ Migration is **complete — all 11 devotions** render from data; the ~4,000 line
 
 Does **not** own: the animation engine, the horizontal-scroll pin, or the progress bar — those stay in `MoodBoard`.
 
+## ConnectionDiscovery
+
+The deepened module that owns the connection-card lifecycle for the active Note: qualify → check embedding → fetch neighbors → (optionally) assemble cards. Reactive, not imperatively triggered — it re-runs whenever its inputs change and cancels the in-flight run on change/unmount. Follows the **`GraphView`** precedent (an `Observable<ConnectionDiscoveryState>` class driven by `useEffect`-bound `setInputs` forwarders), **not** the `MigrationWorkflow`/`RouteTransition` `start()`-triggered precedent. Surfaced as `useConnectionDiscovery({ adapter, userId, activeNote, totalNoteCount, loadNeighborNotes, thresholds, mode })` returning `{ state, retry }`.
+
+Two modes (mirroring `GraphView.setMode`):
+
+- `'presence'` — stops after `getConnectionNeighbors`; emits only whether qualifying connections exist. Used by the mobile glow-dot. `useHasConnections` collapses to a thin wrapper over `mode: 'presence'`, retiring the faked-`{}`-adapter hack (the controller accepts a nullable adapter and parks in `inactive` when absent).
+- `'full'` — continues through `loadNeighborNotes` + `computeSharedSignals` to assemble `ConnectionCard[]`. Used by `ConnectionCardsPanel`.
+
+`cards.length > 0` is knowable at the neighbor-fetch stage boundary (a non-empty `neighbors` always yields non-empty `cards` after the `slice(0, maxRenderedCards)`), which is why `'presence'` can short-circuit before the expensive note-load + signal-compute work.
+
+Responsibilities:
+
+- `decideConnectionQualification(input)` — the **pure** gate, lifted out and node-tested in isolation (mirrors `NotepadFirstLoad.decideFirstLoadActions`). Maps `(activeNote, plaintext word count, totalNoteCount, thresholds)` to the `inactive` reasons (`no_active_note` / `note_too_short` / `vault_too_small`) plus the `meetsDepth` / `meetsVault` flags, or `qualified`.
+- The async run sequence and its per-step error → `{ phase: 'error', reason: 'network' }` mapping.
+- **Generation-fencing** (the stale-async guard previously held in `generationRef` / `cancelledRef` inside a React effect) — moved *inside* the controller so it is node-testable with fake deps. This was the original friction: the fencing was the load-bearing complexity and it could only be exercised through a React harness.
+- The default thresholds contract (`qualifyingMinSimilarity` defaults to the spec value `0.78`; `minWords` / `minVaultSize` carry the dev-loosened defaults), preserved verbatim from the hook.
+
+Deps are injected (`hasNoteEmbedding`, `getConnectionNeighbors`, `loadNeighborNotes`, `computeSharedSignals`) so the controller is node-testable with fakes, mirroring `GraphView`'s `GraphViewDeps`.
+
+`ConnectionCard` (the assembled card data) stays, but **without a `why` field** — the per-card explanation is owned by `ConnectionWhy`. Emits `ConnectionDiscoveryState` (the renamed `ConnectionCardsState`).
+
+Does **not** own: the per-card why-explanation lifecycle (that's `ConnectionWhy`), the server-threshold fetch (`getConnectionCardThresholds` stays a one-shot `useEffect` in the panel and flows in as `thresholds`), or any rendering (`ConnectionCardsPanel` / `ConnectionCardsStrip` / `ConnectionCardsEmpty` are the view shells).
+
+## ConnectionWhy
+
+The deepened module that owns the per-card **why-explanation** lifecycle, split out of the old `useConnectionCards`'s `expandCard` / `retryWhy` callbacks. Surfaced as `useConnectionWhy({ adapter, sourceNoteId })` returning `{ whyState(relatedNoteId), expand(relatedNoteId), retry(relatedNoteId) }`.
+
+Owns a `Record<relatedNoteId, ConnectionCardWhyState>` — a small per-key status machine: `collapsed → loading → shown | error`. `expand` calls `adapter.generateConnectionWhy(sourceNoteId, relatedNoteId)` and maps the `ConnectionWhyResult`: `ok → shown(text, cached)`; `!ok` with `reason === 'validators_failed' → error('validators_failed')`; any other `!ok` or a throw → `error('network')`. `retry` re-runs `expand`. The `ConnectionCardWhyState` type moves here from `useConnectionCards`.
+
+`ConnectionCardsPanel` **composes** the two modules: a `ConnectionCard` from `ConnectionDiscovery` (mode `'full'`) plus `whyState(card.relatedNoteId)` + `expand` from `ConnectionWhy`. The `activeChipId` / open-card UI state stays in the panel (view concern); the chip-click handler calls `expand` only when the card's why is still `collapsed`, preserving today's behavior.
+
+Pure of React orchestration in its core: node-testable with a fake adapter that scripts a `ConnectionWhyResult` per `(sourceNoteId, relatedNoteId)` pair — the `generate → cache | validators_failed | network` branches get one focused test instead of being exercised only through the panel.
+
+Does **not** own: card assembly or qualification (that's `ConnectionDiscovery`), the `prefixWhyWithName` personalization (stays in the panel / `why-render`), or the loading/error/shown JSX.
+
+## HeroChoreography
+
+The umbrella for the hero animation layer split: per-scene keyframe **data** plus pure invariant helpers (the "score"), executed by a thin GSAP/ScrollTrigger harness in `HeroDesktop` / `HeroMobile`. Mirrors `DevotionMoodBoard`'s stance — art-directed timing preserved as data, node-testable helpers back the invariants — so the win is **testability + one source of truth across desktop/mobile**, not normalization of aesthetic easing.
+
+Keyframe grammar: a `Keyframe = { target, from?, to, at, duration, ease }`; a scene spec is `Keyframe[]` plus its scrub/start/end trigger metadata. A thin `applyKeyframes(tl, keyframes, targets)` walks the data into a GSAP timeline — the only GSAP-coupled step.
+
+Scrub scenes expressed as data:
+- `collapseKeyframes` — bloom → three letter waves → A-pulse → ring-bloom → color-flash. Owns the **wave-overlap invariant** (wave 2 (P+M) starts before wave 1 (S₂) ends) and the nav-collapse progress publish spanning `[0,1]`.
+- `maskExpandKeyframes` — clip grow + image scale + image→video crossfade. Carries `VIDEO_PLAY_AT = 0.65` as data so the **play-before-crossfade** ordering (0.65 < the 0.70 crossfade position) is assertable.
+- `quoteFadeKeyframes` — the three-line staggered fade.
+- the shared `bridgeCascadeKeyframes` (below).
+
+Reduced-motion is a **derived projection** for the two fade-only scenes (`quoteFadeKeyframes`, `maskExpandKeyframes`): each reduced state = `projectFinalFrame(spec)`, making "reduced == last frame" an assertable invariant that catches drift. Two scenes are documented **carve-outs** because their reduced state is *not* their scrub's last frame: the **collapse** applies the final opacities WITHOUT the x-translate (no scroll drives it) on an `IntersectionObserver`; the **bridge** renders all three beats simultaneously visible in normal flow (the scrub's last frame has beats 1–2 already faded out, so projection would hide them).
+
+Does **not** own: the GSAP/ScrollTrigger lifecycle wiring (thin effects stay in the components), the intro lifecycle (that's `HeroIntroSequence`), or the JSX.
+
+## WordmarkGeometry
+
+The five PSALMS letter collapse offsets (`P 653.3, S1 339.8, L −313.9, M −690.5, S2 −1076.4`, SVG-userspace units) as one shared constant consumed by both `HeroDesktop` and `HeroMobile`. Previously copy-pasted verbatim across the two files. The intro spread uses them as the *from*; both letter-collapses use them as the *to*. A palette/geometry change is now one edit, not two.
+
+## bridgeCascadeKeyframes
+
+The shared three-beat bridge builder, living alongside the already-shared `BRIDGE_PIN_TIMING` in `hero-bridge-content.ts`. Returns the six-tween keyframe list (text 1 rise+exit, text 2 slide+exit, text 3 rise+exit) as data; `HeroDesktop` and `HeroMobile` each walk it via `applyKeyframes`, passing their own `timeScale` (× `MOBILE_TIME_SCALE` on mobile) and text-2 enter-`x` (120 desktop / 30 mobile). Replaces the duplicated `tl.to` ladder that lived in both files; the kiss-handoff fractions are now asserted once for both platforms.
+
+## HeroIntroSequence
+
+The deepened controller that owns the play-once **intro → handoff → reveal** lifecycle on `HeroDesktop` — the only real state machine in the hero. Status `idle → playing → revealed`; `HeroDesktop` derives `showNav` from the status, which gates the mask section's CSS reveal. The handoff beat fires `onHandoff` and flips to `revealed` at t ≈ 6.40s, strictly **before** `onIntroComplete` fires at timeline end.
+
+Side-effects (gsap timeline build/play, the two callbacks, the clock) are injected as deps so the **callback-ordering invariant** and the **play-once guard** are node-testable with a fake clock — mirrors `RouteTransition` / `PurposeDetailReveal`. The aesthetic heartbeat / ring / spread tweens stay imperative inside its build method (preserved verbatim; we test the lifecycle, not the easing). `HeroMobile` keeps its trivial immediate-fire intro (fires `onIntroComplete` + `onHandoff` at once) and needs no controller.
+
+Does **not** own: the scrub scenes (those are `HeroChoreography` data), responsive aura/ring sizing (`wordmarkAuraSizes` + a thin `ResizeObserver` effect), or `introActive` gating (a prop from `App`).
+
+## wordmarkAuraSizes
+
+Pure function for the glow-aura / pulse-ring sizing ratios (aura ×0.6545, ring-initial ×0.2364, ring-final ×2.5455 of the measured wordmark width). Replaces the inline `ResizeObserver` math; the observer stays a thin effect that calls this and writes the three CSS vars. Node-testable on synthetic widths.
+
+## ScanCapture
+
+The deepened module that owns the capture→transcribe lifecycle for a handwritten-note scan: take or choose a photo, clean it, upload it, and resolve a `TranscriptionResult`. Surfaced as the `useScanCapture({ userId, onResult, onCancel })` hook returning `{ state, startCamera, capture, submitFile, backToIdle, reset, cancel, videoRef, fileRef }` (where `state` is the `{ phase, error }` snapshot). Mounted by the `ScanCapturePanel` view shell (the former inline `ScanCapture` component), itself mounted by `UploadModal`.
+
+Five-state phase machine:
+
+```
+idle ──(startCamera)──> camera ──(capture)──> cleaning ──> transcribing ──(onResult)──> ✕ unmounted
+  │                                              ▲
+  └──(submitFile, valid)─────────────────────────┘
+(any pipeline throw) ──> error ──(reset)──> idle
+(submitFile, invalid) ──> error
+```
+
+Success exits through `deps.onResult(result)` — there is **no `done` phase** because `UploadModal` swaps the panel for `TranscriptionReview` on result.
+
+Class responsibilities:
+
+- The five-state phase and the current error message.
+- `startCamera()` — `idle | error → camera`; calls `deps.openCamera()`. On rejection calls `deps.requestFileFallback()` and stays `idle`, preserving the original getUserMedia-fails→file-picker fallback.
+- `capture()` — `camera → cleaning`; `deps.captureFrame()` → `Blob`, `deps.stopCamera()`, then the pipeline.
+- `submitFile(file)` — the validation gate (`isAcceptedImage` / `MAX_IMAGE_BYTES`) runs **before** any pipeline dep; an invalid file goes straight to `error` with the stage-tagged message and no upload is attempted.
+- The private `runPipeline(blob)`: `cleaning → deps.preprocess(blob) → transcribing → deps.upload(cleaned) → deps.transcribe(key) → deps.onResult(result)` (the deps close over `userId` in the hook, so the controller passes only the blob/key).
+- `reset()` — `error → idle`. `cancel()` — `deps.stopCamera()` then `deps.onCancel()`.
+- `dispose()` — `deps.stopCamera()` and bumps the generation counter; called on hook unmount.
+- **Generation-fencing.** `runPipeline` captures the current generation; a `preprocess` / `upload` / `transcribe` that resolves or throws after `dispose()` / `cancel()` is dropped — `onResult` and the `error` transition only fire for the live generation. This closes the latent unmounted-`setState` bug where an in-flight `transcribe` resolving after the modal closed called `onResult` on an unmounted `UploadModal`. Mirrors `ConnectionDiscovery`'s generation fence and `PurposeDetailReveal.dispose()`.
+- Owns user-facing error copy via the pure `classifyScanError(stage)`: maps `'wrong_type'` / `'too_large'` / `'preprocess'` / `'upload'` / `'transcribe'` to stable messages. Retires the prior raw-`err.message` leak (internal strings like `'upload failed: …'` no longer reach users).
+
+Side-effects are injected as `ScanCaptureDeps` (`openCamera`, `captureFrame`, `stopCamera`, `requestFileFallback`, `preprocess`, `upload`, `transcribe`, `onResult`, `onCancel`), so the controller is pure-state-and-deps and node-testable with fakes for the camera, the canvas, and the transcription client. The previously-untested orchestration — phase transitions, per-stage error mapping, validation-before-upload, the camera fallback, and the dispose fence — gets one focused test each (`scan-capture.test.ts`) instead of being reachable only by mounting the component with a real `getUserMedia` and Supabase.
+
+The thin `useScanCapture` hook owns the DOM coupling the controller is pure of: it holds `videoRef` / `fileRef` and wires the real deps — `openCamera` does `getUserMedia` + attaches the stream to the video element + `play()`; `captureFrame` draws the video to a canvas and `toBlob`s it; `preprocess` / `upload` / `transcribe` forward to `image-preprocess` and `transcription-client`. Mirrors how `useNoteEditor` owns the TipTap instance and `useRouteTransition` mounts its own window listeners.
+
+Does **not** own: the review/save flow (`TranscriptionReview` + `markTranscriptionSaved` / `discardScan` / `buildNoteFromTranscriptionDoc`), the editor, `UploadModal`'s `ScanStage` machine, or the `<video>` / `<canvas>` / file `<input>` elements themselves (the panel renders them; the hook bridges them in through deps).
+
 ---
 
 # Lamplight (edge functions)
