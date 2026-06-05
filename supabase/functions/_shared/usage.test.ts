@@ -31,4 +31,19 @@ describe('recordLamplightUsage', () => {
     expect(errSpy).toHaveBeenCalled();
     errSpy.mockRestore();
   });
+
+  it('accepts a null model (pre-model failure) and inserts it verbatim', async () => {
+    const nullModelRow: UsageRow = {
+      user_id: 'u1',
+      model: null,
+      artifact_kind: 'daily_devotion',
+      tokens_in: 0,
+      tokens_out: 0,
+      status: 'error',
+      error_code: 'quota_exceeded',
+    };
+    const insert = vi.fn(async () => ({ error: null }));
+    await recordLamplightUsage(fakeSupabase(insert), nullModelRow);
+    expect(insert).toHaveBeenCalledWith(nullModelRow);
+  });
 });

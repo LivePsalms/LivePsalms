@@ -3,13 +3,19 @@
 
 export interface UsageRow {
   user_id: string;
-  model: string;
+  // null when no model ran (quota block, context-build throw). A fictional
+  // model id would corrupt cost attribution — null is the honest value.
+  model: string | null;
   artifact_kind: string;
   tokens_in: number;
   tokens_out: number;
   status: 'ok' | 'error';
   error_code?: string | null;
 }
+
+// The per-call usage payload, minus the identity fields the lifecycle owns.
+// Pipelines build a UsageCore; runGeneration merges user_id + artifact_kind.
+export type UsageCore = Omit<UsageRow, 'user_id' | 'artifact_kind'>;
 
 // Minimal Supabase client shape required by this helper. Keeping the type
 // narrow makes it easy to fake in unit tests and avoids cross-runtime
