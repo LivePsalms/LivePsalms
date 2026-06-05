@@ -3,6 +3,7 @@
 // hands it here. Unit-testable by injecting a fake adapter + handcrafted ctx.
 
 import type { LLMAdapter } from '../_shared/anthropic.ts';
+import type { UsageCore } from '../_shared/usage.ts';
 import {
   LAMPLIGHT_SYSTEM_FRAGMENT,
   BANNED_PHRASES,
@@ -53,6 +54,7 @@ export type PipelineResult =
       model_used: string;
       prompt_version: string;
       attempts: number;
+      usage: UsageCore | null;
       retrieval: { note_neighbors: number; bible_passages: number; reranked: boolean };
     }
   | {
@@ -62,6 +64,7 @@ export type PipelineResult =
       model_used?: string;
       prompt_version: string;
       attempts: number;
+      usage: UsageCore | null;
     };
 
 const MAX_ATTEMPTS = 2;
@@ -73,7 +76,7 @@ export async function runSmokeTestPipeline(args: {
   const promptVersion = SMOKE_TEST_PROMPT.promptVersion;
 
   if (!args.ctx) {
-    return { ok: false, reason: 'no_notes', prompt_version: promptVersion, attempts: 0 };
+    return { ok: false, reason: 'no_notes', prompt_version: promptVersion, attempts: 0, usage: null };
   }
   const ctx = args.ctx;
 
@@ -90,7 +93,7 @@ export async function runSmokeTestPipeline(args: {
       stricter,
     });
 
-    const { parsed, modelUsed } = await args.llm.generate<SmokeTestArtifact>({
+    const { parsed, modelUsed, promptTokens, completionTokens } = await args.llm.generate<SmokeTestArtifact>({
       model: 'sonnet',
       system,
       messages: SMOKE_TEST_PROMPT.buildMessages(ctx),
@@ -117,6 +120,7 @@ export async function runSmokeTestPipeline(args: {
         model_used: modelUsed,
         prompt_version: promptVersion,
         attempts,
+        usage: { model: modelUsed, tokens_in: promptTokens ?? 0, tokens_out: completionTokens ?? 0, status: 'ok' },
         retrieval: {
           note_neighbors: ctx.notes.length,
           bible_passages: ctx.passages.length,
@@ -134,6 +138,7 @@ export async function runSmokeTestPipeline(args: {
     model_used: lastModelUsed,
     prompt_version: promptVersion,
     attempts,
+    usage: null,
   };
 }
 

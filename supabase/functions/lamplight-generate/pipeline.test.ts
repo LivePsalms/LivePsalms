@@ -45,6 +45,12 @@ describe('runSmokeTestPipeline', () => {
     if (result.ok) {
       expect(result.attempts).toBe(1);
       expect(result.artifact.sections).toHaveLength(1);
+      expect(result.usage).toEqual({
+        model: 'claude-sonnet-4-6',
+        tokens_in: 10,
+        tokens_out: 20,
+        status: 'ok',
+      });
     }
   });
 
@@ -86,6 +92,7 @@ describe('runSmokeTestPipeline', () => {
     if (!result.ok) {
       expect(result.reason).toBe('no_notes');
       expect(result.attempts).toBe(0);
+      expect(result.usage).toBeNull();
     }
     expect(calls.count).toBe(0);
   });
