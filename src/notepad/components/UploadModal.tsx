@@ -20,7 +20,7 @@ import { useFolderHierarchy } from '../context/useFolderHierarchy';
 import { useNotepadActions } from '../context/useNotepadActions';
 import { filesToNotes } from '../import/document-importer';
 import { useAuthSession } from '@/auth/context/useAuthSession';
-import { ScanCapture } from './ScanCapture';
+import { ScanCapturePanel } from './ScanCapturePanel';
 import { TranscriptionReview } from './TranscriptionReview';
 import type { TranscriptionResult } from '../scan/types';
 
@@ -327,7 +327,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           <>
             {/* Scan flow — replaces the normal dialog content when active */}
             {scan === 'capture' && user && (
-              <ScanCapture
+              <ScanCapturePanel
                 userId={user.id}
                 onResult={(result) => setScan({ review: result })}
                 onCancel={() => setScan(null)}
