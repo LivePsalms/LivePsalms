@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ConnectionDiscovery,
   type ConnectionDiscoveryDeps,
@@ -43,9 +43,13 @@ export function useConnectionDiscovery({
   loadRef.current = loadNeighborNotes;
 
   const controller = useMemo(() => {
+    // When the adapter is absent the gate short-circuits before these are
+    // called, but we null-guard here defensively so no non-null assertion
+    // can throw if a future caller reaches these paths unexpectedly.
     const deps: ConnectionDiscoveryDeps = {
-      hasNoteEmbedding: (id) => adapter!.hasNoteEmbedding(id),
-      getConnectionNeighbors: (id, k, sim) => adapter!.getConnectionNeighbors(id, k, sim),
+      hasNoteEmbedding: (id) => (adapter ? adapter.hasNoteEmbedding(id) : Promise.resolve(false)),
+      getConnectionNeighbors: (id, k, sim) =>
+        adapter ? adapter.getConnectionNeighbors(id, k, sim) : Promise.resolve([]),
       loadNeighborNotes: (ids) => loadRef.current(ids),
     };
     return new ConnectionDiscovery(deps, mode);
@@ -80,5 +84,7 @@ export function useConnectionDiscovery({
 
   useEffect(() => () => controller.dispose(), [controller]);
 
-  return { state, retry: () => setRetryNonce((n) => n + 1) };
+  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
+
+  return { state, retry };
 }
