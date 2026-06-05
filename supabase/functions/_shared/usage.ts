@@ -13,8 +13,8 @@ export interface UsageRow {
   error_code?: string | null;
 }
 
-// The per-call usage payload, minus the identity fields the lifecycle owns.
-// Pipelines build a UsageCore; runGeneration merges user_id + artifact_kind.
+// The per-call usage payload, minus the identity fields (user_id,
+// artifact_kind) the lifecycle owns and merges in. Callers supply only the rest.
 export type UsageCore = Omit<UsageRow, 'user_id' | 'artifact_kind'>;
 
 // Minimal Supabase client shape required by this helper. Keeping the type
