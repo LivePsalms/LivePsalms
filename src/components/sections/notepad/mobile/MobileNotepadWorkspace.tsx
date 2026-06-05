@@ -18,7 +18,7 @@ import { MobileAuthModal } from './MobileAuthModal';
 import { MobileAccountSheet } from './MobileAccountSheet';
 import { useMobileWorkspaceModel } from './useMobileWorkspaceModel';
 import { useHasConnections } from './useHasConnections';
-import { ScanCapture } from '../../../../notepad/components/ScanCapture';
+import { ScanCapturePanel } from '../../../../notepad/components/ScanCapturePanel';
 import { TranscriptionReview } from '../../../../notepad/components/TranscriptionReview';
 import type { TranscriptionResult } from '../../../../notepad/scan/types';
 import type { MobileTab } from './types';
@@ -192,7 +192,7 @@ export function MobileNotepadWorkspace() {
           style={{ background: 'var(--plaster)' }}
         >
           {scan === 'capture' ? (
-            <ScanCapture
+            <ScanCapturePanel
               userId={model.user.id}
               onResult={(result) => setScan({ review: result })}
               onCancel={() => setScan(null)}
