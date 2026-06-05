@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { applyKeyframes } from './keyframes';
-import type { Keyframe, KeyframeTimeline } from './keyframes';
+import { applyKeyframes } from './motion-keyframes';
+import type { Keyframe, KeyframeTimeline } from './motion-keyframes';
 
 interface Call {
   method: 'set' | 'to' | 'fromTo';
@@ -76,7 +76,7 @@ describe('applyKeyframes', () => {
   });
 });
 
-import { projectFinalFrame } from './keyframes';
+import { projectFinalFrame } from './motion-keyframes';
 
 describe('projectFinalFrame', () => {
   it('returns each target\'s merged final values, later keyframes overriding', () => {

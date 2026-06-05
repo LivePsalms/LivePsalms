@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { maskExpandKeyframes, VIDEO_PLAY_AT } from './mask-expand-keyframes';
-import { projectFinalFrame } from './keyframes';
+import { projectFinalFrame } from '../motion-keyframes';
 
 describe('maskExpandKeyframes', () => {
   const kfs = maskExpandKeyframes();

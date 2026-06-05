@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { collapseKeyframes, COLLAPSE_COLOR_DEEP_UMBER } from './collapse-keyframes';
 import { WORDMARK_COLLAPSE } from './wordmark-geometry';
-import type { Keyframe } from './keyframes';
+import type { Keyframe } from '../motion-keyframes';
 
 const at = (kfs: Keyframe[], target: string, prop: string): Keyframe =>
   kfs.find((k) => k.target === target && prop in k.to)!;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { quoteFadeKeyframes } from './quote-fade-keyframes';
-import { projectFinalFrame } from './keyframes';
+import { projectFinalFrame } from '../motion-keyframes';
 
 describe('quoteFadeKeyframes', () => {
   const kfs = quoteFadeKeyframes();

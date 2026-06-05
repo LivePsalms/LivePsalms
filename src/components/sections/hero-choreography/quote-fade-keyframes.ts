@@ -1,4 +1,4 @@
-import type { Keyframe } from './keyframes';
+import type { Keyframe } from '../motion-keyframes';
 
 // Psalm 23 quote: three lines rise + unblur on scroll, staggered. Reduced-motion
 // holds them all at the final frame (handled via projectFinalFrame at the call site).
