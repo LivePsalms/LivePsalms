@@ -1,30 +1,18 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
-import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
+import { BRIDGE_COPY, bridgeCascadeKeyframes } from './hero-bridge-content';
+import { applyKeyframes, projectFinalFrame } from './hero-choreography/keyframes';
+import { wordmarkAuraSizes, WORDMARK_COLLAPSE } from './hero-choreography/wordmark-geometry';
+import { collapseKeyframes, COLLAPSE_COLOR_DEEP_UMBER } from './hero-choreography/collapse-keyframes';
+import { maskExpandKeyframes, VIDEO_PLAY_AT } from './hero-choreography/mask-expand-keyframes';
+import { quoteFadeKeyframes } from './hero-choreography/quote-fade-keyframes';
+import { HeroIntroSequence } from './hero-choreography/hero-intro-sequence';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 import { setNavCollapseProgress } from '@/lib/nav-collapse-progress';
 
 gsap.registerPlugin(ScrollTrigger);
-
-// The CSS var `--deep-umber` (#3A3426) is used in inline styles via var(),
-// but GSAP cannot tween a CSS variable cleanly. Keep this literal in sync
-// with `src/index.css:29` if the palette ever changes.
-const DEEP_UMBER_HEX = '#3A3426';
-
-// SVG-userspace collapse offsets. Distance each letter travels from its
-// settled position to the A's center, in viewBox units (positive = moves
-// rightward toward A from the left side; negative = moves leftward toward
-// A from the right side). Used by both the intro spread (reverse direction)
-// and the scroll-collapse effect.
-const COLLAPSE = {
-  P:  653.3,
-  S1: 339.8,
-  L: -313.9,
-  M: -690.5,
-  S2: -1076.4,
-} as const;
 
 export interface HeroProps {
   introActive?: boolean;
@@ -34,7 +22,6 @@ export interface HeroProps {
 
 export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
-  const [showNav, setShowNav] = useState<boolean>(!introActive);
   const svgRef = useRef<SVGSVGElement>(null);
   const darkCanvasRef = useRef<HTMLDivElement>(null);
   const glowAuraRef = useRef<HTMLDivElement>(null);
@@ -66,6 +53,10 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
   const collapseScrollRef = useRef<HTMLDivElement>(null);
   const collapseRingRef = useRef<HTMLDivElement>(null);
 
+  // Intro state-machine controller (created once) and its kill handle.
+  const introRef = useRef<HeroIntroSequence | null>(null);
+  const killIntroRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const container = quoteRef.current;
     const l1 = quoteLine1Ref.current;
@@ -73,40 +64,22 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
     const attr = quoteAttrRef.current;
     if (!container || !l1 || !l2 || !attr) return;
 
+    const targets = { l1, l2, attr };
+    const kfs = quoteFadeKeyframes();
+
     if (prefersReducedMotion) {
-      // Reduced motion: hold all three lines at their settled state, no scroll fade.
-      gsap.set([l1, l2, attr], { opacity: 1, y: 0, filter: 'blur(0px)' });
+      const final = projectFinalFrame(kfs);
+      gsap.set(l1, final.l1);
+      gsap.set(l2, final.l2);
+      gsap.set(attr, final.attr);
       return;
     }
 
     const ctx = gsap.context(() => {
-      gsap.set([l1, l2, attr], { opacity: 0, y: 40, filter: 'blur(10px)' });
-
       const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: container,
-          start: 'top 95%',
-          end: 'top 10%',
-          scrub: 3,
-          invalidateOnRefresh: true,
-        },
+        scrollTrigger: { trigger: container, start: 'top 95%', end: 'top 10%', scrub: 3, invalidateOnRefresh: true },
       });
-
-      tl.to(
-        l1,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        0
-      );
-      tl.to(
-        l2,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        0.35
-      );
-      tl.to(
-        attr,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out', duration: 1 },
-        0.7
-      );
+      applyKeyframes(tl, kfs, targets);
     }, container);
 
     return () => ctx.revert();
@@ -136,71 +109,10 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
     }
 
     const ctx = gsap.context(() => {
-      // Per-beat initial states. Text 1 rises from below (y:40). Text 2 slides
-      // in from offscreen-right (x:120). Text 3 rises with more pronounced
-      // travel (y:80) to read as "coming in" rather than fading. All three
-      // start hidden and blurred.
-      gsap.set(t1, { opacity: 0, y: 40,  filter: 'blur(10px)' });
-      gsap.set(t2, { opacity: 0, x: 120, filter: 'blur(10px)' });
-      gsap.set(t3, { opacity: 0, y: 80,  filter: 'blur(10px)' });
-
       const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: scrollEl,
-          // 'top 80%' (not 'top top') so text 1 begins fading in while the
-          // bridge is still scrolling up into pin position — the top 20vh of
-          // cream stage is visible when the timeline starts scrubbing. CSS
-          // sticky still engages at its natural point (bridge top hitting
-          // viewport top); only the GSAP scrub starts earlier.
-          start: 'top 80%',
-          end: 'bottom bottom',
-          scrub: 2,
-          invalidateOnRefresh: true,
-        },
+        scrollTrigger: { trigger: scrollEl, start: 'top 80%', end: 'bottom bottom', scrub: 2, invalidateOnRefresh: true },
       });
-
-      // Text 1 — enter (rise + blur clear + fade up), hold, exit (opacity only).
-      tl.to(
-        t1,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
-          duration: BRIDGE_PIN_TIMING.text1.holdStart - BRIDGE_PIN_TIMING.text1.enter },
-        BRIDGE_PIN_TIMING.text1.enter,
-      );
-      tl.to(
-        t1,
-        { opacity: 0, ease: 'power1.in',
-          duration: BRIDGE_PIN_TIMING.text1.exit - BRIDGE_PIN_TIMING.text1.holdEnd },
-        BRIDGE_PIN_TIMING.text1.holdEnd,
-      );
-
-      // Text 2 — horizontal slide from offscreen-right into resting position.
-      tl.to(
-        t2,
-        { opacity: 1, x: 0, filter: 'blur(0px)', ease: 'power2.out',
-          duration: BRIDGE_PIN_TIMING.text2.holdStart - BRIDGE_PIN_TIMING.text2.enter },
-        BRIDGE_PIN_TIMING.text2.enter,
-      );
-      tl.to(
-        t2,
-        { opacity: 0, ease: 'power1.in',
-          duration: BRIDGE_PIN_TIMING.text2.exit - BRIDGE_PIN_TIMING.text2.holdEnd },
-        BRIDGE_PIN_TIMING.text2.holdEnd,
-      );
-
-      // Text 3 — long hold; exits in the last 5% so the stage is clean cream
-      // for the final frame before pin release hands off to the mask section.
-      tl.to(
-        t3,
-        { opacity: 1, y: 0, filter: 'blur(0px)', ease: 'power2.out',
-          duration: BRIDGE_PIN_TIMING.text3.holdStart - BRIDGE_PIN_TIMING.text3.enter },
-        BRIDGE_PIN_TIMING.text3.enter,
-      );
-      tl.to(
-        t3,
-        { opacity: 0, ease: 'power1.in',
-          duration: BRIDGE_PIN_TIMING.text3.exit - BRIDGE_PIN_TIMING.text3.holdEnd },
-        BRIDGE_PIN_TIMING.text3.holdEnd,
-      );
+      applyKeyframes(tl, bridgeCascadeKeyframes({ enterX2: 120 }), { t1, t2, t3 });
     }, scrollEl);
 
     return () => ctx.revert();
@@ -227,31 +139,10 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
           invalidateOnRefresh: true,
         },
       });
-
-      // Phase 1 — Expansion (progress 0.00 → 0.55)
-      // Silhouette grows from 75/45% → 100/100% of the viewport; image scale 1.15 → 1.
-      tl.fromTo(
-        clipEl,
-        { width: '75%', height: '45%' },
-        { width: '100%', height: '100%', ease: 'none', duration: 0.55 },
-        0
-      );
-      tl.fromTo(
-        imgEl,
-        { scale: 1.15 },
-        { scale: 1, ease: 'none', duration: 0.55 },
-        0
-      );
-
-      // Phase 2 — Image → video crossfade inside the silhouette (progress 0.70 → 0.90).
-      if (videoEl) {
-        gsap.set(videoEl, { opacity: 0 });
-        tl.to(
-          videoEl,
-          { opacity: 1, ease: 'power1.inOut', duration: 0.2 },
-          0.7
-        );
-      }
+      const kfs = videoEl
+        ? maskExpandKeyframes()
+        : maskExpandKeyframes().filter((k) => k.target !== 'video');
+      applyKeyframes(tl, kfs, { clip: clipEl, img: imgEl, video: videoEl });
     }, scrollEl);
 
     // Playback start: kick the video off slightly before its visual crossfade.
@@ -262,7 +153,7 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
         start: 'top top',
         end: '60% top',
         onUpdate: (self) => {
-          if (self.progress >= 0.65 && videoEl.paused) {
+          if (self.progress >= VIDEO_PLAY_AT && videoEl.paused) {
             videoEl.play().catch(() => {});
           }
         },
@@ -279,17 +170,16 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
        no scroll animation; silhouette rendered statically at full size with video playing. ── */
   useEffect(() => {
     if (!prefersReducedMotion) return;
-
     const clipEl = maskClipRef.current;
     const imgEl = maskImgRef.current;
     const videoEl = maskVideoRef.current;
     if (!clipEl || !imgEl) return;
 
-    // Hold the silhouette at its end-state and autoplay the video.
-    gsap.set(clipEl, { width: '100%', height: '100%' });
-    gsap.set(imgEl, { scale: 1 });
+    const final = projectFinalFrame(maskExpandKeyframes());
+    gsap.set(clipEl, final.clip);
+    gsap.set(imgEl, final.img);
     if (videoEl) {
-      gsap.set(videoEl, { opacity: 1 });
+      gsap.set(videoEl, final.video);
       videoEl.play().catch(() => {});
     }
   }, [prefersReducedMotion]);
@@ -303,11 +193,10 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
     const update = () => {
       const wordmarkWidth = svgEl.getBoundingClientRect().width;
       if (wordmarkWidth === 0) return;
-      // Ratios derived from the original 1100px wordmark:
-      // aura 720px → 0.6545, ring initial 260px → 0.2364, ring final 2800px → 2.5455
-      heroEl.style.setProperty('--aura-size', `${wordmarkWidth * 0.6545}px`);
-      heroEl.style.setProperty('--ring-size', `${wordmarkWidth * 0.2364}px`);
-      heroEl.style.setProperty('--ring-final-size', `${wordmarkWidth * 2.5455}px`);
+      const sizes = wordmarkAuraSizes(wordmarkWidth);
+      heroEl.style.setProperty('--aura-size', `${sizes.aura}px`);
+      heroEl.style.setProperty('--ring-size', `${sizes.ringInitial}px`);
+      heroEl.style.setProperty('--ring-final-size', `${sizes.ringFinal}px`);
     };
 
     update();
@@ -317,105 +206,105 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
   }, []);
 
   /* ── Intro timeline ── */
-  // useLayoutEffect (not useEffect) so the `tl.set(...)` initial-state calls
-  // run synchronously after DOM commit but BEFORE first paint. Otherwise the
+  // The GSAP build runs inside a HeroIntroSequence state-machine controller.
+  // The controller is created once; `play` is injected with the same
+  // useLayoutEffect-timing semantics (it's invoked from `start()` inside the
+  // layout effect below) so the `tl.set(...)` initial-state calls run
+  // synchronously after DOM commit but BEFORE first paint — otherwise the
   // browser briefly paints the fully-composed wordmark before GSAP collapses
   // the letters, causing a visible flash.
+  if (introRef.current === null) {
+    introRef.current = new HeroIntroSequence({
+      play: ({ onHandoff: fireHandoff, onComplete }) => {
+        const svgEl = svgRef.current!;
+        const darkEl = darkCanvasRef.current!;
+        const glowEl = glowAuraRef.current!;
+        const ringEl = pulseRingRef.current!;
+        const heroEl = heroRef.current!;
+        const letterA  = svgEl.querySelector<SVGGElement>('#letter-A')!;
+        const letterP  = svgEl.querySelector<SVGGElement>('#letter-P')!;
+        const letterS1 = svgEl.querySelector<SVGGElement>('#letter-S1')!;
+        const letterL  = svgEl.querySelector<SVGGElement>('#letter-L')!;
+        const letterM  = svgEl.querySelector<SVGGElement>('#letter-M')!;
+        const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2')!;
+
+        const tl = gsap.timeline({ paused: true, onComplete });
+
+        tl.set(letterA,  { opacity: 0, scale: 0.92, transformOrigin: '50% 50%' }, 0);
+        tl.set(letterP,  { x: WORDMARK_COLLAPSE.P,  opacity: 0, filter: 'blur(6px)' }, 0);
+        tl.set(letterS1, { x: WORDMARK_COLLAPSE.S1, opacity: 0, filter: 'blur(6px)' }, 0);
+        tl.set(letterL,  { x: WORDMARK_COLLAPSE.L,  opacity: 0, filter: 'blur(6px)' }, 0);
+        tl.set(letterM,  { x: WORDMARK_COLLAPSE.M,  opacity: 0, filter: 'blur(6px)' }, 0);
+        tl.set(letterS2, { x: WORDMARK_COLLAPSE.S2, opacity: 0, filter: 'blur(6px)' }, 0);
+        tl.set(glowEl, { opacity: 0 }, 0);
+        tl.set(ringEl, { width: 'var(--ring-size, 260px)', height: 'var(--ring-size, 260px)', opacity: 0 }, 0);
+        tl.set(darkEl, { opacity: 1 }, 0);
+
+        tl.to(letterA, { opacity: 1, scale: 1, duration: 1.4, ease: 'power2.out', overwrite: 'auto' }, 0.3);
+        tl.to(glowEl,  { opacity: 0.18, duration: 1.4, ease: 'power1.out', overwrite: 'auto' }, 0.4);
+
+        const lub = 2.10;
+        tl.to(letterA, { scale: 1.022, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
+        tl.to(letterA, { scale: 1.0,   duration: 0.32, ease: 'power3.out', overwrite: 'auto' }, lub + 0.18);
+        tl.to(glowEl,  { opacity: 0.42, scale: 1.08, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
+        tl.to(glowEl,  { opacity: 0.18, scale: 1.0,  duration: 0.32, ease: 'power2.out', overwrite: 'auto' }, lub + 0.18);
+
+        const dub = 2.85;
+        tl.to(letterA, { scale: 1.042, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
+        tl.to(letterA, { scale: 1.0,   duration: 0.50, ease: 'power3.out', overwrite: 'auto' }, dub + 0.22);
+        tl.to(glowEl,  { opacity: 0.78, scale: 1.18, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
+        tl.to(glowEl,  { opacity: 0,    scale: 1.0,  duration: 1.30, ease: 'power2.in',  overwrite: 'auto' }, dub + 0.22);
+
+        const ring = dub + 0.12;
+        const ringFinalCss = getComputedStyle(heroEl).getPropertyValue('--ring-final-size').trim() || '2800px';
+        tl.to(ringEl, { opacity: 0.92, duration: 0.24, ease: 'power2.out', overwrite: 'auto' }, ring);
+        tl.to(ringEl, { width: ringFinalCss, height: ringFinalCss, duration: 1.8, ease: 'power2.out', overwrite: 'auto' }, ring);
+        tl.to(ringEl, { opacity: 0, duration: 1.5, ease: 'power2.in', overwrite: 'auto' }, ring + 0.35);
+
+        const spread = (target: SVGGElement, t: number) => {
+          tl.to(target, { x: 0,                duration: 1.8, ease: 'power3.out' }, t);
+          tl.to(target, { opacity: 1,          duration: 1.4, ease: 'power1.out' }, t);
+          tl.to(target, { filter: 'blur(0px)', duration: 1.6, ease: 'power2.out' }, t);
+        };
+        const spreadAt = 4.20;
+        spread(letterS1, spreadAt);
+        spread(letterL,  spreadAt);
+        spread(letterP,  spreadAt + 0.45);
+        spread(letterM,  spreadAt + 0.45);
+        spread(letterS2, spreadAt + 0.90);
+
+        const handoff = 6.40;
+        tl.to(darkEl, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }, handoff);
+        tl.to(svgEl,  { color: COLLAPSE_COLOR_DEEP_UMBER, duration: 1.2, ease: 'power2.inOut' }, handoff);
+        tl.to(svgEl,  { opacity: 0.45, duration: 1.2, ease: 'power2.inOut' }, handoff);
+        tl.call(fireHandoff, [], handoff);
+
+        tl.play(0);
+        killIntroRef.current = () => tl.kill();
+      },
+      onHandoff,
+      onIntroComplete,
+    });
+  }
+  const introStatus = useSyncExternalStore(
+    introRef.current.subscribe,
+    () => introRef.current!.getSnapshot().status,
+  );
+  const showNav = !introActive || introStatus === 'revealed';
+
   useLayoutEffect(() => {
     if (!introActive) return;
-
-    const svgEl = svgRef.current;
-    const darkEl = darkCanvasRef.current;
-    const glowEl = glowAuraRef.current;
-    const ringEl = pulseRingRef.current;
-    const heroEl = heroRef.current;
-    if (!svgEl || !darkEl || !glowEl || !ringEl || !heroEl) return;
-
-    // Resolve letter elements once via the SVG ref. Direct references avoid
-    // global selector queries and let us drop gsap.context() (see note above).
-    const letterA  = svgEl.querySelector<SVGGElement>('#letter-A');
-    const letterP  = svgEl.querySelector<SVGGElement>('#letter-P');
-    const letterS1 = svgEl.querySelector<SVGGElement>('#letter-S1');
-    const letterL  = svgEl.querySelector<SVGGElement>('#letter-L');
-    const letterM  = svgEl.querySelector<SVGGElement>('#letter-M');
-    const letterS2 = svgEl.querySelector<SVGGElement>('#letter-S2');
-    if (!letterA || !letterP || !letterS1 || !letterL || !letterM || !letterS2) return;
-
-    const tl = gsap.timeline({
-      paused: true,
-      onComplete: () => {
-        onIntroComplete?.();
-      },
-    });
-
-    // Initial states (t=0)
-    tl.set(letterA,  { opacity: 0, scale: 0.92, transformOrigin: '50% 50%' }, 0);
-    tl.set(letterP,  { x: COLLAPSE.P,  opacity: 0, filter: 'blur(6px)' }, 0);
-    tl.set(letterS1, { x: COLLAPSE.S1, opacity: 0, filter: 'blur(6px)' }, 0);
-    tl.set(letterL,  { x: COLLAPSE.L,  opacity: 0, filter: 'blur(6px)' }, 0);
-    tl.set(letterM,  { x: COLLAPSE.M,  opacity: 0, filter: 'blur(6px)' }, 0);
-    tl.set(letterS2, { x: COLLAPSE.S2, opacity: 0, filter: 'blur(6px)' }, 0);
-    tl.set(glowEl, { opacity: 0 }, 0);
-    tl.set(ringEl, { width: 'var(--ring-size, 260px)', height: 'var(--ring-size, 260px)', opacity: 0 }, 0);
-    tl.set(darkEl, { opacity: 1 }, 0);
-
-    // Act I.1 — A enters (0.3 → 1.7s)
-    tl.to(letterA, { opacity: 1, scale: 1, duration: 1.4, ease: 'power2.out', overwrite: 'auto' }, 0.3);
-    tl.to(glowEl,  { opacity: 0.18, duration: 1.4, ease: 'power1.out', overwrite: 'auto' }, 0.4);
-
-    // Act I.3 — Lub (2.10s)
-    const lub = 2.10;
-    tl.to(letterA, { scale: 1.022, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
-    tl.to(letterA, { scale: 1.0,   duration: 0.32, ease: 'power3.out', overwrite: 'auto' }, lub + 0.18);
-    tl.to(glowEl,  { opacity: 0.42, scale: 1.08, duration: 0.18, ease: 'power2.out', overwrite: 'auto' }, lub);
-    tl.to(glowEl,  { opacity: 0.18, scale: 1.0,  duration: 0.32, ease: 'power2.out', overwrite: 'auto' }, lub + 0.18);
-
-    // Act I.5 — Dub (2.85s)
-    const dub = 2.85;
-    tl.to(letterA, { scale: 1.042, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
-    tl.to(letterA, { scale: 1.0,   duration: 0.50, ease: 'power3.out', overwrite: 'auto' }, dub + 0.22);
-    tl.to(glowEl,  { opacity: 0.78, scale: 1.18, duration: 0.22, ease: 'power2.out', overwrite: 'auto' }, dub);
-    tl.to(glowEl,  { opacity: 0,    scale: 1.0,  duration: 1.30, ease: 'power2.in',  overwrite: 'auto' }, dub + 0.22);
-
-    // Act I.6 — Ring expands (2.97s)
-    const ring = dub + 0.12;
-    const ringFinalCss = getComputedStyle(heroEl).getPropertyValue('--ring-final-size').trim() || '2800px';
-    tl.to(ringEl, { opacity: 0.92, duration: 0.24, ease: 'power2.out', overwrite: 'auto' }, ring);
-    tl.to(ringEl, { width: ringFinalCss, height: ringFinalCss, duration: 1.8, ease: 'power2.out', overwrite: 'auto' }, ring);
-    tl.to(ringEl, { opacity: 0, duration: 1.5, ease: 'power2.in', overwrite: 'auto' }, ring + 0.35);
-
-    // Act II — Letter spread (4.20s, three waves)
-    const spread = (target: SVGGElement, t: number) => {
-      tl.to(target, { x: 0,                duration: 1.8, ease: 'power3.out' }, t);
-      tl.to(target, { opacity: 1,          duration: 1.4, ease: 'power1.out' }, t);
-      tl.to(target, { filter: 'blur(0px)', duration: 1.6, ease: 'power2.out' }, t);
-    };
-    const spreadAt = 4.20;
-    spread(letterS1, spreadAt);
-    spread(letterL,  spreadAt);
-    spread(letterP,  spreadAt + 0.45);
-    spread(letterM,  spreadAt + 0.45);
-    spread(letterS2, spreadAt + 0.90);
-
-    // Handoff beat (6.40s → 7.60s) — cream→deep-umber, opacity→0.45, dark canvas fades.
-    // tl.call fires once at the position; setShowNav(true) triggers the existing
-    // masked-image and quote entrance via their existing prop gating, and
-    // onHandoff?.() notifies App so the header can fade in via its showNav prop.
-    const handoff = 6.40;
-    tl.to(darkEl, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }, handoff);
-    tl.to(svgEl,  { color: DEEP_UMBER_HEX, duration: 1.2, ease: 'power2.inOut' }, handoff);
-    tl.to(svgEl,  { opacity: 0.45, duration: 1.2, ease: 'power2.inOut' }, handoff);
-    tl.call(() => {
-      setShowNav(true);
-      onHandoff?.();
-    }, [], handoff);
-
-    tl.play(0);
-
+    introRef.current!.start();
     return () => {
-      tl.kill();
+      // Tear down the gsap timeline, then reset the controller to idle so a
+      // Strict Mode remount (mount → cleanup → mount) rebuilds and replays it.
+      killIntroRef.current?.();
+      introRef.current!.reset();
     };
-  }, [introActive, onIntroComplete, onHandoff]);
+    // Play-once intent: the controller closes over the latest callbacks via its
+    // constructor, so introActive is the only meaningful dep.
+
+  }, [introActive]);
 
   /* ── Scroll-collapse: bloom + three-wave collapse + A pulse + climax + rest ── */
   useLayoutEffect(() => {
@@ -442,12 +331,9 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
           trigger: scrollEl,
           start: 'top top',
           // 60% of the 380vh outer = 228vh of scrub. The remaining 152vh of
-          // the outer is the natural sticky-release exit. Each collapse wave
-          // gets ~84vh of scroll to read at a deliberate pace.
+          // the outer is the natural sticky-release exit.
           end: '60% top',
-          // scrub: 2 lerps the timeline ~2s behind the scroll position, so
-          // fast trackpad flicks decompress into a smooth settle instead of
-          // racing through the collapse.
+          // scrub: 2 lerps the timeline ~2s behind the scroll position.
           scrub: 2,
           invalidateOnRefresh: true,
           // Publishes the wordmark-collapse progress to the singleton so the
@@ -456,71 +342,11 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
           onUpdate: (self) => setNavCollapseProgress(self.progress),
         },
       });
-
-      // Phase 1 — Bloom (progress 0.000 → 0.150)
-      // Wordmark wakes up: opacity 0.45 → 1.0 + faint scale 0.98 → 1.0.
-      tl.fromTo(svgEl,
-        { opacity: 0.45, scale: 0.98, transformOrigin: '50% 50%' },
-        { opacity: 1.0, scale: 1.0, duration: 0.150, ease: 'power2.out' },
-        0);
-
-      // Phase 2 — Wave 1: S₂ (progress 0.150 → 0.377)
-      // Three independent eases per letter, matching the standalone composition.
-      tl.to(letterS2, { x: COLLAPSE.S2,       duration: 0.227, ease: 'power3.out' }, 0.150);
-      tl.to(letterS2, { opacity: 0,           duration: 0.227, ease: 'power1.out' }, 0.150);
-      tl.to(letterS2, { filter: 'blur(6px)',  duration: 0.227, ease: 'power2.out' }, 0.150);
-
-      // Phase 3 — Wave 2: P + M (progress 0.221 → 0.448)
-      tl.to(letterP, { x: COLLAPSE.P,         duration: 0.227, ease: 'power3.out' }, 0.221);
-      tl.to(letterP, { opacity: 0,            duration: 0.227, ease: 'power1.out' }, 0.221);
-      tl.to(letterP, { filter: 'blur(6px)',   duration: 0.227, ease: 'power2.out' }, 0.221);
-
-      tl.to(letterM, { x: COLLAPSE.M,         duration: 0.227, ease: 'power3.out' }, 0.221);
-      tl.to(letterM, { opacity: 0,            duration: 0.227, ease: 'power1.out' }, 0.221);
-      tl.to(letterM, { filter: 'blur(6px)',   duration: 0.227, ease: 'power2.out' }, 0.221);
-
-      // Phase 4 — Wave 3: S₁ + L (progress 0.292 → 0.518)
-      tl.to(letterS1, { x: COLLAPSE.S1,       duration: 0.226, ease: 'power3.out' }, 0.292);
-      tl.to(letterS1, { opacity: 0,           duration: 0.226, ease: 'power1.out' }, 0.292);
-      tl.to(letterS1, { filter: 'blur(6px)',  duration: 0.226, ease: 'power2.out' }, 0.292);
-
-      tl.to(letterL, { x: COLLAPSE.L,         duration: 0.226, ease: 'power3.out' }, 0.292);
-      tl.to(letterL, { opacity: 0,            duration: 0.226, ease: 'power1.out' }, 0.292);
-      tl.to(letterL, { filter: 'blur(6px)',   duration: 0.226, ease: 'power2.out' }, 0.292);
-
-      // Phase 5 — A pulse (progress 0.504 → 0.639)
-      // Single subtle pulse marks the moment of full contact. Peak 1.06.
-      tl.to(letterA, { scale: 1.06, transformOrigin: '50% 50%', duration: 0.071, ease: 'power2.out' }, 0.504);
-      tl.to(letterA, { scale: 1.00, transformOrigin: '50% 50%', duration: 0.064, ease: 'power3.out' }, 0.575);
-
-      // Phase 6.2 — Ring bloom + expand
-      // Width/height (not scale) is animated so the 1px stroke stays a true
-      // hairline at every diameter — the browser re-rasterises the circle each
-      // frame instead of bilinearly up-scaling a 24px raster (which produced
-      // a chunky, blurred edge). Opacity is decoupled so the wave breathes
-      // through its full journey: holds at peak for the first ~0.090 of expand,
-      // then fades over 0.290. power2.out on size matches shock-wave physics
-      // (fast bloom, gentle settle).
-      tl.fromTo(ringEl,
-        { opacity: 0,    width: 8,  height: 8 },
-        { opacity: 0.85, width: 24, height: 24, duration: 0.020, ease: 'power1.out' },
-        0.568);
-      tl.to(ringEl,
-        { width: 940, height: 940, duration: 0.380, ease: 'power2.out' },
-        0.588);
-      tl.to(ringEl,
-        { opacity: 0, duration: 0.290, ease: 'power1.inOut' },
-        0.678);
-
-      // Phase 6.3 — A fill warming (tonal "flash" — additive light would not read on cream)
-      // Letters inherit fill via `currentColor`; tween the SVG's `color` and the
-      // already-invisible siblings are harmlessly warmed too.
-      tl.to(svgEl,
-        { color: '#5A4520', duration: 0.036, ease: 'power2.out' },
-        0.568);
-      tl.to(svgEl,
-        { color: DEEP_UMBER_HEX, duration: 0.156, ease: 'power2.out' },
-        0.604);
+      applyKeyframes(tl, collapseKeyframes(), {
+        svg: svgEl,
+        letterA, letterP, letterS1, letterL, letterM, letterS2,
+        ring: ringEl,
+      });
     }, scrollEl);
 
     return () => ctx.revert();

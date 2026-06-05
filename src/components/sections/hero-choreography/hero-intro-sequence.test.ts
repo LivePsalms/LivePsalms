@@ -51,6 +51,20 @@ describe('HeroIntroSequence — start()', () => {
   });
 });
 
+describe('HeroIntroSequence — reset()', () => {
+  it('returns to idle so a subsequent start() replays (Strict Mode remount)', () => {
+    const { deps, cap } = makeDeps();
+    const r = new HeroIntroSequence(deps);
+    r.start();
+    expect(cap.playCalls).toBe(1);
+    r.reset();
+    expect(r.getSnapshot()).toEqual({ status: 'idle' });
+    r.start();
+    expect(cap.playCalls).toBe(2);
+    expect(r.getSnapshot()).toEqual({ status: 'playing' });
+  });
+});
+
 describe('HeroIntroSequence — handoff before complete', () => {
   it('handoff flips status → revealed and fires onHandoff', () => {
     const { deps, cap } = makeDeps();

@@ -41,6 +41,16 @@ export class HeroIntroSequence extends Observable<HeroIntroState> {
     });
   };
 
+  // Returns the controller to `idle` so a subsequent `start()` rebuilds the
+  // timeline. Required because the controller is created once and persists
+  // across React Strict Mode's mount → cleanup → mount cycle: the cleanup tears
+  // down the gsap timeline, so the remount must be able to replay. Mirrors the
+  // reset()/dispose() lifecycle on PurposeDetailReveal. The gsap teardown itself
+  // lives in the component (killIntroRef), so this only resets the status.
+  reset = (): void => {
+    this.set('idle');
+  };
+
   private set(status: HeroIntroStatus): void {
     (this as unknown as { setState: (u: (p: HeroIntroState) => HeroIntroState) => void })
       .setState(() => ({ status }));
