@@ -7,6 +7,7 @@ import type { Devotion } from '@/data/devotions';
 import { extractDominantColor } from '@/utils/extractDominantColor';
 import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
 import { useRouteTransitionContext } from '@/transitions/RouteTransitionContext';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,22 +31,6 @@ export function applyCuratedBreak(
     words.slice(0, breakAfter).join(' '),
     words.slice(breakAfter).join(' '),
   ];
-}
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  return reduced;
 }
 
 function useNextProjectColor(nextProject: Project): string {
@@ -92,7 +77,7 @@ export function NextDevotionHandoff({
 }: NextDevotionHandoffProps) {
   void currentProject; // reserved for future analytics
 
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = usePrefersReducedMotion();
   const pillColor = useNextProjectColor(nextProject);
   const rootRef = useRef<HTMLDivElement>(null);
   const leftImgRef = useRef<HTMLImageElement>(null);

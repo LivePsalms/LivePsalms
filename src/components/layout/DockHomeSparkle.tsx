@@ -5,7 +5,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { usePrefersReducedMotion } from '@/notepad-landing/hooks/use-prefers-reduced-motion';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 export interface DockHomeSparkleHandle {
   burst: () => void;

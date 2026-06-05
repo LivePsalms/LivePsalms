@@ -1,7 +1,7 @@
 // src/notepad-landing/sections/garden-scene/stations/04-scripture-margin.tsx
 import { useEffect, useRef } from 'react';
 import { copy } from '../../../data/copy';
-import { usePrefersReducedMotion } from '../../../hooks/use-prefers-reduced-motion';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 interface Props { isActive: boolean }
 
