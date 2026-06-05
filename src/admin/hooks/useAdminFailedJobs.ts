@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { LamplightAdapter, AdminJobRow } from '@/notepad/storage/lamplight-adapter';
+import { useAsyncResource } from './useAsyncResource';
 
 export interface UseAdminFailedJobsArgs {
   adapter: LamplightAdapter;
@@ -21,32 +22,15 @@ export function useAdminFailedJobs({
   kind,
   userSearch,
 }: UseAdminFailedJobsArgs): UseAdminFailedJobsResult {
-  const [jobs, setJobs] = useState<AdminJobRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const since = new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString();
-      const next = await adapter.adminListJobs({
-        status: ['failed'],
-        kind: kind ? [kind] : undefined,
-        userSearch: userSearch || undefined,
-        since,
-      });
-      setJobs(next);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setLoading(false);
-    }
-  }, [adapter, sinceDays, kind, userSearch]);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { jobs, loading, error, refetch: fetch };
+  const fetcher = useCallback(
+    () => adapter.adminListJobs({
+      status: ['failed'],
+      kind: kind ? [kind] : undefined,
+      userSearch: userSearch || undefined,
+      since: new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString(),
+    }),
+    [adapter, sinceDays, kind, userSearch],
+  );
+  const { data, loading, error, refetch } = useAsyncResource<AdminJobRow[]>(fetcher, []);
+  return { jobs: data, loading, error, refetch };
 }
