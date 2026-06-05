@@ -70,7 +70,7 @@ describe('actTwoKeyframes', () => {
     expect(rightReturn[0].from).toBeUndefined();
   });
 
-  it('excludes the empty spacer (every keyframe has a named target)', () => {
+  it('every keyframe resolves to a known choreography target', () => {
     for (const kf of kfs) {
       expect(['left', 'right', 'fill', 'content']).toContain(kf.target);
     }
