@@ -1,9 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import type { LamplightAdapter, AdminJobRow, AdminJobFilters } from '@/notepad/storage/lamplight-adapter';
+import { useCallback } from 'react';
+import type { LamplightAdapter, AdminJobRow } from '@/notepad/storage/lamplight-adapter';
+import { useAsyncResource } from './useAsyncResource';
 
 export interface UseAdminFailedJobsArgs {
   adapter: LamplightAdapter;
-  filters: AdminJobFilters;
+  sinceDays: number;
+  kind?: string;
+  userSearch?: string;
 }
 
 export interface UseAdminFailedJobsResult {
@@ -15,30 +18,19 @@ export interface UseAdminFailedJobsResult {
 
 export function useAdminFailedJobs({
   adapter,
-  filters,
+  sinceDays,
+  kind,
+  userSearch,
 }: UseAdminFailedJobsArgs): UseAdminFailedJobsResult {
-  const [jobs, setJobs] = useState<AdminJobRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const filtersKey = JSON.stringify(filters);
-
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await adapter.adminListJobs({ status: ['failed'], ...filters });
-      setJobs(next);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setLoading(false);
-    }
-  }, [adapter, filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { jobs, loading, error, refetch: fetch };
+  const fetcher = useCallback(
+    () => adapter.adminListJobs({
+      status: ['failed'],
+      kind: kind ? [kind] : undefined,
+      userSearch: userSearch || undefined,
+      since: new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString(),
+    }),
+    [adapter, sinceDays, kind, userSearch],
+  );
+  const { data, loading, error, refetch } = useAsyncResource<AdminJobRow[]>(fetcher, []);
+  return { jobs: data, loading, error, refetch };
 }

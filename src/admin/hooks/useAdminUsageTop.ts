@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { LamplightAdapter, AdminUsageRow } from '@/notepad/storage/lamplight-adapter';
+import { useAsyncResource } from './useAsyncResource';
 
 export interface UseAdminUsageTopArgs {
   adapter: LamplightAdapter;
@@ -19,26 +20,10 @@ export function useAdminUsageTop({
   windowDays,
   limit = 50,
 }: UseAdminUsageTopArgs): UseAdminUsageTopResult {
-  const [rows, setRows] = useState<AdminUsageRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await adapter.adminUsageTop(windowDays, limit);
-      setRows(next);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setLoading(false);
-    }
-  }, [adapter, windowDays, limit]);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { rows, loading, error, refetch: fetch };
+  const fetcher = useCallback(
+    () => adapter.adminUsageTop(windowDays, limit),
+    [adapter, windowDays, limit],
+  );
+  const { data, loading, error, refetch } = useAsyncResource<AdminUsageRow[]>(fetcher, []);
+  return { rows: data, loading, error, refetch };
 }
