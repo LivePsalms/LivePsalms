@@ -116,6 +116,36 @@ describe('useAsyncResource', () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it('UNMOUNT GUARD: resolving an in-flight fetch after unmount is a safe no-op', async () => {
+    // The mount fetch stays pending until we resolve this deferred.
+    const d = defer<string>();
+    const fetcher = vi.fn(() => d.promise);
+
+    const { unmount } = renderHook(() => useAsyncResource(fetcher, ''));
+
+    // The mount effect kicked off a fetch that is now in flight.
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // Watch for React's "state update on an unmounted component" warning.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      // Unmount while the fetch is still pending; mountedRef flips to false.
+      unmount();
+
+      // Resolve the now-stale fetch — the mountedRef guard must short-circuit.
+      await act(async () => {
+        d.resolve('late');
+        await d.promise;
+        await Promise.resolve();
+      });
+
+      // No throw (reaching here proves that) and no React warning logged.
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it('autoRefreshMs triggers an additional fetch after the interval', async () => {
     vi.useFakeTimers();
     try {
