@@ -92,6 +92,34 @@ export interface ContentRuleResult {
   violations: ContentRuleViolation[];
 }
 
+/**
+ * Stricter-prompt lines for the banned/contested/growth content families,
+ * derived from the families present in `violations`. Returns one line per
+ * offending family (the 'name' family is intentionally not handled here — it is
+ * artifact-specific and composed by the daily-devotion pipeline). Lifted from
+ * two byte-identical copies in the smoke and daily pipelines.
+ */
+export function formatContentFamilyStricter(violations: ContentRuleViolation[]): string[] {
+  const families = new Set(violations.map((v) => v.family));
+  const parts: string[] = [];
+  if (families.has('banned')) {
+    parts.push(
+      'On retry: do not produce prophetic, oracular, or "God is telling you" style language. Speak of Scripture in possibility, not pronouncement.',
+    );
+  }
+  if (families.has('contested')) {
+    parts.push(
+      'On retry: avoid interpreting the contested passages mentioned. Name them gently and defer.',
+    );
+  }
+  if (families.has('growth')) {
+    parts.push(
+      'On retry: do not use streak / "missed yesterday" / "get back on track" / effort-shaming language.',
+    );
+  }
+  return parts;
+}
+
 const SNIPPET_RADIUS = 40; // chars before + after the match
 
 function snippetAround(text: string, start: number, end: number): string {

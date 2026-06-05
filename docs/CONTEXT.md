@@ -506,3 +506,36 @@ Does **not** own: HTTP/CORS, env-key checks, JSON parsing, JWT→`userId` deriva
 Pure of HTTP and Supabase wiring: `checkQuota` / `recordUsage` / `classifyError` are injected, so the envelope is node-testable with fakes. The invariants that were previously un-assertable at the dispatcher level — quota-exceeded records exactly one error row and never calls the body; success records exactly one row; a `usage:null` body records nothing; a thrown body records one `model:null` error row with the classified code — get one focused test instead of being re-proven piecemeal across three pipeline suites.
 
 The P2-5 `pg_cron` daily-devotion trigger composes through this seam: the cron calls `runGeneration(deps, meta, dailyDevotionBody)` and inherits quota + usage accounting without re-implementing them. That is the leverage the seam buys — the reason it is not just `index.ts` tidied.
+
+## GenerateWithRetry
+
+The deepened module one layer below `GenerationLifecycle`: it owns the generate→validate→maybe-retry-once loop that every Lamplight pipeline previously open-coded. Surfaced as `generateWithRetry(config)` in `supabase/functions/_shared/generate-with-retry.ts`.
+
+Each pipeline used to repeat the same shape — compose system prompt (base voice fragment + artifact stance + a stricter suffix on retry), call `llm.generate`, run validators, and on failure re-prompt once with a sterner instruction. The bodies differed only in their artifact type, their validators, and the prose of the stricter suffix. That sameness was the duplication; the wrapper concentrates it.
+
+```ts
+interface GenerateWithRetryConfig<TParsed, TViolations> {
+  llm: LLMAdapter;
+  model: LLMModel;
+  maxTokens: number;
+  artifactSystem: string;
+  systemTokens?: Record<string, string>;
+  messages: GenerateInput['messages'];
+  tool: ToolSchema;
+  validate: (parsed: TParsed) => Promise<{ ok: boolean; violations: TViolations }>;
+  formatStricter: (violations: TViolations) => string;
+  maxAttempts?: number; // default 2
+}
+
+type RetryOutcome<TParsed, TViolations> =
+  | { ok: true; parsed: TParsed; modelUsed: string; promptTokens: number; completionTokens: number; attempts: number }
+  | { ok: false; violations: TViolations; modelUsed: string; attempts: number };
+```
+
+Like `GenerationLifecycle`, it returns **data, not side effects** — a `RetryOutcome`, never a DB write. Cache/idempotency lookups stay *before* the wrapper and persistence stays *after* it, in each pipeline: the smoke-test pipeline just returns, daily-devotion does an insert + race-reread, connection-why upserts by composite hash. Those genuinely-different success branches remain visible in the pipelines; only the identical loop moved.
+
+Generic over `TParsed` (artifact shape) and `TViolations` (the pipeline's own violation bag), so each caller keeps its own validators and its own stricter-prose. The wrapper bakes in `LAMPLIGHT_SYSTEM_FRAGMENT` as the base voice and threads the prior attempt's violations into the retry prompt via `formatStricter` — the suffix is empty on the first attempt and only appears on the retry.
+
+Pure of Supabase: it takes an injected `LLMAdapter`, so it is node-testable with a fake adapter that scripts a parsed value per attempt and records the system prompt it was handed. The invariants that were previously re-proven across three pipeline suites — first-attempt-valid makes one call with no stricter suffix; an invalid first attempt retries once with the violations threaded forward; both-invalid returns `ok:false` with the *last* violations and `modelUsed` from the last call; `systemTokens` substitute into the composed prompt — get one focused test (`generate-with-retry.test.ts`).
+
+`formatContentFamilyStricter` (in `validators.ts`) is the shared companion helper: it maps the `banned` / `contested` / `growth` content-violation families to their stricter-prompt lines, deduplicating prose that the smoke and daily pipelines held byte-identical copies of. It deliberately does **not** handle the `name` family — that is daily-devotion-specific and composed in that pipeline's `formatStricter`.

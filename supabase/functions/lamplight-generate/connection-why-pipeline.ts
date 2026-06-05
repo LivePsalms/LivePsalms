@@ -17,9 +17,8 @@ import {
   BANNED_PHRASES,
   CONTESTED_PASSAGES,
   GROWTH_BANNED_PHRASES,
-  LAMPLIGHT_SYSTEM_FRAGMENT,
-  composeSystem,
 } from '../_shared/voice.ts';
+import { generateWithRetry } from '../_shared/generate-with-retry.ts';
 import { CONNECTION_WHY_PROMPT } from './prompts/connection-why.ts';
 import type { UsageCore } from '../_shared/usage.ts';
 
@@ -56,10 +55,9 @@ export type ConnectionWhyPipelineResult =
       usage: UsageCore | null;
     };
 
-function formatConnectionStricterSuffix(violations: {
-  shape: ConnectionShapeViolation[];
-  content: ContentRuleViolation[];
-}): string {
+type ConnectionViolations = { shape: ConnectionShapeViolation[]; content: ContentRuleViolation[] };
+
+function formatConnectionStricterSuffix(violations: ConnectionViolations): string {
   const parts: string[] = ['On retry: stay within 24 words; describe, do not advise.'];
   if (violations.shape.some((v) => v.rule === 'word_count_exceeded')) {
     parts.push('Your previous answer was too long — strict word budget is 24.');
@@ -101,74 +99,61 @@ export async function runConnectionWhyPipeline(args: {
   }
 
   // 2. Generate → validate → maybe-retry-once.
-  let attempts = 0;
-  let lastViolations:
-    | { shape: ConnectionShapeViolation[]; content: ContentRuleViolation[] }
-    | null = null;
-  let lastModelUsed = 'claude-haiku-4-5-20251001';
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    attempts++;
-    const stricter =
-      attempt === 0 ? '' : formatConnectionStricterSuffix(lastViolations!);
-    const system = composeSystem({
-      base: LAMPLIGHT_SYSTEM_FRAGMENT,
-      artifact: CONNECTION_WHY_PROMPT.system,
-      stricter,
-    });
-
-    const { parsed, modelUsed, promptTokens, completionTokens } = await llm.generate<ConnectionWhyArtifact>({
-      model: 'haiku',
-      system,
-      messages: CONNECTION_WHY_PROMPT.buildMessages(ctx),
-      tool: CONNECTION_WHY_PROMPT.tool,
-      maxTokens: 256,
-    });
-    lastModelUsed = modelUsed;
-
-    const shape = validateConnectionWhyShape(parsed);
-    const flat = flattenConnectionWhyText(parsed);
-    const content = await applyContentRules(flat, {
-      banned: BANNED_PHRASES,
-      contested: CONTESTED_PASSAGES,
-      growth: GROWTH_BANNED_PHRASES,
-    });
-
-    if (shape.ok && content.ok) {
-      const upsertRes = await supabase
-        .from('lamplight_connections')
-        .upsert(
-          {
-            note_id: ctx.source.id,
-            related_note_id: ctx.related.id,
-            why: parsed.why,
-            score: ctx.similarity,
-            content_hash: ctx.compositeHash,
-          },
-          { onConflict: 'note_id,related_note_id' },
-        );
-      if (upsertRes.error) throw upsertRes.error;
-
+  const outcome = await generateWithRetry<ConnectionWhyArtifact, ConnectionViolations>({
+    llm,
+    model: 'haiku',
+    maxTokens: 256,
+    artifactSystem: CONNECTION_WHY_PROMPT.system,
+    messages: CONNECTION_WHY_PROMPT.buildMessages(ctx),
+    tool: CONNECTION_WHY_PROMPT.tool,
+    validate: async (parsed) => {
+      const shape = validateConnectionWhyShape(parsed);
+      const content = await applyContentRules(flattenConnectionWhyText(parsed), {
+        banned: BANNED_PHRASES,
+        contested: CONTESTED_PASSAGES,
+        growth: GROWTH_BANNED_PHRASES,
+      });
       return {
-        ok: true,
-        why: parsed.why,
-        cached: false,
-        model_used: modelUsed,
-        prompt_version: promptVersion,
-        attempts,
-        usage: { model: modelUsed, tokens_in: promptTokens ?? 0, tokens_out: completionTokens ?? 0, status: 'ok' },
+        ok: shape.ok && content.ok,
+        violations: { shape: shape.violations, content: content.violations },
       };
-    }
-    lastViolations = { shape: shape.violations, content: content.violations };
+    },
+    formatStricter: formatConnectionStricterSuffix,
+  });
+
+  if (!outcome.ok) {
+    return {
+      ok: false,
+      reason: 'validators_failed',
+      violations: outcome.violations,
+      model_used: outcome.modelUsed,
+      prompt_version: promptVersion,
+      attempts: outcome.attempts,
+      usage: { model: outcome.modelUsed, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'validators_failed' },
+    };
   }
 
+  const upsertRes = await supabase
+    .from('lamplight_connections')
+    .upsert(
+      {
+        note_id: ctx.source.id,
+        related_note_id: ctx.related.id,
+        why: outcome.parsed.why,
+        score: ctx.similarity,
+        content_hash: ctx.compositeHash,
+      },
+      { onConflict: 'note_id,related_note_id' },
+    );
+  if (upsertRes.error) throw upsertRes.error;
+
   return {
-    ok: false,
-    reason: 'validators_failed',
-    violations: lastViolations!,
-    model_used: lastModelUsed,
+    ok: true,
+    why: outcome.parsed.why,
+    cached: false,
+    model_used: outcome.modelUsed,
     prompt_version: promptVersion,
-    attempts,
-    usage: { model: lastModelUsed, tokens_in: 0, tokens_out: 0, status: 'error', error_code: 'validators_failed' },
+    attempts: outcome.attempts,
+    usage: { model: outcome.modelUsed, tokens_in: outcome.promptTokens, tokens_out: outcome.completionTokens, status: 'ok' },
   };
 }
