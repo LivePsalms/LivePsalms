@@ -4,6 +4,32 @@ import type { NoteDecoration } from '../types';
 const MIN_WIDTH_PCT = 0.03;
 const MAX_WIDTH_PCT = 1;
 
+// zIndex of the editor text wrapper. Single source of truth (Editor.tsx imports it).
+export const TEXT_Z = 100000;
+// A selected decoration always sits on top so its handles stay grabbable.
+export const SELECTED_Z = 1000000;
+
+export function decorationZIndex(d: NoteDecoration, selected: boolean): number {
+  if (selected) return SELECTED_Z;
+  if (d.behindText) return d.z;
+  return TEXT_Z + d.z;
+}
+
+export function pointerAngleDeg(
+  center: { x: number; y: number },
+  point: { x: number; y: number },
+): number {
+  return Math.atan2(point.y - center.y, point.x - center.x) * 180 / Math.PI;
+}
+
+export function applyRotationDrag(
+  startRotation: number,
+  startAngle: number,
+  currentAngle: number,
+): number {
+  return rotationDeg(startRotation + (currentAngle - startAngle));
+}
+
 export function moveTo(
   d: NoteDecoration,
   { dxPx, dyPx, contentWidth }: { dxPx: number; dyPx: number; contentWidth: number },

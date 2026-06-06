@@ -3,6 +3,7 @@
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DecorationItem } from './DecorationItem';
+import { TEXT_Z, SELECTED_Z } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 vi.mock('../styles/manifest', () => ({
@@ -59,13 +60,70 @@ describe('DecorationItem', () => {
     );
   });
 
-  it('emits a rotated decoration when the rotate handle is pressed', () => {
+  it('steps rotation by 15 degrees from the action-bar rotate button', () => {
     const h = handlers();
     const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
-    fireEvent.pointerDown(getByLabelText('Rotate decoration'), { pointerId: 1 });
+    fireEvent.click(getByLabelText('Rotate decoration 15 degrees'));
     expect(h.onChange).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'a', rotation: 15 }),
     );
+  });
+
+  it('toggles flipH and reflects scaleX(-1) in the body transform (not the chrome)', () => {
+    const h = handlers();
+    const { getByLabelText, getByTestId, rerender } = render(
+      <DecorationItem decoration={d} selected {...h} />,
+    );
+    fireEvent.click(getByLabelText('Flip horizontal'));
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', flipH: true }),
+    );
+    rerender(<DecorationItem decoration={{ ...d, flipH: true }} selected {...h} />);
+    // Flip lives on the asset body so handles/action-bar glyphs stay un-mirrored.
+    const body = getByTestId('decoration-body-a');
+    expect(body.style.transform).toContain('scaleX(-1)');
+    expect(body.parentElement!.style.transform).not.toContain('scaleX(-1)');
+  });
+
+  it('toggles flipV and reflects scaleY(-1) in the body transform (not the chrome)', () => {
+    const h = handlers();
+    const { getByLabelText, getByTestId, rerender } = render(
+      <DecorationItem decoration={d} selected {...h} />,
+    );
+    fireEvent.click(getByLabelText('Flip vertical'));
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', flipV: true }),
+    );
+    rerender(<DecorationItem decoration={{ ...d, flipV: true }} selected {...h} />);
+    const body = getByTestId('decoration-body-a');
+    expect(body.style.transform).toContain('scaleY(-1)');
+    expect(body.parentElement!.style.transform).not.toContain('scaleY(-1)');
+  });
+
+  it('renders the computed zIndex for selected, behind-text, and default cases', () => {
+    const h = handlers();
+    const { getByTestId, rerender } = render(<DecorationItem decoration={d} selected {...h} />);
+    const root = () => getByTestId('decoration-body-a').parentElement!;
+    expect(root().style.zIndex).toBe(String(SELECTED_Z));
+
+    rerender(<DecorationItem decoration={{ ...d, behindText: true }} selected={false} {...h} />);
+    expect(root().style.zIndex).toBe(String(d.z));
+
+    rerender(<DecorationItem decoration={d} selected={false} {...h} />);
+    expect(root().style.zIndex).toBe(String(TEXT_Z + d.z));
+  });
+
+  it('drag-rotates via the rotate handle (jsdom center at origin)', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    const handle = getByLabelText('Rotate decoration');
+    // jsdom getBoundingClientRect is 0,0 so center is origin.
+    // Down at (10,0) -> angle 0; move to (0,10) -> angle 90; startRotation 0 -> ~90.
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 0, clientY: 10, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    const last = h.onChange.mock.calls.at(-1)![0] as NoteDecoration;
+    expect(last.rotation).toBeCloseTo(90, 5);
   });
 
   it('emits a wider decoration when the resize handle is dragged', () => {

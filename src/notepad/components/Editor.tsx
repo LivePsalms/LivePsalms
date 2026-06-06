@@ -18,6 +18,7 @@ import {
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
 import { DecorationLayer } from '../decorations/DecorationLayer';
+import { TEXT_Z } from '../decorations/decoration-geometry';
 import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
 import { useNoteCollection } from '../context/useNoteCollection';
@@ -327,7 +328,9 @@ export function NotepadEditor({
           position: 'relative',
         }}
       >
-        <div>
+        {/* isolate: contains the text + decoration zIndex contest in one
+            stacking context so decorations can render behind OR in front of text. */}
+        <div style={{ isolation: 'isolate' }}>
           {/* Title */}
           <input
             type="text"
@@ -414,7 +417,10 @@ export function NotepadEditor({
               // click event drives it correctly and clears it when tapping off a verse.
               if (isBottomToolbar) handleMouseOver(e);
             }}
-            style={{ flex: 1 }}
+            // Text sits at TEXT_Z; decorations compute zIndex relative to this so
+            // 'send to back' drops them below the text and 'bring to front' lifts
+            // them above it (see decorationZIndex).
+            style={{ flex: 1, position: 'relative', zIndex: TEXT_Z }}
           >
             <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
           </div>

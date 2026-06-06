@@ -8,6 +8,9 @@ export interface NoteDecoration {
   widthPct: number;  // 0..1, width normalized to content width
   rotation: number;  // degrees
   z: number;         // stacking order
+  behindText?: boolean; // when true, renders behind editor text (default = in front of text)
+  flipH?: boolean;   // horizontal flip
+  flipV?: boolean;   // vertical flip
 }
 
 export interface Note {
