@@ -1,5 +1,5 @@
 // scripts/build-style-assets.mjs
-import { readdir, mkdir, writeFile, stat } from 'node:fs/promises';
+import { readdir, mkdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import sharp from 'sharp';
 import {
