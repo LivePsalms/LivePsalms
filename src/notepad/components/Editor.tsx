@@ -392,6 +392,11 @@ export function NotepadEditor({
             onMouseOut={handleMouseOut}
             onClick={(e) => {
               handleClick(e);
+              // The decoration overlay is pointerEvents:none over empty space, so
+              // clicks on the editor fall through to here — deselect any decoration.
+              // Clicks on a decoration hit its pointerEvents:auto island instead and
+              // never reach this handler, so this only fires for genuine editor clicks.
+              setSelectedDecoration(null);
               // On mobile (bottom toolbar) there is no hover; a tap shows/dismisses
               // the verse tooltip. handleMouseOver reads e.target.closest(...) so a
               // click event drives it correctly and clears it when tapping off a verse.
