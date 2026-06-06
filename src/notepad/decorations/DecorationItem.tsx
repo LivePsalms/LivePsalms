@@ -1,7 +1,7 @@
 // src/notepad/decorations/DecorationItem.tsx
 import { useRef } from 'react';
 import { getStyleAsset } from '../styles/manifest';
-import { moveTo, resizeWidthPct, rotationDeg } from './decoration-geometry';
+import { moveTo, resizeWidthPct, rotationDeg, pinchTransform } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 interface Props {
@@ -24,6 +24,21 @@ export function DecorationItem({
 }: Props) {
   const asset = getStyleAsset(d.assetId);
   const gesture = useRef<Gesture | null>(null);
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinch = useRef<{ startDist: number; startAngle: number; base: NoteDecoration } | null>(null);
+
+  const twoPointerMetrics = () => {
+    const pts = [...pointers.current.values()];
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    return { dist: Math.hypot(dx, dy), angle: (Math.atan2(dy, dx) * 180) / Math.PI };
+  };
+
+  const endPointer = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    end(e);
+  };
 
   if (!asset) return null;
 
@@ -84,11 +99,40 @@ export function DecorationItem({
     >
       <div
         data-testid={`decoration-body-${d.id}`}
-        onPointerDown={start('move')}
-        onPointerMove={move}
-        onPointerUp={end}
-        onPointerCancel={end}
-        style={{ cursor: 'move' }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pointers.current.size === 2) {
+            const m = twoPointerMetrics();
+            pinch.current = { startDist: m.dist, startAngle: m.angle, base: d };
+            gesture.current = null;
+          } else {
+            gesture.current = { kind: 'move', startX: e.clientX, startY: e.clientY, base: d };
+            onSelect(d.id);
+          }
+          try {
+            (e.target as Element).setPointerCapture?.(e.pointerId);
+          } catch {
+            /* jsdom may not implement pointer capture; harmless no-op */
+          }
+        }}
+        onPointerMove={(e) => {
+          if (pointers.current.has(e.pointerId)) {
+            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          }
+          if (pinch.current && pointers.current.size >= 2) {
+            const m = twoPointerMetrics();
+            onChange(pinchTransform(pinch.current.base, {
+              startDist: pinch.current.startDist, dist: m.dist,
+              startAngle: pinch.current.startAngle, angle: m.angle,
+            }));
+            return;
+          }
+          move(e);
+        }}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        style={{ cursor: 'move', touchAction: 'none' }}
       >
         <img src={asset.displayUrl} alt="" draggable={false}
           style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }} />

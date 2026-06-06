@@ -1,7 +1,7 @@
 // src/notepad/decorations/decoration-geometry.test.ts
 import { describe, it, expect } from 'vitest';
 import {
-  moveTo, resizeWidthPct, rotationDeg, clampDecoration,
+  moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -45,5 +45,26 @@ describe('clampDecoration', () => {
   it('keeps xPct within [0, 1] and yPx non-negative', () => {
     expect(clampDecoration({ ...d, xPct: 1.5, yPx: -20 })).toMatchObject({ xPct: 1, yPx: 0 });
     expect(clampDecoration({ ...d, xPct: -0.2 }).xPct).toBe(0);
+  });
+});
+
+describe('pinchTransform', () => {
+  const base: NoteDecoration = {
+    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1,
+  };
+
+  it('scales width by the distance ratio and clamps', () => {
+    const out = pinchTransform(base, { startDist: 100, dist: 200, startAngle: 0, angle: 0 });
+    expect(out.widthPct).toBeCloseTo(0.4); // 0.2 * 2
+  });
+
+  it('adds the angle delta to rotation, normalized', () => {
+    const out = pinchTransform(base, { startDist: 100, dist: 100, startAngle: 350, angle: 20 });
+    expect(out.rotation).toBe(30); // 0 + (20 - 350) = -330 → 30
+  });
+
+  it('ignores a zero start distance (no NaN)', () => {
+    const out = pinchTransform(base, { startDist: 0, dist: 50, startAngle: 0, angle: 0 });
+    expect(out.widthPct).toBe(base.widthPct);
   });
 });

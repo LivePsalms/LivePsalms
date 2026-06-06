@@ -34,3 +34,17 @@ export function clampDecoration(d: NoteDecoration): NoteDecoration {
     yPx: Math.max(0, d.yPx),
   };
 }
+
+export function pinchTransform(
+  d: NoteDecoration,
+  { startDist, dist, startAngle, angle }:
+    { startDist: number; dist: number; startAngle: number; angle: number },
+): NoteDecoration {
+  const factor = startDist > 0 ? dist / startDist : 1;
+  const raw = d.widthPct * factor;
+  return {
+    ...d,
+    widthPct: Math.min(MAX_WIDTH_PCT, Math.max(MIN_WIDTH_PCT, raw)),
+    rotation: rotationDeg(d.rotation + (angle - startAngle)),
+  };
+}

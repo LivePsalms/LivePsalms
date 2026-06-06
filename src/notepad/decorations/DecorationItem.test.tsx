@@ -79,4 +79,16 @@ describe('DecorationItem', () => {
       expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.3, 5) }),
     );
   });
+
+  it('emits a pinch-scaled decoration when a second pointer is added and moved', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const body = getByTestId('decoration-body-a');
+    fireEvent.pointerDown(body, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerDown(body, { clientX: 100, clientY: 0, pointerId: 2 });
+    fireEvent.pointerMove(body, { clientX: 200, clientY: 0, pointerId: 2 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.4, 5) }),
+    );
+  });
 });
