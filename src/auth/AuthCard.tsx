@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
 
-function mapAuthError(message: string, mode: 'login' | 'signup'): string {
+function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): string {
+  if (mode === 'reset') return message;
   const m = message.toLowerCase();
   if (mode === 'login') {
     if (m.includes('invalid login credentials') || m.includes('invalid_credentials')) {
@@ -28,7 +29,7 @@ function mapAuthError(message: string, mode: 'login' | 'signup'): string {
   return message;
 }
 
-type Mode = 'login' | 'signup';
+type Mode = 'login' | 'signup' | 'reset';
 
 export interface AuthCardProps {
   /** Called after a successful email/password sign-in. OAuth flows redirect on their own. */
@@ -70,6 +71,9 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
         }
         await session.signUp(email, password, fullName);
         setSuccess('Check your email to verify your account.');
+      } else if (mode === 'reset') {
+        await session.resetPassword(email);
+        setSuccess('If an account exists for that email, a reset link is on its way.');
       } else {
         await session.signIn(email, password);
         onAuthenticated?.();
@@ -119,10 +123,12 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             fontFamily: 'Cormorant Garamond, serif',
           }}
         >
-          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
         </h1>
       </div>
 
+      {mode !== 'reset' && (
+        <>
       {/* Google sign-in */}
       <button
         onClick={handleGoogle}
@@ -171,6 +177,8 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
         </span>
         <div className="flex-1 h-px" style={{ background: 'var(--pale-stone)' }} />
       </div>
+        </>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="auth-form flex flex-col gap-3">
@@ -203,21 +211,38 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             color: 'var(--deep-umber)',
           }}
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-          style={{
-            border: '1px solid var(--pale-stone)',
-            background: 'var(--plaster)',
-            fontFamily: 'Outfit, sans-serif',
-            color: 'var(--deep-umber)',
-          }}
-        />
+        {mode !== 'reset' && (
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+            style={{
+              border: '1px solid var(--pale-stone)',
+              background: 'var(--plaster)',
+              fontFamily: 'Outfit, sans-serif',
+              color: 'var(--deep-umber)',
+            }}
+          />
+        )}
+
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('reset');
+              setError(null);
+              setSuccess(null);
+            }}
+            className="self-end text-xs underline hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+          >
+            Forgot password?
+          </button>
+        )}
 
         {mode === 'signup' && (
           <label
@@ -273,29 +298,50 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             ? 'Please wait...'
             : mode === 'login'
               ? 'Sign In'
-              : 'Create Account'}
+              : mode === 'signup'
+                ? 'Create Account'
+                : 'Send reset link'}
         </button>
       </form>
 
       {/* Toggle mode */}
-      <p
-        className="text-center text-xs mt-5"
-        style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-      >
-        {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
-        <button
-          onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login');
-            setError(null);
-            setSuccess(null);
-            setAgreedToTerms(false);
-          }}
-          className="underline hover:opacity-70 transition-opacity"
-          style={{ color: 'var(--deep-umber)' }}
+      {mode === 'reset' ? (
+        <p
+          className="text-center text-xs mt-5"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
         >
-          {mode === 'login' ? 'Sign up' : 'Sign in'}
-        </button>
-      </p>
+          <button
+            onClick={() => {
+              setMode('login');
+              setError(null);
+              setSuccess(null);
+            }}
+            className="underline hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--deep-umber)' }}
+          >
+            ← Back to sign in
+          </button>
+        </p>
+      ) : (
+        <p
+          className="text-center text-xs mt-5"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
+          <button
+            onClick={() => {
+              setMode(mode === 'login' ? 'signup' : 'login');
+              setError(null);
+              setSuccess(null);
+              setAgreedToTerms(false);
+            }}
+            className="underline hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--deep-umber)' }}
+          >
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
+          </button>
+        </p>
+      )}
     </div>
   );
 }
