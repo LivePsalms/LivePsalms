@@ -58,4 +58,25 @@ describe('DecorationItem', () => {
       expect.objectContaining({ id: 'a', xPct: expect.closeTo(0.6, 5), yPx: 130 }),
     );
   });
+
+  it('emits a rotated decoration when the rotate handle is pressed', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    fireEvent.pointerDown(getByLabelText('Rotate decoration'), { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', rotation: 15 }),
+    );
+  });
+
+  it('emits a wider decoration when the resize handle is dragged', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    const handle = getByLabelText('Resize decoration');
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 100, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.3, 5) }),
+    );
+  });
 });

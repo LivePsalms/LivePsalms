@@ -87,6 +87,7 @@ export function DecorationItem({
         onPointerDown={start('move')}
         onPointerMove={move}
         onPointerUp={end}
+        onPointerCancel={end}
         style={{ cursor: 'move' }}
       >
         <img src={asset.displayUrl} alt="" draggable={false}
@@ -95,11 +96,13 @@ export function DecorationItem({
 
       {selected && (
         <>
+          {/* Relies on pointer capture (set in `start`) to keep receiving moves once the pointer leaves the 12px handle; no-op in jsdom. */}
           <div
             aria-label="Resize decoration"
             onPointerDown={start('resize')}
             onPointerMove={move}
             onPointerUp={end}
+            onPointerCancel={end}
             style={handleStyle('-6px', '-6px', 'nwse-resize', 'bottom-right')}
           />
           <div
