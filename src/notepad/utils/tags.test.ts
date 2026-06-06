@@ -1,5 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { extractTags, formatTag } from './tags';
+import { extractTags, formatTag, matchTags } from './tags';
+
+// ---------------------------------------------------------------------------
+// matchTags
+// ---------------------------------------------------------------------------
+
+describe('matchTags', () => {
+  it('returns [] for text with no hash tokens', () => {
+    expect(matchTags('just some plain prose')).toEqual([]);
+  });
+
+  it('yields raw (#-prefixed), value (bare), and index for one match', () => {
+    expect(matchTags('a thought about #hope')).toEqual([
+      { raw: '#hope', value: 'hope', index: 16 },
+    ]);
+  });
+
+  it('yields every occurrence in order, WITHOUT deduplicating', () => {
+    expect(matchTags('#hope and again #hope')).toEqual([
+      { raw: '#hope', value: 'hope', index: 0 },
+      { raw: '#hope', value: 'hope', index: 16 },
+    ]);
+  });
+
+  it('reports indices that map to the exact substring', () => {
+    const text = '#faith and #love';
+    for (const m of matchTags(text)) {
+      expect(text.slice(m.index, m.index + m.raw.length)).toBe(m.raw);
+    }
+  });
+
+  it('does not match a bare # with no word characters', () => {
+    expect(matchTags('this # is alone')).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // extractTags
@@ -31,8 +65,9 @@ describe('extractTags', () => {
   });
 
   it('matches numeric word characters too', () => {
-    // Documented: `#\\w+` matches `#1234` like a tag — preserved from prior
-    // behavior. Alignment with the `tagMark` extension is a future deepening.
+    // Documented: `#\\w+` matches `#1234` like a tag. The `tagMark` extension
+    // now builds its RegExps from the same `TAG_PATTERN_SOURCE`, so decoration
+    // and persistence share this behavior by construction.
     expect(extractTags('issue #1234 raised')).toEqual(['1234']);
   });
 
