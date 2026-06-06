@@ -13,8 +13,6 @@ import {
   Code,
   Underline as UnderlineIcon,
   ChevronDown,
-  Palette,
-  Check,
 } from 'lucide-react';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
@@ -22,13 +20,10 @@ import { useReferenceGraph } from '../context/useReferenceGraph';
 import { useNoteEditor } from '../editor/use-note-editor';
 import { useNoteLinkPopup } from '../editor/use-note-link-popup';
 import { useVerseTooltip } from '../editor/use-verse-tooltip';
-import { useJournalTheme } from '../hooks/use-journal-theme';
 import { formatTag } from '../utils/tags';
 import { useAccountProfile } from '../../auth/context/useAccountProfile';
 import { emptyStateMessage } from '../utils/empty-state-message';
-import { JOURNAL_THEMES } from '../types';
-import type { JournalTheme, Note } from '../types';
-import '../journal-themes.css';
+import type { Note } from '../types';
 
 export interface NotepadEditorProps {
   onAfterSave?: (note: Note) => void;
@@ -66,7 +61,6 @@ export function NotepadEditor({
   const { graph } = useReferenceGraph();
   const updateNote = actions.updateNote;
   const openNote = collection.openNote;
-  const [journalTheme, setJournalTheme] = useJournalTheme();
   const { profile } = useAccountProfile();
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
@@ -106,11 +100,6 @@ export function NotepadEditor({
 
   // Heading dropdown
   const [headingOpen, setHeadingOpen] = useState(false);
-
-  // Theme picker dropdown
-  const [themeOpen, setThemeOpen] = useState(false);
-
-  const isJournalThemed = journalTheme !== 'default';
 
   const currentHeading = editor
     ? editor.isActive('heading', { level: 1 }) ? 'H1'
@@ -186,7 +175,7 @@ export function NotepadEditor({
           {/* Heading dropdown */}
           <div className="relative">
             <ToolbarButton
-              onClick={() => { setHeadingOpen(!headingOpen); setThemeOpen(false); }}
+              onClick={() => setHeadingOpen(!headingOpen)}
               active={currentHeading !== 'H'}
               title="Heading"
             >
@@ -285,88 +274,30 @@ export function NotepadEditor({
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-
-          <ToolbarDivider />
-
-          {/* Theme picker */}
-          <div className="relative">
-            <ToolbarButton
-              onClick={() => { setThemeOpen(!themeOpen); setHeadingOpen(false); }}
-              active={isJournalThemed}
-              title="Journal Theme"
-            >
-              <Palette size={15} />
-              <ChevronDown size={10} className="ml-0.5 opacity-50" />
-            </ToolbarButton>
-            {themeOpen && (
-              <div
-                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 rounded-md shadow-lg z-50 py-1`}
-                style={{
-                  background: 'rgba(240, 236, 232, 0.97)',
-                  border: '1px solid var(--pale-stone)',
-                  minWidth: 200,
-                }}
-              >
-                {JOURNAL_THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setJournalTheme(t.id as JournalTheme);
-                      setThemeOpen(false);
-                    }}
-                    className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors gap-2"
-                    style={{
-                      color: journalTheme === t.id ? 'var(--charred)' : 'var(--deep-umber)',
-                      fontWeight: journalTheme === t.id ? 600 : 400,
-                      fontFamily: 'Outfit, sans-serif',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: '50%',
-                        background: t.swatch,
-                        border: t.id === 'default' ? '1px solid var(--pale-stone)' : 'none',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span className="flex-1 text-left">{t.label}</span>
-                    {journalTheme === t.id && (
-                      <Check size={12} style={{ color: 'var(--charred)' }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
       {/* Scrollable content area */}
       <div
-        data-journal-theme={journalTheme}
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: isJournalThemed ? '32px' : '2rem 2.5rem',
+          padding: '2rem 2.5rem',
           position: 'relative',
-          background: isJournalThemed ? '#f5f0e8' : undefined,
         }}
       >
-        <div className={isJournalThemed ? 'journal-page' : ''}>
+        <div>
           {/* Title */}
           <input
             type="text"
             value={activeNote.title}
             onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
             placeholder="Untitled"
-            className={isJournalThemed ? 'journal-title' : ''}
             style={{
-              fontFamily: isJournalThemed ? undefined : "'Cormorant Garamond', serif",
-              fontSize: isJournalThemed ? undefined : '2rem',
-              fontWeight: isJournalThemed ? undefined : 300,
-              color: isJournalThemed ? undefined : 'var(--charred)',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: '2rem',
+              fontWeight: 300,
+              color: 'var(--charred)',
               background: 'transparent',
               border: 'none',
               outline: 'none',
@@ -378,11 +309,10 @@ export function NotepadEditor({
 
           {/* Date */}
           <div
-            className={isJournalThemed ? 'journal-date' : ''}
             style={{
-              fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
-              fontSize: isJournalThemed ? undefined : '0.8rem',
-              color: isJournalThemed ? undefined : 'var(--silica)',
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '0.8rem',
+              color: 'var(--silica)',
               marginBottom: '0.75rem',
               letterSpacing: '0.03em',
             }}
@@ -393,7 +323,6 @@ export function NotepadEditor({
           {/* Tags */}
           {activeNote.tags.length > 0 && (
             <div
-              className={isJournalThemed ? 'journal-tags' : ''}
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -405,10 +334,10 @@ export function NotepadEditor({
                 <span
                   key={tag}
                   style={{
-                    fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
-                    fontSize: isJournalThemed ? undefined : '0.78rem',
-                    background: isJournalThemed ? undefined : 'rgba(188, 179, 163, 0.2)',
-                    color: isJournalThemed ? undefined : 'var(--deep-umber)',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontSize: '0.78rem',
+                    background: 'rgba(188, 179, 163, 0.2)',
+                    color: 'var(--deep-umber)',
                     borderRadius: '4px',
                     padding: '2px 8px',
                   }}
@@ -421,8 +350,7 @@ export function NotepadEditor({
 
           {/* Divider */}
           <hr
-            className={isJournalThemed ? 'journal-divider' : ''}
-            style={isJournalThemed ? {} : {
+            style={{
               border: 'none',
               borderTop: '1px solid var(--pale-stone)',
               marginBottom: '1.5rem',
