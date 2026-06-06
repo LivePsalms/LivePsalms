@@ -7,6 +7,10 @@ import type { Devotion } from '@/data/devotions';
 import { extractDominantColor } from '@/utils/extractDominantColor';
 import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
 import { useRouteTransitionContext } from '@/transitions/RouteTransitionContext';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { decideHandoffEntrance } from './next-handoff-entrance-plan';
+import { actOneKeyframes, actTwoKeyframes, shouldAutoNavigate } from './next-handoff-keyframes';
+import { applyKeyframes } from './motion-keyframes';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,22 +34,6 @@ export function applyCuratedBreak(
     words.slice(0, breakAfter).join(' '),
     words.slice(breakAfter).join(' '),
   ];
-}
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  return reduced;
 }
 
 function useNextProjectColor(nextProject: Project): string {
@@ -92,7 +80,7 @@ export function NextDevotionHandoff({
 }: NextDevotionHandoffProps) {
   void currentProject; // reserved for future analytics
 
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = usePrefersReducedMotion();
   const pillColor = useNextProjectColor(nextProject);
   const rootRef = useRef<HTMLDivElement>(null);
   const leftImgRef = useRef<HTMLImageElement>(null);
@@ -511,19 +499,21 @@ function useEntranceAnimation({
     const content = pillContentRef.current;
     if (!root || !left || !right || !pill || !fill || !content) return;
 
-    // Inside the moodboard horizontal track, the handoff is the final panel
-    // reached by the same horizontal scroll as zones 1–7. No pin of its own,
-    // no entrance/exit choreography, no auto-navigate — the pill click is the
-    // only way forward. Just snap to resting state and let the idle Ken Burns
-    // loop keep the images alive.
-    if (inHorizontalTrack && variant === 'desktop') {
+    const plan = decideHandoffEntrance({ reducedMotion, variant, inHorizontalTrack });
+
+    // 'snap' collapses original branches A (in-track desktop) and C (mobile):
+    // both present the pill in its resting state with no choreography. In-track
+    // desktop is the final panel reached by horizontal scroll (pill click is the
+    // only way forward); mobile renders without a horizontal pin. The idle Ken
+    // Burns loop keeps the background images alive.
+    if (plan === 'snap') {
       gsap.set([left, right], { yPercent: 0 });
       gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
       gsap.set(content, { opacity: 1 });
       return;
     }
 
-    if (reducedMotion) {
+    if (plan === 'reducedFade') {
       // Snap to final state; fade the whole section once when it enters.
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -541,15 +531,7 @@ function useEntranceAnimation({
       };
     }
 
-    if (variant === 'mobile') {
-      // Mobile renders without a horizontal pin — just present the pill in its
-      // resting state when the section enters the viewport.
-      gsap.set([left, right], { yPercent: 0 });
-      gsap.set(fill, { scaleX: 1, transformOrigin: '50% 50%' });
-      gsap.set(content, { opacity: 1 });
-      return;
-    }
-
+    // plan === 'fullMotion'
     const ctx = gsap.context(() => {
       // Seed off-screen state. GSAP owns the transform matrix outright so it
       // doesn't get composed with the idle Ken Burns tween's translate3d.
@@ -570,6 +552,8 @@ function useEntranceAnimation({
         anticipatePin: 1,
       });
 
+      const targets = { left, right, fill, content };
+
       // ACT 1: scrubbed entrance, plays as the section scrolls toward the pin.
       // From 'top 70%' (section 30% visible) to 'top top' (pin engages).
       const actOne = gsap.timeline({
@@ -580,16 +564,7 @@ function useEntranceAnimation({
           scrub: 1,
         },
       });
-      actOne
-        .fromTo(left, { yPercent: -100 }, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
-        .fromTo(right, { yPercent: 100 }, { yPercent: 0, duration: 1.0, ease: 'power3.out' }, 0)
-        .fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '50% 50%' },
-          { scaleX: 1, transformOrigin: '50% 50%', duration: 1.0, ease: 'power3.out' },
-          0,
-        )
-        .to(content, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.6);
+      applyKeyframes(actOne, actOneKeyframes(), targets);
 
       // ACT 2: scrubbed exit + re-enter + navigate, runs while pinned.
       const actTwo = gsap.timeline({
@@ -599,26 +574,16 @@ function useEntranceAnimation({
           end: '+=120%',
           scrub: 1,
           onUpdate: (self) => {
-            if (self.progress >= 0.98 && !navigatedRef.current) {
+            if (shouldAutoNavigate(self.progress, navigatedRef.current)) {
               navigatedRef.current = true;
               navigate(`/purpose/${nextProject.id}`);
             }
           },
         },
       });
-      actTwo
-        .fromTo(left, { yPercent: 0 }, { yPercent: -100, duration: 0.4, ease: 'power2.in' }, 0)
-        .fromTo(right, { yPercent: 0 }, { yPercent: 100, duration: 0.4, ease: 'power2.in' }, 0)
-        .fromTo(
-          fill,
-          { scaleX: 1, transformOrigin: '50% 50%' },
-          { scaleX: 0, transformOrigin: '50% 50%', duration: 0.3, ease: 'power2.in' },
-          0,
-        )
-        .fromTo(content, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0)
-        .to({}, { duration: 0.2 }, 0.4)
-        .to(left, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6)
-        .to(right, { yPercent: 0, duration: 0.4, ease: 'power3.out' }, 0.6);
+      applyKeyframes(actTwo, actTwoKeyframes(), targets);
+      // Inert timeline padding (no named target) — kept verbatim for fidelity.
+      actTwo.to({}, { duration: 0.2 }, 0.4);
 
       void pinTrigger;
     }, root);

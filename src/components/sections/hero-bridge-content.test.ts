@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BRIDGE_COPY, BRIDGE_PIN_TIMING } from './hero-bridge-content';
 import { bridgeCascadeKeyframes } from './hero-bridge-content';
-import { projectFinalFrame } from './hero-choreography/keyframes';
+import { projectFinalFrame } from './motion-keyframes';
 
 describe('BRIDGE_COPY', () => {
   it('exports the invitation beat', () => {

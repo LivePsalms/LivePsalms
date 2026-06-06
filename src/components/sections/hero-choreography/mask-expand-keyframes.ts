@@ -1,4 +1,4 @@
-import type { Keyframe } from './keyframes';
+import type { Keyframe } from '../motion-keyframes';
 
 // Scroll progress at which the video element starts playing — slightly before
 // its visual crossfade (0.70) so the first visible frame is already in motion.

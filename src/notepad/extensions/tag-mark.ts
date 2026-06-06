@@ -2,9 +2,7 @@ import { Mark, markPasteRule } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-
-const TAG_REGEX = /#\w+/g;
-const TAG_PASTE_REGEX = /(#\w+)/g;
+import { matchTags, TAG_PATTERN_SOURCE } from '../utils/tags';
 
 const tagPluginKey = new PluginKey('tagHighlight');
 
@@ -65,7 +63,7 @@ export const TagMark = Mark.create({
   addPasteRules() {
     return [
       markPasteRule({
-        find: TAG_PASTE_REGEX,
+        find: new RegExp(`(${TAG_PATTERN_SOURCE})`, 'g'),
         type: this.type,
         getAttributes: (match) => ({ tag: match[1] }),
       }),
@@ -79,17 +77,14 @@ function findTagDecorations(doc: ProseMirrorNode): DecorationSet {
   doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return;
 
-    const regex = new RegExp(TAG_REGEX.source, 'g');
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(node.text)) !== null) {
-      const from = pos + match.index;
-      const to = from + match[0].length;
+    for (const m of matchTags(node.text)) {
+      const from = pos + m.index;
+      const to = from + m.raw.length;
 
       decorations.push(
         Decoration.inline(from, to, {
           'data-tag-mark': '',
-          'data-tag': match[0],
+          'data-tag': m.raw,
           style:
             'background: rgba(188, 179, 163, 0.25); border-radius: 4px; padding: 1px 6px; font-size: 0.85em;',
         })

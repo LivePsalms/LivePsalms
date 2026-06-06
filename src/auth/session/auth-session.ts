@@ -120,6 +120,20 @@ export class AuthSession extends Observable<AuthSessionState> {
     if (error) throw error;
   };
 
+  resetPassword = async (email: string): Promise<void> => {
+    if (!this.client) throw new Error('Supabase not configured');
+    const redirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/update-password` : undefined;
+    const { error } = await this.client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  };
+
+  updatePassword = async (password: string): Promise<void> => {
+    if (!this.client) throw new Error('Supabase not configured');
+    const { error } = await this.client.auth.updateUser({ password });
+    if (error) throw error;
+  };
+
   signInWithGoogle = async (): Promise<void> => {
     if (!this.client) throw new Error('Supabase not configured');
     const redirectTo =

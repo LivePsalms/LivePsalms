@@ -1,4 +1,4 @@
-import type { Keyframe } from './keyframes';
+import type { Keyframe } from '../motion-keyframes';
 import { WORDMARK_COLLAPSE } from './wordmark-geometry';
 
 // Kept in sync with the `--deep-umber` CSS var (#3A3426) — GSAP can't tween a

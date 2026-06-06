@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import {
-  BEATS,
-  MID_SECTION_PIN_TIMING,
-} from './mid-section-motion-content';
+import { BEATS } from './mid-section-motion-content';
 import {
   mountCurlLinesScene,
   type CurlLinesIntensity,
 } from './mid-section-webgpu-scene';
-import {
-  computeIntensityState,
-  mapBeatProgressWebGPU,
-} from './mid-section-intensity';
+import { computeIntensityState } from './mid-section-intensity';
+import { applyKeyframes } from './motion-keyframes';
+import { buildMidSectionBeatKeyframes } from './mid-section-beat-keyframes';
 import { initialRenderMode, type RenderMode } from './mid-section-render-mode';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -82,9 +78,6 @@ export function MidSectionMotion() {
     if (!wrapperEl || !stageEl || beatEls.some((b) => !b)) return;
 
     const ctx = gsap.context(() => {
-      // Initial states — beats hidden and offset below resting position.
-      gsap.set(beatEls, { opacity: 0, y: 20 });
-
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: wrapperEl,
@@ -101,45 +94,22 @@ export function MidSectionMotion() {
       // totalDuration. Without padding, scroll progress 1.0 would only reach timeline
       // position 0.857 — beat 5 would stay visible through the entire outro. Pad with
       // a phantom set at position 1 so timeline totalDuration matches the scroll range.
+      // (Scrub mechanics, not beat data — stays in the harness.)
       if (renderMode === 'webgpu') {
         tl.set({}, {}, 1);
       }
 
-      // Map a raw reading-relative position (0..1) onto the full pinned timeline.
-      // WebGPU mode offsets/scales into the reading band; video mode uses raw.
-      const mapPos = (raw: number) =>
-        renderMode === 'webgpu' ? mapBeatProgressWebGPU(raw) : raw;
-
-      const beatKeys = ['beat1', 'beat2', 'beat3', 'beat4', 'beat5'] as const;
-      beatKeys.forEach((key, i) => {
-        const beat = beatEls[i];
-        if (!beat) return;
-        const raw = MID_SECTION_PIN_TIMING[key];
-        const enter = mapPos(raw.enter);
-        const holdStart = mapPos(raw.holdStart);
-        const holdEnd = mapPos(raw.holdEnd);
-        const exit = mapPos(raw.exit);
-
-        // Enter tween — fade in + rise from y:20 to y:0.
-        if (enter < holdStart) {
-          tl.to(
-            beat,
-            { opacity: 1, y: 0, ease: 'power2.out', duration: holdStart - enter },
-            enter,
-          );
-        } else {
-          tl.set(beat, { opacity: 1, y: 0 }, enter);
-        }
-
-        // Exit tween — fade out + lift to y:−20.
-        if (holdEnd < exit) {
-          tl.to(
-            beat,
-            { opacity: 0, y: -20, ease: 'power1.in', duration: exit - holdEnd },
-            holdEnd,
-          );
-        }
-      });
+      // Resolve abstract beat names → DOM elements, then play the declarative
+      // keyframe data onto the timeline. The initial hidden state (opacity 0, y 20)
+      // is folded into each beat's enter fromTo inside buildMidSectionBeatKeyframes.
+      const targets = {
+        beat1: beatEls[0],
+        beat2: beatEls[1],
+        beat3: beatEls[2],
+        beat4: beatEls[3],
+        beat5: beatEls[4],
+      };
+      applyKeyframes(tl, buildMidSectionBeatKeyframes(renderMode), targets);
     }, wrapperEl);
 
     return () => ctx.revert();

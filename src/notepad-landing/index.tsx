@@ -1,5 +1,5 @@
 import './styles/landing.css';
-import { usePrefersReducedMotion } from './hooks/use-prefers-reduced-motion';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { useAdaptiveNavTheme } from './hooks/use-adaptive-nav-theme';
 import { ParticleHero } from './sections/01-particle-hero';
 import { GardenScene } from './sections/garden-scene';

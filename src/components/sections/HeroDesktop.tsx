@@ -3,7 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PsalmsWordmarkSvg } from './PsalmsWordmarkSvg';
 import { BRIDGE_COPY, bridgeCascadeKeyframes } from './hero-bridge-content';
-import { applyKeyframes, projectFinalFrame } from './hero-choreography/keyframes';
+import { applyKeyframes, projectFinalFrame } from './motion-keyframes';
 import { wordmarkAuraSizes, WORDMARK_COLLAPSE } from './hero-choreography/wordmark-geometry';
 import { collapseKeyframes, COLLAPSE_COLOR_DEEP_UMBER } from './hero-choreography/collapse-keyframes';
 import { maskExpandKeyframes, VIDEO_PLAY_AT } from './hero-choreography/mask-expand-keyframes';

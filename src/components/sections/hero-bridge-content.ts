@@ -1,4 +1,4 @@
-import type { Keyframe } from './hero-choreography/keyframes';
+import type { Keyframe } from './motion-keyframes';
 
 // Three-beat manifesto for the hero bridge section.
 // Same italic Cormorant voice as the Psalm 23 quote below the mask.

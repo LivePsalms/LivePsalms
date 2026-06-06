@@ -309,10 +309,11 @@ export function ProfilePage() {
             <button
               onClick={async () => {
                 if (!user?.email) return;
-                const { supabase } = await import('@/lib/supabase');
-                if (supabase) {
-                  await supabase.auth.resetPasswordForEmail(user.email);
+                try {
+                  await session.resetPassword(user.email);
                   toast.success('Password reset email sent.');
+                } catch {
+                  toast.error('Could not send reset email. Please try again.');
                 }
               }}
               className="text-left text-xs hover:opacity-70 transition-opacity"

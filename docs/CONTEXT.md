@@ -282,7 +282,7 @@ Responsibilities:
 - The Supabase `User` (or `null`) and the auth subscription lifecycle
 - `loading`: session-level loading only — `false` once `getSession()` resolves, regardless of profile state
 - The active `StorageAdapter`: the `localAdapter` singleton from `local-storage.ts` when no user, a `SupabaseStorageAdapter` memoized on `user.id` when signed in
-- Sign-up, password sign-in, Google/Apple OAuth, and sign-out
+- Sign-up, password sign-in, Google/Apple OAuth, sign-out, password reset (link → `/update-password`), and password update
 - OAuth callback URL stripping (the once-on-first-mount `window.history.replaceState`)
 
 Does **not** own: profile data, account-deletion sequencing, or online/offline detection.
@@ -323,6 +323,20 @@ Responsibilities:
 - `exportData()` — read all Notes and Folders from the active `StorageAdapter` for download as JSON. Adapter-level rather than in-memory because the only consumer is `ProfilePage`, which lives outside `<NotepadProvider>` and therefore has no in-memory `NoteCollection` to read from.
 
 `AuthSession` and `AccountProfile` do not know each other; cross-module knowledge concentrates here.
+
+## UsernameAvailability
+
+The deepened controller that owns the live availability machine for the username picker — `idle → checking → available | taken | error` — including the 300ms debounce and the stale-response fence. Follows the **`ConnectionDiscovery`** precedent (an `Observable<AvailabilityStatus>` class driven by `setInputs` forwarders from a thin hook), one layer smaller. Surfaced as `useUsernameAvailability({ checkAvailable, name, eligible, debounceMs })` returning `{ status, markTaken }`.
+
+Owns:
+- The availability state machine; `status` is the single source of truth for whether a name reads as free.
+- **Debounce.** `setInputs` schedules the `checkAvailable` call via an injected `setTimer(fn, ms) => cancel` (default: real `setTimeout`); a newer input cancels the pending timer before it fires, so a fast typist never triggers a check for an abandoned prefix.
+- **Generation-fencing.** `setInputs`, `markTaken`, and `dispose` all bump a generation counter; a `checkAvailable` that resolves or rejects after the input changed is dropped. This is the load-bearing complexity — rapid input must drop late-arriving responses — and it was previously reachable only through the React harness in `UsernameSetup.test.tsx`.
+- **`markTaken()`** — the submit-time reconciliation: when `claim` loses the unique-constraint race (`reason: 'taken'`), the component calls this to force the machine to `taken`. Concentrates every path into `taken` behind one seam; cancels any in-flight check so it cannot overwrite the verdict.
+
+Fails open: a rejected `checkAvailable` lands in `error`, which does **not** block submit — the `profiles` unique constraint at claim time is the real guard.
+
+Does **not** own: format validation (`username-rules`), the `canSubmit` composition (mixes in `format.valid` + `submitting`, a view concern that stays in `UsernameSetup`), or the `claim` call and its `onClaimed` / `submitError` handling. The thin `useUsernameAvailability` hook owns the React coupling the controller is pure of — it captures `checkAvailable` via a ref so an unstable inline prop doesn't recreate the controller, binds the snapshot via `useSyncExternalStore`, and disposes on unmount. Mirrors how `useConnectionDiscovery` wraps `ConnectionDiscovery`.
 
 ## RouteTransition
 
