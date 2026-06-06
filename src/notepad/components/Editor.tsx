@@ -402,13 +402,18 @@ export function NotepadEditor({
             <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
           </div>
 
-          {/* Read-only decoration overlay — absolutely positioned within the
+          {/* Interactive decoration overlay — absolutely positioned within the
               relative scroll container so it overlays content and scrolls with it. */}
           <DecorationLayer
             decorations={decorationsApi.decorations}
             selectedId={selectedDecoration}
             onSelect={setSelectedDecoration}
             onDeselect={() => setSelectedDecoration(null)}
+            onChange={(next) => decorationsApi.update(next.id, next)}
+            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); }}
+            onDuplicate={(id) => decorationsApi.duplicate(id)}
+            onBringToFront={(id) => decorationsApi.bringToFront(id)}
+            onSendToBack={(id) => decorationsApi.sendToBack(id)}
           />
         </div>
       </div>
