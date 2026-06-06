@@ -5,6 +5,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
 import { TagMark } from '../extensions/tag-mark';
+import { StyleHighlight } from '../extensions/style-highlight';
 import type { Note } from '../types';
 import { parseNoteContent } from './note-editor';
 import { extractTags } from '../utils/tags';
@@ -55,6 +56,7 @@ export function useNoteEditor({
       BibleVerse,
       NoteLink,
       TagMark,
+      StyleHighlight,
     ],
     content: '',
     onUpdate({ editor: ed }) {
