@@ -30,6 +30,7 @@ import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/context/AuthProvider';
 import { LoginPage } from '@/auth/LoginPage';
 import { ProfilePage } from '@/auth/ProfilePage';
+import { UpdatePasswordPage } from '@/auth/UpdatePasswordPage';
 import { WelcomePage } from '@/auth/WelcomePage';
 import { AdminLamplightPage } from '@/admin/AdminLamplightPage';
 import { useRouteTransition } from '@/transitions/useRouteTransition';
@@ -194,6 +195,7 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/update-password" element={<UpdatePasswordPage />} />
             <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin/lamplight" element={<AdminLamplightPage />} />

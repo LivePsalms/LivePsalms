@@ -282,7 +282,7 @@ Responsibilities:
 - The Supabase `User` (or `null`) and the auth subscription lifecycle
 - `loading`: session-level loading only — `false` once `getSession()` resolves, regardless of profile state
 - The active `StorageAdapter`: the `localAdapter` singleton from `local-storage.ts` when no user, a `SupabaseStorageAdapter` memoized on `user.id` when signed in
-- Sign-up, password sign-in, Google/Apple OAuth, sign-out, and password reset
+- Sign-up, password sign-in, Google/Apple OAuth, sign-out, password reset (link → `/update-password`), and password update
 - OAuth callback URL stripping (the once-on-first-mount `window.history.replaceState`)
 
 Does **not** own: profile data, account-deletion sequencing, or online/offline detection.
