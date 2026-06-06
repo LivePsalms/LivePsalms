@@ -34,7 +34,10 @@ export function DecorationLayer({
       ref={ref}
       data-testid="decoration-canvas"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onDeselect(); }}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}
+      // No zIndex here: each DecorationItem sets its own zIndex so it can sit
+      // above OR below the editor text within the shared (isolated) stacking
+      // context established by the content wrapper in Editor.tsx.
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
       <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0 }}>
         {decorations.map((d) => (

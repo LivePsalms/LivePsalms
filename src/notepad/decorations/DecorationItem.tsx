@@ -1,7 +1,10 @@
 // src/notepad/decorations/DecorationItem.tsx
 import { useRef } from 'react';
 import { getStyleAsset } from '../styles/manifest';
-import { moveTo, resizeWidthPct, rotationDeg, pinchTransform } from './decoration-geometry';
+import {
+  moveTo, resizeWidthPct, rotationDeg, pinchTransform,
+  decorationZIndex, pointerAngleDeg, applyRotationDrag,
+} from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 interface Props {
@@ -23,7 +26,11 @@ export function DecorationItem({
   onChange, onSelect, onDelete, onDuplicate, onBringToFront, onSendToBack,
 }: Props) {
   const asset = getStyleAsset(d.assetId);
+  const rootRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
+  const rotateGesture = useRef<
+    { centerX: number; centerY: number; startAngle: number; startRotation: number } | null
+  >(null);
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinch = useRef<{ startDist: number; startAngle: number; base: NoteDecoration } | null>(null);
 
@@ -78,13 +85,48 @@ export function DecorationItem({
     gesture.current = null;
   };
 
-  const rotate = (e: React.PointerEvent) => {
+  const rotateDown = (e: React.PointerEvent) => {
     e.stopPropagation();
-    onChange({ ...d, rotation: rotationDeg(d.rotation + 15) });
+    const rect = rootRef.current?.getBoundingClientRect();
+    const centerX = rect ? rect.left + rect.width / 2 : 0;
+    const centerY = rect ? rect.top + rect.height / 2 : 0;
+    rotateGesture.current = {
+      centerX,
+      centerY,
+      startAngle: pointerAngleDeg({ x: centerX, y: centerY }, { x: e.clientX, y: e.clientY }),
+      startRotation: d.rotation,
+    };
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* jsdom may not implement pointer capture; harmless no-op */
+    }
+  };
+
+  const rotateMove = (e: React.PointerEvent) => {
+    const g = rotateGesture.current;
+    if (!g) return;
+    const currentAngle = pointerAngleDeg(
+      { x: g.centerX, y: g.centerY },
+      { x: e.clientX, y: e.clientY },
+    );
+    onChange({ ...d, rotation: applyRotationDrag(g.startRotation, g.startAngle, currentAngle) });
+  };
+
+  const rotateEnd = (e: React.PointerEvent) => {
+    try {
+      if ((e.target as Element).hasPointerCapture?.(e.pointerId)) {
+        (e.target as Element).releasePointerCapture?.(e.pointerId);
+      }
+    } catch {
+      /* jsdom may not implement pointer capture; harmless no-op */
+    }
+    rotateGesture.current = null;
   };
 
   return (
     <div
+      ref={rootRef}
       style={{
         position: 'absolute',
         left: `${d.xPct * 100}%`,
@@ -92,7 +134,7 @@ export function DecorationItem({
         width: `${d.widthPct * 100}%`,
         transform: `rotate(${d.rotation}deg)`,
         transformOrigin: 'center center',
-        zIndex: d.z,
+        zIndex: decorationZIndex(d, selected),
         pointerEvents: 'auto',
         outline: selected ? '2px solid var(--deep-umber)' : 'none',
       }}
@@ -132,7 +174,12 @@ export function DecorationItem({
         }}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
-        style={{ cursor: 'move', touchAction: 'none' }}
+        style={{
+          cursor: 'move',
+          touchAction: 'none',
+          // Flip the asset only — keep handles/action-bar glyphs un-mirrored.
+          transform: `scaleX(${d.flipH ? -1 : 1}) scaleY(${d.flipV ? -1 : 1})`,
+        }}
       >
         <img src={asset.displayUrl} alt="" draggable={false}
           style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }} />
@@ -151,7 +198,10 @@ export function DecorationItem({
           />
           <div
             aria-label="Rotate decoration"
-            onPointerDown={rotate}
+            onPointerDown={rotateDown}
+            onPointerMove={rotateMove}
+            onPointerUp={rotateEnd}
+            onPointerCancel={rotateEnd}
             style={handleStyle('-22px', 'calc(50% - 6px)', 'grab', 'top')}
           />
           <div style={{
@@ -159,6 +209,10 @@ export function DecorationItem({
             background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
             padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)',
           }}>
+            <button aria-label="Rotate decoration counterclockwise 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation - 15) })} style={barBtn}>↺</button>
+            <button aria-label="Rotate decoration 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation + 15) })} style={barBtn}>↻</button>
+            <button aria-label="Flip horizontal" onClick={() => onChange({ ...d, flipH: !d.flipH })} style={barBtn}>⇋</button>
+            <button aria-label="Flip vertical" onClick={() => onChange({ ...d, flipV: !d.flipV })} style={barBtn}>⇅</button>
             <button aria-label="Bring to front" onClick={() => onBringToFront(d.id)} style={barBtn}>⤒</button>
             <button aria-label="Send to back" onClick={() => onSendToBack(d.id)} style={barBtn}>⤓</button>
             <button aria-label="Duplicate decoration" onClick={() => onDuplicate(d.id)} style={barBtn}>⎘</button>

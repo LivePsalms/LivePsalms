@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addDecoration, updateDecoration, removeDecoration,
-  duplicateDecoration, bringToFront, sendToBack, nextZ,
+  duplicateDecoration, bringToFront, sendToBack, nextZ, prevZ,
 } from './decoration-ops';
 import type { NoteDecoration } from '../types';
 
@@ -43,14 +43,41 @@ describe('decoration-ops', () => {
     expect(out[1].z).toBe(2);
   });
 
-  it('bringToFront / sendToBack reassign z relative to the set', () => {
+  it('bringToFront puts the item above all others and in front of text', () => {
     const two = [base, { ...base, id: 'b', z: 2 }];
-    expect(bringToFront(two, 'a').find((d) => d.id === 'a')!.z).toBe(3);
-    expect(sendToBack(two, 'b').find((d) => d.id === 'b')!.z).toBe(0);
+    const a = bringToFront(two, 'a').find((d) => d.id === 'a')!;
+    expect(a.z).toBe(3); // max z (2) + 1
+    expect(a.behindText).toBe(false);
+  });
+
+  it('sendToBack puts the item below all others and behind text', () => {
+    const two = [base, { ...base, id: 'b', z: 2 }];
+    const b = sendToBack(two, 'b').find((d) => d.id === 'b')!;
+    expect(b.z).toBe(-1); // min(0 seed, 1, 2) - 1
+    expect(b.behindText).toBe(true);
+  });
+
+  it('bringToFront / sendToBack leave other decorations unchanged', () => {
+    const two = [base, { ...base, id: 'b', z: 2 }];
+    expect(bringToFront(two, 'a').find((d) => d.id === 'b')).toEqual(two[1]);
+    expect(sendToBack(two, 'b').find((d) => d.id === 'a')).toEqual(two[0]);
   });
 
   it('nextZ returns max z + 1, or 1 for an empty set', () => {
     expect(nextZ([])).toBe(1);
     expect(nextZ([base])).toBe(2);
+  });
+
+  it('prevZ returns min(0 seed, ...z) - 1; -1 for an empty set', () => {
+    expect(prevZ([])).toBe(-1);
+    // reduce seeds at 0, so positive z values never raise the floor above -1
+    expect(prevZ([
+      { ...base, id: 'a', z: 1 },
+      { ...base, id: 'b', z: 2 },
+      { ...base, id: 'c', z: 3 },
+    ])).toBe(-1);
+    expect(prevZ([{ ...base, z: 0 }])).toBe(-1); // min 0 - 1
+    // a negative z below the seed lowers the floor further
+    expect(prevZ([{ ...base, z: -5 }])).toBe(-6); // min(0, -5) - 1
   });
 });

@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
+  decorationZIndex, pointerAngleDeg, applyRotationDrag, TEXT_Z, SELECTED_Z,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -66,5 +67,50 @@ describe('pinchTransform', () => {
   it('ignores a zero start distance (no NaN)', () => {
     const out = pinchTransform(base, { startDist: 0, dist: 50, startAngle: 0, angle: 0 });
     expect(out.widthPct).toBe(base.widthPct);
+  });
+});
+
+describe('decorationZIndex', () => {
+  const base: NoteDecoration = {
+    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 5,
+  };
+
+  it('returns SELECTED_Z when selected, regardless of behindText', () => {
+    expect(decorationZIndex(base, true)).toBe(SELECTED_Z);
+    expect(decorationZIndex({ ...base, behindText: true }, true)).toBe(SELECTED_Z);
+  });
+
+  it('returns d.z when behindText (sits below text)', () => {
+    expect(decorationZIndex({ ...base, behindText: true }, false)).toBe(5);
+  });
+
+  it('returns TEXT_Z + d.z by default (sits above text)', () => {
+    expect(decorationZIndex(base, false)).toBe(TEXT_Z + 5);
+    expect(decorationZIndex({ ...base, behindText: false }, false)).toBe(TEXT_Z + 5);
+  });
+});
+
+describe('pointerAngleDeg', () => {
+  it('returns 0 for a point to the right of center', () => {
+    expect(pointerAngleDeg({ x: 0, y: 0 }, { x: 1, y: 0 })).toBe(0);
+  });
+
+  it('returns 90 for a point below center', () => {
+    expect(pointerAngleDeg({ x: 0, y: 0 }, { x: 0, y: 1 })).toBe(90);
+  });
+
+  it('returns 180 for a point to the left of center', () => {
+    expect(pointerAngleDeg({ x: 0, y: 0 }, { x: -1, y: 0 })).toBe(180);
+  });
+});
+
+describe('applyRotationDrag', () => {
+  it('adds the angle delta to the start rotation', () => {
+    expect(applyRotationDrag(10, 0, 30)).toBe(40);
+  });
+
+  it('normalizes the result via rotationDeg', () => {
+    expect(applyRotationDrag(350, 0, 30)).toBe(20); // 350 + 30 = 380 → 20
+    expect(applyRotationDrag(0, 30, 0)).toBe(330); // 0 + (0 - 30) = -30 → 330
   });
 });

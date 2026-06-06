@@ -7,6 +7,10 @@ export function nextZ(list: NoteDecoration[]): number {
   return list.reduce((max, d) => Math.max(max, d.z), 0) + 1;
 }
 
+export function prevZ(list: NoteDecoration[]): number {
+  return list.reduce((min, d) => Math.min(min, d.z), 0) - 1;
+}
+
 export function addDecoration(
   list: NoteDecoration[],
   init: NewDecoration,
@@ -48,12 +52,13 @@ export function bringToFront(
   id: string,
 ): NoteDecoration[] {
   const top = nextZ(list);
-  return list.map((d) => (d.id === id ? { ...d, z: top } : d));
+  return list.map((d) => (d.id === id ? { ...d, z: top, behindText: false } : d));
 }
 
 export function sendToBack(
   list: NoteDecoration[],
   id: string,
 ): NoteDecoration[] {
-  return list.map((d) => (d.id === id ? { ...d, z: 0 } : d));
+  const bottom = prevZ(list);
+  return list.map((d) => (d.id === id ? { ...d, z: bottom, behindText: true } : d));
 }
