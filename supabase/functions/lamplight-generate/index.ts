@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { serviceClient } from '../_shared/supabase.ts';
 import { embedQuery, type VoyageDeps } from '../_shared/voyage.ts';
 import { searchBible } from '../_shared/retrieval.ts';
+import { buildPassages, type BiblePassageRow } from '../_shared/bible-passage.ts';
 import { createAnthropicAdapter } from '../_shared/anthropic.ts';
 import { extractTextFromNoteContent } from '../_shared/tiptap-text.ts';
 import { sanitizeFirstName } from '../_shared/personalization.ts';
@@ -228,22 +229,7 @@ async function buildSmokeTestContext(
     .select('id, book, chapter, verse_start, verse_end, text')
     .in('id', sourceIds);
   if (pErr) throw pErr;
-  const passageById = new Map<string, { book: string; chapter: number; verse_start: number; verse_end: number; text: string }>();
-  for (const r of (passageRows ?? []) as Array<{ id: string; book: string; chapter: number; verse_start: number; verse_end: number; text: string }>) {
-    passageById.set(r.id, { book: r.book, chapter: r.chapter, verse_start: r.verse_start, verse_end: r.verse_end, text: r.text });
-  }
-  const passages: SmokeTestPassage[] = retrievedBible
-    .map(r => {
-      const p = passageById.get(r.source_id);
-      if (!p) return null;
-      const refSuffix = p.verse_end !== p.verse_start ? `${p.verse_start}-${p.verse_end}` : `${p.verse_start}`;
-      const ref = `${p.book} ${p.chapter}:${refSuffix}`;
-      return {
-        source_id: r.source_id, text: p.text, ref,
-        metadata: { book: p.book, chapter: p.chapter, similarity: r.similarity, rerank_score: r.rerank_score },
-      };
-    })
-    .filter((x): x is SmokeTestPassage => x !== null);
+  const passages: SmokeTestPassage[] = buildPassages((passageRows ?? []) as BiblePassageRow[], retrievedBible);
 
   return {
     notes, passages,
@@ -299,22 +285,7 @@ async function buildDailyDevotionContext(
     .select('id, book, chapter, verse_start, verse_end, text')
     .in('id', sourceIds);
   if (pErr) throw pErr;
-  const passageById = new Map<string, { book: string; chapter: number; verse_start: number; verse_end: number; text: string }>();
-  for (const r of (passageRows ?? []) as Array<{ id: string; book: string; chapter: number; verse_start: number; verse_end: number; text: string }>) {
-    passageById.set(r.id, { book: r.book, chapter: r.chapter, verse_start: r.verse_start, verse_end: r.verse_end, text: r.text });
-  }
-  const passages: DailyDevotionPassage[] = retrievedBible
-    .map(r => {
-      const p = passageById.get(r.source_id);
-      if (!p) return null;
-      const refSuffix = p.verse_end !== p.verse_start ? `${p.verse_start}-${p.verse_end}` : `${p.verse_start}`;
-      const ref = `${p.book} ${p.chapter}:${refSuffix}`;
-      return {
-        source_id: r.source_id, text: p.text, ref,
-        metadata: { book: p.book, chapter: p.chapter, similarity: r.similarity, rerank_score: r.rerank_score },
-      };
-    })
-    .filter((x): x is DailyDevotionPassage => x !== null);
+  const passages: DailyDevotionPassage[] = buildPassages((passageRows ?? []) as BiblePassageRow[], retrievedBible);
 
   return {
     notes, passages,

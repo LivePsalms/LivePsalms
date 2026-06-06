@@ -1,0 +1,95 @@
+import { describe, it, expect } from 'vitest';
+import { formatVerseRef, buildPassages, type BiblePassageRow } from './bible-passage';
+import type { RetrievedItem } from './retrieval';
+
+function makeRow(over: Partial<BiblePassageRow> = {}): BiblePassageRow {
+  return {
+    id: 'p1',
+    book: 'Psalm',
+    chapter: 23,
+    verse_start: 4,
+    verse_end: 4,
+    text: 'Even though I walk through the valley…',
+    ...over,
+  };
+}
+
+function makeRetrieved(over: Partial<RetrievedItem> = {}): RetrievedItem {
+  return {
+    id: 'r1',
+    source_id: 'p1',
+    chunk_index: 0,
+    chunk_text: 'chunk',
+    similarity: 0.9,
+    metadata: {},
+    ...over,
+  };
+}
+
+describe('formatVerseRef', () => {
+  it('formats a single-verse reference as Book C:V', () => {
+    expect(formatVerseRef({ book: 'Psalm', chapter: 23, verse_start: 4, verse_end: 4 })).toBe('Psalm 23:4');
+  });
+
+  it('formats a multi-verse range as Book C:Vs-Ve', () => {
+    expect(formatVerseRef({ book: 'Romans', chapter: 8, verse_start: 28, verse_end: 30 })).toBe('Romans 8:28-30');
+  });
+});
+
+describe('buildPassages', () => {
+  it('joins a retrieved item to its row, with rerank_score present', () => {
+    const rows = [makeRow()];
+    const retrieved = [makeRetrieved({ similarity: 0.91, rerank_score: 0.77 })];
+    const out = buildPassages(rows, retrieved);
+    expect(out).toEqual([
+      {
+        source_id: 'p1',
+        text: 'Even though I walk through the valley…',
+        ref: 'Psalm 23:4',
+        metadata: { book: 'Psalm', chapter: 23, similarity: 0.91, rerank_score: 0.77 },
+      },
+    ]);
+  });
+
+  it('carries rerank_score as undefined when absent', () => {
+    const out = buildPassages([makeRow()], [makeRetrieved()]);
+    expect(out).toHaveLength(1);
+    expect(out[0].metadata).toEqual({ book: 'Psalm', chapter: 23, similarity: 0.9, rerank_score: undefined });
+    expect('rerank_score' in (out[0].metadata as Record<string, unknown>)).toBe(true);
+  });
+
+  it('produces a range ref when verse_start !== verse_end', () => {
+    const rows = [makeRow({ verse_start: 4, verse_end: 6 })];
+    const out = buildPassages(rows, [makeRetrieved()]);
+    expect(out[0].ref).toBe('Psalm 23:4-6');
+  });
+
+  it('skips a retrieved item whose source_id is missing from the rows', () => {
+    const rows = [makeRow({ id: 'p1' })];
+    const retrieved = [
+      makeRetrieved({ source_id: 'p1' }),
+      makeRetrieved({ id: 'r2', source_id: 'missing' }),
+    ];
+    const out = buildPassages(rows, retrieved);
+    expect(out).toHaveLength(1);
+    expect(out[0].source_id).toBe('p1');
+  });
+
+  it('returns an empty array for empty inputs', () => {
+    expect(buildPassages([], [])).toEqual([]);
+    expect(buildPassages([makeRow()], [])).toEqual([]);
+  });
+
+  it('orders output by the retrieved array, not the rows', () => {
+    const rows = [
+      makeRow({ id: 'a', book: 'Genesis', chapter: 1, verse_start: 1, verse_end: 1 }),
+      makeRow({ id: 'b', book: 'Exodus', chapter: 2, verse_start: 2, verse_end: 2 }),
+    ];
+    const retrieved = [
+      makeRetrieved({ id: 'rb', source_id: 'b' }),
+      makeRetrieved({ id: 'ra', source_id: 'a' }),
+    ];
+    const out = buildPassages(rows, retrieved);
+    expect(out.map(p => p.source_id)).toEqual(['b', 'a']);
+  });
+});
