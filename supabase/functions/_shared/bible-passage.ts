@@ -35,9 +35,9 @@ export function buildPassages(
   passageRows: BiblePassageRow[],
   retrieved: RetrievedItem[],
 ): BiblePassage[] {
-  const passageById = new Map<string, { book: string; chapter: number; verse_start: number; verse_end: number; text: string }>();
+  const passageById = new Map<string, BiblePassageRow>();
   for (const r of passageRows) {
-    passageById.set(r.id, { book: r.book, chapter: r.chapter, verse_start: r.verse_start, verse_end: r.verse_end, text: r.text });
+    passageById.set(r.id, r);
   }
   return retrieved
     .map(r => {
