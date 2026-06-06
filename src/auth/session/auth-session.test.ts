@@ -248,6 +248,7 @@ describe('AuthSession — auth methods', () => {
 
   it('resetPassword calls resetPasswordForEmail with a /login redirectTo when a window exists', async () => {
     const originalWindow = (globalThis as { window?: unknown }).window;
+    // vitest env is 'node' (no window); stub it so the redirectTo branch is exercised.
     (globalThis as { window?: unknown }).window = {
       location: { origin: 'https://example.test' },
     };
@@ -256,8 +257,7 @@ describe('AuthSession — auth methods', () => {
       const session = new AuthSession(client, local, new FakeOAuthProbe());
       await session.resetPassword('a@b.com');
       expect(auth.resetPasswordCalls[0].email).toBe('a@b.com');
-      expect(typeof auth.resetPasswordCalls[0].redirectTo).toBe('string');
-      expect(auth.resetPasswordCalls[0].redirectTo).toContain('/login');
+      expect(auth.resetPasswordCalls[0].redirectTo).toBe('https://example.test/login');
     } finally {
       if (originalWindow === undefined) {
         delete (globalThis as { window?: unknown }).window;
@@ -265,6 +265,14 @@ describe('AuthSession — auth methods', () => {
         (globalThis as { window?: unknown }).window = originalWindow;
       }
     }
+  });
+
+  it('resetPassword passes redirectTo=undefined when no window exists (SSR fallback)', async () => {
+    const { client, auth } = makeFakeClient();
+    const session = new AuthSession(client, local, new FakeOAuthProbe());
+    await session.resetPassword('a@b.com');
+    expect(auth.resetPasswordCalls[0].email).toBe('a@b.com');
+    expect(auth.resetPasswordCalls[0].redirectTo).toBeUndefined();
   });
 
   it('resetPassword throws when the underlying call returns an error', async () => {
