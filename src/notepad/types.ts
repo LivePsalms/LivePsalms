@@ -1,5 +1,15 @@
 export type NoteType = 'devotion' | 'sermon' | 'theme';
 
+export interface NoteDecoration {
+  id: string;        // local uuid
+  assetId: string;   // manifest id
+  xPct: number;      // 0..1, left position normalized to content width
+  yPx: number;       // vertical position in px from top of content
+  widthPct: number;  // 0..1, width normalized to content width
+  rotation: number;  // degrees
+  z: number;         // stacking order
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -7,6 +17,7 @@ export interface Note {
   folderId: string;
   type: NoteType;
   tags: string[];
+  decorations?: NoteDecoration[];
   wordCount: number;
   createdAt: string;
   updatedAt: string;
