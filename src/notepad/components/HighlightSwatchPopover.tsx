@@ -1,4 +1,5 @@
 // src/notepad/components/HighlightSwatchPopover.tsx
+import { useEffect, useRef } from 'react';
 import { filterAssets, type StyleAsset } from '../styles/manifest';
 
 interface Anchor { top: number; left: number; }
@@ -9,15 +10,29 @@ interface Props {
   onQueryChange: (q: string) => void;
   onPick: (swatchId: string) => void;
   onRemove: () => void;
+  onClose: () => void;
   anchor: Anchor;
 }
 
 export function HighlightSwatchPopover({
-  assets, query, onQueryChange, onPick, onRemove, anchor,
+  assets, query, onQueryChange, onPick, onRemove, onClose, anchor,
 }: Props) {
   const shown = filterAssets(assets, 'highlight', query);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => { document.removeEventListener('pointerdown', onPointerDown); };
+  }, [onClose]);
+
   return (
     <div
+      ref={rootRef}
       role="dialog"
       aria-label="Highlight swatches"
       style={{
@@ -41,12 +56,19 @@ export function HighlightSwatchPopover({
           aria-label="Search highlights"
           style={{ flex: 1, fontSize: 12, padding: '3px 6px', border: '1px solid var(--pale-stone)', borderRadius: 6 }}
         />
-        <button aria-label="Remove highlight" onClick={onRemove}
-          style={{ fontSize: 11, border: '1px solid var(--pale-stone)', borderRadius: 6, padding: '0 8px', cursor: 'pointer' }}>
+        <button aria-label="Close highlights" onClick={onClose}
+          style={{ fontSize: 11, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--silica)', padding: '0 4px' }}>
           ✕
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 5, maxHeight: 220, overflowY: 'auto' }}>
+        <button
+          aria-label="Remove highlight"
+          onClick={onRemove}
+          style={{ height: 26, border: '1px solid var(--pale-stone)', borderRadius: 5, background: '#fff', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--silica)' }}
+        >
+          ✕
+        </button>
         {shown.map((a) => (
           <button
             key={a.id}

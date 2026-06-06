@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import {
   Undo2,
@@ -79,14 +79,26 @@ export function NotepadEditor({
 
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
+  const [swatchDismissed, setSwatchDismissed] = useState(false);
+  const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   useEffect(() => {
     if (!editor) return;
     const update = () => {
       const { from, to } = editor.state.selection;
-      if (from === to) { setSwatchAnchor(null); return; }
+      if (from === to) {
+        setSwatchAnchor(null);
+        setSwatchDismissed(false);
+        dismissedRangeRef.current = null;
+        return;
+      }
       const start = editor.view.coordsAtPos(from);
       setSwatchAnchor({ top: start.bottom + 6, left: start.left });
+      const dismissed = dismissedRangeRef.current;
+      if (!dismissed || dismissed.from !== from || dismissed.to !== to) {
+        setSwatchDismissed(false);
+        dismissedRangeRef.current = null;
+      }
     };
     editor.on('selectionUpdate', update);
     return () => { editor.off('selectionUpdate', update); };
@@ -568,7 +580,7 @@ export function NotepadEditor({
       )}
 
       {/* Highlight swatch popover */}
-      {editor && swatchAnchor && (
+      {editor && swatchAnchor && !swatchDismissed && (
         <HighlightSwatchPopover
           assets={STYLE_ASSETS}
           query={swatchQuery}
@@ -576,6 +588,11 @@ export function NotepadEditor({
           anchor={swatchAnchor}
           onPick={(id) => editor.chain().focus().setStyleHighlight(id).run()}
           onRemove={() => editor.chain().focus().unsetStyleHighlight().run()}
+          onClose={() => {
+            setSwatchDismissed(true);
+            const { from, to } = editor.state.selection;
+            dismissedRangeRef.current = { from, to };
+          }}
         />
       )}
 
