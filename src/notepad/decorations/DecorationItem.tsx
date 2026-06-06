@@ -209,6 +209,7 @@ export function DecorationItem({
             background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
             padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)',
           }}>
+            <button aria-label="Rotate decoration counterclockwise 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation - 15) })} style={barBtn}>↺</button>
             <button aria-label="Rotate decoration 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation + 15) })} style={barBtn}>↻</button>
             <button aria-label="Flip horizontal" onClick={() => onChange({ ...d, flipH: !d.flipH })} style={barBtn}>⇋</button>
             <button aria-label="Flip vertical" onClick={() => onChange({ ...d, flipV: !d.flipV })} style={barBtn}>⇅</button>

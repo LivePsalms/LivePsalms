@@ -69,6 +69,15 @@ describe('DecorationItem', () => {
     );
   });
 
+  it('steps rotation backward by 15 degrees, wrapping past 0', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    fireEvent.click(getByLabelText('Rotate decoration counterclockwise 15 degrees'));
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', rotation: 345 }),
+    );
+  });
+
   it('toggles flipH and reflects scaleX(-1) in the body transform (not the chrome)', () => {
     const h = handlers();
     const { getByLabelText, getByTestId, rerender } = render(
