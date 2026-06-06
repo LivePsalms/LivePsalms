@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import {
   Undo2,
@@ -14,6 +14,8 @@ import {
   Underline as UnderlineIcon,
   ChevronDown,
 } from 'lucide-react';
+import { HighlightSwatchPopover } from './HighlightSwatchPopover';
+import { STYLE_ASSETS } from '../styles/manifest';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
 import { useReferenceGraph } from '../context/useReferenceGraph';
@@ -65,6 +67,21 @@ export function NotepadEditor({
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
   const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
+
+  const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [swatchQuery, setSwatchQuery] = useState('');
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      const { from, to } = editor.state.selection;
+      if (from === to) { setSwatchAnchor(null); return; }
+      const start = editor.view.coordsAtPos(from);
+      setSwatchAnchor({ top: start.bottom + 6, left: start.left });
+    };
+    editor.on('selectionUpdate', update);
+    return () => { editor.off('selectionUpdate', update); };
+  }, [editor]);
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
   const {
@@ -517,6 +534,18 @@ export function NotepadEditor({
             )}
           </div>
         </div>
+      )}
+
+      {/* Highlight swatch popover */}
+      {editor && swatchAnchor && (
+        <HighlightSwatchPopover
+          assets={STYLE_ASSETS}
+          query={swatchQuery}
+          onQueryChange={setSwatchQuery}
+          anchor={swatchAnchor}
+          onPick={(id) => editor.chain().focus().setStyleHighlight(id).run()}
+          onRemove={() => editor.chain().focus().unsetStyleHighlight().run()}
+        />
       )}
     </div>
   );
