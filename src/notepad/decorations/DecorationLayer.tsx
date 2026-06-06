@@ -1,5 +1,6 @@
 // src/notepad/decorations/DecorationLayer.tsx
-import { getStyleAsset } from '../styles/manifest';
+import { useRef, useEffect, useState } from 'react';
+import { DecorationItem } from './DecorationItem';
 import type { NoteDecoration } from '../types';
 
 interface Props {
@@ -7,53 +8,51 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDeselect: () => void;
+  onChange: (next: NoteDecoration) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onBringToFront: (id: string) => void;
+  onSendToBack: (id: string) => void;
 }
 
-export function DecorationLayer({ decorations, selectedId, onSelect, onDeselect }: Props) {
+export function DecorationLayer({
+  decorations, selectedId, onSelect, onDeselect,
+  onChange, onDelete, onDuplicate, onBringToFront, onSendToBack,
+}: Props) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [contentWidth, setContentWidth] = useState(1);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver(([entry]) => setContentWidth(entry.contentRect.width));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div
+      ref={ref}
       data-testid="decoration-canvas"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onDeselect();
-      }}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        // Let text under empty areas stay interactive; items re-enable pointers.
-        pointerEvents: 'none',
-        zIndex: 5,
-      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onDeselect(); }}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}
     >
-      {decorations.map((d) => {
-        const asset = getStyleAsset(d.assetId);
-        if (!asset) return null;
-        return (
-          <div
-            key={d.id}
-            data-testid={`decoration-${d.id}`}
-            onMouseDown={(e) => { e.stopPropagation(); onSelect(d.id); }}
-            style={{
-              position: 'absolute',
-              left: `${d.xPct * 100}%`,
-              top: d.yPx,
-              width: `${d.widthPct * 100}%`,
-              transform: `rotate(${d.rotation}deg)`,
-              transformOrigin: 'center center',
-              zIndex: d.z,
-              pointerEvents: 'auto',
-              cursor: 'move',
-              outline: selectedId === d.id ? '2px solid var(--deep-umber)' : 'none',
-            }}
-          >
-            <img
-              src={asset.displayUrl}
-              alt=""
-              draggable={false}
-              style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }}
+      <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0 }}>
+        {decorations.map((d) => (
+          <div key={d.id} style={{ pointerEvents: 'auto' }}>
+            <DecorationItem
+              decoration={d}
+              selected={selectedId === d.id}
+              contentWidth={contentWidth}
+              onChange={onChange}
+              onSelect={onSelect}
+              onDelete={onDelete}
+              onDuplicate={onDuplicate}
+              onBringToFront={onBringToFront}
+              onSendToBack={onSendToBack}
             />
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
