@@ -8,6 +8,8 @@ import type { StyleAsset } from '../styles/manifest';
 const assets: StyleAsset[] = [
   { id: 'arrow-01', category: 'arrow', thumbUrl: 'ta', displayUrl: 'da', aspectRatio: 2 },
   { id: 'shape-01', category: 'shape', thumbUrl: 'ts', displayUrl: 'ds', aspectRatio: 1 },
+  // Highlights are never shown in the tray; they live in the selection popover.
+  { id: 'highlight-01', category: 'highlight', thumbUrl: 'th', displayUrl: 'dh', aspectRatio: 1 },
 ];
 
 afterEach(cleanup);
@@ -17,9 +19,11 @@ describe('DecorationTray', () => {
     const { getByLabelText, queryByLabelText } = render(
       <DecorationTray assets={assets} onPlace={() => {}} onClose={() => {}} />,
     );
-    // Default category 'all' shows both.
+    // Default category 'all' shows the decoration assets...
     expect(getByLabelText('Place arrow-01')).toBeTruthy();
     expect(queryByLabelText('Place shape-01')).toBeTruthy();
+    // ...but excludes highlight-category assets, which live in the selection popover.
+    expect(queryByLabelText('Place highlight-01')).toBeNull();
   });
 
   it('filters by category pill', () => {
