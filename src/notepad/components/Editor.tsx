@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import {
   Undo2,
@@ -13,22 +13,23 @@ import {
   Code,
   Underline as UnderlineIcon,
   ChevronDown,
-  Palette,
-  Check,
+  Sparkles,
 } from 'lucide-react';
+import { HighlightSwatchPopover } from './HighlightSwatchPopover';
+import { useDecorations } from '../decorations/useDecorations';
+import { DecorationLayer } from '../decorations/DecorationLayer';
+import { DecorationTray } from '../decorations/DecorationTray';
+import { STYLE_ASSETS } from '../styles/manifest';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
 import { useReferenceGraph } from '../context/useReferenceGraph';
 import { useNoteEditor } from '../editor/use-note-editor';
 import { useNoteLinkPopup } from '../editor/use-note-link-popup';
 import { useVerseTooltip } from '../editor/use-verse-tooltip';
-import { useJournalTheme } from '../hooks/use-journal-theme';
 import { formatTag } from '../utils/tags';
 import { useAccountProfile } from '../../auth/context/useAccountProfile';
 import { emptyStateMessage } from '../utils/empty-state-message';
-import { JOURNAL_THEMES } from '../types';
-import type { JournalTheme, Note } from '../types';
-import '../journal-themes.css';
+import type { Note } from '../types';
 
 export interface NotepadEditorProps {
   onAfterSave?: (note: Note) => void;
@@ -66,11 +67,42 @@ export function NotepadEditor({
   const { graph } = useReferenceGraph();
   const updateNote = actions.updateNote;
   const openNote = collection.openNote;
-  const [journalTheme, setJournalTheme] = useJournalTheme();
   const { profile } = useAccountProfile();
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
   const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
+
+  // Read-only decoration overlay state (style stickers placed over the note).
+  const decorationsApi = useDecorations(activeNote, updateNote);
+  const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
+  const [trayOpen, setTrayOpen] = useState(false);
+
+  const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [swatchQuery, setSwatchQuery] = useState('');
+  const [swatchDismissed, setSwatchDismissed] = useState(false);
+  const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      const { from, to } = editor.state.selection;
+      if (from === to) {
+        setSwatchAnchor(null);
+        setSwatchDismissed(false);
+        dismissedRangeRef.current = null;
+        return;
+      }
+      const start = editor.view.coordsAtPos(from);
+      setSwatchAnchor({ top: start.bottom + 6, left: start.left });
+      const dismissed = dismissedRangeRef.current;
+      if (!dismissed || dismissed.from !== from || dismissed.to !== to) {
+        setSwatchDismissed(false);
+        dismissedRangeRef.current = null;
+      }
+    };
+    editor.on('selectionUpdate', update);
+    return () => { editor.off('selectionUpdate', update); };
+  }, [editor]);
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
   const {
@@ -106,11 +138,6 @@ export function NotepadEditor({
 
   // Heading dropdown
   const [headingOpen, setHeadingOpen] = useState(false);
-
-  // Theme picker dropdown
-  const [themeOpen, setThemeOpen] = useState(false);
-
-  const isJournalThemed = journalTheme !== 'default';
 
   const currentHeading = editor
     ? editor.isActive('heading', { level: 1 }) ? 'H1'
@@ -186,7 +213,7 @@ export function NotepadEditor({
           {/* Heading dropdown */}
           <div className="relative">
             <ToolbarButton
-              onClick={() => { setHeadingOpen(!headingOpen); setThemeOpen(false); }}
+              onClick={() => setHeadingOpen(!headingOpen)}
               active={currentHeading !== 'H'}
               title="Heading"
             >
@@ -285,88 +312,33 @@ export function NotepadEditor({
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-
-          <ToolbarDivider />
-
-          {/* Theme picker */}
-          <div className="relative">
-            <ToolbarButton
-              onClick={() => { setThemeOpen(!themeOpen); setHeadingOpen(false); }}
-              active={isJournalThemed}
-              title="Journal Theme"
-            >
-              <Palette size={15} />
-              <ChevronDown size={10} className="ml-0.5 opacity-50" />
-            </ToolbarButton>
-            {themeOpen && (
-              <div
-                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 rounded-md shadow-lg z-50 py-1`}
-                style={{
-                  background: 'rgba(240, 236, 232, 0.97)',
-                  border: '1px solid var(--pale-stone)',
-                  minWidth: 200,
-                }}
-              >
-                {JOURNAL_THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setJournalTheme(t.id as JournalTheme);
-                      setThemeOpen(false);
-                    }}
-                    className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors gap-2"
-                    style={{
-                      color: journalTheme === t.id ? 'var(--charred)' : 'var(--deep-umber)',
-                      fontWeight: journalTheme === t.id ? 600 : 400,
-                      fontFamily: 'Outfit, sans-serif',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: '50%',
-                        background: t.swatch,
-                        border: t.id === 'default' ? '1px solid var(--pale-stone)' : 'none',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span className="flex-1 text-left">{t.label}</span>
-                    {journalTheme === t.id && (
-                      <Check size={12} style={{ color: 'var(--charred)' }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate">
+            <Sparkles size={15} />
+          </ToolbarButton>
         </div>
       )}
 
       {/* Scrollable content area */}
       <div
-        data-journal-theme={journalTheme}
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: isJournalThemed ? '32px' : '2rem 2.5rem',
+          padding: '2rem 2.5rem',
           position: 'relative',
-          background: isJournalThemed ? '#f5f0e8' : undefined,
         }}
       >
-        <div className={isJournalThemed ? 'journal-page' : ''}>
+        <div>
           {/* Title */}
           <input
             type="text"
             value={activeNote.title}
             onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
             placeholder="Untitled"
-            className={isJournalThemed ? 'journal-title' : ''}
             style={{
-              fontFamily: isJournalThemed ? undefined : "'Cormorant Garamond', serif",
-              fontSize: isJournalThemed ? undefined : '2rem',
-              fontWeight: isJournalThemed ? undefined : 300,
-              color: isJournalThemed ? undefined : 'var(--charred)',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: '2rem',
+              fontWeight: 300,
+              color: 'var(--charred)',
               background: 'transparent',
               border: 'none',
               outline: 'none',
@@ -378,11 +350,10 @@ export function NotepadEditor({
 
           {/* Date */}
           <div
-            className={isJournalThemed ? 'journal-date' : ''}
             style={{
-              fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
-              fontSize: isJournalThemed ? undefined : '0.8rem',
-              color: isJournalThemed ? undefined : 'var(--silica)',
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '0.8rem',
+              color: 'var(--silica)',
               marginBottom: '0.75rem',
               letterSpacing: '0.03em',
             }}
@@ -393,7 +364,6 @@ export function NotepadEditor({
           {/* Tags */}
           {activeNote.tags.length > 0 && (
             <div
-              className={isJournalThemed ? 'journal-tags' : ''}
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -405,10 +375,10 @@ export function NotepadEditor({
                 <span
                   key={tag}
                   style={{
-                    fontFamily: isJournalThemed ? undefined : "'Outfit', sans-serif",
-                    fontSize: isJournalThemed ? undefined : '0.78rem',
-                    background: isJournalThemed ? undefined : 'rgba(188, 179, 163, 0.2)',
-                    color: isJournalThemed ? undefined : 'var(--deep-umber)',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontSize: '0.78rem',
+                    background: 'rgba(188, 179, 163, 0.2)',
+                    color: 'var(--deep-umber)',
                     borderRadius: '4px',
                     padding: '2px 8px',
                   }}
@@ -421,8 +391,7 @@ export function NotepadEditor({
 
           {/* Divider */}
           <hr
-            className={isJournalThemed ? 'journal-divider' : ''}
-            style={isJournalThemed ? {} : {
+            style={{
               border: 'none',
               borderTop: '1px solid var(--pale-stone)',
               marginBottom: '1.5rem',
@@ -435,6 +404,11 @@ export function NotepadEditor({
             onMouseOut={handleMouseOut}
             onClick={(e) => {
               handleClick(e);
+              // The decoration overlay is pointerEvents:none over empty space, so
+              // clicks on the editor fall through to here — deselect any decoration.
+              // Clicks on a decoration hit its pointerEvents:auto island instead and
+              // never reach this handler, so this only fires for genuine editor clicks.
+              setSelectedDecoration(null);
               // On mobile (bottom toolbar) there is no hover; a tap shows/dismisses
               // the verse tooltip. handleMouseOver reads e.target.closest(...) so a
               // click event drives it correctly and clears it when tapping off a verse.
@@ -444,6 +418,20 @@ export function NotepadEditor({
           >
             <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
           </div>
+
+          {/* Interactive decoration overlay — absolutely positioned within the
+              relative scroll container so it overlays content and scrolls with it. */}
+          <DecorationLayer
+            decorations={decorationsApi.decorations}
+            selectedId={selectedDecoration}
+            onSelect={setSelectedDecoration}
+            onDeselect={() => setSelectedDecoration(null)}
+            onChange={(next) => decorationsApi.update(next.id, next)}
+            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); }}
+            onDuplicate={(id) => decorationsApi.duplicate(id)}
+            onBringToFront={(id) => decorationsApi.bringToFront(id)}
+            onSendToBack={(id) => decorationsApi.sendToBack(id)}
+          />
         </div>
       </div>
 
@@ -589,6 +577,33 @@ export function NotepadEditor({
             )}
           </div>
         </div>
+      )}
+
+      {/* Highlight swatch popover */}
+      {editor && swatchAnchor && !swatchDismissed && (
+        <HighlightSwatchPopover
+          assets={STYLE_ASSETS}
+          query={swatchQuery}
+          onQueryChange={setSwatchQuery}
+          anchor={swatchAnchor}
+          onPick={(id) => editor.chain().focus().setStyleHighlight(id).run()}
+          onRemove={() => editor.chain().focus().unsetStyleHighlight().run()}
+          onClose={() => {
+            setSwatchDismissed(true);
+            const { from, to } = editor.state.selection;
+            dismissedRangeRef.current = { from, to };
+          }}
+        />
+      )}
+
+      {trayOpen && (
+        <DecorationTray
+          assets={STYLE_ASSETS}
+          onClose={() => setTrayOpen(false)}
+          onPlace={(assetId) =>
+            decorationsApi.add({ assetId, xPct: 0.4, yPx: 80, widthPct: 0.25, rotation: 0 })
+          }
+        />
       )}
     </div>
   );

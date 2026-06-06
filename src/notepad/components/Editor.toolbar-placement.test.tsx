@@ -28,7 +28,6 @@ vi.mock('../editor/use-note-link-popup', () => ({
 vi.mock('../editor/use-verse-tooltip', () => ({
   useVerseTooltip: () => ({ tooltip: null, onMouseOver: verseSpies.onMouseOver, onMouseOut: vi.fn() }),
 }));
-vi.mock('../hooks/use-journal-theme', () => ({ useJournalTheme: () => ['default', vi.fn()] }));
 vi.mock('@tiptap/react', () => ({ EditorContent: () => <div data-testid="editor-content" /> }));
 vi.mock('../../auth/context/useAccountProfile', () => ({
   useAccountProfile: () => ({ profile: null }),
