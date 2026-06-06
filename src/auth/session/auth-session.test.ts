@@ -16,6 +16,8 @@ class FakeSupabaseAuth {
   signUpCalls: Array<{ email: string; password: string; fullName: string }> = [];
   signInCalls: Array<{ email: string; password: string }> = [];
   oauthCalls: Array<{ provider: string }> = [];
+  resetPasswordCalls: Array<{ email: string; redirectTo?: string }> = [];
+  resetPasswordError: Error | null = null;
 
   async getSession() {
     return { data: { session: this.initialSession }, error: null };
@@ -53,6 +55,11 @@ class FakeSupabaseAuth {
   async signInWithOAuth(payload: { provider: string }) {
     this.oauthCalls.push(payload);
     return { error: null };
+  }
+
+  async resetPasswordForEmail(email: string, options?: { redirectTo?: string }) {
+    this.resetPasswordCalls.push({ email, redirectTo: options?.redirectTo });
+    return { error: this.resetPasswordError };
   }
 
   async signOut() {
@@ -239,12 +246,41 @@ describe('AuthSession — auth methods', () => {
     expect(auth.oauthCalls.map((c) => c.provider)).toEqual(['google', 'apple']);
   });
 
+  it('resetPassword calls resetPasswordForEmail with a /login redirectTo when a window exists', async () => {
+    const originalWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = {
+      location: { origin: 'https://example.test' },
+    };
+    try {
+      const { client, auth } = makeFakeClient();
+      const session = new AuthSession(client, local, new FakeOAuthProbe());
+      await session.resetPassword('a@b.com');
+      expect(auth.resetPasswordCalls[0].email).toBe('a@b.com');
+      expect(typeof auth.resetPasswordCalls[0].redirectTo).toBe('string');
+      expect(auth.resetPasswordCalls[0].redirectTo).toContain('/login');
+    } finally {
+      if (originalWindow === undefined) {
+        delete (globalThis as { window?: unknown }).window;
+      } else {
+        (globalThis as { window?: unknown }).window = originalWindow;
+      }
+    }
+  });
+
+  it('resetPassword throws when the underlying call returns an error', async () => {
+    const { client, auth } = makeFakeClient();
+    auth.resetPasswordError = new Error('reset failed');
+    const session = new AuthSession(client, local, new FakeOAuthProbe());
+    await expect(session.resetPassword('a@b.com')).rejects.toThrow(/reset failed/i);
+  });
+
   it('all sign-in/up methods throw when no client is configured', async () => {
     const session = new AuthSession(null, local);
     await expect(session.signUp('a', 'b', 'c')).rejects.toThrow(/not configured/i);
     await expect(session.signIn('a', 'b')).rejects.toThrow(/not configured/i);
     await expect(session.signInWithGoogle()).rejects.toThrow(/not configured/i);
     await expect(session.signInWithApple()).rejects.toThrow(/not configured/i);
+    await expect(session.resetPassword('a')).rejects.toThrow(/not configured/i);
   });
 
   it('dispose() unsubscribes the auth listener', () => {
