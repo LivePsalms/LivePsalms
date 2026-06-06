@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categorize, slugify, IN_SCOPE_CATEGORIES } from './style-assets-lib.mjs';
+import { categorize, slugify, IN_SCOPE_CATEGORIES, buildManifestEntry, renderManifestModule } from './style-assets-lib.mjs';
 
 describe('categorize', () => {
   it('maps each in-scope source folder to its category', () => {
@@ -37,5 +37,35 @@ describe('IN_SCOPE_CATEGORIES', () => {
     expect(IN_SCOPE_CATEGORIES).toEqual([
       'highlight', 'shape', 'arrow', 'bubble', 'squiggle', 'line',
     ]);
+  });
+});
+
+describe('buildManifestEntry', () => {
+  it('builds a StyleAsset with public URLs and aspect ratio', () => {
+    const entry = buildManifestEntry({
+      id: 'arrow-12',
+      category: 'arrow',
+      width: 800,
+      height: 400,
+    });
+    expect(entry).toEqual({
+      id: 'arrow-12',
+      category: 'arrow',
+      thumbUrl: '/styles/arrow/arrow-12.thumb.webp',
+      displayUrl: '/styles/arrow/arrow-12.webp',
+      aspectRatio: 2,
+    });
+  });
+});
+
+describe('renderManifestModule', () => {
+  it('emits a typed module exporting STYLE_ASSETS', () => {
+    const src = renderManifestModule([
+      { id: 'shape-01', category: 'shape', thumbUrl: '/styles/shape/shape-01.thumb.webp', displayUrl: '/styles/shape/shape-01.webp', aspectRatio: 1 },
+    ]);
+    expect(src).toContain('export type StyleCategory =');
+    expect(src).toContain('export const STYLE_ASSETS: StyleAsset[] =');
+    expect(src).toContain('"id": "shape-01"');
+    expect(src).toContain("export function getStyleAsset(id: string)");
   });
 });
