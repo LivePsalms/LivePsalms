@@ -13,10 +13,12 @@ import {
   Code,
   Underline as UnderlineIcon,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
 import { DecorationLayer } from '../decorations/DecorationLayer';
+import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
@@ -73,6 +75,7 @@ export function NotepadEditor({
   // Read-only decoration overlay state (style stickers placed over the note).
   const decorationsApi = useDecorations(activeNote, updateNote);
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
+  const [trayOpen, setTrayOpen] = useState(false);
 
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
@@ -296,6 +299,9 @@ export function NotepadEditor({
             title="Underline"
           >
             <UnderlineIcon size={15} />
+          </ToolbarButton>
+          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate">
+            <Sparkles size={15} />
           </ToolbarButton>
         </div>
       )}
@@ -560,6 +566,16 @@ export function NotepadEditor({
           anchor={swatchAnchor}
           onPick={(id) => editor.chain().focus().setStyleHighlight(id).run()}
           onRemove={() => editor.chain().focus().unsetStyleHighlight().run()}
+        />
+      )}
+
+      {trayOpen && (
+        <DecorationTray
+          assets={STYLE_ASSETS}
+          onClose={() => setTrayOpen(false)}
+          onPlace={(assetId) =>
+            decorationsApi.add({ assetId, xPct: 0.4, yPx: 80, widthPct: 0.25, rotation: 0 })
+          }
         />
       )}
     </div>
