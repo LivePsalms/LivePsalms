@@ -15,6 +15,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
+import { useDecorations } from '../decorations/useDecorations';
+import { DecorationLayer } from '../decorations/DecorationLayer';
 import { STYLE_ASSETS } from '../styles/manifest';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
@@ -67,6 +69,10 @@ export function NotepadEditor({
 
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
   const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
+
+  // Read-only decoration overlay state (style stickers placed over the note).
+  const decorationsApi = useDecorations(activeNote, updateNote);
+  const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
 
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
@@ -389,6 +395,15 @@ export function NotepadEditor({
           >
             <EditorContent editor={editor} className="prose prose-sm max-w-none notepad-editor" />
           </div>
+
+          {/* Read-only decoration overlay — absolutely positioned within the
+              relative scroll container so it overlays content and scrolls with it. */}
+          <DecorationLayer
+            decorations={decorationsApi.decorations}
+            selectedId={selectedDecoration}
+            onSelect={setSelectedDecoration}
+            onDeselect={() => setSelectedDecoration(null)}
+          />
         </div>
       </div>
 
