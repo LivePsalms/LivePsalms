@@ -51,6 +51,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
         folder_id: note.folderId === 'root' ? null : note.folderId,
         type: note.type,
         tags: note.tags,
+        decorations: note.decorations ?? [],
         word_count: countWordsFromTipTapJSON(note.content),
       })
       .select()
@@ -73,6 +74,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
         folder_id: note.folderId === 'root' ? null : note.folderId,
         type: note.type,
         tags: note.tags,
+        decorations: note.decorations ?? [],
         word_count: note.wordCount ?? countWordsFromTipTapJSON(note.content),
         created_at: note.createdAt,
         updated_at: note.updatedAt,
@@ -96,6 +98,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
     if (updates.type !== undefined) mapped.type = updates.type;
     if (updates.tags !== undefined) mapped.tags = updates.tags;
+    if (updates.decorations !== undefined) mapped.decorations = updates.decorations;
 
     const { data, error } = await this.#client
       .from('notes')
@@ -122,6 +125,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       folderId: original.folderId,
       type: original.type,
       tags: original.tags,
+      decorations: original.decorations ?? [],
       wordCount: original.wordCount,
     });
   }
@@ -215,6 +219,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     folderId: (row.folder_id as string) ?? 'root',
     type: row.type as Note['type'],
     tags: (row.tags as string[]) ?? [],
+    decorations: (row.decorations as Note['decorations']) ?? [],
     wordCount: (row.word_count as number) ?? 0,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
