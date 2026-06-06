@@ -15,6 +15,11 @@ describe('moveTo', () => {
     expect(moveTo(d, { dxPx: 100, dyPx: 30, contentWidth: 1000 }))
       .toMatchObject({ xPct: 0.6, yPx: 130 });
   });
+
+  it('ignores horizontal delta when contentWidth is 0 but still moves vertically', () => {
+    expect(moveTo(d, { dxPx: 100, dyPx: 30, contentWidth: 0 }))
+      .toMatchObject({ xPct: 0.5, yPx: 130 });
+  });
 });
 
 describe('resizeWidthPct', () => {
@@ -22,6 +27,10 @@ describe('resizeWidthPct', () => {
     expect(resizeWidthPct(d, { dxPx: 100, contentWidth: 1000 }).widthPct).toBeCloseTo(0.3);
     expect(resizeWidthPct({ ...d, widthPct: 0.98 }, { dxPx: 1000, contentWidth: 1000 }).widthPct).toBe(1);
     expect(resizeWidthPct({ ...d, widthPct: 0.05 }, { dxPx: -1000, contentWidth: 1000 }).widthPct).toBe(0.03);
+  });
+
+  it('leaves width unchanged when contentWidth is 0', () => {
+    expect(resizeWidthPct(d, { dxPx: 100, contentWidth: 0 }).widthPct).toBe(0.2);
   });
 });
 

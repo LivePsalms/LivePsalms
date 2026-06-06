@@ -10,7 +10,7 @@ export function moveTo(
 ): NoteDecoration {
   return clampDecoration({
     ...d,
-    xPct: d.xPct + dxPx / contentWidth,
+    xPct: d.xPct + (contentWidth > 0 ? dxPx / contentWidth : 0),
     yPx: d.yPx + dyPx,
   });
 }
@@ -19,7 +19,7 @@ export function resizeWidthPct(
   d: NoteDecoration,
   { dxPx, contentWidth }: { dxPx: number; contentWidth: number },
 ): NoteDecoration {
-  const raw = d.widthPct + dxPx / contentWidth;
+  const raw = d.widthPct + (contentWidth > 0 ? dxPx / contentWidth : 0);
   return { ...d, widthPct: Math.min(MAX_WIDTH_PCT, Math.max(MIN_WIDTH_PCT, raw)) };
 }
 
