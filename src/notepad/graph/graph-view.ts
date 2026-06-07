@@ -151,6 +151,7 @@ export class GraphView extends Observable<GraphViewState> {
   private hoveredNodeId: string | null = null;
   private transform = { x: 0, y: 0, scale: 1 };
   private hasFit = false;
+  private needsSettle = false;
 
   private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
     active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
@@ -201,13 +202,47 @@ export class GraphView extends Observable<GraphViewState> {
     }
   }
 
+  /**
+   * Run the simulation to a stable layout and fit the camera in one shot,
+   * WITHOUT painting intermediate frames. The production animation loop calls
+   * this once per (re)build so the graph appears already settled and fitted —
+   * no entrance motion and no resize, only the final state is ever drawn.
+   * Tests drive ticks via tickFor instead and exercise this directly.
+   */
+  settle(): void {
+    if (!this.sim) return;
+    // d3 scales every force by alpha, so once alpha decays past alphaMin the
+    // layout is visually stable. The cap bounds the worst case for large graphs.
+    const MAX_SETTLE_TICKS = 500;
+    let i = 0;
+    while (i < MAX_SETTLE_TICKS && this.sim.alpha() > this.sim.alphaMin()) {
+      this.sim.tick();
+      i++;
+    }
+    this.tickCount = AUTO_FIT_TICK;
+    if (!this.hasFit) {
+      this.runAutoFit();
+      this.hasFit = true;
+    }
+    this.draw();
+  }
+
   private startAutoTick(): void {
     if (typeof requestAnimationFrame === 'undefined') return;
     this.stopAutoTick();
     const loop = () => {
       if (this.sim) {
-        this.sim.tick();
-        this.onTick();
+        if (this.needsSettle) {
+          // First frame after a (re)build: lay the graph out and fit the camera
+          // in one shot so the user never sees the scale=1 → fit-scale jump that
+          // resized every node, nor the spreading motion. Only the final,
+          // already-fitted state is ever painted — no entrance motion, no resize.
+          this.needsSettle = false;
+          this.settle();
+        } else {
+          this.sim.tick();
+          this.onTick();
+        }
       }
       this.rafHandle = requestAnimationFrame(loop);
     };
@@ -637,6 +672,9 @@ export class GraphView extends Observable<GraphViewState> {
     this.sim.stop();
     this.tickCount = 0;
     this.hasFit = false;
+    // Production rAF loop settles + fits this build on its next frame before any
+    // paint. tickFor (tests) ignores this and ticks/fits incrementally instead.
+    this.needsSettle = true;
   }
 
   private filterNodes(nodes: GraphNode[]): GraphNode[] {

@@ -587,6 +587,60 @@ describe('GraphView — auto-fit camera', () => {
   });
 });
 
+describe('GraphView — settle (no entrance motion)', () => {
+  const spread = () => ({
+    nodes: [
+      node({ id: 'a', type: 'devotion' }),
+      node({ id: 'b', type: 'sermon' }),
+      node({ id: 'c', type: 'theme' }),
+      node({ id: 'd', type: 'scripture' }),
+    ],
+    edges: [
+      edge({ id: 'r1', source: 'a', target: 'b' }),
+      edge({ id: 'r2', source: 'b', target: 'c' }),
+    ],
+  });
+
+  it('is a no-op when no sim is built yet', () => {
+    const { view } = attached();
+    expect(() => view.settle()).not.toThrow();
+  });
+
+  it('fits the camera in one shot, without per-tick animation', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    const identity = view.getTransform();
+    view.settle();
+    // Auto-fit ran during settle, so the camera moved off the identity transform.
+    expect(view.getTransform()).not.toEqual(identity);
+  });
+
+  it('leaves the layout stable so the first painted frame shows no motion', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    view.settle();
+    const before = view.getSimNodes().map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 }));
+    view.tickFor(1);
+    const after = view.getSimNodes().map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 }));
+    for (let i = 0; i < before.length; i++) {
+      expect(Math.abs(after[i].x - before[i].x)).toBeLessThan(2);
+      expect(Math.abs(after[i].y - before[i].y)).toBeLessThan(2);
+    }
+  });
+
+  it('does not re-fit the camera on ticks after settling', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    view.settle();
+    const fitted = { ...view.getTransform() };
+    view.tickFor(120);
+    expect(view.getTransform()).toEqual(fitted);
+  });
+});
+
 describe('GraphView — cursor management', () => {
   function placeNode(view: GraphView, id: string, x: number, y: number) {
     const sim = view.getSimNodes();
