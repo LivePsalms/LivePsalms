@@ -355,10 +355,10 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      ctx.font = `${n.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
+      ctx.font = `${n.radius > 30 ? '17px' : '15px'} Outfit, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, n.x, n.y + n.radius + 14);
+      ctx.fillText(n.title, n.x, n.y + n.radius + 16);
     }
 
     if (hovered) {
