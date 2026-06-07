@@ -212,8 +212,15 @@ function DesktopNotepadWorkspace() {
             </button>
           </div>
 
-          {/* Tab Content */}
-          {activeTab === 'content' && <NotepadEditor onAfterSave={onAfterSave} />}
+          {/* Tab Content — the editor fills the remaining space and scrolls
+              internally; min-h-0 lets it shrink so the Connection Cards strip
+              below stays on-screen instead of being clipped by main's
+              overflow:hidden. */}
+          {activeTab === 'content' && (
+            <div className="flex-1 min-h-0">
+              <NotepadEditor onAfterSave={onAfterSave} />
+            </div>
+          )}
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (
@@ -235,16 +242,18 @@ function DesktopNotepadWorkspace() {
               for every other state (no empty-state placeholders here; the
               Lamplight tab handles those for users who go looking). */}
           {activeTab === 'content' && lamplightAdapter && user && (
-            <ConnectionCardsStrip
-              adapter={lamplightAdapter}
-              userId={user.id}
-              activeNote={activeNote}
-              totalNoteCount={notes.length}
-              loadNeighborNotes={async (ids) =>
-                notes.filter((n) => ids.includes(n.id))
-              }
-              onOpenNote={(id) => collection.openNote(id)}
-            />
+            <div className="shrink-0 overflow-y-auto" style={{ maxHeight: '45vh' }}>
+              <ConnectionCardsStrip
+                adapter={lamplightAdapter}
+                userId={user.id}
+                activeNote={activeNote}
+                totalNoteCount={notes.length}
+                loadNeighborNotes={async (ids) =>
+                  notes.filter((n) => ids.includes(n.id))
+                }
+                onOpenNote={(id) => collection.openNote(id)}
+              />
+            </div>
           )}
         </main>
 
