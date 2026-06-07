@@ -14,8 +14,6 @@ import {
   Underline as UnderlineIcon,
   ChevronDown,
   Sparkles,
-  Wand2,
-  Loader2,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
@@ -23,10 +21,6 @@ import { DecorationLayer } from '../decorations/DecorationLayer';
 import { TEXT_Z } from '../decorations/decoration-geometry';
 import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
-import { usePrettify, type PrettifyCapableAdapter } from '../prettify/use-prettify';
-import { DENSITIES, type PrettifyDensity } from '../prettify/prettify-types';
-import type { Rect } from '../prettify/anchor-geometry';
-import type { QuoteLocation } from '../prettify/quote-locator';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useNotepadActions } from '../context/useNotepadActions';
 import { useReferenceGraph } from '../context/useReferenceGraph';
@@ -45,10 +39,6 @@ export interface NotepadEditorProps {
   toolbarPlacement?: 'top' | 'bottom';
   /** When toolbarPlacement is 'bottom', px to lift the bar above the keyboard. */
   toolbarBottomOffset?: number;
-  /** Lamplight adapter, threaded for the AI Prettify action. Null disables it. */
-  lamplightAdapter?: PrettifyCapableAdapter | null;
-  /** Current user id; required for Prettify (server gates per-user quota). */
-  userId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,16 +54,6 @@ function formatDate(iso: string): string {
   });
 }
 
-function prettifyErrorMessage(reason?: string): string {
-  switch (reason) {
-    case 'no_content': return 'Add some note text before prettifying.';
-    case 'disabled': return 'Lamplight is turned off in your settings.';
-    case 'quota': return 'Daily Lamplight limit reached — try again tomorrow.';
-    case 'validators_failed': return 'Lamplight could not find anchorable text this time.';
-    default: return 'Prettify failed — check your connection and try again.';
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -82,8 +62,6 @@ export function NotepadEditor({
   onAfterSave,
   toolbarPlacement = 'top',
   toolbarBottomOffset = 0,
-  lamplightAdapter = null,
-  userId = null,
 }: NotepadEditorProps = {}) {
   const { notes, activeNote, collection } = useNoteCollection();
   const actions = useNotepadActions();
@@ -99,56 +77,6 @@ export function NotepadEditor({
   const decorationsApi = useDecorations(activeNote, updateNote);
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
-
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [prettifyMenuOpen, setPrettifyMenuOpen] = useState(false);
-  const [contentWidth, setContentWidth] = useState(1);
-
-  // Track the scroll container's width outside render so anchor placement has a
-  // live content width without reading a ref during render.
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const sync = () => setContentWidth(el.clientWidth || 1);
-    sync();
-    const ro = new ResizeObserver(sync);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const measure = useCallback(
-    (range: QuoteLocation): Rect | null => {
-      const el = contentRef.current;
-      const view = editor?.view;
-      if (!el || !view) return null;
-      try {
-        const box = el.getBoundingClientRect();
-        const start = view.coordsAtPos(range.from);
-        const end = view.coordsAtPos(range.to);
-        const left = Math.min(start.left, end.left) - box.left + el.scrollLeft;
-        const top = Math.min(start.top, end.top) - box.top + el.scrollTop;
-        const right = Math.max(start.right, end.right) - box.left + el.scrollLeft;
-        const bottom = Math.max(start.bottom, end.bottom) - box.top + el.scrollTop;
-        return { left, top, width: right - left, height: bottom - top };
-      } catch {
-        return null;
-      }
-    },
-    [editor],
-  );
-
-  const prettify = usePrettify({
-    editor,
-    adapter: lamplightAdapter,
-    userId,
-    noteId: activeNote?.id ?? null,
-    contentText: editor?.getText() ?? '',
-    measure,
-    contentWidth,
-    decorations: decorationsApi.decorations,
-    addMany: decorationsApi.addMany,
-    reset: decorationsApi.reset,
-  });
 
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
@@ -388,48 +316,11 @@ export function NotepadEditor({
           <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate">
             <Sparkles size={15} />
           </ToolbarButton>
-          {lamplightAdapter && userId && (
-            <div className="relative">
-              <ToolbarButton
-                onClick={() => setPrettifyMenuOpen((v) => !v)}
-                active={prettifyMenuOpen || prettify.state.phase === 'running'}
-                disabled={prettify.state.phase === 'running'}
-                title={prettify.state.phase === 'running' ? 'Prettifying…' : 'Prettify with Lamplight'}
-              >
-                {prettify.state.phase === 'running' ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <Wand2 size={15} />
-                )}
-              </ToolbarButton>
-              {prettifyMenuOpen && (
-                <div
-                  className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 rounded-md shadow-lg z-50 py-1`}
-                  style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 120 }}
-                >
-                  {DENSITIES.map((density: PrettifyDensity) => (
-                    <button
-                      key={density}
-                      onClick={() => {
-                        setPrettifyMenuOpen(false);
-                        void prettify.run(density);
-                      }}
-                      className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors capitalize"
-                      style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
-                    >
-                      {density}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
       {/* Scrollable content area */}
       <div
-        ref={contentRef}
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -719,59 +610,6 @@ export function NotepadEditor({
             decorationsApi.add({ assetId, xPct: 0.4, yPx: 80, widthPct: 0.25, rotation: 0 })
           }
         />
-      )}
-
-      {prettify.state.phase === 'done' && (
-        <div
-          style={{
-            position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)',
-            zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
-            background: 'rgba(240, 236, 232, 0.98)', border: '1px solid var(--pale-stone)',
-            borderRadius: 10, padding: '0.6rem 0.9rem', boxShadow: '0 4px 20px rgba(0,0,0,0.14)',
-            fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', color: 'var(--deep-umber)',
-          }}
-        >
-          <span>
-            {`Prettified — ${prettify.state.result?.highlights ?? 0} highlights, `}
-            {`${prettify.state.result?.decorations ?? 0} decorations, `}
-            {`${prettify.state.result?.connections ?? 0} connections`}
-          </span>
-          {prettify.state.canUndo && (
-            <button
-              onClick={() => prettify.undo()}
-              style={{ border: 'none', background: 'transparent', color: 'var(--charred)', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Undo
-            </button>
-          )}
-          <button
-            onClick={() => prettify.dismiss()}
-            style={{ border: 'none', background: 'transparent', color: 'var(--silica)', cursor: 'pointer' }}
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-      {prettify.state.phase === 'error' && (
-        <div
-          style={{
-            position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)',
-            zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
-            background: 'rgba(240, 236, 232, 0.98)', border: '1px solid var(--pale-stone)',
-            borderRadius: 10, padding: '0.6rem 0.9rem', boxShadow: '0 4px 20px rgba(0,0,0,0.14)',
-            fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', color: 'var(--deep-umber)',
-          }}
-        >
-          <span>{prettifyErrorMessage(prettify.state.reason)}</span>
-          <button
-            onClick={() => prettify.dismiss()}
-            style={{ border: 'none', background: 'transparent', color: 'var(--silica)', cursor: 'pointer' }}
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
-        </div>
       )}
     </div>
   );
