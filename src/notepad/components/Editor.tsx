@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Sparkles,
   Wand2,
+  Loader2,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
@@ -393,9 +394,13 @@ export function NotepadEditor({
                 onClick={() => setPrettifyMenuOpen((v) => !v)}
                 active={prettifyMenuOpen || prettify.state.phase === 'running'}
                 disabled={prettify.state.phase === 'running'}
-                title="Prettify with Lamplight"
+                title={prettify.state.phase === 'running' ? 'Prettifying…' : 'Prettify with Lamplight'}
               >
-                <Wand2 size={15} />
+                {prettify.state.phase === 'running' ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Wand2 size={15} />
+                )}
               </ToolbarButton>
               {prettifyMenuOpen && (
                 <div
