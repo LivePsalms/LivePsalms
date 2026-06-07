@@ -43,6 +43,7 @@ export interface ConnectionCardThresholds {
 }
 
 import type { DailyDevotion } from './lamplight-artifacts';
+import type { PrettifyDensity, PrettifyResult } from '../prettify/prettify-types';
 
 export type DailyDevotionGenerateResult =
   | { ok: true; artifact: DailyDevotion; cached: boolean }
@@ -96,6 +97,18 @@ export interface LamplightAdapter {
   hasNoteEmbedding(noteId: string): Promise<boolean>;
   /** Invokes lamplight-generate Edge Function with kind='connection_card_why'. */
   generateConnectionWhy(sourceNoteId: string, relatedNoteId: string): Promise<ConnectionWhyResult>;
+  /**
+   * Invokes the lamplight-prettify Edge Function. Returns semantic decoration
+   * intents for the note. Empty content short-circuits to `no_content` without
+   * a network call. Server enforces enabled (403→'disabled') and quota
+   * (429→'quota'); other transport failures map to 'network'.
+   */
+  generatePrettifyPlan(
+    userId: string,
+    noteId: string,
+    contentText: string,
+    density: PrettifyDensity,
+  ): Promise<PrettifyResult>;
   isLamplightAdmin(): Promise<boolean>;
   adminListJobs(filters: AdminJobFilters): Promise<AdminJobRow[]>;
   adminJobCounts(sinceIso: string): Promise<AdminJobCounts>;
