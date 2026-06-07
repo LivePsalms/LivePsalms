@@ -13,7 +13,6 @@ import type {
   AdminUsageRow,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
-import type { PrettifyResult } from '../prettify/prettify-types';
 
 /**
  * In-memory LamplightAdapter for unit tests. Mirrors the Supabase
@@ -99,21 +98,6 @@ export class FakeLamplightAdapter implements LamplightAdapter {
       this.dailyDevotions.set(`${userId}:${localDate}`, next.artifact);
     }
     return next;
-  }
-
-  private queuedPrettifyResults: PrettifyResult[] = [];
-
-  __queuePrettifyResult(result: PrettifyResult): void {
-    this.queuedPrettifyResults.push(result);
-  }
-
-  async generatePrettifyPlan(
-    _userId: string,
-    _noteId: string,
-    contentText: string,
-  ): Promise<PrettifyResult> {
-    if (!contentText.trim()) return { ok: false, reason: 'no_content' };
-    return this.queuedPrettifyResults.shift() ?? { ok: false, reason: 'network' };
   }
 
   async getPromoConfig(): Promise<PromoConfig> {

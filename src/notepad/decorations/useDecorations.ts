@@ -79,9 +79,6 @@ export function useDecorations(
   return {
     decorations,
     add: (init: NewDecoration) => commit(addDecoration(decorations, init, uuidv4)),
-    addMany: (inits: NewDecoration[]) =>
-      commit(inits.reduce((acc, init) => addDecoration(acc, init, uuidv4), decorations)),
-    reset: (list: NoteDecoration[]) => commit(list),
     update: (id: string, patch: Partial<Omit<NoteDecoration, 'id'>>) =>
       commit(updateDecoration(decorations, id, patch)),
     remove: (id: string) => commit(removeDecoration(decorations, id)),
