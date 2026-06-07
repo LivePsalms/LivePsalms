@@ -940,3 +940,34 @@ describe('GraphView — node drift animation', () => {
     expect(lastArcCentre(canvas)).toEqual([100, 200]);
   });
 });
+
+describe('GraphView — edge drift follows nodes', () => {
+  it('draws edge endpoints at the drifted node positions', () => {
+    const clock = 4000; // 4 seconds
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [edge({ id: 'r1', source: 'a', target: 'b' })],
+      null,
+    );
+    const a = view.getSimNodes().find((n) => n.id === 'a')!;
+    const b = view.getSimNodes().find((n) => n.id === 'b')!;
+    a.fx = 100; a.fy = 100;
+    b.fx = 300; b.fy = 300;
+
+    view.tickFor(1); // pins x=fx, y=fy, then draws
+
+    const t = 4;
+    const oa = driftOffset(a.phase, t, DRIFT_AMPLITUDE);
+    const ob = driftOffset(b.phase, t, DRIFT_AMPLITUDE);
+
+    const moveTo = canvas.ctx.calls.find((c) => c.method === 'moveTo')!.args as number[];
+    const lineTo = canvas.ctx.calls.find((c) => c.method === 'lineTo')!.args as number[];
+    expect(moveTo).toEqual([100 + oa.ox, 100 + oa.oy]);
+    expect(lineTo).toEqual([300 + ob.ox, 300 + ob.oy]);
+  });
+});

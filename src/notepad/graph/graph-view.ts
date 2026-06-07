@@ -373,11 +373,13 @@ export class GraphView extends Observable<GraphViewState> {
       const src = link.source as SimNode;
       const tgt = link.target as SimNode;
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
+      const a = drawnPos(src);
+      const b = drawnPos(tgt);
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
       const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
       ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(tgt.x, tgt.y);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
       ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness;
       ctx.stroke();
