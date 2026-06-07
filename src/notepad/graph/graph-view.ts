@@ -87,6 +87,25 @@ const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
 const AUTO_FIT_MAX_SCALE = 2.2;
 
+// Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
+// with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
+// makes each node trace a slow ellipse rather than a circle.
+export const DRIFT_AMPLITUDE = 4.5;
+export const DRIFT_SPEED = 0.8;
+
+/**
+ * Per-node draw-time offset for the drift animation. Pure: no state, no clock of
+ * its own. Pass amplitude 0 to freeze (used for prefers-reduced-motion).
+ */
+export function driftOffset(phase: number, tSeconds: number, amplitude: number): { ox: number; oy: number } {
+  return {
+    // `+ 0` normalizes a signed `-0` (e.g. when amplitude is 0) to `+0` so the
+    // result compares equal under strict deep-equality.
+    ox: amplitude * Math.sin(tSeconds * DRIFT_SPEED + phase) + 0,
+    oy: amplitude * Math.cos(tSeconds * DRIFT_SPEED * 0.78 + phase * 1.3) + 0,
+  };
+}
+
 export interface SimNode extends SimulationNodeDatum {
   id: string;
   type: GraphNode['type'];

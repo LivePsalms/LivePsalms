@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GraphView, DEFAULT_SETTINGS } from './graph-view';
+import { GraphView, DEFAULT_SETTINGS, driftOffset, DRIFT_AMPLITUDE, DRIFT_SPEED } from './graph-view';
 import type { GraphViewDeps } from './graph-view';
 import type { GraphEdge, GraphNode } from './types';
 
@@ -839,5 +839,26 @@ describe('GraphView — setFocus', () => {
     // Update data with a different activeNodeId — focus stays on 'b'.
     view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], 'c');
     expect(view.getSimNodes().map((n) => n.id)).toEqual(['b']);
+  });
+});
+
+describe('driftOffset', () => {
+  it('returns zero offset when amplitude is zero', () => {
+    expect(driftOffset(1.234, 5, 0)).toEqual({ ox: 0, oy: 0 });
+  });
+
+  it('is elliptical: x and y use different frequencies', () => {
+    const phase = 0;
+    // At t such that DRIFT_SPEED*t = PI/2, sin term is at max, cos term is not.
+    const t = Math.PI / 2 / DRIFT_SPEED;
+    const { ox, oy } = driftOffset(phase, t, DRIFT_AMPLITUDE);
+    expect(ox).toBeCloseTo(DRIFT_AMPLITUDE, 5);
+    expect(Math.abs(oy)).toBeLessThan(DRIFT_AMPLITUDE); // y runs at 0.78x => not at its peak
+  });
+
+  it('different phases produce different offsets at the same time', () => {
+    const a = driftOffset(0, 3, DRIFT_AMPLITUDE);
+    const b = driftOffset(2.0, 3, DRIFT_AMPLITUDE);
+    expect(a).not.toEqual(b);
   });
 });
