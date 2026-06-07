@@ -16,6 +16,7 @@ import type {
   AdminUsageRow,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
+import type { PrettifyDensity, PrettifyPlan, PrettifyResult } from '../prettify/prettify-types';
 
 // Tables with a `user_id` column — deletable via `eq('user_id', userId)`.
 const LAMPLIGHT_USER_ID_TABLES = [
@@ -200,6 +201,39 @@ export class SupabaseLamplightAdapter implements LamplightAdapter {
           ok: false,
           reason: d.reason as 'no_embedding' | 'validators_failed' | 'not_neighbor',
         };
+      }
+      return { ok: false, reason: 'network' };
+    } catch {
+      return { ok: false, reason: 'network' };
+    }
+  }
+
+  async generatePrettifyPlan(
+    userId: string,
+    noteId: string,
+    contentText: string,
+    density: PrettifyDensity,
+  ): Promise<PrettifyResult> {
+    if (!contentText.trim()) return { ok: false, reason: 'no_content' };
+    try {
+      const { data, error } = await this.#client.functions.invoke('lamplight-prettify', {
+        body: { user_id: userId, note_id: noteId, content_text: contentText, density },
+      });
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 429) return { ok: false, reason: 'quota' };
+        if (status === 403) return { ok: false, reason: 'disabled' };
+        return { ok: false, reason: 'network' };
+      }
+      if (!data || typeof data !== 'object') return { ok: false, reason: 'network' };
+      const d = data as { ok?: boolean; plan?: PrettifyPlan; reason?: string };
+      if (d.ok === true && d.plan) return { ok: true, plan: d.plan };
+      if (
+        d.ok === false &&
+        (d.reason === 'no_content' || d.reason === 'validators_failed' ||
+          d.reason === 'disabled' || d.reason === 'quota')
+      ) {
+        return { ok: false, reason: d.reason };
       }
       return { ok: false, reason: 'network' };
     } catch {
