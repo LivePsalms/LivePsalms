@@ -117,6 +117,7 @@ export interface SimNode extends SimulationNodeDatum {
   tags: string[];
   scriptureText: string;
   scriptureTranslation: string;
+  phase: number;
 }
 
 export interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -128,6 +129,20 @@ export interface SimLink extends SimulationLinkDatum<SimNode> {
 function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
   const base = type === 'scripture' ? 42 : 38;
   return Math.min(110, Math.max(26, (base + weight * 5) * sizeMultiplier));
+}
+
+/**
+ * Deterministic per-node animation phase in [0, 2*PI), derived from the node id.
+ * Stable across rebuilds (no per-frame randomness, no popping) and well spread
+ * across distinct ids.
+ */
+function hashPhase(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  const positive = ((h % 1000) + 1000) % 1000;
+  return (positive / 1000) * Math.PI * 2;
 }
 
 /**
@@ -653,6 +668,7 @@ export class GraphView extends Observable<GraphViewState> {
         tags: n.tags,
         scriptureText: n.scriptureText,
         scriptureTranslation: n.scriptureTranslation,
+        phase: hashPhase(n.id),
         x: prev?.x, y: prev?.y, vx: prev?.vx, vy: prev?.vy,
       };
     });

@@ -862,3 +862,30 @@ describe('driftOffset', () => {
     expect(a).not.toEqual(b);
   });
 });
+
+describe('GraphView — node phase', () => {
+  it('assigns a phase in [0, 2*PI) to every node', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
+    for (const n of view.getSimNodes()) {
+      expect(n.phase).toBeGreaterThanOrEqual(0);
+      expect(n.phase).toBeLessThan(Math.PI * 2);
+    }
+  });
+
+  it('gives different ids different phases', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
+    const [a, b] = view.getSimNodes();
+    expect(a.phase).not.toBe(b.phase);
+  });
+
+  it('keeps a node phase stable across a rebuild', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
+    const first = view.getSimNodes()[0].phase;
+    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
+    const second = view.getSimNodes()[0].phase;
+    expect(second).toBe(first);
+  });
+});
