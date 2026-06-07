@@ -96,7 +96,7 @@ const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
 const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
-const AUTO_FIT_MAX_SCALE = 2.2;
+const AUTO_FIT_MAX_SCALE = 3.0;
 
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
