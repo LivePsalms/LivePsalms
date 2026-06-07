@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GraphView, DEFAULT_SETTINGS } from './graph-view';
+import { GraphView, DEFAULT_SETTINGS, driftOffset, DRIFT_AMPLITUDE, DRIFT_SPEED } from './graph-view';
 import type { GraphViewDeps } from './graph-view';
 import type { GraphEdge, GraphNode } from './types';
 
@@ -587,6 +587,60 @@ describe('GraphView — auto-fit camera', () => {
   });
 });
 
+describe('GraphView — settle (no entrance motion)', () => {
+  const spread = () => ({
+    nodes: [
+      node({ id: 'a', type: 'devotion' }),
+      node({ id: 'b', type: 'sermon' }),
+      node({ id: 'c', type: 'theme' }),
+      node({ id: 'd', type: 'scripture' }),
+    ],
+    edges: [
+      edge({ id: 'r1', source: 'a', target: 'b' }),
+      edge({ id: 'r2', source: 'b', target: 'c' }),
+    ],
+  });
+
+  it('is a no-op when no sim is built yet', () => {
+    const { view } = attached();
+    expect(() => view.settle()).not.toThrow();
+  });
+
+  it('fits the camera in one shot, without per-tick animation', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    const identity = view.getTransform();
+    view.settle();
+    // Auto-fit ran during settle, so the camera moved off the identity transform.
+    expect(view.getTransform()).not.toEqual(identity);
+  });
+
+  it('leaves the layout stable so the first painted frame shows no motion', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    view.settle();
+    const before = view.getSimNodes().map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 }));
+    view.tickFor(1);
+    const after = view.getSimNodes().map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 }));
+    for (let i = 0; i < before.length; i++) {
+      expect(Math.abs(after[i].x - before[i].x)).toBeLessThan(2);
+      expect(Math.abs(after[i].y - before[i].y)).toBeLessThan(2);
+    }
+  });
+
+  it('does not re-fit the camera on ticks after settling', () => {
+    const { view } = attached();
+    const { nodes, edges } = spread();
+    view.setData(nodes, edges, null);
+    view.settle();
+    const fitted = { ...view.getTransform() };
+    view.tickFor(120);
+    expect(view.getTransform()).toEqual(fitted);
+  });
+});
+
 describe('GraphView — cursor management', () => {
   function placeNode(view: GraphView, id: string, x: number, y: number) {
     const sim = view.getSimNodes();
@@ -785,5 +839,135 @@ describe('GraphView — setFocus', () => {
     // Update data with a different activeNodeId — focus stays on 'b'.
     view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], 'c');
     expect(view.getSimNodes().map((n) => n.id)).toEqual(['b']);
+  });
+});
+
+describe('driftOffset', () => {
+  it('returns zero offset when amplitude is zero', () => {
+    expect(driftOffset(1.234, 5, 0)).toEqual({ ox: 0, oy: 0 });
+  });
+
+  it('is elliptical: x and y use different frequencies', () => {
+    const phase = 0;
+    // At t such that DRIFT_SPEED*t = PI/2, sin term is at max, cos term is not.
+    const t = Math.PI / 2 / DRIFT_SPEED;
+    const { ox, oy } = driftOffset(phase, t, DRIFT_AMPLITUDE);
+    expect(ox).toBeCloseTo(DRIFT_AMPLITUDE, 5);
+    expect(Math.abs(oy)).toBeLessThan(DRIFT_AMPLITUDE); // y runs at 0.78x => not at its peak
+  });
+
+  it('different phases produce different offsets at the same time', () => {
+    const a = driftOffset(0, 3, DRIFT_AMPLITUDE);
+    const b = driftOffset(2.0, 3, DRIFT_AMPLITUDE);
+    expect(a).not.toEqual(b);
+  });
+});
+
+describe('GraphView — node phase', () => {
+  it('assigns a phase in [0, 2*PI) to every node', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
+    for (const n of view.getSimNodes()) {
+      expect(n.phase).toBeGreaterThanOrEqual(0);
+      expect(n.phase).toBeLessThan(Math.PI * 2);
+    }
+  });
+
+  it('gives different ids different phases', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
+    const [a, b] = view.getSimNodes();
+    expect(a.phase).not.toBe(b.phase);
+  });
+
+  it('keeps a node phase stable across a rebuild', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
+    const first = view.getSimNodes()[0].phase;
+    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
+    const second = view.getSimNodes()[0].phase;
+    expect(second).toBe(first);
+  });
+});
+
+describe('GraphView — node drift animation', () => {
+  // Returns the [x, y] centre of the last arc drawn (the node circle for a
+  // single, non-active, non-hovered node).
+  function lastArcCentre(canvas: MockCanvas): [number, number] {
+    const arcs = canvas.ctx.calls.filter((c) => c.method === 'arc');
+    const args = arcs[arcs.length - 1].args as number[];
+    return [args[0], args[1]];
+  }
+
+  function pinnedSingleNode(over: Partial<GraphViewDeps>) {
+    const { deps, opens } = makeDeps(over);
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    // Pin position so the d3 simulation cannot move the node; only drift can.
+    const s = view.getSimNodes()[0];
+    s.fx = 100; s.fy = 200;
+    return { view, canvas, opens, phase: s.phase };
+  }
+
+  it('moves a node draw position as the clock advances', () => {
+    let clock = 0;
+    const { view, canvas, phase } = pinnedSingleNode({ now: () => clock });
+    view.tickFor(1); // draws at clock = 0
+    expect(lastArcCentre(canvas)).toEqual([
+      100 + driftOffset(phase, 0, DRIFT_AMPLITUDE).ox,
+      200 + driftOffset(phase, 0, DRIFT_AMPLITUDE).oy,
+    ]);
+
+    clock = 1500; // 1.5 seconds later
+    view.tickFor(1); // draws at clock = 1500
+    const t = 1.5;
+    expect(lastArcCentre(canvas)).toEqual([
+      100 + driftOffset(phase, t, DRIFT_AMPLITUDE).ox,
+      200 + driftOffset(phase, t, DRIFT_AMPLITUDE).oy,
+    ]);
+  });
+
+  it('freezes when prefers-reduced-motion is set', () => {
+    let clock = 0;
+    const { view, canvas } = pinnedSingleNode({ now: () => clock, prefersReducedMotion: () => true });
+    view.tickFor(1);
+    expect(lastArcCentre(canvas)).toEqual([100, 200]);
+    clock = 9999;
+    view.tickFor(1);
+    expect(lastArcCentre(canvas)).toEqual([100, 200]);
+  });
+});
+
+describe('GraphView — edge drift follows nodes', () => {
+  it('draws edge endpoints at the drifted node positions', () => {
+    const clock = 4000; // 4 seconds
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
+      [edge({ id: 'r1', source: 'a', target: 'b' })],
+      null,
+    );
+    const a = view.getSimNodes().find((n) => n.id === 'a')!;
+    const b = view.getSimNodes().find((n) => n.id === 'b')!;
+    a.fx = 100; a.fy = 100;
+    b.fx = 300; b.fy = 300;
+
+    view.tickFor(1); // pins x=fx, y=fy, then draws
+
+    const t = 4;
+    const oa = driftOffset(a.phase, t, DRIFT_AMPLITUDE);
+    const ob = driftOffset(b.phase, t, DRIFT_AMPLITUDE);
+
+    const moveTo = canvas.ctx.calls.find((c) => c.method === 'moveTo')!.args as number[];
+    const lineTo = canvas.ctx.calls.find((c) => c.method === 'lineTo')!.args as number[];
+    expect(moveTo).toEqual([100 + oa.ox, 100 + oa.oy]);
+    expect(lineTo).toEqual([300 + ob.ox, 300 + ob.oy]);
   });
 });

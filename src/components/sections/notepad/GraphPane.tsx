@@ -60,6 +60,9 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
   const view = useMemo(() => new GraphView({
     onNodeOpen: (id) => openNote(id),
     devicePixelRatio: () => window.devicePixelRatio || 1,
+    prefersReducedMotion: () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     onNodeTap: (n) => {
       const cb = onNodePeekRef.current;
       if (cb) { cb(n); return true; }

@@ -49,6 +49,17 @@ export interface GraphViewDeps {
   onNodeOpen: (noteId: string) => void;
   devicePixelRatio?: () => number;
   /**
+   * Wall clock in milliseconds for the drift animation. Defaults to
+   * performance.now(). Injected so tests can drive the animation deterministically.
+   */
+  now?: () => number;
+  /**
+   * When this returns true, the drift animation is disabled and the graph renders
+   * perfectly static (respects the user's prefers-reduced-motion setting).
+   * Defaults to false (animate).
+   */
+  prefersReducedMotion?: () => boolean;
+  /**
    * Optional tap interceptor. When provided AND it returns true, the view
    * suppresses its default tap behavior (onNodeOpen for note nodes, popover for
    * scripture nodes). Used by the embedded mobile graph to route taps to a peek
@@ -85,7 +96,28 @@ const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
 const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
-const AUTO_FIT_MAX_SCALE = 1.5;
+const AUTO_FIT_MAX_SCALE = 2.2;
+
+// Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
+// with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
+// makes each node trace a slow ellipse rather than a circle.
+export const DRIFT_AMPLITUDE = 4.5;
+export const DRIFT_SPEED = 0.8;
+
+/**
+ * Per-node draw-time offset for the drift animation. Pure: no state, no clock of
+ * its own. Pass amplitude 0 to freeze (used for prefers-reduced-motion).
+ */
+export function driftOffset(phase: number, tSeconds: number, amplitude: number): { ox: number; oy: number } {
+  return {
+    // `+ 0` normalizes a signed `-0` (e.g. when amplitude is 0) to `+0` so the
+    // result compares equal under strict deep-equality.
+    ox: amplitude * Math.sin(tSeconds * DRIFT_SPEED + phase) + 0,
+    // `phase * 1.3` de-correlates the y phase from x so nodes don't sweep in
+    // lockstep, giving more organic, non-uniform motion.
+    oy: amplitude * Math.cos(tSeconds * DRIFT_SPEED * 0.78 + phase * 1.3) + 0,
+  };
+}
 
 export interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -96,6 +128,7 @@ export interface SimNode extends SimulationNodeDatum {
   tags: string[];
   scriptureText: string;
   scriptureTranslation: string;
+  phase: number;
 }
 
 export interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -105,8 +138,22 @@ export interface SimLink extends SimulationLinkDatum<SimNode> {
 }
 
 function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
-  const base = type === 'scripture' ? 22 : 18;
-  return Math.min(70, Math.max(12, (base + weight * 5) * sizeMultiplier));
+  const base = type === 'scripture' ? 42 : 38;
+  return Math.min(110, Math.max(26, (base + weight * 5) * sizeMultiplier));
+}
+
+/**
+ * Deterministic per-node animation phase in [0, 2*PI), derived from the node id.
+ * Stable across rebuilds (no per-frame randomness, no popping) and well spread
+ * across distinct ids.
+ */
+function hashPhase(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  const positive = ((h % 1000) + 1000) % 1000;
+  return (positive / 1000) * Math.PI * 2;
 }
 
 /**
@@ -151,6 +198,7 @@ export class GraphView extends Observable<GraphViewState> {
   private hoveredNodeId: string | null = null;
   private transform = { x: 0, y: 0, scale: 1 };
   private hasFit = false;
+  private needsSettle = false;
 
   private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
     active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
@@ -201,13 +249,47 @@ export class GraphView extends Observable<GraphViewState> {
     }
   }
 
+  /**
+   * Run the simulation to a stable layout and fit the camera in one shot,
+   * WITHOUT painting intermediate frames. The production animation loop calls
+   * this once per (re)build so the graph appears already settled and fitted —
+   * no entrance motion and no resize, only the final state is ever drawn.
+   * Tests drive ticks via tickFor instead and exercise this directly.
+   */
+  settle(): void {
+    if (!this.sim) return;
+    // d3 scales every force by alpha, so once alpha decays past alphaMin the
+    // layout is visually stable. The cap bounds the worst case for large graphs.
+    const MAX_SETTLE_TICKS = 500;
+    let i = 0;
+    while (i < MAX_SETTLE_TICKS && this.sim.alpha() > this.sim.alphaMin()) {
+      this.sim.tick();
+      i++;
+    }
+    this.tickCount = AUTO_FIT_TICK;
+    if (!this.hasFit) {
+      this.runAutoFit();
+      this.hasFit = true;
+    }
+    this.draw();
+  }
+
   private startAutoTick(): void {
     if (typeof requestAnimationFrame === 'undefined') return;
     this.stopAutoTick();
     const loop = () => {
       if (this.sim) {
-        this.sim.tick();
-        this.onTick();
+        if (this.needsSettle) {
+          // First frame after a (re)build: lay the graph out and fit the camera
+          // in one shot so the user never sees the scale=1 → fit-scale jump that
+          // resized every node, nor the spreading motion. Only the final,
+          // already-fitted state is ever painted — no entrance motion, no resize.
+          this.needsSettle = false;
+          this.settle();
+        } else {
+          this.sim.tick();
+          this.onTick();
+        }
       }
       this.rafHandle = requestAnimationFrame(loop);
     };
@@ -263,6 +345,13 @@ export class GraphView extends Observable<GraphViewState> {
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
     const { x: tx, y: ty, scale } = this.transform;
 
+    const t = (this.deps.now?.() ?? performance.now()) / 1000;
+    const amp = this.deps.prefersReducedMotion?.() ? 0 : DRIFT_AMPLITUDE;
+    const drawnPos = (n: SimNode): { x: number; y: number } => {
+      const { ox, oy } = driftOffset(n.phase, t, amp);
+      return { x: (n.x ?? 0) + ox, y: (n.y ?? 0) + oy };
+    };
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
@@ -284,13 +373,15 @@ export class GraphView extends Observable<GraphViewState> {
       const src = link.source as SimNode;
       const tgt = link.target as SimNode;
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
+      const a = drawnPos(src);
+      const b = drawnPos(tgt);
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
       const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
       ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(tgt.x, tgt.y);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (2 + link.weight * 2) * this.settings.edgeThickness;
+      ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness;
       ctx.stroke();
     }
 
@@ -298,39 +389,41 @@ export class GraphView extends Observable<GraphViewState> {
     const activeId = this.effectiveActiveId();
     for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
+      const d = drawnPos(n);
       const isConnected = !hovered || connectedIds.has(n.id);
       const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
       const color = NODE_COLORS[n.type] ?? '#999';
 
       if (n.id === activeId) {
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 10, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 10, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 5, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, n.radius, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.globalAlpha = alpha;
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      ctx.font = `${n.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
+      ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, n.x, n.y + n.radius + 14);
+      ctx.fillText(n.title, d.x, d.y + n.radius + 22);
     }
 
     if (hovered) {
       const n = this.simNodes.find((x) => x.id === hovered);
       if (n && n.x != null && n.y != null) {
+        const d = drawnPos(n);
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 4, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 4, 0, Math.PI * 2);
         ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -597,6 +690,7 @@ export class GraphView extends Observable<GraphViewState> {
         tags: n.tags,
         scriptureText: n.scriptureText,
         scriptureTranslation: n.scriptureTranslation,
+        phase: hashPhase(n.id),
         x: prev?.x, y: prev?.y, vx: prev?.vx, vy: prev?.vy,
       };
     });
@@ -637,6 +731,9 @@ export class GraphView extends Observable<GraphViewState> {
     this.sim.stop();
     this.tickCount = 0;
     this.hasFit = false;
+    // Production rAF loop settles + fits this build on its next frame before any
+    // paint. tickFor (tests) ignores this and ticks/fits incrementally instead.
+    this.needsSettle = true;
   }
 
   private filterNodes(nodes: GraphNode[]): GraphNode[] {
