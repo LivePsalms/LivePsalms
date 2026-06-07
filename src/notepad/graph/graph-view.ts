@@ -49,6 +49,17 @@ export interface GraphViewDeps {
   onNodeOpen: (noteId: string) => void;
   devicePixelRatio?: () => number;
   /**
+   * Wall clock in milliseconds for the drift animation. Defaults to
+   * performance.now(). Injected so tests can drive the animation deterministically.
+   */
+  now?: () => number;
+  /**
+   * When this returns true, the drift animation is disabled and the graph renders
+   * perfectly static (respects the user's prefers-reduced-motion setting).
+   * Defaults to false (animate).
+   */
+  prefersReducedMotion?: () => boolean;
+  /**
    * Optional tap interceptor. When provided AND it returns true, the view
    * suppresses its default tap behavior (onNodeOpen for note nodes, popover for
    * scripture nodes). Used by the embedded mobile graph to route taps to a peek
@@ -334,6 +345,13 @@ export class GraphView extends Observable<GraphViewState> {
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
     const { x: tx, y: ty, scale } = this.transform;
 
+    const t = (this.deps.now?.() ?? performance.now()) / 1000;
+    const amp = this.deps.prefersReducedMotion?.() ? 0 : DRIFT_AMPLITUDE;
+    const drawnPos = (n: SimNode): { x: number; y: number } => {
+      const { ox, oy } = driftOffset(n.phase, t, amp);
+      return { x: (n.x ?? 0) + ox, y: (n.y ?? 0) + oy };
+    };
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
@@ -369,23 +387,24 @@ export class GraphView extends Observable<GraphViewState> {
     const activeId = this.effectiveActiveId();
     for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
+      const d = drawnPos(n);
       const isConnected = !hovered || connectedIds.has(n.id);
       const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
       const color = NODE_COLORS[n.type] ?? '#999';
 
       if (n.id === activeId) {
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 10, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 10, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 5, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, n.radius, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.globalAlpha = alpha;
       ctx.fill();
@@ -394,14 +413,15 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, n.x, n.y + n.radius + 22);
+      ctx.fillText(n.title, d.x, d.y + n.radius + 22);
     }
 
     if (hovered) {
       const n = this.simNodes.find((x) => x.id === hovered);
       if (n && n.x != null && n.y != null) {
+        const d = drawnPos(n);
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + 4, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y, n.radius + 4, 0, Math.PI * 2);
         ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();

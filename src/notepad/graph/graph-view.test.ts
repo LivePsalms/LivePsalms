@@ -889,3 +889,54 @@ describe('GraphView — node phase', () => {
     expect(second).toBe(first);
   });
 });
+
+describe('GraphView — node drift animation', () => {
+  // Returns the [x, y] centre of the last arc drawn (the node circle for a
+  // single, non-active, non-hovered node).
+  function lastArcCentre(canvas: MockCanvas): [number, number] {
+    const arcs = canvas.ctx.calls.filter((c) => c.method === 'arc');
+    const args = arcs[arcs.length - 1].args as number[];
+    return [args[0], args[1]];
+  }
+
+  function pinnedSingleNode(over: Partial<GraphViewDeps>) {
+    const { deps, opens } = makeDeps(over);
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    // Pin position so the d3 simulation cannot move the node; only drift can.
+    const s = view.getSimNodes()[0];
+    s.fx = 100; s.fy = 200;
+    return { view, canvas, opens, phase: s.phase };
+  }
+
+  it('moves a node draw position as the clock advances', () => {
+    let clock = 0;
+    const { view, canvas, phase } = pinnedSingleNode({ now: () => clock });
+    view.tickFor(1); // draws at clock = 0
+    expect(lastArcCentre(canvas)).toEqual([
+      100 + driftOffset(phase, 0, DRIFT_AMPLITUDE).ox,
+      200 + driftOffset(phase, 0, DRIFT_AMPLITUDE).oy,
+    ]);
+
+    clock = 1500; // 1.5 seconds later
+    view.tickFor(1); // draws at clock = 1500
+    const t = 1.5;
+    expect(lastArcCentre(canvas)).toEqual([
+      100 + driftOffset(phase, t, DRIFT_AMPLITUDE).ox,
+      200 + driftOffset(phase, t, DRIFT_AMPLITUDE).oy,
+    ]);
+  });
+
+  it('freezes when prefers-reduced-motion is set', () => {
+    let clock = 0;
+    const { view, canvas } = pinnedSingleNode({ now: () => clock, prefersReducedMotion: () => true });
+    view.tickFor(1);
+    expect(lastArcCentre(canvas)).toEqual([100, 200]);
+    clock = 9999;
+    view.tickFor(1);
+    expect(lastArcCentre(canvas)).toEqual([100, 200]);
+  });
+});
