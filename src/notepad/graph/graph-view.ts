@@ -265,13 +265,7 @@ export class GraphView extends Observable<GraphViewState> {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    // Map device pixels only. Positions are projected from world→screen manually
-    // (sx/sy) so the zoom `scale` moves nodes around, while node radii and edge
-    // widths stay at their preset screen-pixel size — the entrance auto-fit and
-    // any zoom reposition the graph without resizing its nodes and lines.
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const sx = (wx: number) => wx * scale + tx;
-    const sy = (wy: number) => wy * scale + ty;
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
 
     const hovered = this.hoveredNodeId;
     const connectedIds = new Set<string>();
@@ -293,8 +287,8 @@ export class GraphView extends Observable<GraphViewState> {
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
       const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
       ctx.beginPath();
-      ctx.moveTo(sx(src.x), sy(src.y));
-      ctx.lineTo(sx(tgt.x), sy(tgt.y));
+      ctx.moveTo(src.x, src.y);
+      ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
       ctx.lineWidth = (2 + link.weight * 2) * this.settings.edgeThickness;
       ctx.stroke();
@@ -304,25 +298,23 @@ export class GraphView extends Observable<GraphViewState> {
     const activeId = this.effectiveActiveId();
     for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
-      const px = sx(n.x);
-      const py = sy(n.y);
       const isConnected = !hovered || connectedIds.has(n.id);
       const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
       const color = NODE_COLORS[n.type] ?? '#999';
 
       if (n.id === activeId) {
         ctx.beginPath();
-        ctx.arc(px, py, n.radius + 10, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, n.radius + 10, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(px, py, n.radius + 5, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(px, py, n.radius, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.globalAlpha = alpha;
       ctx.fill();
@@ -331,14 +323,14 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.font = `${n.radius > 16 ? '12px' : '10px'} Outfit, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, px, py + n.radius + 14);
+      ctx.fillText(n.title, n.x, n.y + n.radius + 14);
     }
 
     if (hovered) {
       const n = this.simNodes.find((x) => x.id === hovered);
       if (n && n.x != null && n.y != null) {
         ctx.beginPath();
-        ctx.arc(sx(n.x), sy(n.y), n.radius + 4, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, n.radius + 4, 0, Math.PI * 2);
         ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -543,15 +535,11 @@ export class GraphView extends Observable<GraphViewState> {
   }
 
   private findNodeAt(wx: number, wy: number): SimNode | null {
-    // Nodes render at a constant screen-pixel radius (see draw), so their hit
-    // area in world units is the pixel radius divided by the current zoom scale.
-    const scale = this.transform.scale || 1;
     for (let i = this.simNodes.length - 1; i >= 0; i--) {
       const n = this.simNodes[i];
       if (n.x == null || n.y == null) continue;
       const dx = wx - n.x, dy = wy - n.y;
-      const hitRadius = (n.radius + 4) / scale;
-      if (dx * dx + dy * dy <= hitRadius ** 2) return n;
+      if (dx * dx + dy * dy <= (n.radius + 4) ** 2) return n;
     }
     return null;
   }
