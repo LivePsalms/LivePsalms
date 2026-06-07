@@ -1007,3 +1007,65 @@ describe('GraphView — edge drift follows nodes', () => {
     expect(lineTo).toEqual([300 + ob.ox, 300 + ob.oy]);
   });
 });
+
+describe('GraphView — labels only on hover', () => {
+  function fillTexts(canvas: MockCanvas, from = 0): string[] {
+    return canvas.ctx.calls
+      .slice(from)
+      .filter((c) => c.method === 'fillText')
+      .map((c) => c.args[0] as string);
+  }
+
+  it('draws no node labels when nothing is hovered', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion', title: 'Alpha' }), node({ id: 'b', type: 'sermon', title: 'Beta' })],
+      [],
+      null,
+    );
+    const a = view.getSimNodes().find((n) => n.id === 'a')!;
+    const b = view.getSimNodes().find((n) => n.id === 'b')!;
+    a.x = 100; a.y = 100; a.fx = 100; a.fy = 100;
+    b.x = 250; b.y = 250; b.fx = 250; b.fy = 250;
+
+    const before = canvas.ctx.calls.length;
+    view.tickFor(1); // a plain draw, no hover
+    expect(fillTexts(canvas, before)).toEqual([]);
+  });
+
+  it('draws only the hovered node’s label', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion', title: 'Alpha' }), node({ id: 'b', type: 'sermon', title: 'Beta' })],
+      [],
+      null,
+    );
+    const a = view.getSimNodes().find((n) => n.id === 'a')!;
+    const b = view.getSimNodes().find((n) => n.id === 'b')!;
+    a.x = 100; a.y = 100; a.fx = 100; a.fy = 100;
+    b.x = 250; b.y = 250; b.fx = 250; b.fy = 250;
+
+    const before = canvas.ctx.calls.length;
+    view.handleMouseMove({ clientX: 100, clientY: 100 }); // hover node 'a', triggers a draw
+    expect(view.getHoveredNodeId()).toBe('a');
+    expect(fillTexts(canvas, before)).toEqual(['Alpha']);
+  });
+
+  it('switches the shown label when the hover moves to another node', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion', title: 'Alpha' }), node({ id: 'b', type: 'sermon', title: 'Beta' })],
+      [],
+      null,
+    );
+    const a = view.getSimNodes().find((n) => n.id === 'a')!;
+    const b = view.getSimNodes().find((n) => n.id === 'b')!;
+    a.x = 100; a.y = 100; a.fx = 100; a.fy = 100;
+    b.x = 250; b.y = 250; b.fx = 250; b.fy = 250;
+
+    view.handleMouseMove({ clientX: 100, clientY: 100 }); // hover 'a'
+    const before = canvas.ctx.calls.length;
+    view.handleMouseMove({ clientX: 250, clientY: 250 }); // hover 'b', triggers a draw
+    expect(fillTexts(canvas, before)).toEqual(['Beta']);
+  });
+});

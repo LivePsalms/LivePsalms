@@ -415,13 +415,9 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.globalAlpha = alpha;
       ctx.fill();
       ctx.globalAlpha = 1;
-
-      ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, d.x, d.y + n.radius + 22);
     }
 
+    // Labels are shown only for the hovered node, so the canvas stays uncluttered.
     if (hovered) {
       const n = this.simNodes.find((x) => x.id === hovered);
       if (n && n.x != null && n.y != null) {
@@ -431,6 +427,11 @@ export class GraphView extends Observable<GraphViewState> {
         ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(62, 50, 40, 0.85)';
+        ctx.fillText(n.title, d.x, d.y + n.radius + 22);
       }
     }
 
