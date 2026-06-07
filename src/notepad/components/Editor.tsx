@@ -23,7 +23,7 @@ import { TEXT_Z } from '../decorations/decoration-geometry';
 import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
 import { usePrettify, type PrettifyCapableAdapter } from '../prettify/use-prettify';
-import { isPrettifyDensity, DENSITIES, type PrettifyDensity } from '../prettify/prettify-types';
+import { DENSITIES, type PrettifyDensity } from '../prettify/prettify-types';
 import type { Rect } from '../prettify/anchor-geometry';
 import type { QuoteLocation } from '../prettify/quote-locator';
 import { useNoteCollection } from '../context/useNoteCollection';
@@ -407,7 +407,7 @@ export function NotepadEditor({
                       key={density}
                       onClick={() => {
                         setPrettifyMenuOpen(false);
-                        if (isPrettifyDensity(density)) void prettify.run(density);
+                        void prettify.run(density);
                       }}
                       className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors capitalize"
                       style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}

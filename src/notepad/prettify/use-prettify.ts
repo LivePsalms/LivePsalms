@@ -84,7 +84,7 @@ export function usePrettify(deps: UsePrettifyDeps) {
   }, []);
 
   const dismiss = useCallback(() => {
-    setState((s) => ({ phase: 'idle', canUndo: s.canUndo }));
+    setState({ phase: 'idle', canUndo: false });
   }, []);
 
   return { state, run, undo, dismiss };
