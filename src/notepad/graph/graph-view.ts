@@ -85,7 +85,7 @@ const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
 const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
-const AUTO_FIT_MAX_SCALE = 1.5;
+const AUTO_FIT_MAX_SCALE = 2.2;
 
 export interface SimNode extends SimulationNodeDatum {
   id: string;
