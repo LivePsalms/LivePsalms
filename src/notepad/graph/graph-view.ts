@@ -105,8 +105,8 @@ export interface SimLink extends SimulationLinkDatum<SimNode> {
 }
 
 function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
-  const base = type === 'scripture' ? 22 : 18;
-  return Math.min(70, Math.max(12, (base + weight * 5) * sizeMultiplier));
+  const base = type === 'scripture' ? 28 : 24;
+  return Math.min(80, Math.max(16, (base + weight * 5) * sizeMultiplier));
 }
 
 /**
@@ -325,7 +325,7 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (2 + link.weight * 2) * this.settings.edgeThickness;
+      ctx.lineWidth = (3 + link.weight * 2.5) * this.settings.edgeThickness;
       ctx.stroke();
     }
 
