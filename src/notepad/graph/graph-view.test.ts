@@ -585,6 +585,42 @@ describe('GraphView — auto-fit camera', () => {
     view.tickFor(80);
     expect(view.getTransform()).not.toEqual(t1);
   });
+
+  // Auto-fit zooms in to 1.5x the pure fit-to-view scale so the graph lands more
+  // noticeable on load. The absolute AUTO_FIT_MAX_SCALE ceiling still applies.
+  it('loads zoomed in to 1.5x the fit-to-view scale when below the cap', () => {
+    const { view } = attached(); // 400x400 canvas, dpr 1
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    const sim = view.getSimNodes();
+    const a = sim.find((n) => n.id === 'a')!;
+    const b = sim.find((n) => n.id === 'b')!;
+    // Pin far enough apart that 1.5x the fit stays under the 3.0 cap.
+    a.fx = 0; a.fy = 0;
+    b.fx = 200; b.fy = 200;
+    view.tickFor(80); // auto-fit fires using the pinned positions
+
+    // Recompute the pure fit from the same geometry the view uses.
+    const MARGIN = 20, PAD = 30, SIZE = 400;
+    const minX = Math.min(0 - a.radius - MARGIN, 200 - b.radius - MARGIN);
+    const maxX = Math.max(0 + a.radius + MARGIN, 200 + b.radius + MARGIN);
+    const span = maxX - minX; // x and y spans are equal here
+    const pureFit = (SIZE - PAD * 2) / span;
+    expect(pureFit * 1.5).toBeLessThan(3.0); // guard: we are testing the multiplier path
+    expect(view.getTransform().scale).toBeCloseTo(pureFit * 1.5, 5);
+  });
+
+  it('clamps the loaded zoom to AUTO_FIT_MAX_SCALE for a tiny/dense graph', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    const sim = view.getSimNodes();
+    const a = sim.find((n) => n.id === 'a')!;
+    const b = sim.find((n) => n.id === 'b')!;
+    // Nodes nearly on top of each other: pure fit is huge, so 1.5x must clamp.
+    a.fx = 0; a.fy = 0;
+    b.fx = 1; b.fy = 1;
+    view.tickFor(80);
+    expect(view.getTransform().scale).toBeCloseTo(3.0, 5);
+  });
 });
 
 describe('GraphView — settle (no entrance motion)', () => {

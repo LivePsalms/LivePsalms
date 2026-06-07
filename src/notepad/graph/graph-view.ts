@@ -97,6 +97,9 @@ const AUTO_FIT_TICK = 80;
 const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
 const AUTO_FIT_MAX_SCALE = 3.0;
+// On load, zoom in past pure fit-to-view so the graph lands more noticeable.
+// Clamped by AUTO_FIT_MAX_SCALE so small graphs don't balloon.
+const AUTO_FIT_INITIAL_ZOOM = 1.5;
 
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
@@ -332,7 +335,8 @@ export class GraphView extends Observable<GraphViewState> {
     const w = maxX - minX, h = maxY - minY;
     if (w <= 0 || h <= 0) return;
 
-    const fitScale = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h, AUTO_FIT_MAX_SCALE);
+    const baseFit = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h);
+    const fitScale = Math.min(baseFit * AUTO_FIT_INITIAL_ZOOM, AUTO_FIT_MAX_SCALE);
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     this.transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
   }
