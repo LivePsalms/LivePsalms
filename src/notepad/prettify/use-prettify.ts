@@ -1,5 +1,5 @@
 // src/notepad/prettify/use-prettify.ts
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import type { NoteDecoration } from '../types';
 import type { PrettifyDensity, PrettifyReason, PrettifyResult } from './prettify-types';
@@ -46,7 +46,9 @@ interface Snapshot {
 
 export function usePrettify(deps: UsePrettifyDeps) {
   const depsRef = useRef(deps);
-  depsRef.current = deps;
+  useEffect(() => {
+    depsRef.current = deps;
+  });
   const snapshotRef = useRef<Snapshot | null>(null);
   const [state, setState] = useState<PrettifyState>({ phase: 'idle', canUndo: false });
 
