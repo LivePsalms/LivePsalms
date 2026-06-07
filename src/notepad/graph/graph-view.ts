@@ -102,6 +102,8 @@ export function driftOffset(phase: number, tSeconds: number, amplitude: number):
     // `+ 0` normalizes a signed `-0` (e.g. when amplitude is 0) to `+0` so the
     // result compares equal under strict deep-equality.
     ox: amplitude * Math.sin(tSeconds * DRIFT_SPEED + phase) + 0,
+    // `phase * 1.3` de-correlates the y phase from x so nodes don't sweep in
+    // lockstep, giving more organic, non-uniform motion.
     oy: amplitude * Math.cos(tSeconds * DRIFT_SPEED * 0.78 + phase * 1.3) + 0,
   };
 }
