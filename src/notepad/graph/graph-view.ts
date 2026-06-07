@@ -99,7 +99,7 @@ const AUTO_FIT_VIEWPORT_PADDING = 30;
 const AUTO_FIT_MAX_SCALE = 3.0;
 // On load, zoom in past pure fit-to-view so the graph lands more noticeable.
 // Clamped by AUTO_FIT_MAX_SCALE so small graphs don't balloon.
-const AUTO_FIT_INITIAL_ZOOM = 1.5;
+const AUTO_FIT_INITIAL_ZOOM = 1.25;
 
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which

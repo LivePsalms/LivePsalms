@@ -586,9 +586,9 @@ describe('GraphView — auto-fit camera', () => {
     expect(view.getTransform()).not.toEqual(t1);
   });
 
-  // Auto-fit zooms in to 1.5x the pure fit-to-view scale so the graph lands more
+  // Auto-fit zooms in to 1.25x the pure fit-to-view scale so the graph lands more
   // noticeable on load. The absolute AUTO_FIT_MAX_SCALE ceiling still applies.
-  it('loads zoomed in to 1.5x the fit-to-view scale when below the cap', () => {
+  it('loads zoomed in to 1.25x the fit-to-view scale when below the cap', () => {
     const { view } = attached(); // 400x400 canvas, dpr 1
     view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
     const sim = view.getSimNodes();
@@ -605,8 +605,8 @@ describe('GraphView — auto-fit camera', () => {
     const maxX = Math.max(0 + a.radius + MARGIN, 200 + b.radius + MARGIN);
     const span = maxX - minX; // x and y spans are equal here
     const pureFit = (SIZE - PAD * 2) / span;
-    expect(pureFit * 1.5).toBeLessThan(3.0); // guard: we are testing the multiplier path
-    expect(view.getTransform().scale).toBeCloseTo(pureFit * 1.5, 5);
+    expect(pureFit * 1.25).toBeLessThan(3.0); // guard: we are testing the multiplier path
+    expect(view.getTransform().scale).toBeCloseTo(pureFit * 1.25, 5);
   });
 
   it('clamps the loaded zoom to AUTO_FIT_MAX_SCALE for a tiny/dense graph', () => {
