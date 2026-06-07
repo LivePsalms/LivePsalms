@@ -13,7 +13,7 @@ import type {
   AdminUsageRow,
 } from './lamplight-adapter';
 import type { DailyDevotion } from './lamplight-artifacts';
-import type { PrettifyDensity, PrettifyResult } from '../prettify/prettify-types';
+import type { PrettifyResult } from '../prettify/prettify-types';
 
 /**
  * In-memory LamplightAdapter for unit tests. Mirrors the Supabase
@@ -111,7 +111,6 @@ export class FakeLamplightAdapter implements LamplightAdapter {
     _userId: string,
     _noteId: string,
     contentText: string,
-    _density: PrettifyDensity,
   ): Promise<PrettifyResult> {
     if (!contentText.trim()) return { ok: false, reason: 'no_content' };
     return this.queuedPrettifyResults.shift() ?? { ok: false, reason: 'network' };

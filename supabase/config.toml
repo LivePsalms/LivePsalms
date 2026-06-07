@@ -383,12 +383,16 @@ deno_version = 2
 # Pin JWT verification per function. The Supabase default is already
 # verify_jwt = true; pinning it here keeps the invariant in version control so a
 # future `supabase functions deploy --no-verify-jwt` (or dashboard toggle) can't
-# silently expose these endpoints. All three require auth:
-#   - lamplight-generate, transcribe-note: browser-invoked with the user JWT.
+# silently expose these endpoints. All four require auth:
+#   - lamplight-generate, lamplight-prettify, transcribe-note: browser-invoked
+#     with the user JWT.
 #   - embed-note: browser-invoked ({ job_id }) AND called by the pg_cron sweep,
 #     which sends the service_role key as a Bearer JWT — so verify_jwt = true is
 #     safe on the cron path too (a valid signed JWT).
 [functions.lamplight-generate]
+verify_jwt = true
+
+[functions.lamplight-prettify]
 verify_jwt = true
 
 [functions.transcribe-note]
