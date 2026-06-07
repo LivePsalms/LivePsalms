@@ -146,4 +146,41 @@ describe('useDecorations', () => {
     // And the new note's decorations are loaded.
     expect(result.current.decorations).toHaveLength(0);
   });
+
+  it('adds many decorations in a single commit, each with a distinct id and z', () => {
+    const updateNote = vi.fn();
+    const { result } = renderHook(() => useDecorations(note(), updateNote));
+    act(() => {
+      result.current.addMany([
+        { assetId: 'arrow-01', xPct: 0.1, yPx: 10, widthPct: 0.2, rotation: 0 },
+        { assetId: 'line-01', xPct: 0.3, yPx: 20, widthPct: 0.2, rotation: 0 },
+      ]);
+    });
+    expect(result.current.decorations).toHaveLength(2);
+    const ids = result.current.decorations.map((d) => d.id);
+    expect(new Set(ids).size).toBe(2);
+    const zs = result.current.decorations.map((d) => d.z);
+    expect(new Set(zs).size).toBe(2);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(updateNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('reset replaces the entire decoration list verbatim', () => {
+    const updateNote = vi.fn();
+    const initial = note(
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      'n1',
+    );
+    const { result } = renderHook(() => useDecorations(initial, updateNote));
+    act(() => {
+      result.current.reset([]);
+    });
+    expect(result.current.decorations).toHaveLength(0);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(updateNote).toHaveBeenCalledWith('n1', { decorations: [] });
+  });
 });
