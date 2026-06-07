@@ -213,7 +213,13 @@ function DesktopNotepadWorkspace() {
           </div>
 
           {/* Tab Content */}
-          {activeTab === 'content' && <NotepadEditor onAfterSave={onAfterSave} />}
+          {activeTab === 'content' && (
+            <NotepadEditor
+              onAfterSave={onAfterSave}
+              lamplightAdapter={lamplightAdapter}
+              userId={lamplightAdapter ? (user?.id ?? null) : null}
+            />
+          )}
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (
