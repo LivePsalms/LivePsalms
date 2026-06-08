@@ -24,7 +24,7 @@ class MockContext {
   arc(...a: unknown[]) { this.rec('arc', ...a); }
   moveTo(...a: unknown[]) { this.rec('moveTo', ...a); }
   lineTo(...a: unknown[]) { this.rec('lineTo', ...a); }
-  stroke() { this.rec('stroke'); }
+  stroke() { this.rec('stroke', this.strokeStyle); }
   fill() { this.rec('fill'); }
   fillText(...a: unknown[]) { this.rec('fillText', ...a); }
   measureText(s: string) { return { width: s.length * 6 } as unknown as TextMetrics; }
@@ -806,6 +806,38 @@ describe('GraphView — 3D sphere layout', () => {
       expect(typeof n.y).toBe('number');
       expect(typeof n.z).toBe('number');
     }
+  });
+});
+
+describe('GraphView — edge depth fade', () => {
+  function alphaOf(strokeStyle: string): number {
+    const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(strokeStyle);
+    return m ? parseFloat(m[1]) : NaN;
+  }
+
+  it('draws an edge between back-facing nodes fainter than one between front-facing nodes', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'fa', type: 'devotion' }), node({ id: 'fb', type: 'sermon' }),
+       node({ id: 'ba', type: 'devotion' }), node({ id: 'bb', type: 'sermon' })],
+      // 'front' edge first, 'back' edge second → strokes recorded in this order.
+      [edge({ id: 'front', source: 'fa', target: 'fb' }),
+       edge({ id: 'back', source: 'ba', target: 'bb' })],
+      null,
+    );
+    const sim = view.getSimNodes();
+    const pin = (id: string, x: number, y: number, z: number) => {
+      const s = sim.find((n) => n.id === id)!;
+      s.x = x; s.y = y; s.z = z; s.fx = x; s.fy = y; (s as { fz?: number }).fz = z;
+    };
+    // y=0 so depth ≈ z*cos(pitch). Front pair +z, back pair -z. No hover → 2 strokes total.
+    pin('fa', -40, 0, 200); pin('fb', 40, 0, 200);
+    pin('ba', -40, 0, -200); pin('bb', 40, 0, -200);
+    view.settle();
+
+    const strokes = canvas.ctx.calls.filter((c) => c.method === 'stroke').map((c) => String(c.args[0]));
+    expect(strokes.length).toBe(2);
+    expect(alphaOf(strokes[0])).toBeGreaterThan(alphaOf(strokes[1])); // front brighter than back
   });
 });
 

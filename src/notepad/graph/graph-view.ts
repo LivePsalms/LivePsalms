@@ -389,7 +389,7 @@ export class GraphView extends Observable<GraphViewState> {
       })
       .sort((a, b) => a.p.depth - b.p.depth);
 
-    // Edges — placeholder using projected endpoints (depth fade added in Task 7).
+    // Edges — alpha reduced by endpoint depth so back edges recede.
     const screen = new Map<string, { sx: number; sy: number; dn: number }>();
     for (const d of drawn) screen.set(d.n.id, { sx: d.p.sx, sy: d.p.sy, dn: d.dn });
     for (const link of this.simLinks) {
@@ -398,8 +398,11 @@ export class GraphView extends Observable<GraphViewState> {
       const a = screen.get(src.id);
       const b = screen.get(tgt.id);
       if (!a || !b) continue;
+      const meanDepth = (a.dn + b.dn) / 2;            // 0 back .. 1 front
+      const depthFade = 0.2 + meanDepth * 0.8;        // never fully invisible
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.4;
+      const base = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.5;
+      const alpha = base * depthFade;
       ctx.beginPath();
       ctx.moveTo(a.sx, a.sy);
       ctx.lineTo(b.sx, b.sy);
