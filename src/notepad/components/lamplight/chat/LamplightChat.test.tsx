@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // src/notepad/components/lamplight/chat/LamplightChat.test.tsx
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { StrictMode } from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
 const useChatThread = vi.fn();
@@ -97,5 +98,45 @@ describe('LamplightChat opening insight', () => {
     });
     rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument());
+  });
+
+  it('still appends the insight under StrictMode double-invocation (fires server request once)', async () => {
+    const append = vi.fn();
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
+    requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
+    render(
+      <StrictMode>
+        <LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />
+      </StrictMode>,
+    );
+    // Set guard must prevent a duplicate server insight even though the effect runs twice.
+    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
+    // The insight must still reach the thread (the bug: it was discarded by the cancelled-closure).
+    await waitFor(() => expect(append).toHaveBeenCalledWith([
+      expect.objectContaining({ role: 'assistant', content: 'Opening thought.' }),
+    ]));
+  });
+
+  it('discards an in-flight insight if the passage changed before it resolved', async () => {
+    let resolveInsight: (v: unknown) => void = () => {};
+    requestOpeningInsight.mockReturnValueOnce(new Promise((r) => { resolveInsight = r; }));
+    const appendJhn = vi.fn();
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: appendJhn, reload: vi.fn() });
+    const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
+
+    // Navigate to a different passage that already has messages.
+    const appendRev = vi.fn();
+    useChatThread.mockReturnValue({
+      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
+      loading: false, error: null, append: appendRev, reload: vi.fn(),
+    });
+    rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
+
+    // The jhn insight resolves AFTER navigating away — it must NOT be appended to rev.
+    resolveInsight({ ok: true, threadId: 't1', reply: 'Stale jhn insight.', citations: [] });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(appendRev).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument();
   });
 });
