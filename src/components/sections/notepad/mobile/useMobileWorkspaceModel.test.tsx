@@ -58,4 +58,17 @@ describe('useMobileWorkspaceModel', () => {
     const notes = await captured!(['n2']);
     expect(notes).toEqual([{ id: 'n2' }]);
   });
+
+  it('exposes an invoke function', () => {
+    let captured: unknown;
+    function Probe3() {
+      const m = useMobileWorkspaceModel();
+      useEffect(() => {
+        captured = m.invoke;
+      }, [m.invoke]);
+      return null;
+    }
+    render(<Probe3 />);
+    expect(typeof captured).toBe('function');
+  });
 });
