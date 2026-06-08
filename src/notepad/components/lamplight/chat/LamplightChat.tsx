@@ -21,45 +21,44 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
   const [error, setError] = useState<string | null>(null);
   const passageKey = `${book}.${chapter}`;
   const [insighting, setInsighting] = useState(false);
-  const insightAttempted = useRef<Set<string>>(new Set());
+  const insightInFlight = useRef(false);
   const livePassageKey = useRef(passageKey);
   livePassageKey.current = passageKey;
   const mounted = useRef(true);
 
-  // Track real unmount. StrictMode runs this setup again on remount, so `mounted`
-  // is restored to true and an in-flight insight isn't falsely dropped in dev.
+  // Track real unmount so an in-flight reflection isn't applied after teardown.
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
 
+  // Clear any stale "reflecting…" indicator / error when the passage changes, and
+  // release the in-flight guard so the new passage can request its own reflection.
   useEffect(() => {
-    // Clear any stale "reflecting…" indicator when the passage or thread state changes.
     setInsighting(false);
-    if (thread.loading) return;
-    if (thread.messages.length > 0) return;
-    // Fire at most once per passage per session. Add synchronously BEFORE the request
-    // so a StrictMode double-invoke (or rapid re-render) can't trigger a duplicate
-    // server insight (which would persist two assistant messages on an empty thread).
-    if (insightAttempted.current.has(passageKey)) return;
-    insightAttempted.current.add(passageKey);
+    setError(null);
+    insightInFlight.current = false;
+  }, [passageKey]);
 
+  // User-triggered reflection (replaces the old auto-fire on an empty thread).
+  const requestReflection = async () => {
+    if (insightInFlight.current) return;
+    insightInFlight.current = true;
+    setError(null);
     setInsighting(true);
-    (async () => {
-      const res = await requestOpeningInsight(invoke, { book, chapter });
-      // Apply only if still mounted and still viewing the passage we requested for.
-      // This (not a cleanup cancel) is what makes the single in-flight request survive
-      // StrictMode's setup→cleanup→setup, while a genuine passage change discards it.
-      if (!mounted.current || livePassageKey.current !== passageKey) return;
-      if (res.ok) {
-        thread.append([{ id: localId(), role: 'assistant', content: res.reply, citations: res.citations }]);
-      }
-      setInsighting(false);
-    })();
-    // `invoke` is a stable client fn reference; omitting it avoids re-firing on every
-    // render while passageKey/loading/length capture every real re-trigger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passageKey, thread.loading, thread.messages.length]);
+    const res = await requestOpeningInsight(invoke, { book, chapter });
+    // Apply only if still mounted and still viewing the passage we requested for.
+    // On a passage change the effect above resets the flight guard for the new
+    // passage, so this early return must NOT touch it (the new request owns it).
+    if (!mounted.current || livePassageKey.current !== passageKey) return;
+    insightInFlight.current = false;
+    if (res.ok) {
+      thread.append([{ id: localId(), role: 'assistant', content: res.reply, citations: res.citations }]);
+    } else {
+      setError(res.reason);
+    }
+    setInsighting(false);
+  };
 
   const send = async () => {
     const message = draft.trim();
@@ -81,14 +80,37 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
     }
   };
 
+  const startNewReflection = async () => {
+    await thread.archiveAndReset(); // clears to an empty thread; the Reflect button reappears
+  };
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit, sans-serif' }}>
+      <div className="flex justify-end px-3 pt-2 shrink-0">
+        <button
+          onClick={() => void startNewReflection()}
+          className="text-[10px] tracking-wider px-2 py-1 rounded-full"
+          style={{ color: 'var(--silica)', border: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          + New reflection
+        </button>
+      </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {thread.loading && <p className="text-[11px]" style={{ color: 'var(--silica)' }}>Loading conversation…</p>}
         {!thread.loading && thread.messages.length === 0 && (
-          <p className="text-[11px]" style={{ color: 'var(--silica)' }}>
-            Ask Lamplight about this passage — it draws on your own notes.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <button
+              onClick={() => void requestReflection()}
+              disabled={insighting}
+              className="text-[12px] tracking-wider px-4 py-2 rounded-full disabled:opacity-40"
+              style={{ background: '#C49A78', color: '#fff', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Reflect on this passage
+            </button>
+            <p className="text-[10px]" style={{ color: 'var(--silica)' }}>
+              Lamplight draws on your own notes.
+            </p>
+          </div>
         )}
         {thread.messages.map((m) => (
           <ChatMessage key={m.id} role={m.role} content={m.content} citations={m.citations} />

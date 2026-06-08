@@ -172,7 +172,13 @@ export function MobileNotepadWorkspace() {
 
       <MobileTabBar active={tab} onSelect={handleSelectTab} lamplightHasConnections={hasConnections} />
 
-      <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} onOpenNote={handleOpenNote} />
+      <MobileMoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onOpenNote={handleOpenNote}
+        lamplightAdapter={model.lamplightAdapter}
+        invoke={model.invoke}
+      />
 
       <MobileAuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 

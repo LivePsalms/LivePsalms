@@ -8,6 +8,7 @@ import { useLamplightEmbeddingTrigger } from '../../../../notepad/hooks/useLampl
 import { SupabaseLamplightAdapter } from '../../../../notepad/storage/supabase-lamplight-adapter';
 import type { LamplightAdapter } from '../../../../notepad/storage/lamplight-adapter';
 import type { Note } from '../../../../notepad/types';
+import type { InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { supabase } from '@/lib/supabase';
 
 export interface MobileWorkspaceModel {
@@ -21,6 +22,7 @@ export interface MobileWorkspaceModel {
   lamplightAdapter: LamplightAdapter | null;
   onAfterSave: (note: Note) => void;
   loadNeighborNotes: (ids: string[]) => Promise<Note[]>;
+  invoke: InvokeFn;
 }
 
 export function useMobileWorkspaceModel(): MobileWorkspaceModel {
@@ -52,6 +54,14 @@ export function useMobileWorkspaceModel(): MobileWorkspaceModel {
     [notes],
   );
 
+  const invoke: InvokeFn = useCallback(
+    (name, options) =>
+      supabase
+        ? supabase.functions.invoke(name, { body: options.body as Record<string, unknown> })
+        : Promise.resolve({ data: null, error: { message: 'offline' } }),
+    [],
+  );
+
   return {
     user: user ? { id: user.id } : null,
     notes,
@@ -63,5 +73,6 @@ export function useMobileWorkspaceModel(): MobileWorkspaceModel {
     lamplightAdapter,
     onAfterSave,
     loadNeighborNotes,
+    invoke,
   };
 }

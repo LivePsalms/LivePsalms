@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // src/notepad/components/lamplight/chat/LamplightChat.test.tsx
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { StrictMode } from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
 const useChatThread = vi.fn();
@@ -27,7 +26,7 @@ beforeEach(() => {
 
 function setup(threadOverrides = {}) {
   useChatThread.mockReturnValue({
-    messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn(), ...threadOverrides,
+    messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn(), ...threadOverrides,
   });
 }
 
@@ -56,87 +55,108 @@ describe('LamplightChat', () => {
   });
 });
 
-describe('LamplightChat opening insight', () => {
-  it('auto-fires an insight when the loaded thread is empty', async () => {
-    const append = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
+describe('LamplightChat reflection', () => {
+  it('does NOT auto-fire a reflection on an empty thread', async () => {
+    setup();
     requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
-    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
+    // Give any stray effect a tick to fire; it must not.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(requestOpeningInsight).not.toHaveBeenCalled();
+  });
+
+  it('shows a Reflect button on an empty thread and generates a reflection when clicked', async () => {
+    const append = vi.fn();
+    setup({ append });
+    requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
+    const invoke = vi.fn();
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={invoke} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /reflect on this passage/i }));
+
+    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledWith(invoke, { book: 'jhn', chapter: 10 }));
     await waitFor(() => expect(append).toHaveBeenCalledWith([
       expect.objectContaining({ role: 'assistant', content: 'Opening thought.' }),
     ]));
   });
 
-  it('does NOT fire an insight when the thread already has messages', async () => {
-    useChatThread.mockReturnValue({
-      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
-    });
+  it('surfaces an error when the reflection fails', async () => {
+    setup();
+    requestOpeningInsight.mockResolvedValue({ ok: false, reason: 'network' });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
-    await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: /reflect on this passage/i }));
+    await waitFor(() => expect(screen.getByText(/reach Lamplight/i)).toBeInTheDocument());
   });
 
-  it('does not fire while the thread is still loading', async () => {
-    useChatThread.mockReturnValue({ messages: [], loading: true, error: null, append: vi.fn(), reload: vi.fn() });
+  it('does not show the Reflect button when the thread already has messages', () => {
+    setup({ messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }] });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
-    await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /reflect on this passage/i })).not.toBeInTheDocument();
   });
 
-  it('clears the reflecting indicator when the passage changes mid-insight', async () => {
-    requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves: insight stays in-flight
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn() });
-    const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+  it('does not show the Reflect button while the thread is loading', () => {
+    setup({ loading: true });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /reflect on this passage/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the reflecting indicator while a reflection is in flight', async () => {
+    requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves
+    setup();
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /reflect on this passage/i }));
+    await waitFor(() => expect(screen.getByText(/Lamplight is reflecting/i)).toBeInTheDocument());
+  });
+
+  it('does not fire a second reflection while one is in flight', async () => {
+    requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves
+    setup();
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    const btn = screen.getByRole('button', { name: /reflect on this passage/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
     await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
-    expect(screen.getByText(/Lamplight is reflecting/i)).toBeInTheDocument();
+  });
 
-    // Switch to a passage that already has messages — the new effect returns early
-    // and would never clear `insighting` without the cleanup fix.
-    useChatThread.mockReturnValue({
-      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
-    });
+  it('clears the reflecting indicator when the passage changes mid-reflection', async () => {
+    requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves: stays in-flight
+    setup();
+    const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /reflect on this passage/i }));
+    await waitFor(() => expect(screen.getByText(/Lamplight is reflecting/i)).toBeInTheDocument());
+
+    // Switch to a passage that already has messages — the passage-change effect resets the indicator.
+    setup({ messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }] });
     rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument());
   });
 
-  it('still appends the insight under StrictMode double-invocation (fires server request once)', async () => {
-    const append = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
-    requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
-    render(
-      <StrictMode>
-        <LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />
-      </StrictMode>,
-    );
-    // Set guard must prevent a duplicate server insight even though the effect runs twice.
-    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
-    // The insight must still reach the thread (the bug: it was discarded by the cancelled-closure).
-    await waitFor(() => expect(append).toHaveBeenCalledWith([
-      expect.objectContaining({ role: 'assistant', content: 'Opening thought.' }),
-    ]));
-  });
-
-  it('discards an in-flight insight if the passage changed before it resolved', async () => {
+  it('discards an in-flight reflection if the passage changed before it resolved', async () => {
     let resolveInsight: (v: unknown) => void = () => {};
     requestOpeningInsight.mockReturnValueOnce(new Promise((r) => { resolveInsight = r; }));
     const appendJhn = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: appendJhn, reload: vi.fn() });
+    setup({ append: appendJhn });
     const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /reflect on this passage/i }));
     await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
 
     // Navigate to a different passage that already has messages.
     const appendRev = vi.fn();
-    useChatThread.mockReturnValue({
-      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: appendRev, reload: vi.fn(),
-    });
+    setup({ messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }], append: appendRev });
     rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
 
-    // The jhn insight resolves AFTER navigating away — it must NOT be appended to rev.
+    // The jhn reflection resolves AFTER navigating away — it must NOT be appended to rev.
     resolveInsight({ ok: true, threadId: 't1', reply: 'Stale jhn insight.', citations: [] });
     await new Promise((r) => setTimeout(r, 0));
     expect(appendRev).not.toHaveBeenCalled();
     expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument();
+  });
+
+  it('+ New reflection archives the active thread', async () => {
+    const archiveAndReset = vi.fn().mockResolvedValue(undefined);
+    setup({ messages: [{ id: 'm1', role: 'assistant', content: 'old insight', citations: [] }], archiveAndReset });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /new reflection/i }));
+    await waitFor(() => expect(archiveAndReset).toHaveBeenCalledTimes(1));
   });
 });

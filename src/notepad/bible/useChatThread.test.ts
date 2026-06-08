@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // src/notepad/bible/useChatThread.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, cleanup } from '@testing-library/react';
+import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
 
 // Mock refs wrapped in vi.hoisted so they are initialized before the hoisted
 // vi.mock() factory runs (matches the convention in useBiblePassages.test.ts).
@@ -68,5 +68,57 @@ describe('useChatThread', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
     expect(eqMsg).toHaveBeenCalledWith('thread_id', 't1');
+  });
+
+  it('only loads the active (non-archived) thread', async () => {
+    maybeSingle.mockResolvedValue({ data: { id: 't1' }, error: null });
+    setOrderResult({ data: [], error: null });
+    const { result } = renderHook(() => useChatThread('jhn', 10, 'u1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(eqThread).toHaveBeenCalledWith('archived', false);
+  });
+
+  it('archiveAndReset archives the active thread then reloads', async () => {
+    maybeSingle.mockResolvedValue({ data: { id: 't1' }, error: null });
+    setOrderResult({ data: [{ id: 'm1', role: 'assistant', content: 'x', citations: [] }], error: null });
+
+    // update().eq().eq().eq() chain returns { error: null }
+    const updEq3 = vi.fn().mockResolvedValue({ error: null });
+    const updEq2 = vi.fn(() => ({ eq: updEq3 }));
+    const updEq1 = vi.fn(() => ({ eq: updEq2 }));
+    const update = vi.fn(() => ({ eq: updEq1 }));
+    from.mockImplementation((t: string) =>
+      t === 'lamplight_chat_threads' ? { ...threadBuilder, update } : msgBuilder,
+    );
+
+    const { result } = renderHook(() => useChatThread('jhn', 10, 'u1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => { await result.current.archiveAndReset(); });
+    expect(update).toHaveBeenCalledWith({ archived: true });
+  });
+
+  it('archiveAndReset surfaces the error and keeps the conversation when the archive write fails', async () => {
+    maybeSingle.mockResolvedValue({ data: { id: 't1' }, error: null });
+    setOrderResult({ data: [{ id: 'm1', role: 'assistant', content: 'x', citations: [] }], error: null });
+
+    // update().eq().eq().eq() chain rejects with a Postgres error
+    const updEq3 = vi.fn().mockResolvedValue({ error: { message: 'archive failed' } });
+    const updEq2 = vi.fn(() => ({ eq: updEq3 }));
+    const updEq1 = vi.fn(() => ({ eq: updEq2 }));
+    const update = vi.fn(() => ({ eq: updEq1 }));
+    from.mockImplementation((t: string) =>
+      t === 'lamplight_chat_threads' ? { ...threadBuilder, update } : msgBuilder,
+    );
+
+    const { result } = renderHook(() => useChatThread('jhn', 10, 'u1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.messages.map((m) => m.id)).toEqual(['m1']);
+
+    await act(async () => { await result.current.archiveAndReset(); });
+    // The failed write is surfaced, and the existing conversation is preserved
+    // (not silently cleared and then re-loaded from the still-active thread).
+    expect(result.current.error).toBe('archive failed');
+    expect(result.current.messages.map((m) => m.id)).toEqual(['m1']);
   });
 });
