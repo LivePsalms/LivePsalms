@@ -141,7 +141,7 @@ async function handleChat(req: Request): Promise<Response> {
       });
       const result = await runBibleChatPipeline({
         llm, ctx,
-        prompt: mode === 'insight' ? (BIBLE_INSIGHT_PROMPT as unknown as Parameters<typeof runBibleChatPipeline>[0]['prompt']) : undefined,
+        prompt: mode === 'insight' ? BIBLE_INSIGHT_PROMPT : undefined,
       });
       if (!result.ok) {
         return { response: { ok: false, reason: result.reason }, usage: result.usage };

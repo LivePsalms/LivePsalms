@@ -3,7 +3,7 @@
 // bible-chat, but no user question: it offers ONE grounded observation that
 // connects the open passage to the user's own notes, ending in one open prompt.
 
-import type { BibleChatContext } from '../bible-chat-pipeline.ts';
+import type { BibleChatContext, ChatPromptModule } from '../bible-chat-pipeline.ts';
 import { BIBLE_CHAT_PROMPT } from './bible-chat.ts';
 
 export const BIBLE_INSIGHT_PROMPT = {
@@ -41,4 +41,4 @@ Rules (these compound your system fragment):
         `Offer the opening insight now.`,
     }];
   },
-} as const;
+} as const satisfies ChatPromptModule;
