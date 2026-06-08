@@ -586,7 +586,6 @@ describe('GraphView — setSettings (in-place updates)', () => {
       linkDistance: 100,
       linkForce: 0.005,
       repelForce: 500,
-      centerForce: 0.05,
       edgeThickness: 2,
     });
     expect(view.getSimNodes()[0]).toBe(before);

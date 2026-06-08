@@ -35,7 +35,6 @@ export interface GraphSettings {
   linkDistance: number;
   linkForce: number;
   repelForce: number;
-  centerForce: number;
   nodeSize: number;
   edgeThickness: number;
 }
@@ -72,7 +71,6 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   linkDistance: 30,
   linkForce: 0.01,
   repelForce: 120,
-  centerForce: 0.15,
   nodeSize: 1,
   edgeThickness: 1,
 };
