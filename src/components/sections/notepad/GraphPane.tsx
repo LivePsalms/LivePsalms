@@ -135,10 +135,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
       }
     >
       <div className="p-4 space-y-3 shrink-0">
-        <h3 className="text-[10px] font-medium tracking-[0.2em]" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-          GRAPH
-        </h3>
-
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--pale-stone)' }}>
             <button onClick={() => setGraphMode('global')} className="px-3 py-1.5 text-[10px] font-medium tracking-wider"

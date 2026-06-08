@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { searchNeighbors, searchBible } from './retrieval';
+import { searchNeighbors, searchBible, searchUserNotesByQuery } from './retrieval';
 
 type RpcRow = {
   id: string;
@@ -176,5 +176,32 @@ describe('searchNeighbors (chunked)', () => {
     // Reranker promoted n3 (relevance 0.99) above n2.
     expect(out.map(r => r.source_id)).toEqual(['n3', 'n2']);
     expect(out[0].rerank_score).toBeCloseTo(0.99);
+  });
+});
+
+describe('searchUserNotesByQuery', () => {
+  it('embeds the query and matches the user note RPC, mapping rows', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        { id: 'e1', source_id: 'note-1', chunk_index: 0, chunk_text: 'rest as trust', similarity: 0.9, metadata: {} },
+        { id: 'e2', source_id: 'note-2', chunk_index: 1, chunk_text: 'shepherd', similarity: 0.8, metadata: {} },
+      ],
+      error: null,
+    });
+    const deps = {
+      supabase: { rpc } as unknown as import('@supabase/supabase-js').SupabaseClient,
+      voyage: { apiKey: 'k', fetch: globalThis.fetch },
+      rerankEnabled: false,
+    };
+    const out = await searchUserNotesByQuery(deps, {
+      userId: 'u1', k: 2, queryEmbedding: new Array(1024).fill(0),
+    });
+    expect(rpc).toHaveBeenCalledWith('match_user_note_embeddings', {
+      p_user_id: 'u1',
+      p_query_vector: expect.any(Array),
+      p_exclude_source_id: null,
+      p_limit: 2,
+    });
+    expect(out.map((r) => r.source_id)).toEqual(['note-1', 'note-2']);
   });
 });

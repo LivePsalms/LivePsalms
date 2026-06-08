@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { LamplightAdapter, LamplightTier } from '../storage/lamplight-adapter';
 
-export type LamplightFeature = 'today' | 'weekly' | 'reflections' | 'inline';
+export type LamplightFeature = 'today' | 'weekly' | 'reflections' | 'inline' | 'chat';
 
 export interface UseLamplightEntitlementArgs {
   adapter: LamplightAdapter;
@@ -65,6 +65,7 @@ export function useLamplightEntitlement({
   const hasAccess = useCallback(
     (feature: LamplightFeature) => {
       if (promoActive) return true;
+      if (feature === 'chat') return tier === 'plus';
       if (tier === 'plus') return true;
       if (tier === 'lite') return feature === 'today' || feature === 'weekly';
       return false;

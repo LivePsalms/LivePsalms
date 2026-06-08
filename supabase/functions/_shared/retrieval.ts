@@ -154,3 +154,33 @@ function toRetrievedItem(r: MatchRow & { rerank_score?: number }): RetrievedItem
     ...(r.rerank_score !== undefined ? { rerank_score: r.rerank_score } : {}),
   };
 }
+
+/**
+ * Semantic search over a single user's note embeddings for an arbitrary text
+ * query (used by Bible chat). Reuses the existing match_user_note_embeddings
+ * RPC with a null exclude id. When rerankEnabled, pulls a larger pool and
+ * reranks by the raw query text.
+ */
+export async function searchUserNotesByQuery(
+  deps: RetrievalDeps,
+  args: { userId: string; k: number; query?: string; queryEmbedding?: number[] },
+): Promise<RetrievedItem[]> {
+  const vector = args.queryEmbedding ?? await embedQuery(args.query ?? '', deps.voyage);
+  const limit = deps.rerankEnabled ? POOL_SIZE : args.k;
+  const { data, error } = await deps.supabase.rpc('match_user_note_embeddings', {
+    p_user_id: args.userId,
+    p_query_vector: vector,
+    p_exclude_source_id: null,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  const rows = (data ?? []) as MatchRow[];
+  if (rows.length === 0) return [];
+
+  if (!deps.rerankEnabled || !args.query) {
+    return rows.slice(0, args.k).map(toRetrievedItem);
+  }
+  const documents = rows.map((r) => r.chunk_text);
+  const scored = await rerank(args.query, documents, args.k, deps.voyage);
+  return scored.map((s) => toRetrievedItem({ ...rows[s.index], rerank_score: s.score } as MatchRow & { rerank_score: number }));
+}
