@@ -1,7 +1,7 @@
 // src/notepad/bible/BibleReader.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { bookByAbbrev } from './bible-books';
+import { bookByAbbrev, OLD_TESTAMENT, NEW_TESTAMENT, type BibleBook } from './bible-books';
 import { useBiblePassages } from './useBiblePassages';
 
 export interface PassageRef {
@@ -28,9 +28,25 @@ export function BibleReader({
   onPassageChange,
   onSelectVerse,
 }: BibleReaderProps) {
-  const book = initialBook;
+  const [book, setBook] = useState(initialBook);
   const [chapter, setChapter] = useState(initialChapter);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+
+  const [navOpen, setNavOpen] = useState(false);
+  const [navBook, setNavBook] = useState<BibleBook | null>(null);
+
+  const navChapters = useMemo(
+    () => (navBook ? Array.from({ length: navBook.chapterCount }, (_, i) => i + 1) : []),
+    [navBook],
+  );
+
+  const jumpTo = (abbrev: string, ch: number) => {
+    setBook(abbrev);
+    setChapter(ch);
+    setSelectedVerse(null);
+    setNavOpen(false);
+    setNavBook(null);
+  };
 
   const meta = bookByAbbrev(book);
   const { verses, loading, error } = useBiblePassages(book, chapter);
@@ -62,7 +78,15 @@ export function BibleReader({
     <div className="flex flex-col h-full" style={{ fontFamily: 'Outfit, sans-serif' }}>
       {/* header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--pale-stone)' }}>
-        <span className="text-[13px] font-bold" style={{ color: 'var(--deep-umber)' }}>{label}</span>
+        <button
+          aria-label="Browse books"
+          onClick={() => { setNavOpen((o) => !o); setNavBook(null); }}
+          className="text-[13px] font-bold flex items-center gap-1"
+          style={{ color: 'var(--deep-umber)' }}
+        >
+          {label}
+          <span className="text-[9px]" style={{ color: 'var(--silica)' }}>▾</span>
+        </button>
         <div className="flex items-center gap-1">
           <button
             aria-label="Previous chapter"
@@ -82,6 +106,41 @@ export function BibleReader({
           </button>
         </div>
       </div>
+
+      {navOpen && (
+        <div className="px-4 py-3 shrink-0 overflow-y-auto" style={{ borderBottom: '1px solid var(--pale-stone)', maxHeight: '50%' }}>
+          {!navBook && (
+            <>
+              <NavSection title="Old Testament" books={OLD_TESTAMENT} onPick={setNavBook} />
+              <NavSection title="New Testament" books={NEW_TESTAMENT} onPick={setNavBook} />
+            </>
+          )}
+          {navBook && (
+            <div>
+              <button
+                onClick={() => setNavBook(null)}
+                className="text-[10px] font-medium tracking-wider mb-2 flex items-center gap-1"
+                style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+              >
+                <ChevronLeft className="w-3 h-3" /> {navBook.name}
+              </button>
+              <div className="grid grid-cols-8 gap-1.5">
+                {navChapters.map((ch) => (
+                  <button
+                    key={ch}
+                    aria-label={`Chapter ${ch}`}
+                    onClick={() => jumpTo(navBook.abbrev, ch)}
+                    className="text-[10px] py-1 rounded text-center hover:bg-black/5"
+                    style={{ border: '1px solid var(--pale-stone)', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    {ch}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* body */}
       <div className="flex-1 overflow-y-auto px-4 py-3" style={{ fontFamily: 'Georgia, serif' }}>
@@ -119,6 +178,28 @@ export function BibleReader({
             ))}
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function NavSection({ title, books, onPick }: { title: string; books: readonly BibleBook[]; onPick: (b: BibleBook) => void }) {
+  return (
+    <div className="mb-3">
+      <div className="text-[9px] font-semibold tracking-[0.16em] mb-1.5" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
+        {title.toUpperCase()}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {books.map((b) => (
+          <button
+            key={b.abbrev}
+            onClick={() => onPick(b)}
+            className="text-[10px] px-2 py-1 rounded hover:bg-black/5"
+            style={{ border: '1px solid var(--pale-stone)', color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+          >
+            {b.name}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -50,4 +50,19 @@ describe('BibleReader', () => {
     render(<BibleReader initialBook="jhn" initialChapter={1} />);
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
+
+  it('opens the navigator and jumps to a chosen book + chapter', () => {
+    const onPassageChange = vi.fn();
+    render(<BibleReader initialBook="jhn" initialChapter={1} onPassageChange={onPassageChange} />);
+
+    // Open navigator via the heading button.
+    fireEvent.click(screen.getByRole('button', { name: /browse books/i }));
+
+    // Pick a book (Genesis) then chapter 3.
+    fireEvent.click(screen.getByRole('button', { name: /^Genesis$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^chapter 3$/i }));
+
+    expect(screen.getByText('Genesis 3')).toBeInTheDocument();
+    expect(onPassageChange).toHaveBeenLastCalledWith({ book: 'gen', chapter: 3 });
+  });
 });
