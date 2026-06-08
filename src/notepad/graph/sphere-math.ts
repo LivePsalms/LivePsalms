@@ -25,3 +25,20 @@ export function projectPoint(p: Vec3, cam: SphereCamera, cx: number, cy: number)
   const r = rotatePoint(p, cam.yaw, cam.pitch);
   return { sx: cx + r.x * cam.scale, sy: cy + r.y * cam.scale, depth: r.z };
 }
+
+/** Normalize rotated z (depth) from [-radius, radius] to [0, 1], clamped. */
+export function depthNorm(depth: number, radius: number): number {
+  if (radius <= 0) return 0.5;
+  const dn = (depth / radius + 1) / 2;
+  return dn < 0 ? 0 : dn > 1 ? 1 : dn;
+}
+
+/** Draw-radius multiplier by depth: back nodes shrink, front nodes grow. */
+export function depthScale(dn: number): number {
+  return 0.55 + dn * 0.65;
+}
+
+/** Opacity by depth: back nodes fade, front nodes are solid. */
+export function depthAlpha(dn: number): number {
+  return 0.3 + dn * 0.7;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rotatePoint, projectPoint } from './sphere-math';
+import { rotatePoint, projectPoint, depthNorm, depthScale, depthAlpha } from './sphere-math';
 
 describe('rotatePoint', () => {
   it('is identity at yaw=0, pitch=0', () => {
@@ -27,5 +27,27 @@ describe('projectPoint', () => {
     expect(r.sx).toBeCloseTo(100 + 3 * 2, 6);
     expect(r.sy).toBeCloseTo(50 + 3 * 4, 6);
     expect(r.depth).toBeCloseTo(-1, 6);
+  });
+});
+
+describe('depth shading', () => {
+  it('normalizes depth from [-R, R] to [0, 1]', () => {
+    expect(depthNorm(-200, 200)).toBeCloseTo(0, 6); // far back
+    expect(depthNorm(0, 200)).toBeCloseTo(0.5, 6);  // equator
+    expect(depthNorm(200, 200)).toBeCloseTo(1, 6);  // front
+  });
+
+  it('clamps depth outside [-R, R]', () => {
+    expect(depthNorm(-9999, 200)).toBe(0);
+    expect(depthNorm(9999, 200)).toBe(1);
+  });
+
+  it('front nodes draw larger and more opaque than back nodes', () => {
+    expect(depthScale(1)).toBeGreaterThan(depthScale(0));
+    expect(depthAlpha(1)).toBeGreaterThan(depthAlpha(0));
+    expect(depthScale(0)).toBeCloseTo(0.55, 6);
+    expect(depthScale(1)).toBeCloseTo(1.2, 6);
+    expect(depthAlpha(0)).toBeCloseTo(0.3, 6);
+    expect(depthAlpha(1)).toBeCloseTo(1.0, 6);
   });
 });
