@@ -146,7 +146,7 @@ export class GraphView extends Observable<GraphViewState> {
   private resizeObserver: ResizeObserver | null = null;
   private wheelListener: ((e: WheelEvent) => void) | null = null;
 
-  private sim: Simulation3<SimNode, SimLink> | null = null;
+  private sim: Simulation3<SimNode> | null = null;
   private simNodes: SimNode[] = [];
   private simLinks: SimLink[] = [];
   private tickCount = 0;
@@ -715,7 +715,7 @@ export class GraphView extends Observable<GraphViewState> {
 
     if (this.sim) this.sim.stop();
 
-    this.sim = forceSimulation<SimNode, SimLink>(this.simNodes, 3)
+    this.sim = forceSimulation<SimNode>(this.simNodes, 3)
       .force('link', forceLink<SimNode, SimLink>(this.simLinks)
         .id((d) => d.id)
         .distance((d) => this.settings.linkDistance / d.weight)

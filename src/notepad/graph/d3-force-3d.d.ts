@@ -13,7 +13,7 @@ declare module 'd3-force-3d' {
     initialize?(nodes: N[], random: () => number, numDimensions: number): void;
   }
 
-  export interface Simulation3<N, L> {
+  export interface Simulation3<N> {
     nodes(): N[];
     nodes(nodes: N[]): this;
     force(name: string): Force3<N> | undefined;
@@ -40,7 +40,7 @@ declare module 'd3-force-3d' {
     strength(s: number): this;
   }
 
-  export function forceSimulation<N, L = unknown>(nodes?: N[], numDimensions?: number): Simulation3<N, L>;
+  export function forceSimulation<N>(nodes?: N[], numDimensions?: number): Simulation3<N>;
   export function forceLink<N, L>(links?: L[]): LinkForce3<N, L>;
   export function forceManyBody<N>(): ManyBodyForce3<N>;
   export function forceCenter<N>(x?: number, y?: number, z?: number): Force3<N>;
