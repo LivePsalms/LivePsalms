@@ -17,6 +17,9 @@ export function useThreadMessages(threadId: string | null): UseThreadMessagesRes
 
   useEffect(() => {
     let cancelled = false;
+    // Reset to a loading state whenever the thread id changes. Mirrors the
+    // sibling useChatThread effect; the synchronous reset is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     setMessages([]);

@@ -27,6 +27,9 @@ export function useChatThreadList(book: string, chapter: number, userId: string 
 
   useEffect(() => {
     let cancelled = false;
+    // Reset to a loading state whenever the passage/user changes. Mirrors the
+    // sibling useChatThread effect; the synchronous reset is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     setThreads([]);
