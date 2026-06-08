@@ -6,7 +6,6 @@ import {
   addDecoration, updateDecoration, removeDecoration,
   duplicateDecoration, bringToFront, sendToBack,
 } from './decoration-ops';
-import { migrateLegacyDecoration, isLegacyDecoration } from './decoration-geometry';
 
 type NewDecoration = Omit<NoteDecoration, 'id' | 'z'>;
 
@@ -86,16 +85,5 @@ export function useDecorations(
     duplicate: (id: string) => commit(duplicateDecoration(decorations, id, uuidv4)),
     bringToFront: (id: string) => commit(bringToFront(decorations, id)),
     sendToBack: (id: string) => commit(sendToBack(decorations, id)),
-    migrateLegacy: (width: number) => {
-      // One-time best-effort conversion of pre-uniform-zoom decorations (absolute
-      // yPx) once the live content width is known. Read from activeNote (not the
-      // decorations state): on a note switch onFirstWidth fires during the layer's
-      // mount effect, before the reload effect syncs state — so the state can lag
-      // the active note while commit stamps the new note id. Sourcing from
-      // activeNote keeps the array and the persisted note id consistent.
-      const src = activeNote?.decorations ?? [];
-      if (!src.some(isLegacyDecoration)) return;
-      commit(src.map((d) => migrateLegacyDecoration(d, width)));
-    },
   };
 }

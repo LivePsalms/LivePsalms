@@ -43,7 +43,7 @@ export function duplicateDecoration(
   if (!src) return list;
   return [
     ...list,
-    { ...src, id: idGen(), xPct: src.xPct + 0.02, yPct: ((src as { yPct?: number }).yPct ?? 0) + 0.02, z: nextZ(list) },
+    { ...src, id: idGen(), xPct: src.xPct + 0.02, yPx: src.yPx + 20, z: nextZ(list) },
   ];
 }
 

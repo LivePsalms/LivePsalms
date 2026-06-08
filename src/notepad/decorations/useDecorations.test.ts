@@ -22,7 +22,7 @@ describe('useDecorations', () => {
     const updateNote = vi.fn();
     const { result } = renderHook(() => useDecorations(note(), updateNote));
     act(() => {
-      result.current.add({ assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0 });
+      result.current.add({ assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0 });
     });
     // UI reflects the add synchronously.
     expect(result.current.decorations).toHaveLength(1);
@@ -41,14 +41,14 @@ describe('useDecorations', () => {
       ({ n }) => useDecorations(n, updateNote),
       { initialProps: { n: note([], 'n1') } },
     );
-    rerender({ n: note([{ id: 'x', assetId: 'shape-01', xPct: 0, yPct: 0, widthPct: 0.1, rotation: 0, z: 1 }], 'n2') });
+    rerender({ n: note([{ id: 'x', assetId: 'shape-01', xPct: 0, yPx: 0, widthPct: 0.1, rotation: 0, z: 1 }], 'n2') });
     expect(result.current.decorations).toHaveLength(1);
   });
 
   it('coalesces rapid successive updates into ONE persisted updateNote with the latest state', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result } = renderHook(() => useDecorations(initial, updateNote));
@@ -77,7 +77,7 @@ describe('useDecorations', () => {
   it('updates on-screen decorations synchronously before the debounce fires', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result } = renderHook(() => useDecorations(initial, updateNote));
@@ -94,7 +94,7 @@ describe('useDecorations', () => {
   it('flushes a pending change on unmount', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result, unmount } = renderHook(() => useDecorations(initial, updateNote));
@@ -114,48 +114,6 @@ describe('useDecorations', () => {
     });
   });
 
-  it('migrateLegacy converts legacy yPx decorations to yPct in one persisted write', () => {
-    const updateNote = vi.fn();
-    const legacy = { id: 'd1', assetId: 'arrow-01', xPct: 0.5, yPx: 300, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NonNullable<Note['decorations']>[number];
-    const { result } = renderHook(() => useDecorations(note([legacy]), updateNote));
-
-    act(() => { result.current.migrateLegacy(1000); });
-
-    expect(result.current.decorations[0].yPct).toBe(0.3);
-    expect((result.current.decorations[0] as { yPx?: number }).yPx).toBeUndefined();
-
-    act(() => { vi.advanceTimersByTime(500); });
-    expect(updateNote).toHaveBeenCalledTimes(1);
-  });
-
-  it('migrateLegacy is a no-op when no decoration is legacy', () => {
-    const updateNote = vi.fn();
-    const clean = { id: 'd1', assetId: 'arrow-01', xPct: 0.5, yPct: 0.3, widthPct: 0.2, rotation: 0, z: 1 };
-    const { result } = renderHook(() => useDecorations(note([clean]), updateNote));
-
-    act(() => { result.current.migrateLegacy(1000); });
-    act(() => { vi.advanceTimersByTime(500); });
-
-    expect(updateNote).not.toHaveBeenCalled();
-  });
-
-  it('migrateLegacy converts only legacy items in a mixed array, in one write', () => {
-    const updateNote = vi.fn();
-    const legacy = { id: 'leg', assetId: 'arrow-01', xPct: 0.5, yPx: 300, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NonNullable<Note['decorations']>[number];
-    const clean = { id: 'cln', assetId: 'shape-01', xPct: 0.1, yPct: 0.4, widthPct: 0.2, rotation: 0, z: 2 };
-    const { result } = renderHook(() => useDecorations(note([legacy, clean]), updateNote));
-
-    act(() => { result.current.migrateLegacy(1000); });
-
-    const byId = Object.fromEntries(result.current.decorations.map((d) => [d.id, d]));
-    expect(byId.leg.yPct).toBe(0.3); // 300 / 1000
-    expect((byId.leg as { yPx?: number }).yPx).toBeUndefined();
-    expect(byId.cln.yPct).toBe(0.4); // unchanged
-
-    act(() => { vi.advanceTimersByTime(500); });
-    expect(updateNote).toHaveBeenCalledTimes(1);
-  });
-
   it('flushes a pending change to the ORIGINAL note when the active note switches', () => {
     const updateNote = vi.fn();
     const { result, rerender } = renderHook(
@@ -163,7 +121,7 @@ describe('useDecorations', () => {
       {
         initialProps: {
           n: note(
-            [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+            [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
             'n1',
           ),
         },

@@ -23,43 +23,35 @@ interface Props {
   onDuplicate: (id: string) => void;
   onBringToFront: (id: string) => void;
   onSendToBack: (id: string) => void;
-  onFirstWidth?: (width: number) => void;
 }
 
 export const DecorationLayer = forwardRef<DecorationLayerHandle, Props>(function DecorationLayer({
   decorations, selectedId, onSelect, onDeselect,
-  onChange, onDelete, onDuplicate, onBringToFront, onSendToBack, onFirstWidth,
+  onChange, onDelete, onDuplicate, onBringToFront, onSendToBack,
 }: Props, handleRef) {
   const ref = useRef<HTMLDivElement>(null);
+  // Reference width is snapshotted once (on open) and then frozen. Decorations
+  // are rendered in fixed px against it, so resizing the window afterwards never
+  // moves or rescales them. Re-anchoring to the current width happens only when
+  // the note re-opens (the layer is keyed by note id in Editor.tsx). Measured in
+  // useLayoutEffect so the real width is set before first paint (no flash);
+  // jsdom reports 0 here, so we fall back to the first non-zero ResizeObserver tick.
   const [contentWidth, setContentWidth] = useState(0);
-  // Keep the latest onFirstWidth in a ref so the measuring effect can stay
-  // mount-only (the callback identity changes every render).
-  const onFirstWidthRef = useRef(onFirstWidth);
-  const firstWidthSent = useRef(false);
 
-  // Sync the latest callback into the ref before the measuring effect reads it.
-  useLayoutEffect(() => {
-    onFirstWidthRef.current = onFirstWidth;
-  });
-
-  // Live width: the decoration coordinates are fractions of this, so updating it
-  // on every resize makes decorations scale uniformly with the container.
-  // Measured synchronously in useLayoutEffect for first paint; jsdom reports 0,
-  // so we also accept the first non-zero ResizeObserver tick.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const apply = (width: number) => {
-      if (width <= 0) return;
+    let frozen = false;
+    const ro = new ResizeObserver(([entry]) => freeze(entry.contentRect.width));
+    function freeze(width: number) {
+      if (frozen || width <= 0) return;
+      frozen = true;
       setContentWidth(width);
-      if (!firstWidthSent.current) {
-        firstWidthSent.current = true;
-        onFirstWidthRef.current?.(width);
-      }
-    };
-    apply(el.getBoundingClientRect().width);
-    const ro = new ResizeObserver(([entry]) => apply(entry.contentRect.width));
-    ro.observe(el);
+      ro.disconnect();
+    }
+    const initial = el.getBoundingClientRect().width;
+    if (initial > 0) freeze(initial);
+    else ro.observe(el);
     return () => ro.disconnect();
   }, []);
 

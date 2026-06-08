@@ -1,28 +1,6 @@
 // src/notepad/decorations/decoration-geometry.ts
 import type { NoteDecoration } from '../types';
 
-// Vertical position as a fraction of content width. Tolerates legacy decorations
-// that still carry an absolute `yPx` until migration persists `yPct`.
-export function resolveYPct(d: NoteDecoration, width: number): number {
-  const yPct = (d as { yPct?: number }).yPct;
-  if (typeof yPct === 'number') return yPct;
-  return width > 0 ? (d.yPx ?? 0) / width : 0;
-}
-
-// True if a decoration predates uniform zoom (no yPct, or a lingering legacy yPx).
-export function isLegacyDecoration(d: NoteDecoration): boolean {
-  return typeof (d as { yPct?: number }).yPct !== 'number' || d.yPx !== undefined;
-}
-
-// Convert a legacy decoration (absolute `yPx`) to the uniform-zoom `yPct` unit
-// using the given content width, dropping the legacy field. Already-migrated
-// decorations are returned with any lingering `yPx` removed.
-export function migrateLegacyDecoration(d: NoteDecoration, width: number): NoteDecoration {
-  const next = { ...d, yPct: resolveYPct(d, width) };
-  delete (next as { yPx?: number }).yPx;
-  return next;
-}
-
 const MIN_WIDTH_PCT = 0.03;
 const MAX_WIDTH_PCT = 1;
 
@@ -59,7 +37,7 @@ export function moveTo(
   return clampDecoration({
     ...d,
     xPct: d.xPct + (contentWidth > 0 ? dxPx / contentWidth : 0),
-    yPct: resolveYPct(d, contentWidth) + (contentWidth > 0 ? dyPx / contentWidth : 0),
+    yPx: d.yPx + dyPx,
   });
 }
 
@@ -79,7 +57,7 @@ export function clampDecoration(d: NoteDecoration): NoteDecoration {
   return {
     ...d,
     xPct: Math.min(1, Math.max(0, d.xPct)),
-    yPct: Math.max(0, d.yPct),
+    yPx: Math.max(0, d.yPx),
   };
 }
 
@@ -101,7 +79,7 @@ export function decorationBox(
 ): DecorationBox {
   const width = d.widthPct * refWidth;
   const height = aspectRatio > 0 ? width / aspectRatio : width;
-  return { left: d.xPct * refWidth, top: resolveYPct(d, refWidth) * refWidth, width, height };
+  return { left: d.xPct * refWidth, top: d.yPx, width, height };
 }
 
 export function pointInBox(px: number, py: number, b: DecorationBox): boolean {
