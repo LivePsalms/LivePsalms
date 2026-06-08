@@ -1,16 +1,28 @@
 // @vitest-environment jsdom
 // src/notepad/components/lamplight/chat/LamplightChat.test.tsx
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
 const useChatThread = vi.fn();
 const sendChatMessage = vi.fn();
+const requestOpeningInsight = vi.fn();
 vi.mock('@/notepad/bible/useChatThread', () => ({ useChatThread: (...a: unknown[]) => useChatThread(...a) }));
-vi.mock('@/notepad/bible/lamplight-chat-client', () => ({ sendChatMessage: (...a: unknown[]) => sendChatMessage(...a) }));
+vi.mock('@/notepad/bible/lamplight-chat-client', () => ({
+  sendChatMessage: (...a: unknown[]) => sendChatMessage(...a),
+  requestOpeningInsight: (...a: unknown[]) => requestOpeningInsight(...a),
+}));
 
 import { LamplightChat } from './LamplightChat';
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  sendChatMessage.mockReset();
+  // Reset call count then set a safe default so the effect doesn't crash when untested.
+  requestOpeningInsight.mockReset();
+  requestOpeningInsight.mockResolvedValue({ ok: false, reason: 'test-suppressed' });
+  useChatThread.mockReset();
+});
 
 function setup(threadOverrides = {}) {
   useChatThread.mockReturnValue({
@@ -39,6 +51,34 @@ describe('LamplightChat', () => {
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText(/ask about this passage/i), { target: { value: 'hello' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
-    await waitFor(() => expect(screen.getByText(/couldn’t reach lamplight|couldn't reach lamplight/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/reach Lamplight/i)).toBeInTheDocument());
+  });
+});
+
+describe('LamplightChat opening insight', () => {
+  it('auto-fires an insight when the loaded thread is empty', async () => {
+    const append = vi.fn();
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
+    requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(append).toHaveBeenCalledWith([
+      expect.objectContaining({ role: 'assistant', content: 'Opening thought.' }),
+    ]));
+  });
+
+  it('does NOT fire an insight when the thread already has messages', async () => {
+    useChatThread.mockReturnValue({
+      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
+      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
+    });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
+  });
+
+  it('does not fire while the thread is still loading', async () => {
+    useChatThread.mockReturnValue({ messages: [], loading: true, error: null, append: vi.fn(), reload: vi.fn() });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
   });
 });

@@ -1,7 +1,7 @@
 // src/notepad/components/lamplight/chat/LamplightChat.tsx
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useChatThread, type ChatThreadMessage } from '@/notepad/bible/useChatThread';
-import { sendChatMessage, type InvokeFn } from '@/notepad/bible/lamplight-chat-client';
+import { sendChatMessage, requestOpeningInsight, type InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { ChatMessage } from './ChatMessage';
 
 export interface LamplightChatProps {
@@ -19,6 +19,29 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [insighting, setInsighting] = useState(false);
+  const insightAttempted = useRef<Set<string>>(new Set());
+  const passageKey = `${book}.${chapter}`;
+
+  useEffect(() => {
+    if (thread.loading) return;
+    if (thread.messages.length > 0) return;
+    if (insightAttempted.current.has(passageKey)) return;
+    insightAttempted.current.add(passageKey);
+
+    let cancelled = false;
+    setInsighting(true);
+    (async () => {
+      const res = await requestOpeningInsight(invoke, { book, chapter });
+      if (cancelled) return;
+      if (res.ok) {
+        thread.append([{ id: localId(), role: 'assistant', content: res.reply, citations: res.citations }]);
+      }
+      setInsighting(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passageKey, thread.loading, thread.messages.length]);
 
   const send = async () => {
     const message = draft.trim();
@@ -52,10 +75,10 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
         {thread.messages.map((m) => (
           <ChatMessage key={m.id} role={m.role} content={m.content} citations={m.citations} />
         ))}
-        {sending && <p className="text-[11px] italic" style={{ color: 'var(--silica)' }}>Lamplight is reflecting…</p>}
+        {(sending || insighting) && <p className="text-[11px] italic" style={{ color: 'var(--silica)' }}>Lamplight is reflecting…</p>}
         {error && (
           <p className="text-[11px]" style={{ color: '#b45454' }}>
-            Couldn’t reach Lamplight ({error}). Try again.
+            Couldn't reach Lamplight ({error}). Try again.
           </p>
         )}
       </div>
