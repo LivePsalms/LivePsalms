@@ -101,6 +101,9 @@ function sphereRadius(nodeCount: number): number {
   return Math.max(160, Math.sqrt(Math.max(1, nodeCount)) * 55);
 }
 
+const PITCH_LIMIT = 1.3;          // clamp pitch (~75°) so the globe can't flip
+const ORBIT_SENSITIVITY = 0.01;   // rad of camera rotation per pixel dragged
+
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
 // makes each node trace a slow ellipse rather than a circle.
@@ -212,8 +215,8 @@ export class GraphView extends Observable<GraphViewState> {
   private hasFit = false;
   private needsSettle = false;
 
-  private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
-    active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
+  private dragState = {
+    active: false, moved: false, startX: 0, startY: 0, origYaw: 0, origPitch: 0,
   };
 
   constructor(deps: GraphViewDeps) {
@@ -552,8 +555,12 @@ export class GraphView extends Observable<GraphViewState> {
   handleMouseMove = (e: { clientX: number; clientY: number }): void => {
     if (this.dragState.active) {
       this.dragState.moved = true;
-      this._transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
-      this._transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
+      const dx = e.clientX - this.dragState.startX;
+      const dy = e.clientY - this.dragState.startY;
+      this.camera.yaw = this.dragState.origYaw + dx * ORBIT_SENSITIVITY;
+      let pitch = this.dragState.origPitch - dy * ORBIT_SENSITIVITY;
+      pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
+      this.camera.pitch = pitch;
       this.syncPopoverScreen();
       this.updateCursor();
       this.draw();
@@ -572,12 +579,9 @@ export class GraphView extends Observable<GraphViewState> {
     const { sx, sy } = this.toScreen(e.clientX, e.clientY);
     if (!this.findNodeAt(sx, sy)) {
       this.dragState = {
-        active: true,
-        moved: false,
-        startX: e.clientX,
-        startY: e.clientY,
-        origTx: this._transform.x,
-        origTy: this._transform.y,
+        active: true, moved: false,
+        startX: e.clientX, startY: e.clientY,
+        origYaw: this.camera.yaw, origPitch: this.camera.pitch,
       };
     }
   };

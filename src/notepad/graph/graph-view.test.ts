@@ -457,27 +457,6 @@ describe('GraphView — pointer interaction', () => {
     expect(view.getHoveredNodeId()).toBeNull();
   });
 
-  it('popover screenX/screenY follows pan', () => {
-    const { view } = attached();
-    view.setData(
-      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
-      [], null,
-    );
-    // place node at world (100, 100)
-    const sim = view.getSimNodes();
-    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    // Open popover — click at projected screen ≈ (300, 294). _transform is still identity
-    // so _transform-based screenX = node.x * 1 + 0 = 100, screenY = node.y * 1 + 0 = 100.
-    view.handleMouseDown({ clientX: 300, clientY: 294 });
-    view.handleMouseUp({ clientX: 300, clientY: 294 });
-    expect(view.getSnapshot().popover).toMatchObject({ screenX: 100, screenY: 100 });
-    // Pan: drag from empty space (10, 10) to (60, 30) → _transform.x += 50, _transform.y += 20.
-    view.handleMouseDown({ clientX: 10, clientY: 10 });
-    view.handleMouseMove({ clientX: 60, clientY: 30 });
-    // popover screen should now be (100 + 50, 100 + 20) = (150, 120)
-    expect(view.getSnapshot().popover).toMatchObject({ screenX: 150, screenY: 120 });
-  });
-
   it('popover screenX/screenY follows zoom', () => {
     const { view } = attached();
     view.setData(
@@ -856,6 +835,31 @@ describe('GraphView — sphere hit-testing', () => {
     expect(view.getHoveredNodeId()).toBe('a');
     const labels = canvas.ctx.calls.slice(before).filter((c) => c.method === 'fillText').map((c) => c.args[0]);
     expect(labels).toEqual(['Alpha']);
+  });
+});
+
+describe('GraphView — drag to orbit', () => {
+  it('horizontal drag changes yaw, vertical drag changes pitch (clamped)', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    const before = view.getCamera();
+    view.handleMouseDown({ clientX: 10, clientY: 10 });   // empty space (node is centred, away from 10,10)
+    view.handleMouseMove({ clientX: 60, clientY: 40 });   // dragged +50x, +30y
+    const after = view.getCamera();
+    expect(after.yaw).not.toBeCloseTo(before.yaw, 6);
+    expect(after.pitch).not.toBeCloseTo(before.pitch, 6);
+    view.handleMouseUp({ clientX: 60, clientY: 40 });
+  });
+
+  it('clamps pitch within ±PITCH_LIMIT', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    view.handleMouseDown({ clientX: 10, clientY: 10 });
+    view.handleMouseMove({ clientX: 10, clientY: 100000 }); // huge vertical drag
+    expect(Math.abs(view.getCamera().pitch)).toBeLessThanOrEqual(1.3 + 1e-9);
+    view.handleMouseUp({ clientX: 10, clientY: 100000 });
   });
 });
 
