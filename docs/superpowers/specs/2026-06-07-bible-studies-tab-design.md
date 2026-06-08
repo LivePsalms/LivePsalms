@@ -46,7 +46,7 @@ passage**. Ships for **desktop and mobile** together.
 | Access gating | Reader free; chat gated behind Lamplight entitlement |
 | Chat history | Saved per passage (one thread per user per passage) |
 | Platform | Desktop pane + mobile view together |
-| LLM integration | New streaming `lamplight-chat` Edge Function (Approach A) |
+| LLM integration | New `lamplight-chat` Edge Function (Approach A). Structured, citation-validated turns (tool-use), NOT SSE streaming — the existing `_shared/anthropic.ts` adapter is tool-use only and citation-first depends on structured output. UI shows a per-turn loading state. |
 | Proactive insight | When chat is on, opening/navigating to a passage drops one opening insight grounded in passage + notes; text box always available |
 
 ### Note on the architecture brief tension
@@ -84,8 +84,8 @@ on/off, active thread id.
 
 ### Backend
 
-- `supabase/functions/lamplight-chat/index.ts` — new streaming (SSE) Edge Function,
-  structured after `lamplight-generate`:
+- `supabase/functions/lamplight-chat/index.ts` — new Edge Function, structured after
+  `lamplight-generate` (structured tool-use response per turn, not SSE streaming):
   1. **Auth + entitlement** — verify JWT, then server-side Lamplight entitlement check
      (never trust client toggle). No entitlement → `402`.
   2. **Retrieval** — reuse `_shared/retrieval.ts`: embed user message (+ open passage
@@ -112,9 +112,9 @@ on/off, active thread id.
 ## Data Flow (one turn)
 
 User opens John 10 with chat on → client loads-or-creates the thread → proactive
-opening insight requested (passage + notes) → user types → SSE stream renders
-token-by-token → citation chips appear → both messages saved → reopening John 10
-later restores the thread.
+opening insight requested (passage + notes) → user types → "Lamplight is reflecting…"
+loading state → validated reply returns with citation chips → both messages saved →
+reopening John 10 later restores the thread.
 
 ## Error Handling / Failure Modes
 
