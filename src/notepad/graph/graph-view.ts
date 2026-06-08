@@ -4,16 +4,10 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter,
-  forceCollide,
-  type Simulation,
-  type SimulationNodeDatum,
-  type SimulationLinkDatum,
-  type ForceLink,
-  type ForceManyBody,
-  type ForceCenter,
-} from 'd3-force';
-import { forceSharedTags } from './force-shared-tags';
+  type Simulation3,
+} from 'd3-force-3d';
+import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
+import { forceSphere } from './force-sphere';
 
 export interface PopoverState {
   nodeId: string;
@@ -101,6 +95,11 @@ const AUTO_FIT_MAX_SCALE = 3.0;
 // Clamped by AUTO_FIT_MAX_SCALE so small graphs don't balloon.
 const AUTO_FIT_INITIAL_ZOOM = 1.25;
 
+// Sphere radius (world units) grows with node count so the surface doesn't overcrowd.
+function sphereRadius(nodeCount: number): number {
+  return Math.max(160, Math.sqrt(Math.max(1, nodeCount)) * 55);
+}
+
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
 // makes each node trace a slow ellipse rather than a circle.
@@ -132,6 +131,7 @@ export interface SimNode extends SimulationNodeDatum {
   scriptureText: string;
   scriptureTranslation: string;
   phase: number;
+  z?: number;
 }
 
 export interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -182,7 +182,7 @@ export class GraphView extends Observable<GraphViewState> {
   private resizeObserver: ResizeObserver | null = null;
   private wheelListener: ((e: WheelEvent) => void) | null = null;
 
-  private sim: Simulation<SimNode, SimLink> | null = null;
+  private sim: Simulation3<SimNode, SimLink> | null = null;
   private simNodes: SimNode[] = [];
   private simLinks: SimLink[] = [];
   private tickCount = 0;
@@ -465,17 +465,15 @@ export class GraphView extends Observable<GraphViewState> {
       }
     }
 
-    const link = this.sim.force<ForceLink<SimNode, SimLink>>('link');
+    const link = this.sim.force('link') as import('d3-force-3d').LinkForce3<SimNode, SimLink> | undefined;
     if (link) {
       link.distance((d) => settings.linkDistance / d.weight);
       link.strength((d) => settings.linkForce * d.weight);
     }
 
-    const charge = this.sim.force<ForceManyBody<SimNode>>('charge');
+    const charge = this.sim.force('charge') as import('d3-force-3d').ManyBodyForce3<SimNode> | undefined;
     if (charge) charge.strength(-settings.repelForce);
-
-    const center = this.sim.force<ForceCenter<SimNode>>('center');
-    if (center) center.strength(settings.centerForce);
+    // No center force in the sphere layout; the 'sphere' force owns global shape.
 
     // Re-warm alpha so the next external tick applies the new forces.
     // Do NOT call .restart() — d3's internal timer is intentionally stopped;
@@ -682,13 +680,21 @@ export class GraphView extends Observable<GraphViewState> {
     const filteredIds = new Set(filtered.map((n) => n.id));
 
     // Preserve positions of surviving nodes.
-    const prevPos = new Map<string, { x: number; y: number; vx?: number; vy?: number }>();
+    const prevPos = new Map<string, { x: number; y: number; z: number; vx?: number; vy?: number; vz?: number }>();
     for (const n of this.simNodes) {
-      if (n.x != null && n.y != null) prevPos.set(n.id, { x: n.x, y: n.y, vx: n.vx, vy: n.vy });
+      if (n.x != null && n.y != null) {
+        prevPos.set(n.id, { x: n.x, y: n.y, z: n.z ?? 0, vx: n.vx, vy: n.vy, vz: (n as { vz?: number }).vz });
+      }
     }
 
-    this.simNodes = filtered.map((n) => {
+    const R = sphereRadius(filtered.length);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    this.simNodes = filtered.map((n, i) => {
       const prev = prevPos.get(n.id);
+      // Seed on a Fibonacci sphere so the sim starts near a good sphere and settles fast.
+      const yUnit = filtered.length > 1 ? 1 - (i / (filtered.length - 1)) * 2 : 0;
+      const rUnit = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
+      const theta = golden * i;
       return {
         id: n.id, type: n.type, title: n.title, weight: n.weight,
         radius: computeRadius(n.type, n.weight, this.settings.nodeSize),
@@ -696,7 +702,10 @@ export class GraphView extends Observable<GraphViewState> {
         scriptureText: n.scriptureText,
         scriptureTranslation: n.scriptureTranslation,
         phase: hashPhase(n.id),
-        x: prev?.x, y: prev?.y, vx: prev?.vx, vy: prev?.vy,
+        x: prev?.x ?? Math.cos(theta) * rUnit * R,
+        y: prev?.y ?? yUnit * R,
+        z: prev?.z ?? Math.sin(theta) * rUnit * R,
+        vx: prev?.vx, vy: prev?.vy, vz: prev?.vz,
       };
     });
 
@@ -713,22 +722,14 @@ export class GraphView extends Observable<GraphViewState> {
 
     if (this.sim) this.sim.stop();
 
-    const width = this.canvas?.width
-      ? this.canvas.width / (this.deps.devicePixelRatio?.() ?? 1)
-      : 400;
-    const height = this.canvas?.height
-      ? this.canvas.height / (this.deps.devicePixelRatio?.() ?? 1)
-      : 400;
-
-    this.sim = forceSimulation<SimNode>(this.simNodes)
+    this.sim = forceSimulation<SimNode, SimLink>(this.simNodes, 3)
       .force('link', forceLink<SimNode, SimLink>(this.simLinks)
         .id((d) => d.id)
         .distance((d) => this.settings.linkDistance / d.weight)
         .strength((d) => this.settings.linkForce * d.weight))
       .force('charge', forceManyBody<SimNode>().strength(-this.settings.repelForce))
-      .force('center', forceCenter(width / 2, height / 2).strength(this.settings.centerForce))
-      .force('collide', forceCollide<SimNode>().radius((d) => d.radius * 0.8))
-      .force('tags', forceSharedTags<SimNode>(0.0003))
+      .force('sphere', forceSphere<SimNode>(R, 0.08))
+      .numDimensions(3)
       .alphaDecay(0.015)
       .velocityDecay(0.15);
 

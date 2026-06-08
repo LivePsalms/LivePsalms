@@ -21,6 +21,8 @@ declare module 'd3-force-3d' {
     alpha(): number;
     alpha(a: number): this;
     alphaMin(): number;
+    alphaDecay(n: number): this;
+    velocityDecay(n: number): this;
     tick(iterations?: number): this;
     stop(): this;
     restart(): this;
