@@ -1,7 +1,17 @@
 // src/notepad/decorations/DecorationLayer.tsx
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { DecorationItem } from './DecorationItem';
+import { topmostBehindAtPoint } from './decoration-geometry';
+import { getStyleAsset } from '../styles/manifest';
 import type { NoteDecoration } from '../types';
+
+export interface DecorationLayerHandle {
+  // Hit-tests a viewport point against behind-text decorations, which sit below
+  // the editor text and so never receive clicks directly. Returns the topmost
+  // matching decoration id (or null). The editor calls this on alt/double-click
+  // to make behind-text decorations selectable without stealing normal clicks.
+  hitTestBehind(clientX: number, clientY: number): string | null;
+}
 
 interface Props {
   decorations: NoteDecoration[];
@@ -15,19 +25,50 @@ interface Props {
   onSendToBack: (id: string) => void;
 }
 
-export function DecorationLayer({
+export const DecorationLayer = forwardRef<DecorationLayerHandle, Props>(function DecorationLayer({
   decorations, selectedId, onSelect, onDeselect,
   onChange, onDelete, onDuplicate, onBringToFront, onSendToBack,
-}: Props) {
+}: Props, handleRef) {
   const ref = useRef<HTMLDivElement>(null);
-  const [contentWidth, setContentWidth] = useState(1);
+  // Reference width is snapshotted once (on open) and then frozen. Decorations
+  // are rendered in fixed px against it, so resizing the window afterwards never
+  // moves or rescales them. Re-anchoring to the current width happens only when
+  // the note re-opens (the layer is keyed by note id in Editor.tsx). Measured in
+  // useLayoutEffect so the real width is set before first paint (no flash);
+  // jsdom reports 0 here, so we fall back to the first non-zero ResizeObserver tick.
+  const [contentWidth, setContentWidth] = useState(0);
 
-  useEffect(() => {
-    if (!ref.current) return;
-    const ro = new ResizeObserver(([entry]) => setContentWidth(entry.contentRect.width));
-    ro.observe(ref.current);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let frozen = false;
+    const ro = new ResizeObserver(([entry]) => freeze(entry.contentRect.width));
+    function freeze(width: number) {
+      if (frozen || width <= 0) return;
+      frozen = true;
+      setContentWidth(width);
+      ro.disconnect();
+    }
+    const initial = el.getBoundingClientRect().width;
+    if (initial > 0) freeze(initial);
+    else ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useImperativeHandle(handleRef, () => ({
+    hitTestBehind(clientX, clientY) {
+      const el = ref.current;
+      if (!el || contentWidth <= 0) return null;
+      const rect = el.getBoundingClientRect();
+      return topmostBehindAtPoint(
+        decorations,
+        clientX - rect.left,
+        clientY - rect.top,
+        contentWidth,
+        (assetId) => getStyleAsset(assetId)?.aspectRatio,
+      );
+    },
+  }), [decorations, contentWidth]);
 
   return (
     <div
@@ -58,4 +99,4 @@ export function DecorationLayer({
       </div>
     </div>
   );
-}
+});

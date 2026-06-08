@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { getStyleAsset } from '../styles/manifest';
 import {
   moveTo, resizeWidthPct, rotationDeg, pinchTransform,
-  decorationZIndex, pointerAngleDeg, applyRotationDrag,
+  decorationZIndex, pointerAngleDeg, applyRotationDrag, SELECTED_Z,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -85,6 +85,42 @@ export function DecorationItem({
     gesture.current = null;
   };
 
+  // Combined select + move + pinch handler. Applied to the body image when the
+  // decoration is unselected (so a click selects/drags it) and to the top chrome
+  // surface when selected (so it stays draggable even if the image is behind text).
+  const surfacePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      const m = twoPointerMetrics();
+      pinch.current = { startDist: m.dist, startAngle: m.angle, base: d };
+      gesture.current = null;
+    } else {
+      gesture.current = { kind: 'move', startX: e.clientX, startY: e.clientY, base: d };
+      onSelect(d.id);
+    }
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* jsdom may not implement pointer capture; harmless no-op */
+    }
+  };
+
+  const surfacePointerMove = (e: React.PointerEvent) => {
+    if (pointers.current.has(e.pointerId)) {
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (pinch.current && pointers.current.size >= 2) {
+      const m = twoPointerMetrics();
+      onChange(pinchTransform(pinch.current.base, {
+        startDist: pinch.current.startDist, dist: m.dist,
+        startAngle: pinch.current.startAngle, angle: m.angle,
+      }));
+      return;
+    }
+    move(e);
+  };
+
   const rotateDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     const rect = rootRef.current?.getBoundingClientRect();
@@ -124,69 +160,69 @@ export function DecorationItem({
     rotateGesture.current = null;
   };
 
+  // Shared geometry: position + size + rotation. The image layer and the chrome
+  // layer use identical geometry but live at different z so they stay aligned.
+  const renderedWidth = d.widthPct * contentWidth;
+  const geometry: React.CSSProperties = {
+    position: 'absolute',
+    // Fixed px from a frozen reference width (not container %), so resizing the
+    // window never moves or rescales the decoration.
+    left: d.xPct * contentWidth,
+    top: d.yPx,
+    width: renderedWidth,
+    transform: `rotate(${d.rotation}deg)`,
+    transformOrigin: 'center center',
+  };
+  // The chrome layer holds only absolutely-positioned children, so it needs an
+  // explicit height (matching the <img> render = width / aspectRatio) for its
+  // outline, drag surface (inset:0) and bottom-right handle to line up.
+  const renderedHeight = asset.aspectRatio > 0 ? renderedWidth / asset.aspectRatio : renderedWidth;
+
   return (
-    <div
-      ref={rootRef}
-      style={{
-        position: 'absolute',
-        left: `${d.xPct * 100}%`,
-        top: d.yPx,
-        width: `${d.widthPct * 100}%`,
-        transform: `rotate(${d.rotation}deg)`,
-        transformOrigin: 'center center',
-        zIndex: decorationZIndex(d, selected),
-        pointerEvents: 'auto',
-        outline: selected ? '2px solid var(--deep-umber)' : 'none',
-      }}
-    >
-      <div
-        data-testid={`decoration-body-${d.id}`}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          if (pointers.current.size === 2) {
-            const m = twoPointerMetrics();
-            pinch.current = { startDist: m.dist, startAngle: m.angle, base: d };
-            gesture.current = null;
-          } else {
-            gesture.current = { kind: 'move', startX: e.clientX, startY: e.clientY, base: d };
-            onSelect(d.id);
-          }
-          try {
-            (e.target as Element).setPointerCapture?.(e.pointerId);
-          } catch {
-            /* jsdom may not implement pointer capture; harmless no-op */
-          }
-        }}
-        onPointerMove={(e) => {
-          if (pointers.current.has(e.pointerId)) {
-            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          }
-          if (pinch.current && pointers.current.size >= 2) {
-            const m = twoPointerMetrics();
-            onChange(pinchTransform(pinch.current.base, {
-              startDist: pinch.current.startDist, dist: m.dist,
-              startAngle: pinch.current.startAngle, angle: m.angle,
-            }));
-            return;
-          }
-          move(e);
-        }}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-        style={{
-          cursor: 'move',
-          touchAction: 'none',
-          // Flip the asset only — keep handles/action-bar glyphs un-mirrored.
-          transform: `scaleX(${d.flipH ? -1 : 1}) scaleY(${d.flipV ? -1 : 1})`,
-        }}
-      >
-        <img src={asset.displayUrl} alt="" draggable={false}
-          style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }} />
+    <>
+      {/* Body image — rendered at its TRUE layer (behind or in front of text)
+          regardless of selection, so 'send to back' / 'bring to front' are
+          reflected immediately. When selected it is purely visual; interaction
+          moves to the chrome layer below. */}
+      <div style={{ ...geometry, zIndex: decorationZIndex(d, false), pointerEvents: selected ? 'none' : 'auto' }}>
+        <div
+          data-testid={`decoration-body-${d.id}`}
+          onPointerDown={selected ? undefined : surfacePointerDown}
+          onPointerMove={selected ? undefined : surfacePointerMove}
+          onPointerUp={selected ? undefined : endPointer}
+          onPointerCancel={selected ? undefined : endPointer}
+          style={{
+            cursor: 'move',
+            touchAction: 'none',
+            // Flip the asset only — keep handles/action-bar glyphs un-mirrored.
+            transform: `scaleX(${d.flipH ? -1 : 1}) scaleY(${d.flipV ? -1 : 1})`,
+          }}
+        >
+          <img src={asset.displayUrl} alt="" draggable={false}
+            style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }} />
+        </div>
       </div>
 
+      {/* Selection chrome — always on top (SELECTED_Z) so handles stay grabbable
+          even when the body image is behind the text. pointerEvents:none on the
+          root; only the surface/handles/action-bar re-enable them. */}
       {selected && (
-        <>
+        <div
+          ref={rootRef}
+          data-testid={`decoration-chrome-${d.id}`}
+          style={{ ...geometry, height: renderedHeight, zIndex: SELECTED_Z, outline: '2px solid var(--deep-umber)', pointerEvents: 'none' }}
+        >
+          {/* Full-box drag/pinch surface (transparent), so a selected decoration
+              stays movable even when its image sits behind the text. */}
+          <div
+            data-testid={`decoration-surface-${d.id}`}
+            onPointerDown={surfacePointerDown}
+            onPointerMove={surfacePointerMove}
+            onPointerUp={endPointer}
+            onPointerCancel={endPointer}
+            style={{ position: 'absolute', inset: 0, cursor: 'move', touchAction: 'none', pointerEvents: 'auto' }}
+          />
+
           {/* Relies on pointer capture (set in `start`) to keep receiving moves once the pointer leaves the 12px handle; no-op in jsdom. */}
           <div
             aria-label="Resize decoration"
@@ -194,7 +230,7 @@ export function DecorationItem({
             onPointerMove={move}
             onPointerUp={end}
             onPointerCancel={end}
-            style={handleStyle('-6px', '-6px', 'nwse-resize', 'bottom-right')}
+            style={{ ...handleStyle('-6px', '-6px', 'nwse-resize', 'bottom-right'), pointerEvents: 'auto' }}
           />
           <div
             aria-label="Rotate decoration"
@@ -202,12 +238,12 @@ export function DecorationItem({
             onPointerMove={rotateMove}
             onPointerUp={rotateEnd}
             onPointerCancel={rotateEnd}
-            style={handleStyle('-22px', 'calc(50% - 6px)', 'grab', 'top')}
+            style={{ ...handleStyle('-22px', 'calc(50% - 6px)', 'grab', 'top'), pointerEvents: 'auto' }}
           />
           <div style={{
             position: 'absolute', top: -34, left: 0, display: 'flex', gap: 4,
             background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
-            padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)',
+            padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)', pointerEvents: 'auto',
           }}>
             <button aria-label="Rotate decoration counterclockwise 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation - 15) })} style={barBtn}>↺</button>
             <button aria-label="Rotate decoration 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation + 15) })} style={barBtn}>↻</button>
@@ -218,9 +254,9 @@ export function DecorationItem({
             <button aria-label="Duplicate decoration" onClick={() => onDuplicate(d.id)} style={barBtn}>⎘</button>
             <button aria-label="Delete decoration" onClick={() => onDelete(d.id)} style={barBtn}>✕</button>
           </div>
-        </>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
