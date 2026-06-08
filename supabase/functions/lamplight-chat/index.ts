@@ -19,6 +19,7 @@ import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/qu
 import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
 import { classifyGenerateError } from '../lamplight-generate/classify-error.ts';
 import { runBibleChatPipeline, type BibleChatContext } from './bible-chat-pipeline.ts';
+import { BIBLE_INSIGHT_PROMPT } from './prompts/bible-insight.ts';
 
 const HISTORY_LIMIT = 10;
 const NOTE_K = 4;
@@ -47,14 +48,18 @@ async function handleChat(req: Request): Promise<Response> {
   if (!anthropicKey) return jsonResp({ error: 'ANTHROPIC_API_KEY missing' }, 500);
   if (!voyageKey) return jsonResp({ error: 'VOYAGE_AI_KEY missing' }, 500);
 
-  let body: { book?: string; chapter?: number; message?: string };
+  let body: { book?: string; chapter?: number; message?: string; mode?: string };
   try { body = await req.json(); } catch { return jsonResp({ error: 'bad json' }, 400); }
-  if (typeof body.book !== 'string' || typeof body.chapter !== 'number' || typeof body.message !== 'string' || !body.message.trim()) {
+  const mode = body.mode === 'insight' ? 'insight' : 'chat';
+  if (typeof body.book !== 'string' || typeof body.chapter !== 'number') {
+    return jsonResp({ error: 'bad payload' }, 400);
+  }
+  if (mode === 'chat' && (typeof body.message !== 'string' || !body.message.trim())) {
     return jsonResp({ error: 'bad payload' }, 400);
   }
   const book = body.book;
   const chapter = body.chapter;
-  const message = body.message.trim().slice(0, 2000);
+  const message = (body.message ?? '').trim().slice(0, 2000);
   const passageRef = `${book}.${chapter}`;
 
   const supabase = serviceClient();
@@ -97,9 +102,9 @@ async function handleChat(req: Request): Promise<Response> {
     { userId, artifactKind: 'bible_chat' },
     async () => {
       // 1. Load-or-create the thread for this passage.
-      const threadId = await upsertThread(supabase, userId, book, chapter, passageRef, message);
+      const threadId = await upsertThread(supabase, userId, book, chapter, passageRef, message || `Study of ${book} ${chapter}`);
 
-      // 2. Load recent history (oldest→newest), excluding the new message.
+      // 2. Load existing messages (oldest→newest).
       const { data: histRows } = await supabase
         .from('lamplight_chat_messages')
         .select('role, content')
@@ -108,20 +113,48 @@ async function handleChat(req: Request): Promise<Response> {
         .limit(HISTORY_LIMIT);
       const history = ((histRows ?? []) as Array<{ role: 'user' | 'assistant'; content: string }>).reverse();
 
-      // 3. Build retrieval context.
-      const ctx = await buildChatContext(supabase, { userId, book, chapter, passageRef, message, history, voyageDeps, rerankEnabled });
+      // Insight only fires on an empty thread — refuse otherwise (idempotent, no cost).
+      if (mode === 'insight' && history.length > 0) {
+        return { response: { ok: true, thread_id: threadId, skipped: true }, usage: null };
+      }
 
-      // 4. Run the pipeline.
-      const result = await runBibleChatPipeline({ llm, ctx });
+      // 3. Fetch the open chapter once so insight can seed retrieval from its text.
+      //    (buildChatContext fetches it again for allowed refs; acceptable for V1.)
+      let retrievalQuery = message;
+      if (mode === 'insight') {
+        const { data: chRows } = await supabase
+          .from('bible_passages')
+          .select('text')
+          .like('id', `${book}.${chapter}.%`)
+          .order('verse_start', { ascending: true })
+          .limit(20);
+        retrievalQuery = ((chRows ?? []) as Array<{ text: string }>).map((r) => r.text).join(' ').slice(0, 1500) || `${book} ${chapter}`;
+      }
+
+      // 4. Build context + run the right prompt.
+      const ctx = await buildChatContext(supabase, {
+        userId, book, chapter, passageRef,
+        message: mode === 'insight' ? '' : message,
+        retrievalQuery,
+        history,
+        voyageDeps, rerankEnabled,
+      });
+      const result = await runBibleChatPipeline({
+        llm, ctx,
+        prompt: mode === 'insight' ? BIBLE_INSIGHT_PROMPT : undefined,
+      });
       if (!result.ok) {
         return { response: { ok: false, reason: result.reason }, usage: result.usage };
       }
 
-      // 5. Persist both messages.
-      await supabase.from('lamplight_chat_messages').insert([
-        { thread_id: threadId, user_id: userId, role: 'user', content: message, citations: [] },
-        { thread_id: threadId, user_id: userId, role: 'assistant', content: result.reply, citations: result.citations },
-      ]);
+      // 5. Persist. Insight = one assistant message; chat = user + assistant.
+      const rows = mode === 'insight'
+        ? [{ thread_id: threadId, user_id: userId, role: 'assistant', content: result.reply, citations: result.citations }]
+        : [
+            { thread_id: threadId, user_id: userId, role: 'user', content: message, citations: [] },
+            { thread_id: threadId, user_id: userId, role: 'assistant', content: result.reply, citations: result.citations },
+          ];
+      await supabase.from('lamplight_chat_messages').insert(rows);
       await supabase.from('lamplight_chat_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId);
 
       return { response: { ok: true, thread_id: threadId, reply: result.reply, citations: result.citations }, usage: result.usage };
@@ -152,7 +185,9 @@ async function upsertThread(
 async function buildChatContext(
   supabase: SupabaseClient,
   args: {
-    userId: string; book: string; chapter: number; passageRef: string; message: string;
+    userId: string; book: string; chapter: number; passageRef: string;
+    message: string;          // rendered as the question (empty for insight)
+    retrievalQuery: string;   // what we embed for note/cross-ref search
     history: Array<{ role: 'user' | 'assistant'; content: string }>;
     voyageDeps: VoyageDeps; rerankEnabled: boolean;
   },
@@ -169,13 +204,13 @@ async function buildChatContext(
   const passageRefHuman = `${args.book} ${args.chapter}`;
   const chapterVerseRefs = new Set(verses.map((v) => formatVerseRef(v).toLowerCase()));
 
-  // Embed the question once; reuse for both retrievals.
-  const queryEmbedding = await embedQuery(args.message, args.voyageDeps);
+  // Embed the retrieval query once; reuse for both retrievals.
+  const queryEmbedding = await embedQuery(args.retrievalQuery, args.voyageDeps);
 
   // User note neighbors.
   const retrievedNotes = await searchUserNotesByQuery(
     { supabase, voyage: args.voyageDeps, rerankEnabled: args.rerankEnabled },
-    { userId: args.userId, k: NOTE_K, query: args.message, queryEmbedding },
+    { userId: args.userId, k: NOTE_K, query: args.retrievalQuery, queryEmbedding },
   );
   const noteIds = [...new Set(retrievedNotes.map((r) => r.source_id))];
   let notes: BibleChatContext['notes'] = [];
@@ -190,7 +225,7 @@ async function buildChatContext(
   // Cross-reference passages from the whole Bible.
   const retrievedBible = await searchBible(
     { supabase, voyage: args.voyageDeps, rerankEnabled: args.rerankEnabled },
-    { query: args.message, k: CROSSREF_K, queryEmbedding },
+    { query: args.retrievalQuery, k: CROSSREF_K, queryEmbedding },
   );
   const crossIds = retrievedBible.map((r) => r.source_id);
   let crossRefs: BibleChatContext['crossRefs'] = [];

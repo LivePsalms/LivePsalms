@@ -19,3 +19,14 @@ export async function sendChatMessage(invoke: InvokeFn, args: SendChatArgs): Pro
   if (!d || d.ok !== true) return { ok: false, reason: d?.reason ?? 'unknown_error' };
   return { ok: true, threadId: d.thread_id ?? '', reply: d.reply ?? '', citations: d.citations ?? [] };
 }
+
+export interface RequestInsightArgs { book: string; chapter: number }
+
+export async function requestOpeningInsight(invoke: InvokeFn, args: RequestInsightArgs): Promise<SendChatResult> {
+  const { data, error } = await invoke('lamplight-chat', { body: { book: args.book, chapter: args.chapter, mode: 'insight' } });
+  if (error) return { ok: false, reason: error.message };
+  const d = data as { ok?: boolean; reason?: string; skipped?: boolean; thread_id?: string; reply?: string; citations?: ChatCitation[] } | null;
+  if (!d || d.ok !== true) return { ok: false, reason: d?.reason ?? 'unknown_error' };
+  if (d.skipped || typeof d.reply !== 'string') return { ok: false, reason: 'skipped' };
+  return { ok: true, threadId: d.thread_id ?? '', reply: d.reply, citations: d.citations ?? [] };
+}

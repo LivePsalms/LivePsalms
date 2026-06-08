@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runBibleChatPipeline, type BibleChatContext } from './bible-chat-pipeline.ts';
 import type { LLMAdapter } from '../_shared/anthropic.ts';
+import { BIBLE_INSIGHT_PROMPT } from './prompts/bible-insight.ts';
 
 const baseCtx: BibleChatContext = {
   passageRef: 'jhn 10',
@@ -39,5 +40,12 @@ describe('runBibleChatPipeline', () => {
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.reason).toBe('validators_failed');
     expect((llm.generate as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2); // one retry
+  });
+
+  it('runs with an injected prompt module (insight) and still validates', async () => {
+    const llm = fakeLLM({ reply: 'A quiet opening thought on the shepherd.', citations: [{ type: 'verse', ref: 'jhn 10:11' }] });
+    const out = await runBibleChatPipeline({ llm, ctx: baseCtx, prompt: BIBLE_INSIGHT_PROMPT });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.promptVersion).toBe(BIBLE_INSIGHT_PROMPT.promptVersion);
   });
 });
