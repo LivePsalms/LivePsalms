@@ -4,6 +4,9 @@ import { WifiOff, Wifi } from 'lucide-react';
 import { BacklinksPanel } from '../../../../notepad/components/BacklinksPanel';
 import { InfoPanel } from '../../../../notepad/components/InfoPanel';
 import { GraphPane } from '../GraphPane';
+import { BibleStudyPane } from '@/notepad/bible/BibleStudyPane';
+import type { LamplightAdapter } from '../../../../notepad/storage/lamplight-adapter';
+import type { InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { NodePeek } from './NodePeek';
 import { buildPeekData, type PeekTarget } from './node-peek-data';
 import { useNoteCollection } from '../../../../notepad/context/useNoteCollection';
@@ -11,15 +14,17 @@ import { useReferenceGraph } from '../../../../notepad/context/useReferenceGraph
 import { useOnlineStatus } from '../../../../notepad/hooks/useOnlineStatus';
 import { Segmented } from './Segmented';
 
-type DetailSegment = 'backlinks' | 'info' | 'graph';
+type DetailSegment = 'backlinks' | 'info' | 'graph' | 'bible';
 
 export interface MobileMoreSheetProps {
   open: boolean;
   onClose: () => void;
   onOpenNote: (id: string) => void;
+  lamplightAdapter: LamplightAdapter | null;
+  invoke: InvokeFn;
 }
 
-export function MobileMoreSheet({ open, onClose, onOpenNote }: MobileMoreSheetProps) {
+export function MobileMoreSheet({ open, onClose, onOpenNote, lamplightAdapter, invoke }: MobileMoreSheetProps) {
   const [segment, setSegment] = useState<DetailSegment>('backlinks');
   const [peeked, setPeeked] = useState<PeekTarget | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -75,6 +80,7 @@ export function MobileMoreSheet({ open, onClose, onOpenNote }: MobileMoreSheetPr
               { value: 'backlinks', label: 'Backlinks' },
               { value: 'info', label: 'Info' },
               { value: 'graph', label: 'Graph' },
+              { value: 'bible', label: 'Bible' },
             ]}
             value={segment}
             onChange={handleSegment}
@@ -103,6 +109,11 @@ export function MobileMoreSheet({ open, onClose, onOpenNote }: MobileMoreSheetPr
                 onNodePeek={(n) => setPeeked({ id: n.id, kind: n.type === 'scripture' ? 'scripture' : 'note' })}
               />
             )
+          )}
+          {segment === 'bible' && (
+            <div className="h-full min-h-[60vh]">
+              <BibleStudyPane lamplightAdapter={lamplightAdapter} invoke={invoke} />
+            </div>
           )}
         </div>
 
