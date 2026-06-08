@@ -16,6 +16,13 @@ import { generateWithRetry } from '../_shared/generate-with-retry.ts';
 import { BIBLE_CHAT_PROMPT } from './prompts/bible-chat.ts';
 import type { UsageCore } from '../_shared/usage.ts';
 
+export interface ChatPromptModule {
+  promptVersion: string;
+  system: string;
+  tool: unknown;
+  buildMessages: (ctx: BibleChatContext) => Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
 export interface BibleChatContext {
   passageRef: string;                  // e.g. "jhn 10"
   passageText: string;                 // open chapter text (joined)
@@ -36,19 +43,21 @@ type ChatViolations = { citation: CitationViolation[]; content: ContentRuleViola
 export async function runBibleChatPipeline(args: {
   llm: LLMAdapter;
   ctx: BibleChatContext;
+  prompt?: ChatPromptModule;
 }): Promise<BibleChatPipelineResult> {
-  const promptVersion = BIBLE_CHAT_PROMPT.promptVersion;
+  const prompt: ChatPromptModule = args.prompt ?? BIBLE_CHAT_PROMPT;
+  const promptVersion = prompt.promptVersion;
   const ctx = args.ctx;
 
   const outcome = await generateWithRetry<ChatReply, ChatViolations>({
     llm: args.llm,
     model: 'sonnet',
     maxTokens: 1024,
-    artifactSystem: BIBLE_CHAT_PROMPT.system,
-    messages: BIBLE_CHAT_PROMPT.buildMessages(ctx),
+    artifactSystem: prompt.system,
+    messages: prompt.buildMessages(ctx),
     // `as const` on the nested schema produces literal types narrower than
     // ToolSchema.input_schema (Record<string, unknown>); cast is type-only.
-    tool: BIBLE_CHAT_PROMPT.tool as unknown as Parameters<LLMAdapter['generate']>[0]['tool'],
+    tool: prompt.tool as Parameters<LLMAdapter['generate']>[0]['tool'],
     validate: async (parsed) => {
       const citation = validateChatReplyCitations(parsed, {
         allowedNoteIds: ctx.allowedNoteIds,
