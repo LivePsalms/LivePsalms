@@ -1,0 +1,217 @@
+// supabase/functions/lamplight-chat/index.ts
+// Bible-study chat endpoint. Mirrors lamplight-generate's envelope.
+// Body: { book: string, chapter: number, message: string }
+// Resp: { ok: true, thread_id, reply, citations } | { ok: false, reason }
+
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { serviceClient } from '../_shared/supabase.ts';
+import { type VoyageDeps, embedQuery } from '../_shared/voyage.ts';
+import { searchBible, searchUserNotesByQuery } from '../_shared/retrieval.ts';
+import { formatVerseRef } from '../_shared/bible-passage.ts';
+import { createAnthropicAdapter } from '../_shared/anthropic.ts';
+import { extractTextFromNoteContent } from '../_shared/tiptap-text.ts';
+import { hasChatAccess, type LamplightTier } from '../_shared/entitlement.ts';
+import { recordLamplightUsage } from '../_shared/usage.ts';
+import { runGeneration, type GenerationLifecycleDeps } from '../_shared/generation-lifecycle.ts';
+import { bearerToken, deriveUserId } from '../_shared/auth-identity.ts';
+import { resolveQuotaLimits, checkQuota, supabaseQuotaDeps } from '../_shared/quota.ts';
+import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
+import { classifyGenerateError } from '../lamplight-generate/classify-error.ts';
+import { runBibleChatPipeline, type BibleChatContext } from './bible-chat-pipeline.ts';
+
+const HISTORY_LIMIT = 10;
+const NOTE_K = 4;
+const CROSSREF_K = 3;
+
+serve(async (req) => {
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
+  try {
+    return await handleChat(req);
+  } catch (err) {
+    return jsonResp({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+});
+
+async function handleChat(req: Request): Promise<Response> {
+  const cors = corsHeaders(req, resolveAllowedOrigins(Deno.env));
+  const jsonResp = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
+  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+  const voyageKey = Deno.env.get('VOYAGE_AI_KEY');
+  if (!anthropicKey) return jsonResp({ error: 'ANTHROPIC_API_KEY missing' }, 500);
+  if (!voyageKey) return jsonResp({ error: 'VOYAGE_AI_KEY missing' }, 500);
+
+  let body: { book?: string; chapter?: number; message?: string };
+  try { body = await req.json(); } catch { return jsonResp({ error: 'bad json' }, 400); }
+  if (typeof body.book !== 'string' || typeof body.chapter !== 'number' || typeof body.message !== 'string' || !body.message.trim()) {
+    return jsonResp({ error: 'bad payload' }, 400);
+  }
+  const book = body.book;
+  const chapter = body.chapter;
+  const message = body.message.trim().slice(0, 2000);
+  const passageRef = `${book}.${chapter}`;
+
+  const supabase = serviceClient();
+
+  // Identity from the verified JWT.
+  const userId = await deriveUserId(supabase, bearerToken(req));
+  if (!userId) return jsonResp({ error: 'unauthorized' }, 401);
+
+  // Opt-in gate (same as lamplight-generate).
+  const { data: settings, error: sErr } = await supabase
+    .from('lamplight_settings').select('enabled').eq('user_id', userId).maybeSingle();
+  if (sErr) return jsonResp({ error: sErr.message }, 500);
+  if (!settings?.enabled) return jsonResp({ ok: false, reason: 'not_opted_in' }, 403);
+
+  // Entitlement gate (chat = plus or active promo).
+  const [{ data: ent }, { data: promoRow }] = await Promise.all([
+    supabase.from('lamplight_entitlements').select('tier').eq('user_id', userId).maybeSingle(),
+    supabase.from('app_config').select('value').eq('key', 'lamplight_promo_active').maybeSingle(),
+  ]);
+  const tier = ((ent?.tier as LamplightTier) ?? 'none');
+  const promoActive = promoRow?.value === true;
+  if (!hasChatAccess({ tier, promoActive })) return jsonResp({ ok: false, reason: 'no_entitlement' }, 402);
+
+  const voyageDeps: VoyageDeps = { apiKey: voyageKey, fetch };
+  const rerankEnabled = Deno.env.get('RERANK_ENABLED') === 'true';
+  const llm = createAnthropicAdapter({ apiKey: anthropicKey, fetch });
+  const quotaCfg = resolveQuotaLimits(Deno.env);
+
+  const lifecycleDeps: GenerationLifecycleDeps = {
+    checkQuota: async (uid) => {
+      const q = await checkQuota(supabaseQuotaDeps(supabase), quotaCfg.generation, quotaCfg.global, { userId: uid, nowMs: Date.now() });
+      return q.ok ? { ok: true } : { ok: false, reason: q.reason };
+    },
+    recordUsage: (row) => recordLamplightUsage(supabase, row),
+    classifyError: classifyGenerateError,
+  };
+
+  const { status, response } = await runGeneration(
+    lifecycleDeps,
+    { userId, artifactKind: 'bible_chat' },
+    async () => {
+      // 1. Load-or-create the thread for this passage.
+      const threadId = await upsertThread(supabase, userId, book, chapter, passageRef, message);
+
+      // 2. Load recent history (oldest→newest), excluding the new message.
+      const { data: histRows } = await supabase
+        .from('lamplight_chat_messages')
+        .select('role, content')
+        .eq('thread_id', threadId)
+        .order('created_at', { ascending: false })
+        .limit(HISTORY_LIMIT);
+      const history = ((histRows ?? []) as Array<{ role: 'user' | 'assistant'; content: string }>).reverse();
+
+      // 3. Build retrieval context.
+      const ctx = await buildChatContext(supabase, { userId, book, chapter, passageRef, message, history, voyageDeps, rerankEnabled });
+
+      // 4. Run the pipeline.
+      const result = await runBibleChatPipeline({ llm, ctx });
+      if (!result.ok) {
+        return { response: { ok: false, reason: result.reason }, usage: result.usage };
+      }
+
+      // 5. Persist both messages.
+      await supabase.from('lamplight_chat_messages').insert([
+        { thread_id: threadId, user_id: userId, role: 'user', content: message, citations: [] },
+        { thread_id: threadId, user_id: userId, role: 'assistant', content: result.reply, citations: result.citations },
+      ]);
+      await supabase.from('lamplight_chat_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId);
+
+      return { response: { ok: true, thread_id: threadId, reply: result.reply, citations: result.citations }, usage: result.usage };
+    },
+  );
+  return jsonResp(response, status);
+}
+
+async function upsertThread(
+  supabase: SupabaseClient, userId: string, book: string, chapter: number, passageRef: string, firstMessage: string,
+): Promise<string> {
+  const existing = await supabase
+    .from('lamplight_chat_threads').select('id').eq('user_id', userId).eq('passage_ref', passageRef).maybeSingle();
+  if (existing.data?.id) return existing.data.id as string;
+  const title = firstMessage.slice(0, 80);
+  const ins = await supabase
+    .from('lamplight_chat_threads')
+    .insert({ user_id: userId, book, chapter, passage_ref: passageRef, title })
+    .select('id').single();
+  if (ins.data?.id) return ins.data.id as string;
+  // Race: re-read.
+  const reread = await supabase
+    .from('lamplight_chat_threads').select('id').eq('user_id', userId).eq('passage_ref', passageRef).single();
+  if (reread.error || !reread.data) throw ins.error ?? reread.error ?? new Error('thread upsert failed');
+  return reread.data.id as string;
+}
+
+async function buildChatContext(
+  supabase: SupabaseClient,
+  args: {
+    userId: string; book: string; chapter: number; passageRef: string; message: string;
+    history: Array<{ role: 'user' | 'assistant'; content: string }>;
+    voyageDeps: VoyageDeps; rerankEnabled: boolean;
+  },
+): Promise<BibleChatContext> {
+  // Open chapter passages.
+  const { data: chapterRows, error: cErr } = await supabase
+    .from('bible_passages')
+    .select('id, book, chapter, verse_start, verse_end, text')
+    .like('id', `${args.book}.${args.chapter}.%`)
+    .order('verse_start', { ascending: true });
+  if (cErr) throw cErr;
+  const verses = (chapterRows ?? []) as Array<{ book: string; chapter: number; verse_start: number; verse_end: number; text: string }>;
+  const passageText = verses.map((v) => `${v.verse_start} ${v.text}`).join(' ');
+  const passageRefHuman = `${args.book} ${args.chapter}`;
+  const chapterVerseRefs = new Set(verses.map((v) => formatVerseRef(v).toLowerCase()));
+
+  // Embed the question once; reuse for both retrievals.
+  const queryEmbedding = await embedQuery(args.message, args.voyageDeps);
+
+  // User note neighbors.
+  const retrievedNotes = await searchUserNotesByQuery(
+    { supabase, voyage: args.voyageDeps, rerankEnabled: args.rerankEnabled },
+    { userId: args.userId, k: NOTE_K, query: args.message, queryEmbedding },
+  );
+  const noteIds = [...new Set(retrievedNotes.map((r) => r.source_id))];
+  let notes: BibleChatContext['notes'] = [];
+  if (noteIds.length) {
+    const { data: noteRows } = await supabase
+      .from('notes').select('id, title, content').eq('user_id', args.userId).in('id', noteIds);
+    notes = ((noteRows ?? []) as Array<{ id: string; title: string; content: string }>)
+      .map((n) => ({ id: n.id, title: (n.title ?? '').trim() || '(untitled)', plaintext: extractTextFromNoteContent(n.content).slice(0, 800) }))
+      .filter((n) => n.plaintext.trim().length > 0);
+  }
+
+  // Cross-reference passages from the whole Bible.
+  const retrievedBible = await searchBible(
+    { supabase, voyage: args.voyageDeps, rerankEnabled: args.rerankEnabled },
+    { query: args.message, k: CROSSREF_K, queryEmbedding },
+  );
+  const crossIds = retrievedBible.map((r) => r.source_id);
+  let crossRefs: BibleChatContext['crossRefs'] = [];
+  const crossRefSet = new Set<string>();
+  if (crossIds.length) {
+    const { data: crossRows } = await supabase
+      .from('bible_passages').select('id, book, chapter, verse_start, verse_end, text').in('id', crossIds);
+    crossRefs = ((crossRows ?? []) as Array<{ book: string; chapter: number; verse_start: number; verse_end: number; text: string }>)
+      .map((p) => { const ref = formatVerseRef(p); crossRefSet.add(ref.toLowerCase()); return { ref, text: p.text }; });
+  }
+
+  const allowedVerseRefs = new Set<string>([...chapterVerseRefs, ...crossRefSet]);
+
+  return {
+    passageRef: passageRefHuman,
+    passageText,
+    crossRefs,
+    notes,
+    history: args.history,
+    userMessage: args.message,
+    allowedNoteIds: new Set(notes.map((n) => n.id)),
+    allowedVerseRefs,
+  };
+}
