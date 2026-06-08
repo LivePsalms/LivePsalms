@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { getStyleAsset } from '../styles/manifest';
 import {
   moveTo, resizeWidthPct, rotationDeg, pinchTransform,
-  decorationZIndex, pointerAngleDeg, applyRotationDrag, SELECTED_Z,
+  decorationZIndex, pointerAngleDeg, applyRotationDrag, SELECTED_Z, resolveYPct,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -168,7 +168,7 @@ export function DecorationItem({
     // Fixed px from a frozen reference width (not container %), so resizing the
     // window never moves or rescales the decoration.
     left: d.xPct * contentWidth,
-    top: d.yPx,
+    top: resolveYPct(d, contentWidth) * contentWidth,
     width: renderedWidth,
     transform: `rotate(${d.rotation}deg)`,
     transformOrigin: 'center center',

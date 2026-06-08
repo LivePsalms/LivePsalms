@@ -629,7 +629,7 @@ export function NotepadEditor({
           assets={STYLE_ASSETS}
           onClose={() => setTrayOpen(false)}
           onPlace={(assetId) =>
-            decorationsApi.add({ assetId, xPct: 0.4, yPx: 80, widthPct: 0.25, rotation: 0 })
+            decorationsApi.add({ assetId, xPct: 0.4, yPct: 0.1, widthPct: 0.25, rotation: 0 })
           }
         />
       )}

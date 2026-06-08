@@ -13,7 +13,7 @@ vi.mock('../styles/manifest', () => ({
 }));
 
 const d: NoteDecoration = {
-  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 3,
+  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 3,
 };
 
 const handlers = () => ({
@@ -32,7 +32,7 @@ describe('DecorationItem', () => {
     const { getByTestId } = render(<DecorationItem decoration={d} selected={false} {...h} />);
     const root = getByTestId('decoration-body-a').parentElement!;
     expect(root.style.left).toBe('500px'); // 0.5 * 1000
-    expect(root.style.top).toBe('100px'); // yPx, unchanged
+    expect(root.style.top).toBe('100px'); // 0.1 * 1000
     expect(root.style.width).toBe('200px'); // 0.2 * 1000
   });
 
@@ -69,7 +69,7 @@ describe('DecorationItem', () => {
     fireEvent.pointerMove(surface, { clientX: 100, clientY: 30, pointerId: 1 });
     fireEvent.pointerUp(surface, { pointerId: 1 });
     expect(h.onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'a', xPct: expect.closeTo(0.6, 5), yPx: 130 }),
+      expect.objectContaining({ id: 'a', xPct: expect.closeTo(0.6, 5), yPct: expect.closeTo(0.13, 5) }),
     );
   });
 

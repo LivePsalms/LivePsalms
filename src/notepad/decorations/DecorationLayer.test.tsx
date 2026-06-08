@@ -32,7 +32,7 @@ const noops = {
 };
 
 const deco: NoteDecoration = {
-  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 10, z: 3,
+  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 10, z: 3,
 };
 
 afterEach(cleanup);
@@ -70,7 +70,7 @@ describe('DecorationLayer', () => {
 
   it('hitTestBehind maps a viewport point to the behind-text decoration under it', () => {
     const ref = createRef<DecorationLayerHandle>();
-    const back: NoteDecoration = { ...deco, behindText: true }; // xPct .5, yPx 100, widthPct .2
+    const back: NoteDecoration = { ...deco, behindText: true }; // xPct .5, yPct 0.1, widthPct .2
     const { getByTestId } = render(
       <DecorationLayer ref={ref} decorations={[back]} selectedId={null} onSelect={() => {}} onDeselect={() => {}} {...noops} />,
     );

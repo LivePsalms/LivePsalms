@@ -4,23 +4,24 @@ import {
   moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, TEXT_Z, SELECTED_Z,
   decorationBox, pointInBox, topmostBehindAtPoint,
+  resolveYPct, isLegacyDecoration, migrateLegacyDecoration,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 const d: NoteDecoration = {
-  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1,
+  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 1,
 };
 
 describe('moveTo', () => {
-  it('converts a pixel delta to a normalized x and absolute y', () => {
-    // content width 1000px: +100px x → +0.1 xPct; +30px y.
+  it('converts a pixel delta to a normalized x and y (fraction of width)', () => {
+    // content width 1000px: +100px → +0.1 xPct; +30px → +0.03 yPct.
     expect(moveTo(d, { dxPx: 100, dyPx: 30, contentWidth: 1000 }))
-      .toMatchObject({ xPct: 0.6, yPx: 130 });
+      .toMatchObject({ xPct: expect.closeTo(0.6, 5), yPct: expect.closeTo(0.13, 5) });
   });
 
-  it('ignores horizontal delta when contentWidth is 0 but still moves vertically', () => {
+  it('ignores both deltas when contentWidth is 0', () => {
     expect(moveTo(d, { dxPx: 100, dyPx: 30, contentWidth: 0 }))
-      .toMatchObject({ xPct: 0.5, yPx: 130 });
+      .toMatchObject({ xPct: 0.5, yPct: 0.1 });
   });
 });
 
@@ -44,15 +45,15 @@ describe('rotationDeg', () => {
 });
 
 describe('clampDecoration', () => {
-  it('keeps xPct within [0, 1] and yPx non-negative', () => {
-    expect(clampDecoration({ ...d, xPct: 1.5, yPx: -20 })).toMatchObject({ xPct: 1, yPx: 0 });
+  it('keeps xPct within [0, 1] and yPct non-negative', () => {
+    expect(clampDecoration({ ...d, xPct: 1.5, yPct: -0.02 })).toMatchObject({ xPct: 1, yPct: 0 });
     expect(clampDecoration({ ...d, xPct: -0.2 }).xPct).toBe(0);
   });
 });
 
 describe('pinchTransform', () => {
   const base: NoteDecoration = {
-    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1,
+    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 1,
   };
 
   it('scales width by the distance ratio and clamps', () => {
@@ -73,7 +74,7 @@ describe('pinchTransform', () => {
 
 describe('decorationZIndex', () => {
   const base: NoteDecoration = {
-    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 5,
+    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 5,
   };
 
   it('returns SELECTED_Z when selected, regardless of behindText', () => {
@@ -140,8 +141,8 @@ describe('pointInBox', () => {
 
 describe('topmostBehindAtPoint', () => {
   const ar = () => 2; // every asset is 2:1
-  const back: NoteDecoration = { id: 'back', assetId: 'x', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1, behindText: true };
-  const front: NoteDecoration = { id: 'front', assetId: 'x', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1 };
+  const back: NoteDecoration = { id: 'back', assetId: 'x', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 1, behindText: true };
+  const front: NoteDecoration = { id: 'front', assetId: 'x', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 1 };
 
   it('returns the id of a behind-text decoration under the point', () => {
     expect(topmostBehindAtPoint([back], 550, 150, 1000, ar)).toBe('back');
@@ -159,5 +160,48 @@ describe('topmostBehindAtPoint', () => {
     const lo = { ...back, id: 'lo', z: 1 };
     const hi = { ...back, id: 'hi', z: 5 };
     expect(topmostBehindAtPoint([lo, hi], 550, 150, 1000, ar)).toBe('hi');
+  });
+});
+
+describe('resolveYPct', () => {
+  const legacy = { id: 'l', assetId: 'x', xPct: 0.5, yPx: 300, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NoteDecoration;
+
+  it('returns yPct directly when present', () => {
+    expect(resolveYPct({ ...d, yPct: 0.25 }, 1000)).toBe(0.25);
+  });
+  it('derives yPct from legacy yPx and width when yPct is absent', () => {
+    expect(resolveYPct(legacy, 1000)).toBe(0.3);
+  });
+  it('is 0 when width is 0', () => {
+    expect(resolveYPct(legacy, 0)).toBe(0);
+  });
+});
+
+describe('isLegacyDecoration', () => {
+  const legacy = { id: 'l', assetId: 'x', xPct: 0.5, yPx: 300, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NoteDecoration;
+
+  it('is true when yPct is missing', () => {
+    expect(isLegacyDecoration(legacy)).toBe(true);
+  });
+  it('is true when a lingering yPx remains even with yPct present', () => {
+    expect(isLegacyDecoration({ ...d, yPct: 0.1, yPx: 50 })).toBe(true);
+  });
+  it('is false for a clean migrated decoration', () => {
+    expect(isLegacyDecoration({ ...d, yPct: 0.1 })).toBe(false);
+  });
+});
+
+describe('migrateLegacyDecoration', () => {
+  const legacy = { id: 'l', assetId: 'x', xPct: 0.5, yPx: 300, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NoteDecoration;
+
+  it('converts legacy yPx to yPct by width and drops yPx', () => {
+    const out = migrateLegacyDecoration(legacy, 1000);
+    expect(out.yPct).toBe(0.3);
+    expect((out as { yPx?: number }).yPx).toBeUndefined();
+  });
+  it('leaves an already-migrated decoration unchanged and yPx-free', () => {
+    const out = migrateLegacyDecoration({ ...d, yPct: 0.4 }, 1000);
+    expect(out.yPct).toBe(0.4);
+    expect((out as { yPx?: number }).yPx).toBeUndefined();
   });
 });

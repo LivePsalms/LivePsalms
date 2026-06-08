@@ -7,7 +7,7 @@ import {
 import type { NoteDecoration } from '../types';
 
 const base: NoteDecoration = {
-  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1,
+  id: 'a', assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0, z: 1,
 };
 
 let counter = 0;
@@ -16,7 +16,7 @@ const idGen = () => `id-${++counter}`;
 describe('decoration-ops', () => {
   it('addDecoration appends with a generated id and next z', () => {
     counter = 0;
-    const out = addDecoration([base], { assetId: 'shape-01', xPct: 0.1, yPx: 10, widthPct: 0.3, rotation: 0 }, idGen);
+    const out = addDecoration([base], { assetId: 'shape-01', xPct: 0.1, yPct: 0.01, widthPct: 0.3, rotation: 0 }, idGen);
     expect(out).toHaveLength(2);
     expect(out[1].id).toBe('id-1');
     expect(out[1].z).toBe(2); // max z (1) + 1
@@ -39,8 +39,16 @@ describe('decoration-ops', () => {
     expect(out[1].id).toBe('id-1');
     expect(out[1].assetId).toBe('arrow-01');
     expect(out[1].xPct).toBeCloseTo(0.52);
-    expect(out[1].yPx).toBe(120);
+    expect(out[1].yPct).toBeCloseTo(0.12);
     expect(out[1].z).toBe(2);
+  });
+
+  it('duplicateDecoration tolerates a legacy decoration without yPct (no NaN)', () => {
+    counter = 0;
+    const legacy = { id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1 } as unknown as NoteDecoration;
+    const out = duplicateDecoration([legacy], 'a', idGen);
+    expect(out[1].yPct).toBeCloseTo(0.02); // (undefined -> 0) + 0.02, not NaN
+    expect(Number.isNaN(out[1].yPct)).toBe(false);
   });
 
   it('bringToFront puts the item above all others and in front of text', () => {

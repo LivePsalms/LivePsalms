@@ -22,7 +22,7 @@ describe('useDecorations', () => {
     const updateNote = vi.fn();
     const { result } = renderHook(() => useDecorations(note(), updateNote));
     act(() => {
-      result.current.add({ assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0 });
+      result.current.add({ assetId: 'arrow-01', xPct: 0.5, yPct: 0.1, widthPct: 0.2, rotation: 0 });
     });
     // UI reflects the add synchronously.
     expect(result.current.decorations).toHaveLength(1);
@@ -41,14 +41,14 @@ describe('useDecorations', () => {
       ({ n }) => useDecorations(n, updateNote),
       { initialProps: { n: note([], 'n1') } },
     );
-    rerender({ n: note([{ id: 'x', assetId: 'shape-01', xPct: 0, yPx: 0, widthPct: 0.1, rotation: 0, z: 1 }], 'n2') });
+    rerender({ n: note([{ id: 'x', assetId: 'shape-01', xPct: 0, yPct: 0, widthPct: 0.1, rotation: 0, z: 1 }], 'n2') });
     expect(result.current.decorations).toHaveLength(1);
   });
 
   it('coalesces rapid successive updates into ONE persisted updateNote with the latest state', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result } = renderHook(() => useDecorations(initial, updateNote));
@@ -77,7 +77,7 @@ describe('useDecorations', () => {
   it('updates on-screen decorations synchronously before the debounce fires', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result } = renderHook(() => useDecorations(initial, updateNote));
@@ -94,7 +94,7 @@ describe('useDecorations', () => {
   it('flushes a pending change on unmount', () => {
     const updateNote = vi.fn();
     const initial = note(
-      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+      [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
       'n1',
     );
     const { result, unmount } = renderHook(() => useDecorations(initial, updateNote));
@@ -121,7 +121,7 @@ describe('useDecorations', () => {
       {
         initialProps: {
           n: note(
-            [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPx: 0, widthPct: 0.2, rotation: 0, z: 1 }],
+            [{ id: 'd1', assetId: 'arrow-01', xPct: 0, yPct: 0, widthPct: 0.2, rotation: 0, z: 1 }],
             'n1',
           ),
         },
