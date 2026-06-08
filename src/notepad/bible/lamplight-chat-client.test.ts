@@ -1,6 +1,6 @@
 // src/notepad/bible/lamplight-chat-client.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { sendChatMessage } from './lamplight-chat-client';
+import { sendChatMessage, requestOpeningInsight } from './lamplight-chat-client';
 
 describe('sendChatMessage', () => {
   it('invokes lamplight-chat with the passage + message and returns the reply', async () => {
@@ -23,5 +23,22 @@ describe('sendChatMessage', () => {
     const invoke = vi.fn().mockResolvedValue({ data: { ok: false, reason: 'no_entitlement' }, error: null });
     const out = await sendChatMessage(invoke, { book: 'jhn', chapter: 10, message: 'hi' });
     expect(out).toEqual({ ok: false, reason: 'no_entitlement' });
+  });
+});
+
+describe('requestOpeningInsight', () => {
+  it('invokes lamplight-chat in insight mode and returns the reply', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { ok: true, thread_id: 't1', reply: 'An opening thought.', citations: [] }, error: null,
+    });
+    const out = await requestOpeningInsight(invoke, { book: 'jhn', chapter: 10 });
+    expect(invoke).toHaveBeenCalledWith('lamplight-chat', { body: { book: 'jhn', chapter: 10, mode: 'insight' } });
+    expect(out).toEqual({ ok: true, threadId: 't1', reply: 'An opening thought.', citations: [] });
+  });
+
+  it('maps a skipped insight (already has messages) to ok:false reason skipped', async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { ok: true, thread_id: 't1', skipped: true }, error: null });
+    const out = await requestOpeningInsight(invoke, { book: 'jhn', chapter: 10 });
+    expect(out).toEqual({ ok: false, reason: 'skipped' });
   });
 });
