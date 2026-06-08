@@ -916,3 +916,83 @@ describe('GraphView — sphere zoom and auto-fit', () => {
   });
 });
 
+describe('GraphView — auto-rotation', () => {
+  it('advances yaw over time when idle', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);      // establishes last-frame time
+    clock = 1000; view.tickFor(1);   // +1s
+    expect(view.getCamera().yaw).toBeGreaterThan(before);
+  });
+
+  it('does not advance yaw under prefers-reduced-motion', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock, prefersReducedMotion: () => true });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);
+    clock = 5000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(before);
+  });
+
+  it('does not advance yaw while a node is hovered', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    s.x = 0; s.y = 0; s.z = 0; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 0;
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0; // project to centre
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // hover the centred node
+    expect(view.getHoveredNodeId()).toBe('a');
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);
+    clock = 3000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(before);
+  });
+});
+
+describe('GraphView — pointer leave', () => {
+  it('clears hover and resumes auto-rotation when the pointer leaves', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    s.x = 0; s.y = 0; s.z = 0; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 0;
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0; // project to centre
+    view.handleMouseMove({ clientX: 200, clientY: 200 });
+    expect(view.getHoveredNodeId()).toBe('a');
+    // hovered → rotation paused
+    const paused = view.getCamera().yaw;
+    clock = 0; view.tickFor(1); clock = 2000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(paused);
+    // pointer leaves → hover cleared → rotation resumes
+    view.handleMouseLeave();
+    expect(view.getHoveredNodeId()).toBe(null);
+    const resumed = view.getCamera().yaw;
+    clock = 2000; view.tickFor(1); clock = 3000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBeGreaterThan(resumed);
+  });
+});
+

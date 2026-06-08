@@ -98,6 +98,7 @@ function sphereRadius(nodeCount: number): number {
 
 const PITCH_LIMIT = 1.3;          // clamp pitch (~75°) so the globe can't flip
 const ORBIT_SENSITIVITY = 0.01;   // rad of camera rotation per pixel dragged
+const ROTATE_SPEED = 0.18;        // rad/sec auto-rotation (slow)
 
 // Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
 // with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
@@ -199,14 +200,7 @@ export class GraphView extends Observable<GraphViewState> {
 
   private hoveredNodeId: string | null = null;
   private camera: SphereCamera = { yaw: 0, pitch: 0.35, scale: 1 };
-  // TEMPORARY SHIM (Tasks 8–11 replace each user):
-  // • handleMouseDown/handleMouseMove — panning (Task 9 rewrites as orbit)
-  // • handleMouseUp — popover screenX/Y (Task 11 rewrites via projectPoint)
-  // • handleWheel — zoom (Task 10 rewrites as camera.scale)
-  // • screenToWorld — hit-testing (Task 8 rewrites)
-  // • syncPopoverScreen — popover follow (Task 11 rewrites)
-  // • runAutoFit — fit-to-sphere (Task 10 rewrites)
-  private _transform = { x: 0, y: 0, scale: 1 };
+  private lastRotateTime: number | null = null;
   private hasFit = false;
   private needsSettle = false;
 
@@ -297,8 +291,10 @@ export class GraphView extends Observable<GraphViewState> {
           this.needsSettle = false;
           this.settle();
         } else {
-          this.sim.tick();
-          this.onTick();
+          // Layout is frozen post-settle; only the camera rotates.
+          // Do NOT tick the sim — positions are stable.
+          this.advanceRotation();
+          this.draw();
         }
       }
       this.rafHandle = requestAnimationFrame(loop);
@@ -319,6 +315,7 @@ export class GraphView extends Observable<GraphViewState> {
       this.runAutoFit();
       this.hasFit = true;
     }
+    this.advanceRotation();
     this.draw();
   }
 
@@ -334,6 +331,19 @@ export class GraphView extends Observable<GraphViewState> {
     const fit = (Math.min(width, height) - 2 * AUTO_FIT_VIEWPORT_PADDING) / (2 * (R + maxNodeR));
     this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fit));
     // Sphere is origin-centred; projection adds the viewport centre, so no x/y offset.
+  }
+
+  private advanceRotation(): void {
+    const now = this.deps.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : 0);
+    const last = this.lastRotateTime ?? now;
+    const dt = (now - last) / 1000;
+    this.lastRotateTime = now;
+    const reduced = this.deps.prefersReducedMotion?.() ?? false;
+    const idle = !this.dragState.active && this.hoveredNodeId === null;
+    if (!reduced && idle && dt > 0) {
+      this.camera.yaw += ROTATE_SPEED * dt;
+      this.syncPopoverScreen();
+    }
   }
 
   private draw(): void {
@@ -558,6 +568,14 @@ export class GraphView extends Observable<GraphViewState> {
     }
   };
 
+  handleMouseLeave = (): void => {
+    if (this.hoveredNodeId !== null) {
+      this.hoveredNodeId = null;
+      this.updateCursor();
+      this.draw();
+    }
+  };
+
   handleMouseDown = (e: { clientX: number; clientY: number }): void => {
     const { sx, sy } = this.toScreen(e.clientX, e.clientY);
     if (!this.findNodeAt(sx, sy)) {
@@ -596,9 +614,11 @@ export class GraphView extends Observable<GraphViewState> {
       if (current && current.nodeId === node.id) {
         this.setState((prev) => ({ ...prev, popover: null }));
       } else {
-        const t = this._transform;
-        const screenX = (node.x ?? 0) * t.scale + t.x;
-        const screenY = (node.y ?? 0) * t.scale + t.y;
+        const dpr = this.deps.devicePixelRatio?.() ?? 1;
+        const width = (this.canvas?.width ?? 0) / dpr, height = (this.canvas?.height ?? 0) / dpr;
+        const p = projectPoint({ x: node.x ?? 0, y: node.y ?? 0, z: node.z ?? 0 }, this.camera, width / 2, height / 2);
+        const screenX = p.sx;
+        const screenY = p.sy;
         this.setState(() => ({
           popover: {
             nodeId: node.id,
@@ -629,13 +649,6 @@ export class GraphView extends Observable<GraphViewState> {
     if (this.canvas.style.cursor !== next) {
       this.canvas.style.cursor = next;
     }
-  }
-
-  private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
-    if (!this.canvas) return { x: 0, y: 0 };
-    const rect = this.canvas.getBoundingClientRect();
-    const { x: tx, y: ty, scale } = this._transform;
-    return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
   }
 
   private toScreen(clientX: number, clientY: number): { sx: number; sy: number } {
@@ -677,14 +690,14 @@ export class GraphView extends Observable<GraphViewState> {
 
   private syncPopoverScreen(): void {
     const current = this.getSnapshot().popover;
-    if (!current) return;
-    const node = this.simNodes.find((n) => n.id === current.nodeId);
-    if (!node || node.x == null || node.y == null) return;
-    const t = this._transform;
-    const screenX = node.x * t.scale + t.x;
-    const screenY = node.y * t.scale + t.y;
-    if (screenX === current.screenX && screenY === current.screenY) return;
-    this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX, screenY } } : prev);
+    if (!current || !this.canvas) return;
+    const n = this.simNodes.find((x) => x.id === current.nodeId);
+    if (!n || n.x == null || n.y == null) return;
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const width = this.canvas.width / dpr, height = this.canvas.height / dpr;
+    const p = projectPoint({ x: n.x, y: n.y, z: n.z ?? 0 }, this.camera, width / 2, height / 2);
+    if (p.sx === current.screenX && p.sy === current.screenY) return;
+    this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX: p.sx, screenY: p.sy } } : prev);
   }
 
   /** Test affordance — read the camera without subscribing. */
