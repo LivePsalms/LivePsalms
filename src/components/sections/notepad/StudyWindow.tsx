@@ -1,7 +1,9 @@
 // src/components/sections/notepad/StudyWindow.tsx
 import { useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { BibleReader } from '@/notepad/bible/BibleReader';
+import { BibleStudyPane } from '@/notepad/bible/BibleStudyPane';
+import type { LamplightAdapter } from '@/notepad/storage/lamplight-adapter';
+import type { InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { GraphPane } from './GraphPane';
 
 type StudyTab = 'bible' | 'graph';
@@ -11,9 +13,11 @@ interface StudyWindowProps {
   graphOpen: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  lamplightAdapter: LamplightAdapter | null;
+  invoke: InvokeFn;
 }
 
-export function StudyWindow({ graphOpen, expanded = false, onToggleExpand }: StudyWindowProps) {
+export function StudyWindow({ graphOpen, expanded = false, onToggleExpand, lamplightAdapter, invoke }: StudyWindowProps) {
   const [tab, setTab] = useState<StudyTab>('bible');
 
   const tabStyle = (active: boolean) => ({
@@ -54,7 +58,7 @@ export function StudyWindow({ graphOpen, expanded = false, onToggleExpand }: Stu
       {/* body */}
       <div className="flex-1 relative overflow-hidden">
         {tab === 'bible' ? (
-          <BibleReader />
+          <BibleStudyPane lamplightAdapter={lamplightAdapter} invoke={invoke} />
         ) : (
           <GraphPane graphOpen={graphOpen} embedded />
         )}

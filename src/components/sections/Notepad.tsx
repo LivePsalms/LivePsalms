@@ -258,7 +258,15 @@ function DesktopNotepadWorkspace() {
         </main>
 
         {/* Study Window — Bible reader + graph, tabbed */}
-        <StudyWindow graphOpen={graphOpen} expanded={graphExpanded} onToggleExpand={() => setGraphExpanded(!graphExpanded)} />
+        <StudyWindow
+          graphOpen={graphOpen}
+          expanded={graphExpanded}
+          onToggleExpand={() => setGraphExpanded(!graphExpanded)}
+          lamplightAdapter={lamplightAdapter}
+          invoke={(name, options) =>
+            supabase!.functions.invoke(name, { body: options.body as Record<string, unknown> })
+          }
+        />
       </div>
 
       <SearchDialog />
