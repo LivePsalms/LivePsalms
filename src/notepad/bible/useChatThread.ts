@@ -31,6 +31,9 @@ export function useChatThread(book: string, chapter: number, userId: string | nu
 
   useEffect(() => {
     let cancelled = false;
+    // Reset to a loading state whenever the passage/user changes. Mirrors the
+    // sibling useBiblePassages effect; the synchronous reset is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     setMessages([]);
