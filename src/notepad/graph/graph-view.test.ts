@@ -731,6 +731,47 @@ describe('GraphView — setFocus', () => {
 
 
 
+describe('GraphView — sphere rendering', () => {
+  // Pull the radius of the LAST node-circle arc drawn (front-most, painted last).
+  function arcs(canvas: MockCanvas) {
+    return canvas.ctx.calls.filter((c) => c.method === 'arc').map((c) => c.args as number[]);
+  }
+
+  it('paints nodes back-to-front (deeper nodes drawn earlier, so radii increase)', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'back', type: 'devotion' }), node({ id: 'mid', type: 'sermon' }), node({ id: 'front', type: 'theme' })],
+      [], null,
+    );
+    const sim = view.getSimNodes();
+    const pin = (id: string, z: number) => {
+      const s = sim.find((n) => n.id === id)!;
+      s.x = 0; s.y = 0; s.z = z; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = z;
+    };
+    // All non-scripture → identical base radius, so depthScale alone drives drawn size.
+    pin('back', -200); pin('mid', 0); pin('front', 200);
+    view.settle();
+    const radii = arcs(canvas).map((a) => a[2]); // arc radius arg, in draw order
+    expect(radii.length).toBe(3);
+    expect(radii[0]).toBeLessThan(radii[1]); // back drawn first, smallest
+    expect(radii[1]).toBeLessThan(radii[2]); // front drawn last, largest
+  });
+
+  it('a front-facing node is drawn larger than the same node facing away', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'solo', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    // Pin one node straight in front (+z) vs straight behind (-z); compare drawn radius.
+    s.x = 0; s.y = 0; s.z = 200; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 200;
+    view.settle();
+    const front = arcs(canvas).at(-1)![2]; // arc radius arg
+    s.z = -200; (s as { fz?: number }).fz = -200;
+    view.settle();
+    const back = arcs(canvas).at(-1)![2];
+    expect(front).toBeGreaterThan(back);
+  });
+});
+
 describe('GraphView — 3D sphere layout', () => {
   it('settles every node onto the sphere surface (≈ radius R from origin)', () => {
     const { view } = attached();

@@ -8,6 +8,7 @@ import {
 } from 'd3-force-3d';
 import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 import { forceSphere } from './force-sphere';
+import { projectPoint, depthNorm, depthScale, depthAlpha, type SphereCamera } from './sphere-math';
 
 export interface PopoverState {
   nodeId: string;
@@ -199,7 +200,15 @@ export class GraphView extends Observable<GraphViewState> {
   private getNeighborhoodFn: ((id: string, depth: number) => Set<string>) | null = null;
 
   private hoveredNodeId: string | null = null;
-  private transform = { x: 0, y: 0, scale: 1 };
+  private camera: SphereCamera = { yaw: 0, pitch: 0.35, scale: 1 };
+  // TEMPORARY SHIM (Tasks 8–11 replace each user):
+  // • handleMouseDown/handleMouseMove — panning (Task 9 rewrites as orbit)
+  // • handleMouseUp — popover screenX/Y (Task 11 rewrites via projectPoint)
+  // • handleWheel — zoom (Task 10 rewrites as camera.scale)
+  // • screenToWorld — hit-testing (Task 8 rewrites)
+  // • syncPopoverScreen — popover follow (Task 11 rewrites)
+  // • runAutoFit — fit-to-sphere (Task 10 rewrites)
+  private _transform = { x: 0, y: 0, scale: 1 };
   private hasFit = false;
   private needsSettle = false;
 
@@ -338,7 +347,7 @@ export class GraphView extends Observable<GraphViewState> {
     const baseFit = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h);
     const fitScale = Math.min(baseFit * AUTO_FIT_INITIAL_ZOOM, AUTO_FIT_MAX_SCALE);
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    this.transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
+    this._transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
   }
 
   private draw(): void {
@@ -347,18 +356,16 @@ export class GraphView extends Observable<GraphViewState> {
     if (!ctx || !canvas) return;
 
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
-    const { x: tx, y: ty, scale } = this.transform;
-
-    const t = (this.deps.now?.() ?? performance.now()) / 1000;
-    const amp = this.deps.prefersReducedMotion?.() ? 0 : DRIFT_AMPLITUDE;
-    const drawnPos = (n: SimNode): { x: number; y: number } => {
-      const { ox, oy } = driftOffset(n.phase, t, amp);
-      return { x: (n.x ?? 0) + ox, y: (n.y ?? 0) + oy };
-    };
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+    const cx = width / 2;
+    const cy = height / 2;
+    const cam = this.camera;
+    const R = sphereRadius(this.simNodes.length);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS-pixel screen space
 
     const hovered = this.hoveredNodeId;
     const connectedIds = new Set<string>();
@@ -372,66 +379,77 @@ export class GraphView extends Observable<GraphViewState> {
       }
     }
 
-    // Edges
+    // Project every node once; depth-sort back-to-front.
+    const drawn = this.simNodes
+      .filter((n) => n.x != null && n.y != null)
+      .map((n) => {
+        const p = projectPoint({ x: n.x ?? 0, y: n.y ?? 0, z: n.z ?? 0 }, cam, cx, cy);
+        const dn = depthNorm(p.depth, R);
+        return { n, p, dn };
+      })
+      .sort((a, b) => a.p.depth - b.p.depth);
+
+    // Edges — placeholder using projected endpoints (depth fade added in Task 7).
+    const screen = new Map<string, { sx: number; sy: number; dn: number }>();
+    for (const d of drawn) screen.set(d.n.id, { sx: d.p.sx, sy: d.p.sy, dn: d.dn });
     for (const link of this.simLinks) {
       const src = link.source as SimNode;
       const tgt = link.target as SimNode;
-      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
-      const a = drawnPos(src);
-      const b = drawnPos(tgt);
+      const a = screen.get(src.id);
+      const b = screen.get(tgt.id);
+      if (!a || !b) continue;
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
+      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.4;
       ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness;
+      ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness * cam.scale;
       ctx.stroke();
     }
 
-    // Nodes
+    // Nodes — back-to-front, depth-scaled radius + depth-faded fill.
     const activeId = this.effectiveActiveId();
-    for (const n of this.simNodes) {
-      if (n.x == null || n.y == null) continue;
-      const d = drawnPos(n);
+    for (const { n, p, dn } of drawn) {
+      const drawR = n.radius * cam.scale * depthScale(dn);
       const isConnected = !hovered || connectedIds.has(n.id);
-      const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
+      const fade = depthAlpha(dn) * (hovered ? (isConnected ? 1 : 0.18) : 1);
       const color = NODE_COLORS[n.type] ?? '#999';
 
       if (n.id === activeId) {
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 10, 0, Math.PI * 2);
+        ctx.arc(p.sx, p.sy, drawR + 10 * cam.scale, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 5, 0, Math.PI * 2);
+        ctx.arc(p.sx, p.sy, drawR + 5 * cam.scale, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(d.x, d.y, n.radius, 0, Math.PI * 2);
+      ctx.arc(p.sx, p.sy, drawR, 0, Math.PI * 2);
       ctx.fillStyle = color;
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = fade;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    // Labels are shown only for the hovered node, so the canvas stays uncluttered.
+    // Hover label — only the hovered node, at its projected position.
     if (hovered) {
-      const n = this.simNodes.find((x) => x.id === hovered);
-      if (n && n.x != null && n.y != null) {
-        const d = drawnPos(n);
+      const d = drawn.find((x) => x.n.id === hovered);
+      if (d) {
+        const drawR = d.n.radius * cam.scale * depthScale(d.dn);
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
+        ctx.arc(d.p.sx, d.p.sy, drawR + 4 * cam.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = `${NODE_COLORS[d.n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
+        ctx.font = `${d.n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(62, 50, 40, 0.85)';
-        ctx.fillText(n.title, d.x, d.y + n.radius + 22);
+        ctx.fillText(d.n.title, d.p.sx, d.p.sy + drawR + 18);
       }
     }
 
@@ -531,8 +549,8 @@ export class GraphView extends Observable<GraphViewState> {
   handleMouseMove = (e: { clientX: number; clientY: number }): void => {
     if (this.dragState.active) {
       this.dragState.moved = true;
-      this.transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
-      this.transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
+      this._transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
+      this._transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
       this.syncPopoverScreen();
       this.updateCursor();
       this.draw();
@@ -555,8 +573,8 @@ export class GraphView extends Observable<GraphViewState> {
         moved: false,
         startX: e.clientX,
         startY: e.clientY,
-        origTx: this.transform.x,
-        origTy: this.transform.y,
+        origTx: this._transform.x,
+        origTy: this._transform.y,
       };
     }
   };
@@ -588,7 +606,7 @@ export class GraphView extends Observable<GraphViewState> {
       if (current && current.nodeId === node.id) {
         this.setState((prev) => ({ ...prev, popover: null }));
       } else {
-        const t = this.transform;
+        const t = this._transform;
         const screenX = (node.x ?? 0) * t.scale + t.x;
         const screenY = (node.y ?? 0) * t.scale + t.y;
         this.setState(() => ({
@@ -626,7 +644,7 @@ export class GraphView extends Observable<GraphViewState> {
   private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
     if (!this.canvas) return { x: 0, y: 0 };
     const rect = this.canvas.getBoundingClientRect();
-    const { x: tx, y: ty, scale } = this.transform;
+    const { x: tx, y: ty, scale } = this._transform;
     return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
   }
 
@@ -647,7 +665,7 @@ export class GraphView extends Observable<GraphViewState> {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const factor = e.deltaY > 0 ? ZOOM_OUT_FACTOR : ZOOM_IN_FACTOR;
-    const t = this.transform;
+    const t = this._transform;
     const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale * factor));
     // Anchor world-point under cursor: compute offset ratio with OLD scale before mutating it.
     const ratio = newScale / t.scale;
@@ -663,16 +681,16 @@ export class GraphView extends Observable<GraphViewState> {
     if (!current) return;
     const node = this.simNodes.find((n) => n.id === current.nodeId);
     if (!node || node.x == null || node.y == null) return;
-    const t = this.transform;
+    const t = this._transform;
     const screenX = node.x * t.scale + t.x;
     const screenY = node.y * t.scale + t.y;
     if (screenX === current.screenX && screenY === current.screenY) return;
     this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX, screenY } } : prev);
   }
 
-  /** Test affordance — read transform without subscribing. */
-  getTransform(): { x: number; y: number; scale: number } {
-    return { ...this.transform };
+  /** Test affordance — read the camera without subscribing. */
+  getCamera(): SphereCamera {
+    return { ...this.camera };
   }
 
   private rebuild(): void {
