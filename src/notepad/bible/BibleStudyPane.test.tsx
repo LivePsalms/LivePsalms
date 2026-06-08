@@ -55,4 +55,11 @@ describe('BibleStudyPane', () => {
     fireEvent.click(screen.getByRole('button', { name: /lamplight/i }));
     expect(screen.getByTestId('signin')).toBeInTheDocument();
   });
+
+  it('shows a resize handle between reader and chat only when chat is open', async () => {
+    render(<BibleStudyPane lamplightAdapter={adapter} invoke={vi.fn()} />);
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /lamplight/i }));
+    await waitFor(() => expect(screen.getByRole('separator')).toBeInTheDocument());
+  });
 });

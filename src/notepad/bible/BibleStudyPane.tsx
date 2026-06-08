@@ -1,5 +1,5 @@
 // src/notepad/bible/BibleStudyPane.tsx
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useAuthSession } from '@/auth/context/useAuthSession';
 import { useLamplightSettings } from '@/notepad/hooks/useLamplightSettings';
@@ -10,6 +10,8 @@ import { PaywallCard } from '@/notepad/components/lamplight/PaywallCard';
 import { LamplightChat } from '@/notepad/components/lamplight/chat/LamplightChat';
 import type { InvokeFn } from './lamplight-chat-client';
 import { BibleReader, type PassageRef } from './BibleReader';
+import { SplitResizeHandle } from './SplitResizeHandle';
+import { useDragResize } from './useDragResize';
 
 export interface BibleStudyPaneProps {
   lamplightAdapter: LamplightAdapter | null;
@@ -21,6 +23,8 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
   const userId = user?.id ?? null;
   const [chatOpen, setChatOpen] = useState(false);
   const [passage, setPassage] = useState<PassageRef>({ book: 'jhn', chapter: 1 });
+  const splitRef = useRef<HTMLDivElement | null>(null);
+  const { fraction, handleProps } = useDragResize(splitRef);
 
   // Dedupe so an unchanged book/chapter keeps the same state reference. The real
   // BibleReader only fires onPassageChange from a useEffect, but defensive callers
@@ -60,14 +64,20 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
         </button>
       </div>
 
-      <div className={chatOpen ? 'flex-1 min-h-0 flex flex-col' : 'flex-1 min-h-0'}>
-        <div className={chatOpen ? 'flex-1 min-h-0 overflow-hidden' : 'h-full'}>
+      <div ref={splitRef} className={chatOpen ? 'flex-1 min-h-0 flex flex-col' : 'flex-1 min-h-0'}>
+        <div
+          className={chatOpen ? 'min-h-0 overflow-hidden' : 'h-full'}
+          style={chatOpen ? { flexGrow: 1 - fraction, flexBasis: 0 } : undefined}
+        >
           <BibleReader onPassageChange={handlePassageChange} />
         </div>
         {chatOpen && (
-          <div className="flex-1 min-h-0" style={{ borderTop: '1px solid var(--pale-stone)' }}>
-            {renderChatArea()}
-          </div>
+          <>
+            <SplitResizeHandle {...handleProps} />
+            <div className="min-h-0" style={{ flexGrow: fraction, flexBasis: 0 }}>
+              {renderChatArea()}
+            </div>
+          </>
         )}
       </div>
     </div>

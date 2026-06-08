@@ -6,11 +6,13 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 const useChatThread = vi.fn();
 const sendChatMessage = vi.fn();
 const requestOpeningInsight = vi.fn();
+const useNoteCollection = vi.fn();
 vi.mock('@/notepad/bible/useChatThread', () => ({ useChatThread: (...a: unknown[]) => useChatThread(...a) }));
 vi.mock('@/notepad/bible/lamplight-chat-client', () => ({
   sendChatMessage: (...a: unknown[]) => sendChatMessage(...a),
   requestOpeningInsight: (...a: unknown[]) => requestOpeningInsight(...a),
 }));
+vi.mock('@/notepad/context/useNoteCollection', () => ({ useNoteCollection: () => useNoteCollection() }));
 
 import { LamplightChat } from './LamplightChat';
 
@@ -22,6 +24,8 @@ beforeEach(() => {
   requestOpeningInsight.mockReset();
   requestOpeningInsight.mockResolvedValue({ ok: false, reason: 'test-suppressed' });
   useChatThread.mockReset();
+  useNoteCollection.mockReset();
+  useNoteCollection.mockReturnValue({ notes: [] });
 });
 
 function setup(threadOverrides = {}) {
@@ -150,6 +154,19 @@ describe('LamplightChat reflection', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(appendRev).not.toHaveBeenCalled();
     expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument();
+  });
+
+  it('renders a note citation chip as the note title, not the raw id', () => {
+    useNoteCollection.mockReturnValue({ notes: [{ id: 'n1', title: 'On the Good Shepherd' }] });
+    setup({
+      messages: [{
+        id: 'm1', role: 'assistant', content: 'Builds on your earlier thought.',
+        citations: [{ type: 'note', ref: 'n1' }],
+      }],
+    });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    expect(screen.getByText('On the Good Shepherd')).toBeInTheDocument();
+    expect(screen.queryByText('n1')).not.toBeInTheDocument();
   });
 
   it('+ New reflection archives the active thread', async () => {

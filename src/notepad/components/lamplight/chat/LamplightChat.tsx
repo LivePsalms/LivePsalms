@@ -1,7 +1,8 @@
 // src/notepad/components/lamplight/chat/LamplightChat.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useChatThread, type ChatThreadMessage } from '@/notepad/bible/useChatThread';
 import { sendChatMessage, requestOpeningInsight, type InvokeFn } from '@/notepad/bible/lamplight-chat-client';
+import { useNoteCollection } from '@/notepad/context/useNoteCollection';
 import { ChatMessage } from './ChatMessage';
 
 export interface LamplightChatProps {
@@ -16,6 +17,12 @@ const localId = () => `local-${++localIdSeq}`;
 
 export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatProps) {
   const thread = useChatThread(book, chapter, userId);
+  const { notes } = useNoteCollection();
+  // Resolve note citations to their titles (chips show names, never raw note ids).
+  const resolveNoteTitle = useMemo(() => {
+    const titleById = new Map(notes.map((n) => [n.id, n.title]));
+    return (id: string) => titleById.get(id);
+  }, [notes]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +120,7 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
           </div>
         )}
         {thread.messages.map((m) => (
-          <ChatMessage key={m.id} role={m.role} content={m.content} citations={m.citations} />
+          <ChatMessage key={m.id} role={m.role} content={m.content} citations={m.citations} resolveNoteTitle={resolveNoteTitle} />
         ))}
         {(sending || insighting) && <p className="text-[11px] italic" style={{ color: 'var(--silica)' }}>Lamplight is reflecting…</p>}
         {error && (
