@@ -11,7 +11,7 @@ import { BacklinksPanel } from '@/notepad/components/BacklinksPanel';
 import { InfoPanel } from '@/notepad/components/InfoPanel';
 import { SearchDialog } from '@/notepad/components/SearchDialog';
 import { MigrationDialog } from '@/notepad/components/MigrationDialog';
-import { GraphPane } from './notepad/GraphPane';
+import { StudyWindow } from './notepad/StudyWindow';
 import { useOnlineStatus } from '@/notepad/hooks/useOnlineStatus';
 import { useNotepadFirstLoad } from '@/notepad/first-load/useNotepadFirstLoad';
 import { LamplightTabPanel } from '@/notepad/components/lamplight/LamplightTabPanel';
@@ -257,8 +257,8 @@ function DesktopNotepadWorkspace() {
           )}
         </main>
 
-        {/* Graph Pane (static placeholder — functionality deferred) */}
-        <GraphPane graphOpen={graphOpen} expanded={graphExpanded} onToggleExpand={() => setGraphExpanded(!graphExpanded)} />
+        {/* Study Window — Bible reader + graph, tabbed */}
+        <StudyWindow graphOpen={graphOpen} expanded={graphExpanded} onToggleExpand={() => setGraphExpanded(!graphExpanded)} />
       </div>
 
       <SearchDialog />
