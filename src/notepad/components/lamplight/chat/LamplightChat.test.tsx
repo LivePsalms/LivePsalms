@@ -81,4 +81,21 @@ describe('LamplightChat opening insight', () => {
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
   });
+
+  it('clears the reflecting indicator when the passage changes mid-insight', async () => {
+    requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves: insight stays in-flight
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn() });
+    const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/Lamplight is reflecting/i)).toBeInTheDocument();
+
+    // Switch to a passage that already has messages — the new effect returns early
+    // and would never clear `insighting` without the cleanup fix.
+    useChatThread.mockReturnValue({
+      messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
+      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
+    });
+    rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
+    await waitFor(() => expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument());
+  });
 });

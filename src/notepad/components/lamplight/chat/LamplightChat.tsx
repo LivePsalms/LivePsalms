@@ -39,7 +39,9 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
       }
       setInsighting(false);
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; setInsighting(false); };
+    // `invoke` is a stable client fn reference; omitting it avoids re-firing on every
+    // render while the passageKey/loading/length deps capture every real re-trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passageKey, thread.loading, thread.messages.length]);
 
