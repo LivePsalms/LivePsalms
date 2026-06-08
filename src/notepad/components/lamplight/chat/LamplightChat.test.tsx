@@ -14,6 +14,22 @@ vi.mock('@/notepad/bible/lamplight-chat-client', () => ({
 }));
 vi.mock('@/notepad/context/useNoteCollection', () => ({ useNoteCollection: () => useNoteCollection() }));
 
+const useChatThreadList = vi.fn(() => ({ threads: [], loading: false, error: null, reload: vi.fn() }));
+vi.mock('@/notepad/bible/useChatThreadList', () => ({ useChatThreadList: () => useChatThreadList() }));
+vi.mock('./ChatHistoryList', () => ({
+  ChatHistoryList: (p: { onSelect: (id: string) => void; onBack: () => void }) => (
+    <div data-testid="history-list">
+      <button onClick={() => p.onSelect('t1')}>open-t1</button>
+      <button onClick={p.onBack}>list-back</button>
+    </div>
+  ),
+}));
+vi.mock('./ReflectionThreadView', () => ({
+  ReflectionThreadView: (p: { threadId: string; onBack: () => void }) => (
+    <div data-testid="thread-view">{p.threadId}<button onClick={p.onBack}>thread-back</button></div>
+  ),
+}));
+
 import { LamplightChat } from './LamplightChat';
 
 afterEach(cleanup);
@@ -175,5 +191,25 @@ describe('LamplightChat reflection', () => {
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /new reflection/i }));
     await waitFor(() => expect(archiveAndReset).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('LamplightChat history', () => {
+  it('opens the history list, then a thread, then returns to live', async () => {
+    setup(); // live thread with messages, from the existing helper
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /history/i }));
+    expect(screen.getByTestId('history-list')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('open-t1'));
+    expect(screen.getByTestId('thread-view')).toHaveTextContent('t1');
+
+    fireEvent.click(screen.getByText('thread-back'));
+    expect(screen.getByTestId('history-list')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('list-back'));
+    expect(screen.queryByTestId('history-list')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ask about this passage/i)).toBeInTheDocument();
   });
 });

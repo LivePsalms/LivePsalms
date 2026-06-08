@@ -3,7 +3,10 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useChatThread, type ChatThreadMessage } from '@/notepad/bible/useChatThread';
 import { sendChatMessage, requestOpeningInsight, type InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { useNoteCollection } from '@/notepad/context/useNoteCollection';
+import { useChatThreadList } from '@/notepad/bible/useChatThreadList';
 import { ChatMessage } from './ChatMessage';
+import { ChatHistoryList } from './ChatHistoryList';
+import { ReflectionThreadView } from './ReflectionThreadView';
 
 export interface LamplightChatProps {
   book: string;
@@ -27,6 +30,9 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passageKey = `${book}.${chapter}`;
+  type View = { kind: 'live' } | { kind: 'list' } | { kind: 'thread'; threadId: string };
+  const [view, setView] = useState<View>({ kind: 'live' });
+  const history = useChatThreadList(book, chapter, userId);
   const [insighting, setInsighting] = useState(false);
   const insightInFlight = useRef(false);
   const livePassageKey = useRef(passageKey);
@@ -46,6 +52,10 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
     setError(null);
     insightInFlight.current = false;
   }, [passageKey]);
+
+  // Reset to the live conversation whenever the passage changes, so navigating
+  // chapters never strands the user in a previous chapter's history view.
+  useEffect(() => { setView({ kind: 'live' }); }, [passageKey]);
 
   // User-triggered reflection (replaces the old auto-fire on an empty thread).
   const requestReflection = async () => {
@@ -91,9 +101,30 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
     await thread.archiveAndReset(); // clears to an empty thread; the Reflect button reappears
   };
 
+  if (view.kind === 'list') {
+    return (
+      <ChatHistoryList
+        threads={history.threads}
+        loading={history.loading}
+        onSelect={(threadId) => setView({ kind: 'thread', threadId })}
+        onBack={() => setView({ kind: 'live' })}
+      />
+    );
+  }
+  if (view.kind === 'thread') {
+    return <ReflectionThreadView threadId={view.threadId} onBack={() => setView({ kind: 'list' })} />;
+  }
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit, sans-serif' }}>
-      <div className="flex justify-end px-3 pt-2 shrink-0">
+      <div className="flex justify-end gap-2 px-3 pt-2 shrink-0">
+        <button
+          onClick={() => { history.reload(); setView({ kind: 'list' }); }}
+          className="text-[10px] tracking-wider px-2 py-1 rounded-full"
+          style={{ color: 'var(--silica)', border: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          History
+        </button>
         <button
           onClick={() => void startNewReflection()}
           className="text-[10px] tracking-wider px-2 py-1 rounded-full"
