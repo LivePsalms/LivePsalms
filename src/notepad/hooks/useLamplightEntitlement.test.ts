@@ -58,4 +58,37 @@ describe('useLamplightEntitlement', () => {
     expect(result.current.hasAccess('weekly')).toBe(false);
     expect(result.current.hasAccess('reflections')).toBe(false);
   });
+
+  it('grants chat only to plus or active promo', async () => {
+    // plus tier, no promo
+    {
+      adapter.promo = { promoActive: false, promoEndsAt: null };
+      adapter.entitlements.set('user-1', {
+        userId: 'user-1', tier: 'plus', source: 'subscription',
+        grantedAt: '2026-05-25T00:00:00Z', expiresAt: null,
+      });
+      const { result } = renderHook(() => useLamplightEntitlement({ adapter, userId: 'user-1' }));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.hasAccess('chat')).toBe(true);
+    }
+    // lite tier, no promo
+    {
+      adapter.promo = { promoActive: false, promoEndsAt: null };
+      adapter.entitlements.set('user-1', {
+        userId: 'user-1', tier: 'lite', source: 'subscription',
+        grantedAt: '2026-05-25T00:00:00Z', expiresAt: null,
+      });
+      const { result } = renderHook(() => useLamplightEntitlement({ adapter, userId: 'user-1' }));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.hasAccess('chat')).toBe(false);
+    }
+    // none tier, promo active
+    {
+      adapter.promo = { promoActive: true, promoEndsAt: null };
+      adapter.entitlements.delete('user-1');
+      const { result } = renderHook(() => useLamplightEntitlement({ adapter, userId: 'user-1' }));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.hasAccess('chat')).toBe(true);
+    }
+  });
 });
