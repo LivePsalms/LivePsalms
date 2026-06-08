@@ -44,12 +44,12 @@ export interface GraphViewDeps {
   onNodeOpen: (noteId: string) => void;
   devicePixelRatio?: () => number;
   /**
-   * Wall clock in milliseconds for the drift animation. Defaults to
-   * performance.now(). Injected so tests can drive the animation deterministically.
+   * Wall clock in milliseconds. Defaults to performance.now(). Injected so tests
+   * can drive the auto-rotation animation deterministically.
    */
   now?: () => number;
   /**
-   * When this returns true, the drift animation is disabled and the graph renders
+   * When this returns true, auto-rotation is disabled and the graph renders
    * perfectly static (respects the user's prefers-reduced-motion setting).
    * Defaults to false (animate).
    */
@@ -100,26 +100,6 @@ const PITCH_LIMIT = 1.3;          // clamp pitch (~75°) so the globe can't flip
 const ORBIT_SENSITIVITY = 0.01;   // rad of camera rotation per pixel dragged
 const ROTATE_SPEED = 0.18;        // rad/sec auto-rotation (slow)
 
-// Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
-// with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
-// makes each node trace a slow ellipse rather than a circle.
-export const DRIFT_AMPLITUDE = 4.5;
-export const DRIFT_SPEED = 0.8;
-
-/**
- * Per-node draw-time offset for the drift animation. Pure: no state, no clock of
- * its own. Pass amplitude 0 to freeze (used for prefers-reduced-motion).
- */
-export function driftOffset(phase: number, tSeconds: number, amplitude: number): { ox: number; oy: number } {
-  return {
-    // `+ 0` normalizes a signed `-0` (e.g. when amplitude is 0) to `+0` so the
-    // result compares equal under strict deep-equality.
-    ox: amplitude * Math.sin(tSeconds * DRIFT_SPEED + phase) + 0,
-    // `phase * 1.3` de-correlates the y phase from x so nodes don't sweep in
-    // lockstep, giving more organic, non-uniform motion.
-    oy: amplitude * Math.cos(tSeconds * DRIFT_SPEED * 0.78 + phase * 1.3) + 0,
-  };
-}
 
 export interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -130,7 +110,6 @@ export interface SimNode extends SimulationNodeDatum {
   tags: string[];
   scriptureText: string;
   scriptureTranslation: string;
-  phase: number;
   z?: number;
 }
 
@@ -145,19 +124,6 @@ function computeRadius(type: string, weight: number, sizeMultiplier: number): nu
   return Math.min(110, Math.max(26, (base + weight * 5) * sizeMultiplier));
 }
 
-/**
- * Deterministic per-node animation phase in [0, 2*PI), derived from the node id.
- * Stable across rebuilds (no per-frame randomness, no popping) and well spread
- * across distinct ids.
- */
-function hashPhase(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) | 0;
-  }
-  const positive = ((h % 1000) + 1000) % 1000;
-  return (positive / 1000) * Math.PI * 2;
-}
 
 /**
  * Owns the d3-force simulation, canvas rendering, and pointer interaction
@@ -731,7 +697,6 @@ export class GraphView extends Observable<GraphViewState> {
         tags: n.tags,
         scriptureText: n.scriptureText,
         scriptureTranslation: n.scriptureTranslation,
-        phase: hashPhase(n.id),
         x: prev?.x ?? Math.cos(theta) * rUnit * R,
         y: prev?.y ?? yUnit * R,
         z: prev?.z ?? Math.sin(theta) * rUnit * R,
