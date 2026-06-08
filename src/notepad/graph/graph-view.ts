@@ -4,16 +4,11 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter,
-  forceCollide,
-  type Simulation,
-  type SimulationNodeDatum,
-  type SimulationLinkDatum,
-  type ForceLink,
-  type ForceManyBody,
-  type ForceCenter,
-} from 'd3-force';
-import { forceSharedTags } from './force-shared-tags';
+  type Simulation3,
+} from 'd3-force-3d';
+import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
+import { forceSphere } from './force-sphere';
+import { projectPoint, depthNorm, depthScale, depthAlpha, type SphereCamera } from './sphere-math';
 
 export interface PopoverState {
   nodeId: string;
@@ -40,7 +35,6 @@ export interface GraphSettings {
   linkDistance: number;
   linkForce: number;
   repelForce: number;
-  centerForce: number;
   nodeSize: number;
   edgeThickness: number;
 }
@@ -49,12 +43,12 @@ export interface GraphViewDeps {
   onNodeOpen: (noteId: string) => void;
   devicePixelRatio?: () => number;
   /**
-   * Wall clock in milliseconds for the drift animation. Defaults to
-   * performance.now(). Injected so tests can drive the animation deterministically.
+   * Wall clock in milliseconds. Defaults to performance.now(). Injected so tests
+   * can drive the auto-rotation animation deterministically.
    */
   now?: () => number;
   /**
-   * When this returns true, the drift animation is disabled and the graph renders
+   * When this returns true, auto-rotation is disabled and the graph renders
    * perfectly static (respects the user's prefers-reduced-motion setting).
    * Defaults to false (animate).
    */
@@ -77,7 +71,6 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   linkDistance: 30,
   linkForce: 0.01,
   repelForce: 120,
-  centerForce: 0.15,
   nodeSize: 1,
   edgeThickness: 1,
 };
@@ -94,30 +87,20 @@ const ZOOM_OUT_FACTOR = 0.92;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
-const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
-const AUTO_FIT_MAX_SCALE = 2.2;
+// Fraction of the available viewport the auto-fit sphere fills (<1 leaves the globe
+// zoomed out a touch so it doesn't crowd the frame).
+const AUTO_FIT_FILL = 0.7;
 
-// Subtle render-only "alive" motion. Amplitude is in WORLD units, so it scales
-// with zoom alongside the nodes. The y axis runs at 0.78x the x frequency, which
-// makes each node trace a slow ellipse rather than a circle.
-export const DRIFT_AMPLITUDE = 4.5;
-export const DRIFT_SPEED = 0.8;
-
-/**
- * Per-node draw-time offset for the drift animation. Pure: no state, no clock of
- * its own. Pass amplitude 0 to freeze (used for prefers-reduced-motion).
- */
-export function driftOffset(phase: number, tSeconds: number, amplitude: number): { ox: number; oy: number } {
-  return {
-    // `+ 0` normalizes a signed `-0` (e.g. when amplitude is 0) to `+0` so the
-    // result compares equal under strict deep-equality.
-    ox: amplitude * Math.sin(tSeconds * DRIFT_SPEED + phase) + 0,
-    // `phase * 1.3` de-correlates the y phase from x so nodes don't sweep in
-    // lockstep, giving more organic, non-uniform motion.
-    oy: amplitude * Math.cos(tSeconds * DRIFT_SPEED * 0.78 + phase * 1.3) + 0,
-  };
+// Sphere radius (world units) grows with node count so the surface doesn't overcrowd.
+function sphereRadius(nodeCount: number): number {
+  return Math.max(160, Math.sqrt(Math.max(1, nodeCount)) * 55);
 }
+
+const PITCH_LIMIT = 1.3;          // clamp pitch (~75°) so the globe can't flip
+const ORBIT_SENSITIVITY = 0.01;   // rad of camera rotation per pixel dragged
+const ROTATE_SPEED = 0.18;        // rad/sec auto-rotation (slow)
+
 
 export interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -128,7 +111,7 @@ export interface SimNode extends SimulationNodeDatum {
   tags: string[];
   scriptureText: string;
   scriptureTranslation: string;
-  phase: number;
+  z?: number;
 }
 
 export interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -138,23 +121,10 @@ export interface SimLink extends SimulationLinkDatum<SimNode> {
 }
 
 function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
-  const base = type === 'scripture' ? 42 : 38;
-  return Math.min(110, Math.max(26, (base + weight * 5) * sizeMultiplier));
+  const base = type === 'scripture' ? 24 : 20;
+  return Math.min(64, Math.max(14, (base + weight * 3.5) * sizeMultiplier));
 }
 
-/**
- * Deterministic per-node animation phase in [0, 2*PI), derived from the node id.
- * Stable across rebuilds (no per-frame randomness, no popping) and well spread
- * across distinct ids.
- */
-function hashPhase(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) | 0;
-  }
-  const positive = ((h % 1000) + 1000) % 1000;
-  return (positive / 1000) * Math.PI * 2;
-}
 
 /**
  * Owns the d3-force simulation, canvas rendering, and pointer interaction
@@ -179,7 +149,7 @@ export class GraphView extends Observable<GraphViewState> {
   private resizeObserver: ResizeObserver | null = null;
   private wheelListener: ((e: WheelEvent) => void) | null = null;
 
-  private sim: Simulation<SimNode, SimLink> | null = null;
+  private sim: Simulation3<SimNode> | null = null;
   private simNodes: SimNode[] = [];
   private simLinks: SimLink[] = [];
   private tickCount = 0;
@@ -196,12 +166,13 @@ export class GraphView extends Observable<GraphViewState> {
   private getNeighborhoodFn: ((id: string, depth: number) => Set<string>) | null = null;
 
   private hoveredNodeId: string | null = null;
-  private transform = { x: 0, y: 0, scale: 1 };
+  private camera: SphereCamera = { yaw: 0, pitch: 0.35, scale: 1 };
+  private lastRotateTime: number | null = null;
   private hasFit = false;
   private needsSettle = false;
 
-  private dragState: { active: boolean; moved: boolean; startX: number; startY: number; origTx: number; origTy: number } = {
-    active: false, moved: false, startX: 0, startY: 0, origTx: 0, origTy: 0,
+  private dragState = {
+    active: false, moved: false, startX: 0, startY: 0, origYaw: 0, origPitch: 0,
   };
 
   constructor(deps: GraphViewDeps) {
@@ -287,8 +258,10 @@ export class GraphView extends Observable<GraphViewState> {
           this.needsSettle = false;
           this.settle();
         } else {
-          this.sim.tick();
-          this.onTick();
+          // Layout is frozen post-settle; only the camera rotates.
+          // Do NOT tick the sim — positions are stable.
+          this.advanceRotation();
+          this.draw();
         }
       }
       this.rafHandle = requestAnimationFrame(loop);
@@ -309,32 +282,35 @@ export class GraphView extends Observable<GraphViewState> {
       this.runAutoFit();
       this.hasFit = true;
     }
+    this.advanceRotation();
     this.draw();
   }
 
   private runAutoFit(): void {
     const canvas = this.canvas;
     if (!canvas) return;
+    if (this.simNodes.length === 0) return;
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
+    const R = sphereRadius(this.simNodes.length);
+    const maxNodeR = Math.max(...this.simNodes.map((n) => n.radius));
+    const fit = (AUTO_FIT_FILL * (Math.min(width, height) - 2 * AUTO_FIT_VIEWPORT_PADDING)) / (2 * (R + maxNodeR));
+    this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fit));
+    // Sphere is origin-centred; projection adds the viewport centre, so no x/y offset.
+  }
 
-    const placed = this.simNodes.filter((n) => n.x != null && n.y != null);
-    if (placed.length === 0) return;
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const n of placed) {
-      minX = Math.min(minX, n.x! - n.radius - AUTO_FIT_NODE_MARGIN);
-      minY = Math.min(minY, n.y! - n.radius - AUTO_FIT_NODE_MARGIN);
-      maxX = Math.max(maxX, n.x! + n.radius + AUTO_FIT_NODE_MARGIN);
-      maxY = Math.max(maxY, n.y! + n.radius + AUTO_FIT_NODE_MARGIN);
+  private advanceRotation(): void {
+    const now = this.deps.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : 0);
+    const last = this.lastRotateTime ?? now;
+    const dt = (now - last) / 1000;
+    this.lastRotateTime = now;
+    const reduced = this.deps.prefersReducedMotion?.() ?? false;
+    const idle = !this.dragState.active && this.hoveredNodeId === null;
+    if (!reduced && idle && dt > 0) {
+      this.camera.yaw += ROTATE_SPEED * dt;
+      this.syncPopoverScreen();
     }
-    const w = maxX - minX, h = maxY - minY;
-    if (w <= 0 || h <= 0) return;
-
-    const fitScale = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h, AUTO_FIT_MAX_SCALE);
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    this.transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
   }
 
   private draw(): void {
@@ -343,18 +319,16 @@ export class GraphView extends Observable<GraphViewState> {
     if (!ctx || !canvas) return;
 
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
-    const { x: tx, y: ty, scale } = this.transform;
-
-    const t = (this.deps.now?.() ?? performance.now()) / 1000;
-    const amp = this.deps.prefersReducedMotion?.() ? 0 : DRIFT_AMPLITUDE;
-    const drawnPos = (n: SimNode): { x: number; y: number } => {
-      const { ox, oy } = driftOffset(n.phase, t, amp);
-      return { x: (n.x ?? 0) + ox, y: (n.y ?? 0) + oy };
-    };
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+    const cx = width / 2;
+    const cy = height / 2;
+    const cam = this.camera;
+    const R = sphereRadius(this.simNodes.length);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, tx * dpr, ty * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS-pixel screen space
 
     const hovered = this.hoveredNodeId;
     const connectedIds = new Set<string>();
@@ -368,65 +342,80 @@ export class GraphView extends Observable<GraphViewState> {
       }
     }
 
-    // Edges
+    // Project every node once; depth-sort back-to-front.
+    const drawn = this.simNodes
+      .filter((n) => n.x != null && n.y != null)
+      .map((n) => {
+        const p = projectPoint({ x: n.x ?? 0, y: n.y ?? 0, z: n.z ?? 0 }, cam, cx, cy);
+        const dn = depthNorm(p.depth, R);
+        return { n, p, dn };
+      })
+      .sort((a, b) => a.p.depth - b.p.depth);
+
+    // Edges — alpha reduced by endpoint depth so back edges recede.
+    const screen = new Map<string, { sx: number; sy: number; dn: number }>();
+    for (const d of drawn) screen.set(d.n.id, { sx: d.p.sx, sy: d.p.sy, dn: d.dn });
     for (const link of this.simLinks) {
       const src = link.source as SimNode;
       const tgt = link.target as SimNode;
-      if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue;
-      const a = drawnPos(src);
-      const b = drawnPos(tgt);
+      const a = screen.get(src.id);
+      const b = screen.get(tgt.id);
+      if (!a || !b) continue;
+      const meanDepth = (a.dn + b.dn) / 2;            // 0 back .. 1 front
+      const depthFade = 0.2 + meanDepth * 0.8;        // never fully invisible
       const isHighlighted = hovered && connectedIds.has(src.id) && connectedIds.has(tgt.id);
-      const alpha = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.55;
+      const base = hovered ? (isHighlighted ? 0.9 : 0.06) : 0.5;
+      const alpha = base * depthFade;
       ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness;
+      ctx.lineWidth = (1.8 + link.weight * 1.5) * this.settings.edgeThickness * cam.scale;
       ctx.stroke();
     }
 
-    // Nodes
+    // Nodes — back-to-front, depth-scaled radius + depth-faded fill.
     const activeId = this.effectiveActiveId();
-    for (const n of this.simNodes) {
-      if (n.x == null || n.y == null) continue;
-      const d = drawnPos(n);
+    for (const { n, p, dn } of drawn) {
+      const drawR = n.radius * cam.scale * depthScale(dn);
       const isConnected = !hovered || connectedIds.has(n.id);
-      const alpha = hovered ? (isConnected ? 1 : 0.12) : 1;
+      const fade = depthAlpha(dn) * (hovered ? (isConnected ? 1 : 0.18) : 1);
       const color = NODE_COLORS[n.type] ?? '#999';
 
       if (n.id === activeId) {
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 10, 0, Math.PI * 2);
+        ctx.arc(p.sx, p.sy, drawR + 10 * cam.scale, 0, Math.PI * 2);
         ctx.fillStyle = `${color}30`;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 5, 0, Math.PI * 2);
+        ctx.arc(p.sx, p.sy, drawR + 5 * cam.scale, 0, Math.PI * 2);
         ctx.fillStyle = `${color}20`;
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(d.x, d.y, n.radius, 0, Math.PI * 2);
+      ctx.arc(p.sx, p.sy, drawR, 0, Math.PI * 2);
       ctx.fillStyle = color;
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = fade;
       ctx.fill();
       ctx.globalAlpha = 1;
-
-      ctx.font = `${n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = `rgba(62, 50, 40, ${alpha * 0.85})`;
-      ctx.fillText(n.title, d.x, d.y + n.radius + 22);
     }
 
+    // Hover label — only the hovered node, at its projected position.
     if (hovered) {
-      const n = this.simNodes.find((x) => x.id === hovered);
-      if (n && n.x != null && n.y != null) {
-        const d = drawnPos(n);
+      const d = drawn.find((x) => x.n.id === hovered);
+      if (d) {
+        const drawR = d.n.radius * cam.scale * depthScale(d.dn);
         ctx.beginPath();
-        ctx.arc(d.x, d.y, n.radius + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = `${NODE_COLORS[n.type] ?? '#999'}80`;
+        ctx.arc(d.p.sx, d.p.sy, drawR + 4 * cam.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = `${NODE_COLORS[d.n.type] ?? '#999'}80`;
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.font = `${d.n.radius > 24 ? '15px' : '13px'} Outfit, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(62, 50, 40, 0.85)';
+        ctx.fillText(d.n.title, d.p.sx, d.p.sy + drawR + 10);
       }
     }
 
@@ -460,17 +449,15 @@ export class GraphView extends Observable<GraphViewState> {
       }
     }
 
-    const link = this.sim.force<ForceLink<SimNode, SimLink>>('link');
+    const link = this.sim.force('link') as import('d3-force-3d').LinkForce3<SimNode, SimLink> | undefined;
     if (link) {
       link.distance((d) => settings.linkDistance / d.weight);
       link.strength((d) => settings.linkForce * d.weight);
     }
 
-    const charge = this.sim.force<ForceManyBody<SimNode>>('charge');
+    const charge = this.sim.force('charge') as import('d3-force-3d').ManyBodyForce3<SimNode> | undefined;
     if (charge) charge.strength(-settings.repelForce);
-
-    const center = this.sim.force<ForceCenter<SimNode>>('center');
-    if (center) center.strength(settings.centerForce);
+    // No center force in the sphere layout; the 'sphere' force owns global shape.
 
     // Re-warm alpha so the next external tick applies the new forces.
     // Do NOT call .restart() — d3's internal timer is intentionally stopped;
@@ -528,15 +515,19 @@ export class GraphView extends Observable<GraphViewState> {
   handleMouseMove = (e: { clientX: number; clientY: number }): void => {
     if (this.dragState.active) {
       this.dragState.moved = true;
-      this.transform.x = this.dragState.origTx + (e.clientX - this.dragState.startX);
-      this.transform.y = this.dragState.origTy + (e.clientY - this.dragState.startY);
+      const dx = e.clientX - this.dragState.startX;
+      const dy = e.clientY - this.dragState.startY;
+      this.camera.yaw = this.dragState.origYaw + dx * ORBIT_SENSITIVITY;
+      let pitch = this.dragState.origPitch - dy * ORBIT_SENSITIVITY;
+      pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
+      this.camera.pitch = pitch;
       this.syncPopoverScreen();
       this.updateCursor();
       this.draw();
       return;
     }
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    const id = this.findNodeAt(x, y)?.id ?? null;
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    const id = this.findNodeAt(sx, sy)?.id ?? null;
     if (id !== this.hoveredNodeId) {
       this.hoveredNodeId = id;
       this.updateCursor();
@@ -544,16 +535,21 @@ export class GraphView extends Observable<GraphViewState> {
     }
   };
 
+  handleMouseLeave = (): void => {
+    if (this.hoveredNodeId !== null) {
+      this.hoveredNodeId = null;
+      this.updateCursor();
+      this.draw();
+    }
+  };
+
   handleMouseDown = (e: { clientX: number; clientY: number }): void => {
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    if (!this.findNodeAt(x, y)) {
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    if (!this.findNodeAt(sx, sy)) {
       this.dragState = {
-        active: true,
-        moved: false,
-        startX: e.clientX,
-        startY: e.clientY,
-        origTx: this.transform.x,
-        origTy: this.transform.y,
+        active: true, moved: false,
+        startX: e.clientX, startY: e.clientY,
+        origYaw: this.camera.yaw, origPitch: this.camera.pitch,
       };
     }
   };
@@ -567,8 +563,8 @@ export class GraphView extends Observable<GraphViewState> {
     }
     this.dragState.active = false;
     this.dragState.moved = false;
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    const node = this.findNodeAt(x, y);
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    const node = this.findNodeAt(sx, sy);
     if (!node) {
       this.setState((prev) => prev.popover === null ? prev : { ...prev, popover: null });
       return;
@@ -585,9 +581,11 @@ export class GraphView extends Observable<GraphViewState> {
       if (current && current.nodeId === node.id) {
         this.setState((prev) => ({ ...prev, popover: null }));
       } else {
-        const t = this.transform;
-        const screenX = (node.x ?? 0) * t.scale + t.x;
-        const screenY = (node.y ?? 0) * t.scale + t.y;
+        const dpr = this.deps.devicePixelRatio?.() ?? 1;
+        const width = (this.canvas?.width ?? 0) / dpr, height = (this.canvas?.height ?? 0) / dpr;
+        const p = projectPoint({ x: node.x ?? 0, y: node.y ?? 0, z: node.z ?? 0 }, this.camera, width / 2, height / 2);
+        const screenX = p.sx;
+        const screenY = p.sy;
         this.setState(() => ({
           popover: {
             nodeId: node.id,
@@ -620,56 +618,58 @@ export class GraphView extends Observable<GraphViewState> {
     }
   }
 
-  private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
-    if (!this.canvas) return { x: 0, y: 0 };
+  private toScreen(clientX: number, clientY: number): { sx: number; sy: number } {
+    if (!this.canvas) return { sx: 0, sy: 0 };
     const rect = this.canvas.getBoundingClientRect();
-    const { x: tx, y: ty, scale } = this.transform;
-    return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+    return { sx: clientX - rect.left, sy: clientY - rect.top };
   }
 
-  private findNodeAt(wx: number, wy: number): SimNode | null {
-    for (let i = this.simNodes.length - 1; i >= 0; i--) {
-      const n = this.simNodes[i];
+  private findNodeAt(sx: number, sy: number): SimNode | null {
+    if (!this.canvas) return null;
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
+    const cx = width / 2, cy = height / 2;
+    const cam = this.camera;
+    const R = sphereRadius(this.simNodes.length);
+    let best: SimNode | null = null;
+    let bestDepth = -Infinity;
+    for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
-      const dx = wx - n.x, dy = wy - n.y;
-      if (dx * dx + dy * dy <= (n.radius + 4) ** 2) return n;
+      const p = projectPoint({ x: n.x, y: n.y, z: n.z ?? 0 }, cam, cx, cy);
+      const drawR = n.radius * cam.scale * depthScale(depthNorm(p.depth, R));
+      const dx = sx - p.sx, dy = sy - p.sy;
+      if (dx * dx + dy * dy <= (drawR + 4) ** 2 && p.depth > bestDepth) {
+        best = n;
+        bestDepth = p.depth;
+      }
     }
-    return null;
+    return best;
   }
 
   handleWheel = (e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void => {
     e.preventDefault?.();
-    if (!this.canvas) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
     const factor = e.deltaY > 0 ? ZOOM_OUT_FACTOR : ZOOM_IN_FACTOR;
-    const t = this.transform;
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale * factor));
-    // Anchor world-point under cursor: compute offset ratio with OLD scale before mutating it.
-    const ratio = newScale / t.scale;
-    t.x = mx - (mx - t.x) * ratio;
-    t.y = my - (my - t.y) * ratio;
-    t.scale = newScale;
+    this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, this.camera.scale * factor));
     this.syncPopoverScreen();
     this.draw();
   };
 
   private syncPopoverScreen(): void {
     const current = this.getSnapshot().popover;
-    if (!current) return;
-    const node = this.simNodes.find((n) => n.id === current.nodeId);
-    if (!node || node.x == null || node.y == null) return;
-    const t = this.transform;
-    const screenX = node.x * t.scale + t.x;
-    const screenY = node.y * t.scale + t.y;
-    if (screenX === current.screenX && screenY === current.screenY) return;
-    this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX, screenY } } : prev);
+    if (!current || !this.canvas) return;
+    const n = this.simNodes.find((x) => x.id === current.nodeId);
+    if (!n || n.x == null || n.y == null) return;
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const width = this.canvas.width / dpr, height = this.canvas.height / dpr;
+    const p = projectPoint({ x: n.x, y: n.y, z: n.z ?? 0 }, this.camera, width / 2, height / 2);
+    if (p.sx === current.screenX && p.sy === current.screenY) return;
+    this.setState((prev) => prev.popover ? { popover: { ...prev.popover, screenX: p.sx, screenY: p.sy } } : prev);
   }
 
-  /** Test affordance — read transform without subscribing. */
-  getTransform(): { x: number; y: number; scale: number } {
-    return { ...this.transform };
+  /** Test affordance — read the camera without subscribing. */
+  getCamera(): SphereCamera {
+    return { ...this.camera };
   }
 
   private rebuild(): void {
@@ -677,21 +677,31 @@ export class GraphView extends Observable<GraphViewState> {
     const filteredIds = new Set(filtered.map((n) => n.id));
 
     // Preserve positions of surviving nodes.
-    const prevPos = new Map<string, { x: number; y: number; vx?: number; vy?: number }>();
+    const prevPos = new Map<string, { x: number; y: number; z: number; vx?: number; vy?: number; vz?: number }>();
     for (const n of this.simNodes) {
-      if (n.x != null && n.y != null) prevPos.set(n.id, { x: n.x, y: n.y, vx: n.vx, vy: n.vy });
+      if (n.x != null && n.y != null) {
+        prevPos.set(n.id, { x: n.x, y: n.y, z: n.z ?? 0, vx: n.vx, vy: n.vy, vz: (n as { vz?: number }).vz });
+      }
     }
 
-    this.simNodes = filtered.map((n) => {
+    const R = sphereRadius(filtered.length);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    this.simNodes = filtered.map((n, i) => {
       const prev = prevPos.get(n.id);
+      // Seed on a Fibonacci sphere so the sim starts near a good sphere and settles fast.
+      const yUnit = filtered.length > 1 ? 1 - (i / (filtered.length - 1)) * 2 : 0;
+      const rUnit = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
+      const theta = golden * i;
       return {
         id: n.id, type: n.type, title: n.title, weight: n.weight,
         radius: computeRadius(n.type, n.weight, this.settings.nodeSize),
         tags: n.tags,
         scriptureText: n.scriptureText,
         scriptureTranslation: n.scriptureTranslation,
-        phase: hashPhase(n.id),
-        x: prev?.x, y: prev?.y, vx: prev?.vx, vy: prev?.vy,
+        x: prev?.x ?? Math.cos(theta) * rUnit * R,
+        y: prev?.y ?? yUnit * R,
+        z: prev?.z ?? Math.sin(theta) * rUnit * R,
+        vx: prev?.vx, vy: prev?.vy, vz: prev?.vz,
       };
     });
 
@@ -708,22 +718,14 @@ export class GraphView extends Observable<GraphViewState> {
 
     if (this.sim) this.sim.stop();
 
-    const width = this.canvas?.width
-      ? this.canvas.width / (this.deps.devicePixelRatio?.() ?? 1)
-      : 400;
-    const height = this.canvas?.height
-      ? this.canvas.height / (this.deps.devicePixelRatio?.() ?? 1)
-      : 400;
-
-    this.sim = forceSimulation<SimNode>(this.simNodes)
+    this.sim = forceSimulation<SimNode>(this.simNodes, 3)
       .force('link', forceLink<SimNode, SimLink>(this.simLinks)
         .id((d) => d.id)
         .distance((d) => this.settings.linkDistance / d.weight)
         .strength((d) => this.settings.linkForce * d.weight))
       .force('charge', forceManyBody<SimNode>().strength(-this.settings.repelForce))
-      .force('center', forceCenter(width / 2, height / 2).strength(this.settings.centerForce))
-      .force('collide', forceCollide<SimNode>().radius((d) => d.radius * 0.8))
-      .force('tags', forceSharedTags<SimNode>(0.0003))
+      .force('sphere', forceSphere<SimNode>(R, 0.08))
+      .numDimensions(3)
       .alphaDecay(0.015)
       .velocityDecay(0.15);
 

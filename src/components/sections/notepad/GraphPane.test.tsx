@@ -49,7 +49,7 @@ vi.mock('@/notepad/graph/graph-view', () => {
   return {
     GraphView,
     DEFAULT_FILTERS: { scripture: true, sermon: true, devotion: true, theme: true },
-    DEFAULT_SETTINGS: { depth: 1, nodeSize: 1, edgeThickness: 1, linkDistance: 100, linkForce: 0.005, repelForce: 500, centerForce: 0.05 },
+    DEFAULT_SETTINGS: { depth: 1, nodeSize: 1, edgeThickness: 1, linkDistance: 100, linkForce: 0.005, repelForce: 500 },
   };
 });
 

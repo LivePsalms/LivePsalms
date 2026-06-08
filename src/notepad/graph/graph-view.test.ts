@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GraphView, DEFAULT_SETTINGS, driftOffset, DRIFT_AMPLITUDE, DRIFT_SPEED } from './graph-view';
+import { GraphView, DEFAULT_SETTINGS } from './graph-view';
 import type { GraphViewDeps } from './graph-view';
 import type { GraphEdge, GraphNode } from './types';
 
@@ -24,7 +24,7 @@ class MockContext {
   arc(...a: unknown[]) { this.rec('arc', ...a); }
   moveTo(...a: unknown[]) { this.rec('moveTo', ...a); }
   lineTo(...a: unknown[]) { this.rec('lineTo', ...a); }
-  stroke() { this.rec('stroke'); }
+  stroke() { this.rec('stroke', this.strokeStyle); }
   fill() { this.rec('fill'); }
   fillText(...a: unknown[]) { this.rec('fillText', ...a); }
   measureText(s: string) { return { width: s.length * 6 } as unknown as TextMetrics; }
@@ -373,8 +373,10 @@ describe('GraphView — pointer interaction', () => {
     const { view, opens } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Node at world (100, 100, 0) with default camera {yaw:0,pitch:0.35,scale:1}
+    // projects to screen ≈ (300, 294) on a 400×400 canvas (cx=cy=200).
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 
@@ -382,8 +384,9 @@ describe('GraphView — pointer interaction', () => {
     const { view, opens } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node's projected screen position ≈ (300, 294).
+    view.handleMouseDown({ clientX: 0, clientY: 0 });
+    view.handleMouseUp({ clientX: 0, clientY: 0 });
     expect(opens).toEqual([]);
   });
 
@@ -400,8 +403,8 @@ describe('GraphView — pointer interaction', () => {
       null,
     );
     placeNode(view, 'scripture:gen-1-1', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     const snap = view.getSnapshot();
     expect(snap.popover).toMatchObject({
       nodeId: 'scripture:gen-1-1',
@@ -418,11 +421,11 @@ describe('GraphView — pointer interaction', () => {
       [], null,
     );
     placeNode(view, 's', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).not.toBeNull();
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).toBeNull();
   });
 
@@ -433,11 +436,12 @@ describe('GraphView — pointer interaction', () => {
       [], null,
     );
     placeNode(view, 's', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).not.toBeNull();
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node's projected screen position ≈ (300, 294).
+    view.handleMouseDown({ clientX: 0, clientY: 0 });
+    view.handleMouseUp({ clientX: 0, clientY: 0 });
     expect(view.getSnapshot().popover).toBeNull();
   });
 
@@ -445,147 +449,27 @@ describe('GraphView — pointer interaction', () => {
     const { view } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    // Hover at the node's projected screen position ≈ (300, 294).
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(view.getHoveredNodeId()).toBe('a');
-    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    // (0, 0) is far off — no node there.
+    view.handleMouseMove({ clientX: 0, clientY: 0 });
     expect(view.getHoveredNodeId()).toBeNull();
   });
 
-  it('popover screenX/screenY follows pan', () => {
+  it('wheel zoom changes camera.scale (popover screen-sync deferred to Task 11)', () => {
     const { view } = attached();
     view.setData(
       [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
       [], null,
     );
-    // place node at world (100, 100)
-    const sim = view.getSimNodes();
-    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    // open popover at identity transform → screen = (100, 100)
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
-    expect(view.getSnapshot().popover).toMatchObject({ screenX: 100, screenY: 100 });
-    // pan: drag empty space, moves transform.x to 50
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseMove({ clientX: 350, clientY: 320 });
-    // popover screen should now be (100 + 50, 100 + 20) = (150, 120)
-    expect(view.getSnapshot().popover).toMatchObject({ screenX: 150, screenY: 120 });
-  });
-
-  it('popover screenX/screenY follows zoom', () => {
-    const { view } = attached();
-    view.setData(
-      [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
-      [], null,
-    );
-    const sim = view.getSimNodes();
-    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
-    const before = view.getSnapshot().popover!.screenX;
+    const before = view.getCamera().scale;
     view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 }); // zoom in
-    // After zoom in (factor 1.08, anchor at cursor 0,0), the world point (100, 100)
-    // maps to a different screen position. Just verify it changed.
-    expect(view.getSnapshot().popover!.screenX).not.toBe(before);
+    // Wheel now drives camera.scale, not _transform.
+    expect(view.getCamera().scale).toBeGreaterThan(before);
   });
 });
 
-describe('GraphView — pan and wheel zoom', () => {
-  it('drag on empty space pans the transform', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    view.handleMouseDown({ clientX: 200, clientY: 200 });
-    view.handleMouseMove({ clientX: 250, clientY: 230 });
-    expect(view.getTransform()).toMatchObject({ x: 50, y: 30 });
-    view.handleMouseUp({ clientX: 250, clientY: 230 });
-  });
-
-  it('drag does not start when mouse-down is on a node', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    const sim = view.getSimNodes();
-    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseMove({ clientX: 200, clientY: 200 });
-    expect(view.getTransform()).toMatchObject({ x: 0, y: 0 });
-  });
-
-  it('wheel up zooms in, anchored at the cursor', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    const before = view.getTransform();
-    view.handleWheel({ clientX: 100, clientY: 100, deltaY: -100 });
-    const after = view.getTransform();
-    expect(after.scale).toBeGreaterThan(before.scale);
-  });
-
-  it('wheel down zooms out', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    const before = view.getTransform().scale;
-    view.handleWheel({ clientX: 100, clientY: 100, deltaY: 100 });
-    expect(view.getTransform().scale).toBeLessThan(before);
-  });
-
-  it('zoom is clamped between 0.1 and 5', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    for (let i = 0; i < 200; i++) view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 });
-    expect(view.getTransform().scale).toBeLessThanOrEqual(5);
-    for (let i = 0; i < 400; i++) view.handleWheel({ clientX: 0, clientY: 0, deltaY: 100 });
-    expect(view.getTransform().scale).toBeGreaterThanOrEqual(0.1);
-  });
-});
-
-describe('GraphView — auto-fit camera', () => {
-  it('changes the transform after tick 80 when nodes are spread out', () => {
-    const { view } = attached();
-    view.setData(
-      [
-        node({ id: 'a', type: 'devotion' }),
-        node({ id: 'b', type: 'sermon' }),
-        node({ id: 'c', type: 'theme' }),
-      ],
-      [edge({ id: 'r1', source: 'a', target: 'b' }), edge({ id: 'r2', source: 'b', target: 'c' })],
-      null,
-    );
-    view.tickFor(79);
-    const before = view.getTransform();
-    view.tickFor(1); // hits tick 80
-    const after = view.getTransform();
-    expect(after).not.toEqual(before);
-  });
-
-  it('only fires once — subsequent ticks do not change the transform from auto-fit', () => {
-    const { view } = attached();
-    view.setData(
-      [
-        node({ id: 'a', type: 'devotion' }),
-        node({ id: 'b', type: 'sermon' }),
-        node({ id: 'c', type: 'theme' }),
-      ],
-      [edge({ id: 'r1', source: 'a', target: 'b' })],
-      null,
-    );
-    view.tickFor(80);
-    const afterFit = { ...view.getTransform() };
-    view.tickFor(50);
-    expect(view.getTransform()).toEqual(afterFit);
-  });
-
-  it('resets the auto-fit gate when setData is called again', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
-    view.tickFor(80);
-    const t1 = { ...view.getTransform() };
-    view.setData(
-      [node({ id: 'x', type: 'theme' }), node({ id: 'y', type: 'devotion' }), node({ id: 'z', type: 'sermon' })],
-      [edge({ id: 'r1', source: 'x', target: 'y' })],
-      null,
-    );
-    view.tickFor(80);
-    expect(view.getTransform()).not.toEqual(t1);
-  });
-});
 
 describe('GraphView — settle (no entrance motion)', () => {
   const spread = () => ({
@@ -606,16 +490,6 @@ describe('GraphView — settle (no entrance motion)', () => {
     expect(() => view.settle()).not.toThrow();
   });
 
-  it('fits the camera in one shot, without per-tick animation', () => {
-    const { view } = attached();
-    const { nodes, edges } = spread();
-    view.setData(nodes, edges, null);
-    const identity = view.getTransform();
-    view.settle();
-    // Auto-fit ran during settle, so the camera moved off the identity transform.
-    expect(view.getTransform()).not.toEqual(identity);
-  });
-
   it('leaves the layout stable so the first painted frame shows no motion', () => {
     const { view } = attached();
     const { nodes, edges } = spread();
@@ -630,15 +504,7 @@ describe('GraphView — settle (no entrance motion)', () => {
     }
   });
 
-  it('does not re-fit the camera on ticks after settling', () => {
-    const { view } = attached();
-    const { nodes, edges } = spread();
-    view.setData(nodes, edges, null);
-    view.settle();
-    const fitted = { ...view.getTransform() };
-    view.tickFor(120);
-    expect(view.getTransform()).toEqual(fitted);
-  });
+
 });
 
 describe('GraphView — cursor management', () => {
@@ -661,7 +527,8 @@ describe('GraphView — cursor management', () => {
     const { view, canvas } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    // Hover at the node's projected screen position ≈ (300, 294).
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(canvas.style.cursor).toBe('pointer');
   });
 
@@ -669,9 +536,10 @@ describe('GraphView — cursor management', () => {
     const { view, canvas } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(canvas.style.cursor).toBe('pointer');
-    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node — no node there.
+    view.handleMouseMove({ clientX: 0, clientY: 0 });
     expect(canvas.style.cursor).toBe('grab');
   });
 
@@ -718,7 +586,6 @@ describe('GraphView — setSettings (in-place updates)', () => {
       linkDistance: 100,
       linkForce: 0.005,
       repelForce: 500,
-      centerForce: 0.05,
       edgeThickness: 2,
     });
     expect(view.getSimNodes()[0]).toBe(before);
@@ -765,8 +632,9 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({ onNodeTap: (n) => { taps.push(n); return true; } });
     view.setData([node({ id: 'a', type: 'devotion', title: 'A' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Click at projected screen position of world (100, 100, 0) ≈ (300, 294).
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(taps).toEqual([{ id: 'a', type: 'devotion', title: 'A' }]);
     expect(opens).toEqual([]);
   });
@@ -780,8 +648,8 @@ describe('GraphView — onNodeTap interception', () => {
       null,
     );
     placeNode(view, 'scripture:gen-1-1', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(taps).toEqual([{ id: 'scripture:gen-1-1', type: 'scripture', title: 'Genesis 1:1' }]);
     expect(view.getSnapshot().popover).toBeNull();
   });
@@ -790,8 +658,8 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({ onNodeTap: () => false });
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 
@@ -799,8 +667,8 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({}); // no onNodeTap key
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 });
@@ -842,132 +710,288 @@ describe('GraphView — setFocus', () => {
   });
 });
 
-describe('driftOffset', () => {
-  it('returns zero offset when amplitude is zero', () => {
-    expect(driftOffset(1.234, 5, 0)).toEqual({ ox: 0, oy: 0 });
+
+
+
+
+describe('GraphView — sphere rendering', () => {
+  // Pull the radius of the LAST node-circle arc drawn (front-most, painted last).
+  function arcs(canvas: MockCanvas) {
+    return canvas.ctx.calls.filter((c) => c.method === 'arc').map((c) => c.args as number[]);
+  }
+
+  it('paints nodes back-to-front (deeper nodes drawn earlier, so radii increase)', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'back', type: 'devotion' }), node({ id: 'mid', type: 'sermon' }), node({ id: 'front', type: 'theme' })],
+      [], null,
+    );
+    const sim = view.getSimNodes();
+    const pin = (id: string, z: number) => {
+      const s = sim.find((n) => n.id === id)!;
+      s.x = 0; s.y = 0; s.z = z; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = z;
+    };
+    // All non-scripture → identical base radius, so depthScale alone drives drawn size.
+    pin('back', -200); pin('mid', 0); pin('front', 200);
+    view.settle();
+    const radii = arcs(canvas).map((a) => a[2]); // arc radius arg, in draw order
+    expect(radii.length).toBe(3);
+    expect(radii[0]).toBeLessThan(radii[1]); // back drawn first, smallest
+    expect(radii[1]).toBeLessThan(radii[2]); // front drawn last, largest
   });
 
-  it('is elliptical: x and y use different frequencies', () => {
-    const phase = 0;
-    // At t such that DRIFT_SPEED*t = PI/2, sin term is at max, cos term is not.
-    const t = Math.PI / 2 / DRIFT_SPEED;
-    const { ox, oy } = driftOffset(phase, t, DRIFT_AMPLITUDE);
-    expect(ox).toBeCloseTo(DRIFT_AMPLITUDE, 5);
-    expect(Math.abs(oy)).toBeLessThan(DRIFT_AMPLITUDE); // y runs at 0.78x => not at its peak
-  });
-
-  it('different phases produce different offsets at the same time', () => {
-    const a = driftOffset(0, 3, DRIFT_AMPLITUDE);
-    const b = driftOffset(2.0, 3, DRIFT_AMPLITUDE);
-    expect(a).not.toEqual(b);
+  it('a front-facing node is drawn larger than the same node facing away', () => {
+    const { view, canvas } = attached();
+    view.setData([node({ id: 'solo', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    // Pin one node straight in front (+z) vs straight behind (-z); compare drawn radius.
+    s.x = 0; s.y = 0; s.z = 200; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 200;
+    view.settle();
+    const front = arcs(canvas).at(-1)![2]; // arc radius arg
+    s.z = -200; (s as { fz?: number }).fz = -200;
+    view.settle();
+    const back = arcs(canvas).at(-1)![2];
+    expect(front).toBeGreaterThan(back);
   });
 });
 
-describe('GraphView — node phase', () => {
-  it('assigns a phase in [0, 2*PI) to every node', () => {
+describe('GraphView — 3D sphere layout', () => {
+  it('settles every node onto the sphere surface (≈ radius R from origin)', () => {
     const { view } = attached();
-    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
-    for (const n of view.getSimNodes()) {
-      expect(n.phase).toBeGreaterThanOrEqual(0);
-      expect(n.phase).toBeLessThan(Math.PI * 2);
+    view.setData(
+      [
+        node({ id: 'a', type: 'devotion' }),
+        node({ id: 'b', type: 'sermon' }),
+        node({ id: 'c', type: 'theme' }),
+        node({ id: 'd', type: 'devotion' }),
+        node({ id: 'e', type: 'sermon' }),
+      ],
+      [edge({ id: 'r1', source: 'a', target: 'b' }), edge({ id: 'r2', source: 'b', target: 'c' })],
+      null,
+    );
+    view.settle();
+    const sim = view.getSimNodes();
+    const R = Math.max(160, Math.sqrt(5) * 55); // sphereRadius(5)
+    for (const n of sim) {
+      const d = Math.sqrt((n.x ?? 0) ** 2 + (n.y ?? 0) ** 2 + (n.z ?? 0) ** 2);
+      // Within 35% of R — the constraint is soft, not a hard projection.
+      expect(d).toBeGreaterThan(R * 0.65);
+      expect(d).toBeLessThan(R * 1.35);
     }
   });
 
-  it('gives different ids different phases', () => {
+  it('gives every node a defined 3D position', () => {
     const { view } = attached();
-    view.setData([node({ id: 'alpha', type: 'devotion' }), node({ id: 'beta', type: 'sermon' })], [], null);
-    const [a, b] = view.getSimNodes();
-    expect(a.phase).not.toBe(b.phase);
-  });
-
-  it('keeps a node phase stable across a rebuild', () => {
-    const { view } = attached();
-    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
-    const first = view.getSimNodes()[0].phase;
-    view.setData([node({ id: 'alpha', type: 'devotion' })], [], null);
-    const second = view.getSimNodes()[0].phase;
-    expect(second).toBe(first);
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    view.settle();
+    for (const n of view.getSimNodes()) {
+      expect(typeof n.x).toBe('number');
+      expect(typeof n.y).toBe('number');
+      expect(typeof n.z).toBe('number');
+    }
   });
 });
 
-describe('GraphView — node drift animation', () => {
-  // Returns the [x, y] centre of the last arc drawn (the node circle for a
-  // single, non-active, non-hovered node).
-  function lastArcCentre(canvas: MockCanvas): [number, number] {
-    const arcs = canvas.ctx.calls.filter((c) => c.method === 'arc');
-    const args = arcs[arcs.length - 1].args as number[];
-    return [args[0], args[1]];
-  }
+describe('GraphView — sphere hit-testing', () => {
+  it('returns the front-most node when two overlap in screen space', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'front', type: 'devotion' }), node({ id: 'back', type: 'sermon' })], [], null);
+    const sim = view.getSimNodes();
+    const front = sim.find((n) => n.id === 'front')!;
+    const back = sim.find((n) => n.id === 'back')!;
+    // Same x/y (overlap on screen), different z. Pin so the sim can't move them.
+    front.x = 0; front.y = 0; front.z = 150; front.fx = 0; front.fy = 0; (front as { fz?: number }).fz = 150;
+    back.x = 0; back.y = 0; back.z = -150; back.fx = 0; back.fy = 0; (back as { fz?: number }).fz = -150;
+    view.settle();
+    // Flatten pitch to 0 so both nodes project to the exact screen centre and truly
+    // overlap (with the default tilt they'd project to different screen Y).
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0;
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // 400x400 canvas → centre
+    expect(view.getHoveredNodeId()).toBe('front');
+  });
 
-  function pinnedSingleNode(over: Partial<GraphViewDeps>) {
-    const { deps, opens } = makeDeps(over);
-    const view = new GraphView(deps);
-    const canvas = new MockCanvas();
-    const container = new MockContainer(400, 400);
-    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+  it('draws only the hovered node\'s label', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion', title: 'Alpha' }), node({ id: 'b', type: 'sermon', title: 'Beta' })],
+      [], null,
+    );
+    const sim = view.getSimNodes();
+    const a = sim.find((n) => n.id === 'a')!;
+    const b = sim.find((n) => n.id === 'b')!;
+    a.x = 0; a.y = 0; a.z = 0; a.fx = 0; a.fy = 0; (a as { fz?: number }).fz = 0;       // projects to centre
+    b.x = 999; b.y = 999; b.z = 0; b.fx = 999; b.fy = 999; (b as { fz?: number }).fz = 0; // far off-screen
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0;
+    const before = canvas.ctx.calls.length;
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // hover node 'a' at the centre
+    expect(view.getHoveredNodeId()).toBe('a');
+    const labels = canvas.ctx.calls.slice(before).filter((c) => c.method === 'fillText').map((c) => c.args[0]);
+    expect(labels).toEqual(['Alpha']);
+  });
+});
+
+describe('GraphView — drag to orbit', () => {
+  it('horizontal drag changes yaw, vertical drag changes pitch (clamped)', () => {
+    const { view } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
-    // Pin position so the d3 simulation cannot move the node; only drift can.
-    const s = view.getSimNodes()[0];
-    s.fx = 100; s.fy = 200;
-    return { view, canvas, opens, phase: s.phase };
-  }
-
-  it('moves a node draw position as the clock advances', () => {
-    let clock = 0;
-    const { view, canvas, phase } = pinnedSingleNode({ now: () => clock });
-    view.tickFor(1); // draws at clock = 0
-    expect(lastArcCentre(canvas)).toEqual([
-      100 + driftOffset(phase, 0, DRIFT_AMPLITUDE).ox,
-      200 + driftOffset(phase, 0, DRIFT_AMPLITUDE).oy,
-    ]);
-
-    clock = 1500; // 1.5 seconds later
-    view.tickFor(1); // draws at clock = 1500
-    const t = 1.5;
-    expect(lastArcCentre(canvas)).toEqual([
-      100 + driftOffset(phase, t, DRIFT_AMPLITUDE).ox,
-      200 + driftOffset(phase, t, DRIFT_AMPLITUDE).oy,
-    ]);
+    view.settle();
+    const before = view.getCamera();
+    view.handleMouseDown({ clientX: 10, clientY: 10 });   // empty space (node is centred, away from 10,10)
+    view.handleMouseMove({ clientX: 60, clientY: 40 });   // dragged +50x, +30y
+    const after = view.getCamera();
+    expect(after.yaw).not.toBeCloseTo(before.yaw, 6);
+    expect(after.pitch).not.toBeCloseTo(before.pitch, 6);
+    view.handleMouseUp({ clientX: 60, clientY: 40 });
   });
 
-  it('freezes when prefers-reduced-motion is set', () => {
-    let clock = 0;
-    const { view, canvas } = pinnedSingleNode({ now: () => clock, prefersReducedMotion: () => true });
-    view.tickFor(1);
-    expect(lastArcCentre(canvas)).toEqual([100, 200]);
-    clock = 9999;
-    view.tickFor(1);
-    expect(lastArcCentre(canvas)).toEqual([100, 200]);
+  it('clamps pitch within ±PITCH_LIMIT', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    view.handleMouseDown({ clientX: 10, clientY: 10 });
+    view.handleMouseMove({ clientX: 10, clientY: 100000 }); // huge vertical drag
+    expect(Math.abs(view.getCamera().pitch)).toBeLessThanOrEqual(1.3 + 1e-9);
+    view.handleMouseUp({ clientX: 10, clientY: 100000 });
   });
 });
 
-describe('GraphView — edge drift follows nodes', () => {
-  it('draws edge endpoints at the drifted node positions', () => {
-    const clock = 4000; // 4 seconds
+describe('GraphView — edge depth fade', () => {
+  function alphaOf(strokeStyle: string): number {
+    const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(strokeStyle);
+    return m ? parseFloat(m[1]) : NaN;
+  }
+
+  it('draws an edge between back-facing nodes fainter than one between front-facing nodes', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'fa', type: 'devotion' }), node({ id: 'fb', type: 'sermon' }),
+       node({ id: 'ba', type: 'devotion' }), node({ id: 'bb', type: 'sermon' })],
+      // 'front' edge first, 'back' edge second → strokes recorded in this order.
+      [edge({ id: 'front', source: 'fa', target: 'fb' }),
+       edge({ id: 'back', source: 'ba', target: 'bb' })],
+      null,
+    );
+    const sim = view.getSimNodes();
+    const pin = (id: string, x: number, y: number, z: number) => {
+      const s = sim.find((n) => n.id === id)!;
+      s.x = x; s.y = y; s.z = z; s.fx = x; s.fy = y; (s as { fz?: number }).fz = z;
+    };
+    // y=0 so depth ≈ z*cos(pitch). Front pair +z, back pair -z. No hover → 2 strokes total.
+    pin('fa', -40, 0, 200); pin('fb', 40, 0, 200);
+    pin('ba', -40, 0, -200); pin('bb', 40, 0, -200);
+    view.settle();
+
+    const strokes = canvas.ctx.calls.filter((c) => c.method === 'stroke').map((c) => String(c.args[0]));
+    expect(strokes.length).toBe(2);
+    expect(alphaOf(strokes[0])).toBeGreaterThan(alphaOf(strokes[1])); // front brighter than back
+  });
+});
+
+describe('GraphView — sphere zoom and auto-fit', () => {
+  it('wheel up increases camera scale, wheel down decreases it', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    view.settle();
+    const base = view.getCamera().scale;
+    view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 });
+    expect(view.getCamera().scale).toBeGreaterThan(base);
+    const up = view.getCamera().scale;
+    view.handleWheel({ clientX: 0, clientY: 0, deltaY: 100 });
+    expect(view.getCamera().scale).toBeLessThan(up);
+  });
+
+  it('auto-fit scales the sphere to fit the viewport', () => {
+    const { view } = attached(); // 400x400
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' }), node({ id: 'c', type: 'theme' })],
+      [], null,
+    );
+    view.settle(); // runs auto-fit
+    const R = Math.max(160, Math.sqrt(3) * 55);
+    const maxNodeR = Math.max(...view.getSimNodes().map((n) => n.radius));
+    const expected = (0.7 * (Math.min(400, 400) - 2 * 30)) / (2 * (R + maxNodeR));
+    expect(view.getCamera().scale).toBeCloseTo(expected, 4);
+  });
+});
+
+describe('GraphView — auto-rotation', () => {
+  it('advances yaw over time when idle', () => {
+    let clock = 0;
     const { deps } = makeDeps({ now: () => clock });
     const view = new GraphView(deps);
     const canvas = new MockCanvas();
     const container = new MockContainer(400, 400);
     view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
-    view.setData(
-      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })],
-      [edge({ id: 'r1', source: 'a', target: 'b' })],
-      null,
-    );
-    const a = view.getSimNodes().find((n) => n.id === 'a')!;
-    const b = view.getSimNodes().find((n) => n.id === 'b')!;
-    a.fx = 100; a.fy = 100;
-    b.fx = 300; b.fy = 300;
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);      // establishes last-frame time
+    clock = 1000; view.tickFor(1);   // +1s
+    expect(view.getCamera().yaw).toBeGreaterThan(before);
+  });
 
-    view.tickFor(1); // pins x=fx, y=fy, then draws
+  it('does not advance yaw under prefers-reduced-motion', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock, prefersReducedMotion: () => true });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    view.settle();
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);
+    clock = 5000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(before);
+  });
 
-    const t = 4;
-    const oa = driftOffset(a.phase, t, DRIFT_AMPLITUDE);
-    const ob = driftOffset(b.phase, t, DRIFT_AMPLITUDE);
-
-    const moveTo = canvas.ctx.calls.find((c) => c.method === 'moveTo')!.args as number[];
-    const lineTo = canvas.ctx.calls.find((c) => c.method === 'lineTo')!.args as number[];
-    expect(moveTo).toEqual([100 + oa.ox, 100 + oa.oy]);
-    expect(lineTo).toEqual([300 + ob.ox, 300 + ob.oy]);
+  it('does not advance yaw while a node is hovered', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    s.x = 0; s.y = 0; s.z = 0; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 0;
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0; // project to centre
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // hover the centred node
+    expect(view.getHoveredNodeId()).toBe('a');
+    const before = view.getCamera().yaw;
+    clock = 0; view.tickFor(1);
+    clock = 3000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(before);
   });
 });
+
+describe('GraphView — pointer leave', () => {
+  it('clears hover and resumes auto-rotation when the pointer leaves', () => {
+    let clock = 0;
+    const { deps } = makeDeps({ now: () => clock });
+    const view = new GraphView(deps);
+    const canvas = new MockCanvas();
+    const container = new MockContainer(400, 400);
+    view.attach(canvas as unknown as HTMLCanvasElement, container as unknown as HTMLElement);
+    view.setData([node({ id: 'a', type: 'devotion' })], [], null);
+    const s = view.getSimNodes()[0];
+    s.x = 0; s.y = 0; s.z = 0; s.fx = 0; s.fy = 0; (s as { fz?: number }).fz = 0;
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0; // project to centre
+    view.handleMouseMove({ clientX: 200, clientY: 200 });
+    expect(view.getHoveredNodeId()).toBe('a');
+    // hovered → rotation paused
+    const paused = view.getCamera().yaw;
+    clock = 0; view.tickFor(1); clock = 2000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBe(paused);
+    // pointer leaves → hover cleared → rotation resumes
+    view.handleMouseLeave();
+    expect(view.getHoveredNodeId()).toBe(null);
+    const resumed = view.getCamera().yaw;
+    clock = 2000; view.tickFor(1); clock = 3000; view.tickFor(1);
+    expect(view.getCamera().yaw).toBeGreaterThan(resumed);
+  });
+});
+

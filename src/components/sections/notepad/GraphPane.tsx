@@ -189,8 +189,6 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
               onChange={(v) => setSettings((s) => ({ ...s, linkForce: v }))} format={(v) => v.toFixed(3)} />
             <SettingRow label="Repel Force" min={100} max={2000} step={50} value={settings.repelForce}
               onChange={(v) => setSettings((s) => ({ ...s, repelForce: v }))} format={(v) => String(v)} />
-            <SettingRow label="Center Force" min={0.001} max={0.3} step={0.005} value={settings.centerForce}
-              onChange={(v) => setSettings((s) => ({ ...s, centerForce: v }))} format={(v) => v.toFixed(4)} />
             <button onClick={() => setSettings(DEFAULT_SETTINGS)}
               className="text-[10px] font-medium tracking-wider px-2 py-1 rounded hover:bg-black/5 transition-colors"
               style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
@@ -208,6 +206,7 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
           onPointerDown={(e) => view.handleMouseDown(e)}
           onPointerMove={(e) => view.handleMouseMove(e)}
           onPointerUp={(e) => view.handleMouseUp(e)}
+          onPointerLeave={() => view.handleMouseLeave()}
         />
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
