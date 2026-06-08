@@ -33,12 +33,16 @@ export function useChatThread(book: string, chapter: number, userId: string | nu
 
   const archiveAndReset = useCallback(async () => {
     if (!supabase || !userId) return;
-    await supabase
+    const { error: archiveErr } = await supabase
       .from('lamplight_chat_threads')
       .update({ archived: true })
       .eq('user_id', userId)
       .eq('passage_ref', passageRef)
       .eq('archived', false);
+    // If the archive write fails, surface it and keep the current conversation
+    // rather than clearing it (a reload would re-fetch the still-active thread).
+    if (archiveErr) { setError(archiveErr.message); return; }
+    setError(null);
     setMessages([]);
     setNonce((n) => n + 1);
   }, [userId, passageRef]);

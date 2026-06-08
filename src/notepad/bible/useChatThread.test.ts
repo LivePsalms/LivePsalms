@@ -97,4 +97,28 @@ describe('useChatThread', () => {
     await act(async () => { await result.current.archiveAndReset(); });
     expect(update).toHaveBeenCalledWith({ archived: true });
   });
+
+  it('archiveAndReset surfaces the error and keeps the conversation when the archive write fails', async () => {
+    maybeSingle.mockResolvedValue({ data: { id: 't1' }, error: null });
+    setOrderResult({ data: [{ id: 'm1', role: 'assistant', content: 'x', citations: [] }], error: null });
+
+    // update().eq().eq().eq() chain rejects with a Postgres error
+    const updEq3 = vi.fn().mockResolvedValue({ error: { message: 'archive failed' } });
+    const updEq2 = vi.fn(() => ({ eq: updEq3 }));
+    const updEq1 = vi.fn(() => ({ eq: updEq2 }));
+    const update = vi.fn(() => ({ eq: updEq1 }));
+    from.mockImplementation((t: string) =>
+      t === 'lamplight_chat_threads' ? { ...threadBuilder, update } : msgBuilder,
+    );
+
+    const { result } = renderHook(() => useChatThread('jhn', 10, 'u1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.messages.map((m) => m.id)).toEqual(['m1']);
+
+    await act(async () => { await result.current.archiveAndReset(); });
+    // The failed write is surfaced, and the existing conversation is preserved
+    // (not silently cleared and then re-loaded from the still-active thread).
+    expect(result.current.error).toBe('archive failed');
+    expect(result.current.messages.map((m) => m.id)).toEqual(['m1']);
+  });
 });
