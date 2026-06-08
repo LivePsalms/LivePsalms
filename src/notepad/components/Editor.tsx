@@ -446,8 +446,8 @@ export function NotepadEditor({
           {/* Interactive decoration overlay — absolutely positioned within the
               relative scroll container so it overlays content and scrolls with it. */}
           <DecorationLayer
-            // Keyed by note id so the frozen reference width re-snapshots to the
-            // current container size each time a different note is opened.
+            // Keyed by note id so the layer remounts per note, re-firing the
+            // one-shot onFirstWidth — each note's legacy decorations migrate on open.
             key={activeNote.id}
             ref={decorationLayerRef}
             decorations={decorationsApi.decorations}
@@ -459,6 +459,8 @@ export function NotepadEditor({
             onDuplicate={(id) => decorationsApi.duplicate(id)}
             onBringToFront={(id) => decorationsApi.bringToFront(id)}
             onSendToBack={(id) => decorationsApi.sendToBack(id)}
+            // Convert any pre-uniform-zoom decorations once the live width is known.
+            onFirstWidth={decorationsApi.migrateLegacy}
           />
         </div>
       </div>
