@@ -56,7 +56,7 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
             border: '1px solid #e2d7c8',
           }}
         >
-          <Sparkles className="w-3 h-3" /> Lamplight {chatOpen ? '●' : '○'}
+          <Sparkles className="w-3 h-3" /> Lamplight Chat {chatOpen ? '●' : '○'}
         </button>
       </div>
 
