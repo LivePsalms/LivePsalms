@@ -27,7 +27,7 @@ beforeEach(() => {
 
 function setup(threadOverrides = {}) {
   useChatThread.mockReturnValue({
-    messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn(), ...threadOverrides,
+    messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn(), ...threadOverrides,
   });
 }
 
@@ -59,7 +59,7 @@ describe('LamplightChat', () => {
 describe('LamplightChat opening insight', () => {
   it('auto-fires an insight when the loaded thread is empty', async () => {
     const append = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn(), archiveAndReset: vi.fn() });
     requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
@@ -71,21 +71,21 @@ describe('LamplightChat opening insight', () => {
   it('does NOT fire an insight when the thread already has messages', async () => {
     useChatThread.mockReturnValue({
       messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
+      loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn(),
     });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
   });
 
   it('does not fire while the thread is still loading', async () => {
-    useChatThread.mockReturnValue({ messages: [], loading: true, error: null, append: vi.fn(), reload: vi.fn() });
+    useChatThread.mockReturnValue({ messages: [], loading: true, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn() });
     render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).not.toHaveBeenCalled());
   });
 
   it('clears the reflecting indicator when the passage changes mid-insight', async () => {
     requestOpeningInsight.mockReturnValue(new Promise(() => {})); // never resolves: insight stays in-flight
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn() });
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn() });
     const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
     expect(screen.getByText(/Lamplight is reflecting/i)).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe('LamplightChat opening insight', () => {
     // and would never clear `insighting` without the cleanup fix.
     useChatThread.mockReturnValue({
       messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: vi.fn(), reload: vi.fn(),
+      loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset: vi.fn(),
     });
     rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument());
@@ -102,7 +102,7 @@ describe('LamplightChat opening insight', () => {
 
   it('still appends the insight under StrictMode double-invocation (fires server request once)', async () => {
     const append = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn() });
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append, reload: vi.fn(), archiveAndReset: vi.fn() });
     requestOpeningInsight.mockResolvedValue({ ok: true, threadId: 't1', reply: 'Opening thought.', citations: [] });
     render(
       <StrictMode>
@@ -121,7 +121,7 @@ describe('LamplightChat opening insight', () => {
     let resolveInsight: (v: unknown) => void = () => {};
     requestOpeningInsight.mockReturnValueOnce(new Promise((r) => { resolveInsight = r; }));
     const appendJhn = vi.fn();
-    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: appendJhn, reload: vi.fn() });
+    useChatThread.mockReturnValue({ messages: [], loading: false, error: null, append: appendJhn, reload: vi.fn(), archiveAndReset: vi.fn() });
     const { rerender } = render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
     await waitFor(() => expect(requestOpeningInsight).toHaveBeenCalledTimes(1));
 
@@ -129,7 +129,7 @@ describe('LamplightChat opening insight', () => {
     const appendRev = vi.fn();
     useChatThread.mockReturnValue({
       messages: [{ id: 'm1', role: 'assistant', content: 'prior', citations: [] }],
-      loading: false, error: null, append: appendRev, reload: vi.fn(),
+      loading: false, error: null, append: appendRev, reload: vi.fn(), archiveAndReset: vi.fn(),
     });
     rerender(<LamplightChat book="rev" chapter={1} userId="u1" invoke={vi.fn()} />);
 
@@ -138,5 +138,16 @@ describe('LamplightChat opening insight', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(appendRev).not.toHaveBeenCalled();
     expect(screen.queryByText(/Lamplight is reflecting/i)).not.toBeInTheDocument();
+  });
+
+  it('archives + clears the insight guard so a fresh insight can fire', async () => {
+    const archiveAndReset = vi.fn().mockResolvedValue(undefined);
+    useChatThread.mockReturnValue({
+      messages: [{ id: 'm1', role: 'assistant', content: 'old insight', citations: [] }],
+      loading: false, error: null, append: vi.fn(), reload: vi.fn(), archiveAndReset,
+    });
+    render(<LamplightChat book="jhn" chapter={10} userId="u1" invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /new reflection/i }));
+    await waitFor(() => expect(archiveAndReset).toHaveBeenCalledTimes(1));
   });
 });

@@ -17,6 +17,8 @@ export interface UseChatThreadResult {
   /** Append messages locally (after a send) without a re-fetch. */
   append: (msgs: ChatThreadMessage[]) => void;
   reload: () => void;
+  /** Archive the active thread for this passage, then reload (becomes empty). */
+  archiveAndReset: () => Promise<void>;
 }
 
 export function useChatThread(book: string, chapter: number, userId: string | null): UseChatThreadResult {
@@ -28,6 +30,18 @@ export function useChatThread(book: string, chapter: number, userId: string | nu
   const passageRef = `${book}.${chapter}`;
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   const append = useCallback((msgs: ChatThreadMessage[]) => setMessages((prev) => [...prev, ...msgs]), []);
+
+  const archiveAndReset = useCallback(async () => {
+    if (!supabase || !userId) return;
+    await supabase
+      .from('lamplight_chat_threads')
+      .update({ archived: true })
+      .eq('user_id', userId)
+      .eq('passage_ref', passageRef)
+      .eq('archived', false);
+    setMessages([]);
+    setNonce((n) => n + 1);
+  }, [userId, passageRef]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,5 +84,5 @@ export function useChatThread(book: string, chapter: number, userId: string | nu
     return () => { cancelled = true; };
   }, [passageRef, userId, nonce]);
 
-  return { messages, loading, error, append, reload };
+  return { messages, loading, error, append, reload, archiveAndReset };
 }

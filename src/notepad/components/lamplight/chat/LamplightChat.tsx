@@ -81,8 +81,22 @@ export function LamplightChat({ book, chapter, userId, invoke }: LamplightChatPr
     }
   };
 
+  const startNewReflection = async () => {
+    insightAttempted.current.delete(passageKey); // allow a fresh opening insight
+    await thread.archiveAndReset();
+  };
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit, sans-serif' }}>
+      <div className="flex justify-end px-3 pt-2 shrink-0">
+        <button
+          onClick={() => void startNewReflection()}
+          className="text-[10px] tracking-wider px-2 py-1 rounded-full"
+          style={{ color: 'var(--silica)', border: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          + New reflection
+        </button>
+      </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {thread.loading && <p className="text-[11px]" style={{ color: 'var(--silica)' }}>Loading conversation…</p>}
         {!thread.loading && thread.messages.length === 0 && (
