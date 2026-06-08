@@ -88,6 +88,9 @@ const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
+// Fraction of the available viewport the auto-fit sphere fills (<1 leaves the globe
+// zoomed out a touch so it doesn't crowd the frame).
+const AUTO_FIT_FILL = 0.7;
 
 // Sphere radius (world units) grows with node count so the surface doesn't overcrowd.
 function sphereRadius(nodeCount: number): number {
@@ -118,8 +121,8 @@ export interface SimLink extends SimulationLinkDatum<SimNode> {
 }
 
 function computeRadius(type: string, weight: number, sizeMultiplier: number): number {
-  const base = type === 'scripture' ? 42 : 38;
-  return Math.min(110, Math.max(26, (base + weight * 5) * sizeMultiplier));
+  const base = type === 'scripture' ? 24 : 20;
+  return Math.min(64, Math.max(14, (base + weight * 3.5) * sizeMultiplier));
 }
 
 
@@ -292,7 +295,7 @@ export class GraphView extends Observable<GraphViewState> {
     const height = canvas.height / dpr;
     const R = sphereRadius(this.simNodes.length);
     const maxNodeR = Math.max(...this.simNodes.map((n) => n.radius));
-    const fit = (Math.min(width, height) - 2 * AUTO_FIT_VIEWPORT_PADDING) / (2 * (R + maxNodeR));
+    const fit = (AUTO_FIT_FILL * (Math.min(width, height) - 2 * AUTO_FIT_VIEWPORT_PADDING)) / (2 * (R + maxNodeR));
     this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fit));
     // Sphere is origin-centred; projection adds the viewport centre, so no x/y offset.
   }
@@ -367,7 +370,7 @@ export class GraphView extends Observable<GraphViewState> {
       ctx.moveTo(a.sx, a.sy);
       ctx.lineTo(b.sx, b.sy);
       ctx.strokeStyle = `rgba(168, 160, 145, ${alpha})`;
-      ctx.lineWidth = (5 + link.weight * 3.5) * this.settings.edgeThickness * cam.scale;
+      ctx.lineWidth = (1.8 + link.weight * 1.5) * this.settings.edgeThickness * cam.scale;
       ctx.stroke();
     }
 
@@ -409,10 +412,10 @@ export class GraphView extends Observable<GraphViewState> {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.font = `${d.n.radius > 38 ? '26px' : '23px'} Outfit, sans-serif`;
+        ctx.font = `${d.n.radius > 24 ? '15px' : '13px'} Outfit, sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(62, 50, 40, 0.85)';
-        ctx.fillText(d.n.title, d.p.sx, d.p.sy + drawR + 18);
+        ctx.fillText(d.n.title, d.p.sx, d.p.sy + drawR + 10);
       }
     }
 

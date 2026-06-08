@@ -910,7 +910,7 @@ describe('GraphView — sphere zoom and auto-fit', () => {
     view.settle(); // runs auto-fit
     const R = Math.max(160, Math.sqrt(3) * 55);
     const maxNodeR = Math.max(...view.getSimNodes().map((n) => n.radius));
-    const expected = (Math.min(400, 400) - 2 * 30) / (2 * (R + maxNodeR));
+    const expected = (0.7 * (Math.min(400, 400) - 2 * 30)) / (2 * (R + maxNodeR));
     expect(view.getCamera().scale).toBeCloseTo(expected, 4);
   });
 });
