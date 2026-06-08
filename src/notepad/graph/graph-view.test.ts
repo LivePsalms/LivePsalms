@@ -373,8 +373,10 @@ describe('GraphView — pointer interaction', () => {
     const { view, opens } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Node at world (100, 100, 0) with default camera {yaw:0,pitch:0.35,scale:1}
+    // projects to screen ≈ (300, 294) on a 400×400 canvas (cx=cy=200).
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 
@@ -382,8 +384,9 @@ describe('GraphView — pointer interaction', () => {
     const { view, opens } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node's projected screen position ≈ (300, 294).
+    view.handleMouseDown({ clientX: 0, clientY: 0 });
+    view.handleMouseUp({ clientX: 0, clientY: 0 });
     expect(opens).toEqual([]);
   });
 
@@ -400,8 +403,8 @@ describe('GraphView — pointer interaction', () => {
       null,
     );
     placeNode(view, 'scripture:gen-1-1', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     const snap = view.getSnapshot();
     expect(snap.popover).toMatchObject({
       nodeId: 'scripture:gen-1-1',
@@ -418,11 +421,11 @@ describe('GraphView — pointer interaction', () => {
       [], null,
     );
     placeNode(view, 's', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).not.toBeNull();
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).toBeNull();
   });
 
@@ -433,11 +436,12 @@ describe('GraphView — pointer interaction', () => {
       [], null,
     );
     placeNode(view, 's', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).not.toBeNull();
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseUp({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node's projected screen position ≈ (300, 294).
+    view.handleMouseDown({ clientX: 0, clientY: 0 });
+    view.handleMouseUp({ clientX: 0, clientY: 0 });
     expect(view.getSnapshot().popover).toBeNull();
   });
 
@@ -445,9 +449,11 @@ describe('GraphView — pointer interaction', () => {
     const { view } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    // Hover at the node's projected screen position ≈ (300, 294).
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(view.getHoveredNodeId()).toBe('a');
-    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    // (0, 0) is far off — no node there.
+    view.handleMouseMove({ clientX: 0, clientY: 0 });
     expect(view.getHoveredNodeId()).toBeNull();
   });
 
@@ -460,13 +466,14 @@ describe('GraphView — pointer interaction', () => {
     // place node at world (100, 100)
     const sim = view.getSimNodes();
     sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    // open popover at identity transform → screen = (100, 100)
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Open popover — click at projected screen ≈ (300, 294). _transform is still identity
+    // so _transform-based screenX = node.x * 1 + 0 = 100, screenY = node.y * 1 + 0 = 100.
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(view.getSnapshot().popover).toMatchObject({ screenX: 100, screenY: 100 });
-    // pan: drag empty space, moves transform.x to 50
-    view.handleMouseDown({ clientX: 300, clientY: 300 });
-    view.handleMouseMove({ clientX: 350, clientY: 320 });
+    // Pan: drag from empty space (10, 10) to (60, 30) → _transform.x += 50, _transform.y += 20.
+    view.handleMouseDown({ clientX: 10, clientY: 10 });
+    view.handleMouseMove({ clientX: 60, clientY: 30 });
     // popover screen should now be (100 + 50, 100 + 20) = (150, 120)
     expect(view.getSnapshot().popover).toMatchObject({ screenX: 150, screenY: 120 });
   });
@@ -479,8 +486,9 @@ describe('GraphView — pointer interaction', () => {
     );
     const sim = view.getSimNodes();
     sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Open popover — click at projected screen ≈ (300, 294).
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     const before = view.getSnapshot().popover!.screenX;
     view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 }); // zoom in
     // After zoom in (factor 1.08, anchor at cursor 0,0), the world point (100, 100)
@@ -546,7 +554,8 @@ describe('GraphView — cursor management', () => {
     const { view, canvas } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    // Hover at the node's projected screen position ≈ (300, 294).
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(canvas.style.cursor).toBe('pointer');
   });
 
@@ -554,9 +563,10 @@ describe('GraphView — cursor management', () => {
     const { view, canvas } = attached();
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseMove({ clientX: 100, clientY: 100 });
+    view.handleMouseMove({ clientX: 300, clientY: 294 });
     expect(canvas.style.cursor).toBe('pointer');
-    view.handleMouseMove({ clientX: 300, clientY: 300 });
+    // (0, 0) is far from the node — no node there.
+    view.handleMouseMove({ clientX: 0, clientY: 0 });
     expect(canvas.style.cursor).toBe('grab');
   });
 
@@ -650,8 +660,9 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({ onNodeTap: (n) => { taps.push(n); return true; } });
     view.setData([node({ id: 'a', type: 'devotion', title: 'A' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    // Click at projected screen position of world (100, 100, 0) ≈ (300, 294).
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(taps).toEqual([{ id: 'a', type: 'devotion', title: 'A' }]);
     expect(opens).toEqual([]);
   });
@@ -665,8 +676,8 @@ describe('GraphView — onNodeTap interception', () => {
       null,
     );
     placeNode(view, 'scripture:gen-1-1', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(taps).toEqual([{ id: 'scripture:gen-1-1', type: 'scripture', title: 'Genesis 1:1' }]);
     expect(view.getSnapshot().popover).toBeNull();
   });
@@ -675,8 +686,8 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({ onNodeTap: () => false });
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 
@@ -684,8 +695,8 @@ describe('GraphView — onNodeTap interception', () => {
     const { view, opens } = attachedWith({}); // no onNodeTap key
     view.setData([node({ id: 'a', type: 'devotion' })], [], null);
     placeNode(view, 'a', 100, 100);
-    view.handleMouseDown({ clientX: 100, clientY: 100 });
-    view.handleMouseUp({ clientX: 100, clientY: 100 });
+    view.handleMouseDown({ clientX: 300, clientY: 294 });
+    view.handleMouseUp({ clientX: 300, clientY: 294 });
     expect(opens).toEqual(['a']);
   });
 });
@@ -806,6 +817,45 @@ describe('GraphView — 3D sphere layout', () => {
       expect(typeof n.y).toBe('number');
       expect(typeof n.z).toBe('number');
     }
+  });
+});
+
+describe('GraphView — sphere hit-testing', () => {
+  it('returns the front-most node when two overlap in screen space', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'front', type: 'devotion' }), node({ id: 'back', type: 'sermon' })], [], null);
+    const sim = view.getSimNodes();
+    const front = sim.find((n) => n.id === 'front')!;
+    const back = sim.find((n) => n.id === 'back')!;
+    // Same x/y (overlap on screen), different z. Pin so the sim can't move them.
+    front.x = 0; front.y = 0; front.z = 150; front.fx = 0; front.fy = 0; (front as { fz?: number }).fz = 150;
+    back.x = 0; back.y = 0; back.z = -150; back.fx = 0; back.fy = 0; (back as { fz?: number }).fz = -150;
+    view.settle();
+    // Flatten pitch to 0 so both nodes project to the exact screen centre and truly
+    // overlap (with the default tilt they'd project to different screen Y).
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0;
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // 400x400 canvas → centre
+    expect(view.getHoveredNodeId()).toBe('front');
+  });
+
+  it('draws only the hovered node\'s label', () => {
+    const { view, canvas } = attached();
+    view.setData(
+      [node({ id: 'a', type: 'devotion', title: 'Alpha' }), node({ id: 'b', type: 'sermon', title: 'Beta' })],
+      [], null,
+    );
+    const sim = view.getSimNodes();
+    const a = sim.find((n) => n.id === 'a')!;
+    const b = sim.find((n) => n.id === 'b')!;
+    a.x = 0; a.y = 0; a.z = 0; a.fx = 0; a.fy = 0; (a as { fz?: number }).fz = 0;       // projects to centre
+    b.x = 999; b.y = 999; b.z = 0; b.fx = 999; b.fy = 999; (b as { fz?: number }).fz = 0; // far off-screen
+    view.settle();
+    (view as unknown as { camera: { pitch: number } }).camera.pitch = 0;
+    const before = canvas.ctx.calls.length;
+    view.handleMouseMove({ clientX: 200, clientY: 200 }); // hover node 'a' at the centre
+    expect(view.getHoveredNodeId()).toBe('a');
+    const labels = canvas.ctx.calls.slice(before).filter((c) => c.method === 'fillText').map((c) => c.args[0]);
+    expect(labels).toEqual(['Alpha']);
   });
 });
 

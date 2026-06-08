@@ -559,8 +559,8 @@ export class GraphView extends Observable<GraphViewState> {
       this.draw();
       return;
     }
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    const id = this.findNodeAt(x, y)?.id ?? null;
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    const id = this.findNodeAt(sx, sy)?.id ?? null;
     if (id !== this.hoveredNodeId) {
       this.hoveredNodeId = id;
       this.updateCursor();
@@ -569,8 +569,8 @@ export class GraphView extends Observable<GraphViewState> {
   };
 
   handleMouseDown = (e: { clientX: number; clientY: number }): void => {
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    if (!this.findNodeAt(x, y)) {
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    if (!this.findNodeAt(sx, sy)) {
       this.dragState = {
         active: true,
         moved: false,
@@ -591,8 +591,8 @@ export class GraphView extends Observable<GraphViewState> {
     }
     this.dragState.active = false;
     this.dragState.moved = false;
-    const { x, y } = this.screenToWorld(e.clientX, e.clientY);
-    const node = this.findNodeAt(x, y);
+    const { sx, sy } = this.toScreen(e.clientX, e.clientY);
+    const node = this.findNodeAt(sx, sy);
     if (!node) {
       this.setState((prev) => prev.popover === null ? prev : { ...prev, popover: null });
       return;
@@ -651,14 +651,33 @@ export class GraphView extends Observable<GraphViewState> {
     return { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
   }
 
-  private findNodeAt(wx: number, wy: number): SimNode | null {
-    for (let i = this.simNodes.length - 1; i >= 0; i--) {
-      const n = this.simNodes[i];
+  private toScreen(clientX: number, clientY: number): { sx: number; sy: number } {
+    if (!this.canvas) return { sx: 0, sy: 0 };
+    const rect = this.canvas.getBoundingClientRect();
+    return { sx: clientX - rect.left, sy: clientY - rect.top };
+  }
+
+  private findNodeAt(sx: number, sy: number): SimNode | null {
+    if (!this.canvas) return null;
+    const dpr = this.deps.devicePixelRatio?.() ?? 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
+    const cx = width / 2, cy = height / 2;
+    const cam = this.camera;
+    const R = sphereRadius(this.simNodes.length);
+    let best: SimNode | null = null;
+    let bestDepth = -Infinity;
+    for (const n of this.simNodes) {
       if (n.x == null || n.y == null) continue;
-      const dx = wx - n.x, dy = wy - n.y;
-      if (dx * dx + dy * dy <= (n.radius + 4) ** 2) return n;
+      const p = projectPoint({ x: n.x, y: n.y, z: n.z ?? 0 }, cam, cx, cy);
+      const drawR = n.radius * cam.scale * depthScale(depthNorm(p.depth, R));
+      const dx = sx - p.sx, dy = sy - p.sy;
+      if (dx * dx + dy * dy <= (drawR + 4) ** 2 && p.depth > bestDepth) {
+        best = n;
+        bestDepth = p.depth;
+      }
     }
-    return null;
+    return best;
   }
 
   handleWheel = (e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void => {
