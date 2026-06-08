@@ -165,8 +165,9 @@ export function DecorationItem({
   const renderedWidth = d.widthPct * contentWidth;
   const geometry: React.CSSProperties = {
     position: 'absolute',
-    // Fixed px from a frozen reference width (not container %), so resizing the
-    // window never moves or rescales the decoration.
+    // px derived from the live content width — all three (left, top, width) are
+    // fractions of width, so the decoration scales uniformly as the container
+    // resizes (uniform zoom), keeping its saved relative position and proportions.
     left: d.xPct * contentWidth,
     top: resolveYPct(d, contentWidth) * contentWidth,
     width: renderedWidth,
