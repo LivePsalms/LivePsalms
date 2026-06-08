@@ -30,7 +30,7 @@ export function DecorationTray({ assets, onPlace, onClose }: Props) {
       aria-label="Decorations"
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        background: 'var(--cream)', borderTop: '1px solid var(--pale-stone)',
+        background: 'var(--plaster)', borderTop: '1px solid var(--pale-stone)',
         boxShadow: '0 -8px 22px rgba(0,0,0,.12)', padding: '8px 10px', zIndex: 70,
       }}
     >
