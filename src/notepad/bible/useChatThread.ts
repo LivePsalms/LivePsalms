@@ -49,6 +49,7 @@ export function useChatThread(book: string, chapter: number, userId: string | nu
         .select('id')
         .eq('user_id', userId)
         .eq('passage_ref', passageRef)
+        .eq('archived', false)
         .maybeSingle();
       if (cancelled) return;
       if (thread.error) { setError(thread.error.message); setLoading(false); return; }

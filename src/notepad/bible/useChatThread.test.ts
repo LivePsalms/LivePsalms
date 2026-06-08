@@ -69,4 +69,12 @@ describe('useChatThread', () => {
     expect(result.current.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
     expect(eqMsg).toHaveBeenCalledWith('thread_id', 't1');
   });
+
+  it('only loads the active (non-archived) thread', async () => {
+    maybeSingle.mockResolvedValue({ data: { id: 't1' }, error: null });
+    setOrderResult({ data: [], error: null });
+    const { result } = renderHook(() => useChatThread('jhn', 10, 'u1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(eqThread).toHaveBeenCalledWith('archived', false);
+  });
 });
