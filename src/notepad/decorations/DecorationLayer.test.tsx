@@ -55,17 +55,33 @@ describe('DecorationLayer', () => {
     expect(onSelect).toHaveBeenCalledWith('a');
   });
 
-  it('freezes the reference width at first measure and ignores later resizes', () => {
+  it('scales decoration position and size live as the container width changes', () => {
     const { getByTestId } = render(
       <DecorationLayer decorations={[deco]} selectedId={null} onSelect={() => {}} onDeselect={() => {}} {...noops} />,
     );
-    act(() => roCallback!([{ contentRect: { width: 1000 } }]));
     const root = getByTestId('decoration-body-a').parentElement!;
-    expect(root.style.left).toBe('500px'); // 0.5 * 1000
 
-    // A later resize must NOT move or rescale the decoration.
-    act(() => roCallback!([{ contentRect: { width: 2000 } }]));
-    expect(root.style.left).toBe('500px');
+    act(() => roCallback!([{ contentRect: { width: 1000 } }]));
+    expect(root.style.left).toBe('500px'); // 0.5 * 1000
+    expect(root.style.top).toBe('100px'); // 0.1 * 1000
+    expect(root.style.width).toBe('200px'); // 0.2 * 1000
+
+    // A later resize must re-scale position AND size (uniform zoom), not freeze.
+    act(() => roCallback!([{ contentRect: { width: 1400 } }]));
+    expect(root.style.left).toBe('700px'); // 0.5 * 1400
+    expect(root.style.top).toBe('140px'); // 0.1 * 1400
+    expect(root.style.width).toBe('280px'); // 0.2 * 1400
+  });
+
+  it('calls onFirstWidth once with the first non-zero measured width', () => {
+    const onFirstWidth = vi.fn();
+    render(
+      <DecorationLayer decorations={[deco]} selectedId={null} onSelect={() => {}} onDeselect={() => {}} onFirstWidth={onFirstWidth} {...noops} />,
+    );
+    act(() => roCallback!([{ contentRect: { width: 1000 } }]));
+    act(() => roCallback!([{ contentRect: { width: 1400 } }]));
+    expect(onFirstWidth).toHaveBeenCalledTimes(1);
+    expect(onFirstWidth).toHaveBeenCalledWith(1000);
   });
 
   it('hitTestBehind maps a viewport point to the behind-text decoration under it', () => {
