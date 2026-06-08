@@ -286,6 +286,34 @@ export function flattenConnectionWhyText(artifact: ConnectionWhyArtifact): strin
   return artifact.why;
 }
 
+// ── Bible-chat reply validator (Phase 2) ───────────────────────────────────
+// Chat replies may carry zero citations (a short clarifying answer), but any
+// citation present must resolve to a supplied note id or retrieved verse ref.
+
+export interface ChatReply {
+  reply: string;
+  citations: Citation[];
+}
+
+export function validateChatReplyCitations(
+  reply: ChatReply,
+  allowed: { allowedNoteIds: Set<string>; allowedVerseRefs: Set<string> },
+): CitationCheckResult {
+  const violations: CitationViolation[] = [];
+  const verseRefsLower = new Set<string>();
+  for (const r of allowed.allowedVerseRefs) verseRefsLower.add(r.toLowerCase());
+
+  (reply.citations ?? []).forEach((cite) => {
+    if (cite.type === 'note' && !allowed.allowedNoteIds.has(cite.ref)) {
+      violations.push({ section_index: 0, reason: 'unknown_note', detail: `cited note "${cite.ref}" is not in the user's context` });
+    } else if (cite.type === 'verse' && !verseRefsLower.has(cite.ref.toLowerCase())) {
+      violations.push({ section_index: 0, reason: 'unknown_verse', detail: `cited verse "${cite.ref}" is not in the retrieved passages` });
+    }
+  });
+
+  return { ok: violations.length === 0, violations };
+}
+
 // ── Name-use validators (sub-project 8) ────────────────────────────────────
 // Cap total artifact mentions at 2 across opening + reflection + prompt.
 // When firstName === null, reject openings that start with a vocative

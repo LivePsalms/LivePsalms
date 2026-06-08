@@ -294,7 +294,7 @@ describe('flattenConnectionWhyText', () => {
   });
 });
 
-import { nameMentionCount, applyNameRules } from './validators';
+import { nameMentionCount, applyNameRules, validateChatReplyCitations } from './validators';
 
 function makeDailyDevotion(over: Partial<DailyDevotion> = {}): DailyDevotion {
   return {
@@ -404,5 +404,37 @@ describe('applyNameRules', () => {
     const violations = applyNameRules({ artifact, firstName: 'José' });
     expect(violations).toHaveLength(1);
     expect(violations[0]).toMatchObject({ family: 'name', rule: 'name_overuse' });
+  });
+});
+
+describe('validateChatReplyCitations', () => {
+  const allowed = {
+    allowedNoteIds: new Set(['note-1']),
+    allowedVerseRefs: new Set(['jhn 10:11']),
+  };
+
+  it('passes a reply with zero citations', () => {
+    const r = validateChatReplyCitations({ reply: 'A short answer.', citations: [] }, allowed);
+    expect(r.ok).toBe(true);
+  });
+
+  it('passes valid note + verse citations (verse case-insensitive)', () => {
+    const r = validateChatReplyCitations(
+      { reply: 'x', citations: [{ type: 'note', ref: 'note-1' }, { type: 'verse', ref: 'John 10:11'.toLowerCase() === 'jhn 10:11' ? 'jhn 10:11' : 'JHN 10:11' }] },
+      allowed,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  it('flags an unknown note', () => {
+    const r = validateChatReplyCitations({ reply: 'x', citations: [{ type: 'note', ref: 'ghost' }] }, allowed);
+    expect(r.ok).toBe(false);
+    expect(r.violations[0].reason).toBe('unknown_note');
+  });
+
+  it('flags an unknown verse', () => {
+    const r = validateChatReplyCitations({ reply: 'x', citations: [{ type: 'verse', ref: 'gen 1:1' }] }, allowed);
+    expect(r.ok).toBe(false);
+    expect(r.violations[0].reason).toBe('unknown_verse');
   });
 });
