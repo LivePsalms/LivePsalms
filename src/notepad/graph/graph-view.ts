@@ -89,12 +89,7 @@ const ZOOM_OUT_FACTOR = 0.92;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
 const AUTO_FIT_TICK = 80;
-const AUTO_FIT_NODE_MARGIN = 20;
 const AUTO_FIT_VIEWPORT_PADDING = 30;
-const AUTO_FIT_MAX_SCALE = 3.0;
-// On load, zoom in past pure fit-to-view so the graph lands more noticeable.
-// Clamped by AUTO_FIT_MAX_SCALE so small graphs don't balloon.
-const AUTO_FIT_INITIAL_ZOOM = 1.25;
 
 // Sphere radius (world units) grows with node count so the surface doesn't overcrowd.
 function sphereRadius(nodeCount: number): number {
@@ -330,27 +325,15 @@ export class GraphView extends Observable<GraphViewState> {
   private runAutoFit(): void {
     const canvas = this.canvas;
     if (!canvas) return;
+    if (this.simNodes.length === 0) return;
     const dpr = this.deps.devicePixelRatio?.() ?? 1;
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
-
-    const placed = this.simNodes.filter((n) => n.x != null && n.y != null);
-    if (placed.length === 0) return;
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const n of placed) {
-      minX = Math.min(minX, n.x! - n.radius - AUTO_FIT_NODE_MARGIN);
-      minY = Math.min(minY, n.y! - n.radius - AUTO_FIT_NODE_MARGIN);
-      maxX = Math.max(maxX, n.x! + n.radius + AUTO_FIT_NODE_MARGIN);
-      maxY = Math.max(maxY, n.y! + n.radius + AUTO_FIT_NODE_MARGIN);
-    }
-    const w = maxX - minX, h = maxY - minY;
-    if (w <= 0 || h <= 0) return;
-
-    const baseFit = Math.min((width - AUTO_FIT_VIEWPORT_PADDING * 2) / w, (height - AUTO_FIT_VIEWPORT_PADDING * 2) / h);
-    const fitScale = Math.min(baseFit * AUTO_FIT_INITIAL_ZOOM, AUTO_FIT_MAX_SCALE);
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    this._transform = { x: width / 2 - cx * fitScale, y: height / 2 - cy * fitScale, scale: fitScale };
+    const R = sphereRadius(this.simNodes.length);
+    const maxNodeR = Math.max(...this.simNodes.map((n) => n.radius));
+    const fit = (Math.min(width, height) - 2 * AUTO_FIT_VIEWPORT_PADDING) / (2 * (R + maxNodeR));
+    this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fit));
+    // Sphere is origin-centred; projection adds the viewport centre, so no x/y offset.
   }
 
   private draw(): void {
@@ -686,18 +669,8 @@ export class GraphView extends Observable<GraphViewState> {
 
   handleWheel = (e: { clientX: number; clientY: number; deltaY: number; preventDefault?: () => void }): void => {
     e.preventDefault?.();
-    if (!this.canvas) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
     const factor = e.deltaY > 0 ? ZOOM_OUT_FACTOR : ZOOM_IN_FACTOR;
-    const t = this._transform;
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale * factor));
-    // Anchor world-point under cursor: compute offset ratio with OLD scale before mutating it.
-    const ratio = newScale / t.scale;
-    t.x = mx - (mx - t.x) * ratio;
-    t.y = my - (my - t.y) * ratio;
-    t.scale = newScale;
+    this.camera.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, this.camera.scale * factor));
     this.syncPopoverScreen();
     this.draw();
   };

@@ -457,22 +457,16 @@ describe('GraphView — pointer interaction', () => {
     expect(view.getHoveredNodeId()).toBeNull();
   });
 
-  it('popover screenX/screenY follows zoom', () => {
+  it('wheel zoom changes camera.scale (popover screen-sync deferred to Task 11)', () => {
     const { view } = attached();
     view.setData(
       [node({ id: 's', type: 'scripture', title: 'X', scriptureText: 'Y', scriptureTranslation: 'Z' })],
       [], null,
     );
-    const sim = view.getSimNodes();
-    sim[0].x = 100; sim[0].y = 100; sim[0].fx = 100; sim[0].fy = 100;
-    // Open popover — click at projected screen ≈ (300, 294).
-    view.handleMouseDown({ clientX: 300, clientY: 294 });
-    view.handleMouseUp({ clientX: 300, clientY: 294 });
-    const before = view.getSnapshot().popover!.screenX;
+    const before = view.getCamera().scale;
     view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 }); // zoom in
-    // After zoom in (factor 1.08, anchor at cursor 0,0), the world point (100, 100)
-    // maps to a different screen position. Just verify it changed.
-    expect(view.getSnapshot().popover!.screenX).not.toBe(before);
+    // Wheel now drives camera.scale, not _transform.
+    expect(view.getCamera().scale).toBeGreaterThan(before);
   });
 });
 
@@ -892,6 +886,33 @@ describe('GraphView — edge depth fade', () => {
     const strokes = canvas.ctx.calls.filter((c) => c.method === 'stroke').map((c) => String(c.args[0]));
     expect(strokes.length).toBe(2);
     expect(alphaOf(strokes[0])).toBeGreaterThan(alphaOf(strokes[1])); // front brighter than back
+  });
+});
+
+describe('GraphView — sphere zoom and auto-fit', () => {
+  it('wheel up increases camera scale, wheel down decreases it', () => {
+    const { view } = attached();
+    view.setData([node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' })], [], null);
+    view.settle();
+    const base = view.getCamera().scale;
+    view.handleWheel({ clientX: 0, clientY: 0, deltaY: -100 });
+    expect(view.getCamera().scale).toBeGreaterThan(base);
+    const up = view.getCamera().scale;
+    view.handleWheel({ clientX: 0, clientY: 0, deltaY: 100 });
+    expect(view.getCamera().scale).toBeLessThan(up);
+  });
+
+  it('auto-fit scales the sphere to fit the viewport', () => {
+    const { view } = attached(); // 400x400
+    view.setData(
+      [node({ id: 'a', type: 'devotion' }), node({ id: 'b', type: 'sermon' }), node({ id: 'c', type: 'theme' })],
+      [], null,
+    );
+    view.settle(); // runs auto-fit
+    const R = Math.max(160, Math.sqrt(3) * 55);
+    const maxNodeR = Math.max(...view.getSimNodes().map((n) => n.radius));
+    const expected = (Math.min(400, 400) - 2 * 30) / (2 * (R + maxNodeR));
+    expect(view.getCamera().scale).toBeCloseTo(expected, 4);
   });
 });
 
