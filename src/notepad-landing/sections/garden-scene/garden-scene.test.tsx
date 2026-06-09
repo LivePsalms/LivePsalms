@@ -86,12 +86,12 @@ describe('<GardenScene /> — Living Graph station layout', () => {
     expect(video?.loop).toBe(true);
     expect(video?.getAttribute('playsinline')).not.toBeNull();
     expect(video?.getAttribute('preload')).toBe('metadata');
-    expect(video?.getAttribute('poster')).toBe('/notepad-landing/graph-poster.jpg');
+    expect(video?.getAttribute('poster')).toBe('/notepad-feature-video-poster.jpg');
 
     const sources = Array.from(video?.querySelectorAll('source') ?? []);
     const srcs = sources.map((s) => s.getAttribute('src'));
-    expect(srcs).toContain('/notepad-landing/graph.webm');
-    expect(srcs).toContain('/notepad-landing/graph.mp4');
+    expect(srcs).toContain('/notepad-feature-video.webm');
+    expect(srcs).toContain('/notepad-feature-video.mp4');
   });
 });
 

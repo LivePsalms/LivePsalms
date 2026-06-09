@@ -25,12 +25,12 @@ export function LivingGraph({ prm }: LivingGraphProps) {
           loop
           playsInline
           preload="metadata"
-          poster="/notepad-landing/graph-poster.jpg"
+          poster="/notepad-feature-video-poster.jpg"
           controls={prm}
           aria-label="The Live Psalms knowledge graph showing notes connected by shared scripture"
         >
-          <source src="/notepad-landing/graph.webm" type="video/webm" />
-          <source src="/notepad-landing/graph.mp4" type="video/mp4" />
+          <source src="/notepad-feature-video.webm" type="video/webm" />
+          <source src="/notepad-feature-video.mp4" type="video/mp4" />
         </video>
         <div className="living-graph-overlay">
           <p className="eyebrow">{eyebrow}</p>
