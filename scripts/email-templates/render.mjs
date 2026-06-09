@@ -81,7 +81,7 @@ export const TEMPLATES = [
   {
     name: 'reauthentication',
     subject: 'Your verification code',
-    preheader: "Use this code to verify it’s really you.",
+    preheader: "Use this code to verify it's really you.",
     headline: "It's really you?",
     body: 'Use the code below to verify your identity. It expires shortly.',
     code: '{{ .Token }}',
