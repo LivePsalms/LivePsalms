@@ -1,6 +1,30 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { getStyleAsset } from '../styles/manifest';
 
+export type HighlightAction =
+  | { type: 'unset' }
+  | { type: 'set'; swatchId: string }
+  | { type: 'none' };
+
+// Decide what Mod-Shift-H should do: remove an active highlight, otherwise apply
+// the last-used swatch (or a configured default). Pure so it can be unit-tested.
+export function nextHighlightAction(
+  isActive: boolean,
+  lastSwatchId: string | null,
+  defaultSwatchId: string | null,
+): HighlightAction {
+  if (isActive) return { type: 'unset' };
+  const swatchId = lastSwatchId ?? defaultSwatchId;
+  return swatchId ? { type: 'set', swatchId } : { type: 'none' };
+}
+
+export interface StyleHighlightOptions {
+  defaultSwatchId: string | null;
+}
+export interface StyleHighlightStorage {
+  lastSwatchId: string | null;
+}
+
 export function highlightBackgroundStyle(displayUrl: string | undefined): string {
   if (!displayUrl) return '';
   return (
@@ -24,8 +48,16 @@ declare module '@tiptap/core' {
   }
 }
 
-export const StyleHighlight = Mark.create({
+export const StyleHighlight = Mark.create<StyleHighlightOptions, StyleHighlightStorage>({
   name: 'styleHighlight',
+
+  addOptions() {
+    return { defaultSwatchId: null };
+  },
+
+  addStorage() {
+    return { lastSwatchId: null };
+  },
 
   addAttributes() {
     return {
@@ -57,16 +89,37 @@ export const StyleHighlight = Mark.create({
     return {
       setStyleHighlight:
         (swatchId) =>
-        ({ commands }) =>
-          commands.setMark(this.name, { swatchId }),
+        ({ commands }) => {
+          const applied = commands.setMark(this.name, { swatchId });
+          if (applied) this.storage.lastSwatchId = swatchId;
+          return applied;
+        },
       unsetStyleHighlight:
         () =>
         ({ commands }) =>
           commands.unsetMark(this.name),
       toggleStyleHighlight:
         (swatchId) =>
-        ({ commands }) =>
-          commands.toggleMark(this.name, { swatchId }),
+        ({ commands }) => {
+          const applied = commands.toggleMark(this.name, { swatchId });
+          if (applied) this.storage.lastSwatchId = swatchId;
+          return applied;
+        },
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Shift-h': () => {
+        const action = nextHighlightAction(
+          this.editor.isActive(this.name),
+          this.storage.lastSwatchId,
+          this.options.defaultSwatchId,
+        );
+        if (action.type === 'unset') return this.editor.commands.unsetStyleHighlight();
+        if (action.type === 'set') return this.editor.commands.setStyleHighlight(action.swatchId);
+        return false;
+      },
     };
   },
 });
