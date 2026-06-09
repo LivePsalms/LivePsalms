@@ -32,15 +32,15 @@ export const copy = {
     cta: 'Open your notepad →',
   },
   section05: {
-    eyebrow: '— SCRIPTURE INLINE —',
-    h2: 'The Bible, in the margin of your sentence.',
-    body: 'Type the reference. Hover. The verse is there — full text, in the translation you read. The flow you were in does not have to break.',
-    supporting: 'Every scripture you cite becomes a thread. Every thread keeps the next note close.',
+    eyebrow: '— PERSONAL BIBLE STUDY —',
+    h2: 'Open any passage. Study it with your own notes in hand. Take your studies deeper.',
+    body: 'All 66 books, search straight to any verse. Ask about the passage and the answer draws on what you’ve already written about it, every reference cited.',
+    supporting: 'Study John 10 and it brings back the times you wrote about being found.',
   },
   section06: {
-    eyebrow: '— SEVEN PAPERS —',
-    h2: 'Choose the paper that asks the right thing of you.',
-    body: 'Some mornings want a clean page. Some want lined. Some want a page the color of communion bread. Seven paper styles — each one a different way of being met.',
+    eyebrow: '— SPIRITUAL CANVAS —',
+    h2: 'A page that actually looks like yours.',
+    body: 'Highlight in textures that read like real ink, not a flat bar. Drop hand-drawn arrows and marks anywhere on the page. Sort it into folders with their own color and icon. It should feel like your journal — because it is.',
     papers: [
       { name: 'Linen', blurb: 'the morning before the day arrives', clip: '/notepad-landing/templates/t1' },
       { name: 'Vellum', blurb: 'for long-form devotional writing', clip: '/notepad-landing/templates/t2' },
