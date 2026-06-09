@@ -65,4 +65,31 @@ describe('BibleReader', () => {
     expect(screen.getByText('Genesis 3')).toBeInTheDocument();
     expect(onPassageChange).toHaveBeenLastCalledWith({ book: 'gen', chapter: 3 });
   });
+
+  it('filters the book list as you type in the search bar', () => {
+    render(<BibleReader initialBook="jhn" initialChapter={1} />);
+    fireEvent.click(screen.getByRole('button', { name: /browse books/i }));
+
+    const search = screen.getByLabelText(/search books or verse/i);
+    fireEvent.change(search, { target: { value: 'Samuel' } });
+
+    // "Samuel" surfaces the numbered books without typing the number.
+    expect(screen.getByRole('button', { name: /^1 Samuel$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^2 Samuel$/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Genesis$/ })).not.toBeInTheDocument();
+  });
+
+  it('offers a "Go to" jump for a typed verse reference and follows it', () => {
+    const onPassageChange = vi.fn();
+    render(<BibleReader initialBook="jhn" initialChapter={1} onPassageChange={onPassageChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /browse books/i }));
+
+    fireEvent.change(screen.getByLabelText(/search books or verse/i), {
+      target: { value: 'Genesis 3:5' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /go to genesis 3:5/i }));
+
+    expect(screen.getByText('Genesis 3')).toBeInTheDocument();
+    expect(onPassageChange).toHaveBeenLastCalledWith({ book: 'gen', chapter: 3 });
+  });
 });

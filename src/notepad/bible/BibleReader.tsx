@@ -1,7 +1,8 @@
 // src/notepad/bible/BibleReader.tsx
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { bookByAbbrev, OLD_TESTAMENT, NEW_TESTAMENT, type BibleBook } from './bible-books';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, CornerDownLeft, Search } from 'lucide-react';
+import { bookByAbbrev, type BibleBook } from './bible-books';
+import { searchBooks } from './book-search';
 import { useBiblePassages } from './useBiblePassages';
 
 export interface PassageRef {
@@ -34,18 +35,32 @@ export function BibleReader({
 
   const [navOpen, setNavOpen] = useState(false);
   const [navBook, setNavBook] = useState<BibleBook | null>(null);
+  const [query, setQuery] = useState('');
+
+  // Verse to scroll into view after the next passage loads (set when a search
+  // reference like "John 3:16" is followed). A ref so it doesn't fire on plain
+  // verse taps.
+  const pendingScrollVerse = useRef<number | null>(null);
 
   const navChapters = useMemo(
     () => (navBook ? Array.from({ length: navBook.chapterCount }, (_, i) => i + 1) : []),
     [navBook],
   );
 
-  const jumpTo = (abbrev: string, ch: number) => {
+  const search = useMemo(() => searchBooks(query), [query]);
+  const otMatches = useMemo(() => search.books.filter((b) => b.testament === 'OT'), [search]);
+  const ntMatches = useMemo(() => search.books.filter((b) => b.testament === 'NT'), [search]);
+
+  const openNav = () => { setNavOpen((o) => !o); setNavBook(null); setQuery(''); };
+
+  const jumpTo = (abbrev: string, ch: number, verse: number | null = null) => {
     setBook(abbrev);
     setChapter(ch);
-    setSelectedVerse(null);
+    setSelectedVerse(verse);
+    pendingScrollVerse.current = verse;
     setNavOpen(false);
     setNavBook(null);
+    setQuery('');
   };
 
   const meta = bookByAbbrev(book);
@@ -54,6 +69,17 @@ export function BibleReader({
   useEffect(() => {
     onPassageChange?.({ book, chapter });
   }, [book, chapter, onPassageChange]);
+
+  // Scroll a search-targeted verse into view once its chapter has loaded.
+  useEffect(() => {
+    const verse = pendingScrollVerse.current;
+    if (verse == null || loading) return;
+    if (!verses.some((v) => v.verse === verse)) return;
+    document
+      .getElementById(`bible-verse-${verse}`)
+      ?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    pendingScrollVerse.current = null;
+  }, [verses, loading]);
 
   const goPrev = () => {
     if (chapter > 1) {
@@ -80,7 +106,7 @@ export function BibleReader({
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--pale-stone)' }}>
         <button
           aria-label="Browse books"
-          onClick={() => { setNavOpen((o) => !o); setNavBook(null); }}
+          onClick={openNav}
           className="text-[13px] font-bold flex items-center gap-1"
           style={{ color: 'var(--deep-umber)' }}
         >
@@ -111,8 +137,74 @@ export function BibleReader({
         <div className="px-4 py-3 shrink-0 overflow-y-auto" style={{ borderBottom: '1px solid var(--pale-stone)', maxHeight: '50%' }}>
           {!navBook && (
             <>
-              <NavSection title="Old Testament" books={OLD_TESTAMENT} onPick={setNavBook} />
-              <NavSection title="New Testament" books={NEW_TESTAMENT} onPick={setNavBook} />
+              {/* Search a book of the Bible or a verse reference. */}
+              <div className="relative mb-3">
+                <Search
+                  className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--silica)' }}
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (search.jump) {
+                        jumpTo(search.jump.book.abbrev, search.jump.chapter, search.jump.verse);
+                      } else if (search.books.length > 0) {
+                        setNavBook(search.books[0]);
+                      }
+                    } else if (e.key === 'Escape' && query) {
+                      e.stopPropagation();
+                      setQuery('');
+                    }
+                  }}
+                  autoFocus
+                  aria-label="Search books or verse"
+                  placeholder="Search a book or verse…"
+                  className="w-full text-[11px] pl-7 pr-2.5 py-1.5 rounded outline-none"
+                  style={{
+                    border: '1px solid var(--pale-stone)',
+                    color: 'var(--deep-umber)',
+                    fontFamily: 'Outfit, sans-serif',
+                    background: 'transparent',
+                  }}
+                />
+              </div>
+
+              {search.jump && (
+                <button
+                  onClick={() => {
+                    const j = search.jump;
+                    if (j) jumpTo(j.book.abbrev, j.chapter, j.verse);
+                  }}
+                  className="w-full mb-3 text-left text-[11px] px-2.5 py-2 rounded hover:bg-black/5 flex items-center gap-2"
+                  style={{
+                    border: '1px solid var(--deep-umber)',
+                    color: 'var(--deep-umber)',
+                    fontFamily: 'Outfit, sans-serif',
+                  }}
+                >
+                  <CornerDownLeft className="w-3 h-3 shrink-0" style={{ color: 'var(--silica)' }} />
+                  Go to {search.jump.book.name} {search.jump.chapter}
+                  {search.jump.verse != null ? `:${search.jump.verse}` : ''}
+                </button>
+              )}
+
+              {otMatches.length > 0 && (
+                <NavSection title="Old Testament" books={otMatches} onPick={setNavBook} />
+              )}
+              {ntMatches.length > 0 && (
+                <NavSection title="New Testament" books={ntMatches} onPick={setNavBook} />
+              )}
+              {search.books.length === 0 && !search.jump && (
+                <p
+                  className="text-[10px]"
+                  style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+                >
+                  No books match “{query}”.
+                </p>
+              )}
             </>
           )}
           {navBook && (
@@ -164,6 +256,7 @@ export function BibleReader({
             {verses.map((v) => (
               <span
                 key={v.verse}
+                id={`bible-verse-${v.verse}`}
                 onClick={() => selectVerse(v.verse)}
                 className="cursor-pointer"
                 style={{
