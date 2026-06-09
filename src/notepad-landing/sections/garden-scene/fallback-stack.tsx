@@ -17,7 +17,7 @@ export function FallbackStack({ prm }: FallbackStackProps) {
       <ThreeVoices prm={prm} />
       <LivingGraph prm={prm} />
       <Lamplight prm={prm} />
-      <ScriptureMargin />
+      <ScriptureMargin prm={prm} />
       <SevenPapers prm={prm} />
       <TierPath />
       <TrustImport />

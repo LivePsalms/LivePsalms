@@ -121,3 +121,30 @@ describe('<GardenScene /> — Seven Papers station layout', () => {
     expect(srcs).toContain('/notepad-highlight-deco-feature.mp4');
   });
 });
+
+describe('<GardenScene /> — Scripture Margin station layout', () => {
+  it('wraps the Scripture Margin text and video in a .garden-station-pair grid', () => {
+    renderScene(false);
+    const station = document.querySelector('.garden-station--scripture-margin');
+    expect(station).not.toBeNull();
+    const pair = station?.querySelector('.garden-station-pair');
+    expect(pair).not.toBeNull();
+    expect(pair?.querySelector('.garden-station-content--left')).not.toBeNull();
+    expect(pair?.querySelector('.scripture-margin-video-wrap')).not.toBeNull();
+  });
+
+  it('renders a muted, looping, playsInline video pointing at the bible-study assets', () => {
+    renderScene(false);
+    const video = document.querySelector<HTMLVideoElement>('.scripture-margin-video');
+    expect(video).not.toBeNull();
+    expect(video?.muted).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.getAttribute('playsinline')).not.toBeNull();
+    expect(video?.getAttribute('preload')).toBe('metadata');
+    expect(video?.getAttribute('poster')).toBe('/notepad-bible-study-video-poster.jpg');
+    const sources = Array.from(video?.querySelectorAll('source') ?? []);
+    const srcs = sources.map((s) => s.getAttribute('src'));
+    expect(srcs).toContain('/notepad-bible-study-video.webm');
+    expect(srcs).toContain('/notepad-bible-study-video.mp4');
+  });
+});
