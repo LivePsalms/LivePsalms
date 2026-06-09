@@ -24,8 +24,12 @@ describe('notepad landing copy (locked)', () => {
     expect(copy.section09.ctaPrimary).toBe('Open your notepad →');
   });
 
-  it('Lamplight section refuses chatbot framing', () => {
-    expect(copy.section04.body).toMatch(/Lamplight is not a chatbot/);
+  it('Lamplight section leads with the "already knows" framing', () => {
+    expect(copy.section04.h2).toBe('Most apps wait for you to type. This one already knows.');
+  });
+
+  it('Lamplight shows its work (cites the source note and verse)', () => {
+    expect(copy.section04.detail).toMatch(/names the note and the verse/);
   });
 
   it('seven papers includes all seven paper names', () => {

@@ -11,7 +11,7 @@ export function ClosingCTA({ prm }: ClosingCTAProps) {
   const ref = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const staged = useIntersectionStage(ref, { rootMargin: '0px 0px -20% 0px', threshold: 0.2 });
-  const { h2, sub, ctaPrimary, ctaSecondary } = copy.section09;
+  const { h2, ctaPrimary, ctaSecondary } = copy.section09;
 
   useEffect(() => {
     if (!staged || !canvasRef.current) return;
@@ -39,10 +39,11 @@ export function ClosingCTA({ prm }: ClosingCTAProps) {
       <div className="closing-content">
         <div className="closing-text-block">
           <h2 id="sec09-h2">{h2}</h2>
-          <p className="closing-sub">{sub}</p>
         </div>
-        <Link to="/notepad/notes" className="cta-primary closing-cta-primary">{ctaPrimary}</Link>
-        <Link to="/login" className="closing-cta-secondary">{ctaSecondary}</Link>
+        <div className="closing-actions">
+          <Link to="/notepad/notes" className="cta-primary closing-cta-primary">{ctaPrimary}</Link>
+          <Link to="/login" className="closing-cta-secondary">{ctaSecondary}</Link>
+        </div>
       </div>
     </section>
   );
