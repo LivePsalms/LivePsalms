@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { LamplightSettingsSection } from './components/LamplightSettingsSection';
 import { AdminEntryLink } from './components/AdminEntryLink';
+import { SecuritySection } from './components/SecuritySection';
 import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
 import { supabase as supabaseClient } from '@/lib/supabase';
 
@@ -303,38 +304,20 @@ export function ProfilePage() {
         </div>
 
         {/* Auth Management */}
-        <div style={sectionStyle}>
-          <p style={labelStyle}>SECURITY</p>
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={async () => {
-                if (!user?.email) return;
-                try {
-                  await session.resetPassword(user.email);
-                  toast.success('Password reset email sent.');
-                } catch {
-                  toast.error('Could not send reset email. Please try again.');
-                }
-              }}
-              className="text-left text-xs hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
-            >
-              Change Password →
-            </button>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              Google:{' '}
-              {user?.app_metadata?.providers?.includes('google')
-                ? 'Linked'
-                : 'Not linked'}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}>
-              Apple:{' '}
-              {user?.app_metadata?.providers?.includes('apple')
-                ? 'Linked'
-                : 'Not linked'}
-            </p>
-          </div>
-        </div>
+        <SecuritySection
+          providers={user?.app_metadata?.providers ?? []}
+          sectionStyle={sectionStyle}
+          labelStyle={labelStyle}
+          onChangePassword={async () => {
+            if (!user?.email) return;
+            try {
+              await session.resetPassword(user.email);
+              toast.success('Password reset email sent.');
+            } catch {
+              toast.error('Could not send reset email. Please try again.');
+            }
+          }}
+        />
 
         {/* Lamplight */}
         {user && lamplightAdapter && (
