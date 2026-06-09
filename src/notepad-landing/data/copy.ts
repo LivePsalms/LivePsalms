@@ -1,12 +1,13 @@
 export const copy = {
   section01: {
     eyebrow: '— THE NOTEPAD —',
-    h1: 'For what you cannot afford to forget.',
-    sub: 'The notepad that remembers what God has been saying — across your devotions, your sermons, the threads you’ve been walking with for months.',
+    h1: 'Everything God’s said to you. In one place that remembers.',
+    sub: 'Your devotions, your sermon notes, the verses you keep coming back to — written down, connected, and quietly read back to you when you need it.',
     activeFormLabel: 'ACTIVE FORM',
     shapeNames: ['Pencil', 'Heart', 'Journal'] as const,
     ctaPrimary: 'Open your notepad →',
     ctaGhost: 'Read what it does',
+    ctaNote: 'No account needed to start. Works offline.',
   },
   section02: {
     eyebrow: '— ONE NOTEPAD —',

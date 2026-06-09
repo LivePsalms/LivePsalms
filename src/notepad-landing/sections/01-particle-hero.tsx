@@ -28,7 +28,7 @@ export function ParticleHero({ prm }: ParticleHeroProps) {
     };
   }, [prm]);
 
-  const { eyebrow, h1, sub, ctaPrimary, ctaGhost, activeFormLabel, shapeNames } = copy.section01;
+  const { eyebrow, h1, sub, ctaPrimary, ctaGhost, ctaNote, activeFormLabel, shapeNames } = copy.section01;
 
   return (
     <section className="hero" aria-labelledby="hero-h1">
@@ -41,6 +41,7 @@ export function ParticleHero({ prm }: ParticleHeroProps) {
           <Link to="/notepad/notes" className="cta-primary">{ctaPrimary}</Link>
           <a href="#section-02" className="cta-ghost">{ctaGhost}</a>
         </div>
+        <p className="hero-cta-note">{ctaNote}</p>
       </div>
       <div className="hero-form-indicator" aria-hidden="true">
         <div className="form-label">{activeFormLabel}</div>
