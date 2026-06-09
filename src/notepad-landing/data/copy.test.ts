@@ -32,8 +32,8 @@ describe('notepad landing copy (locked)', () => {
     expect(copy.section04.detail).toMatch(/names the note and the verse/);
   });
 
-  it('seven papers includes all seven paper names', () => {
-    const names = copy.section06.papers.map((p) => p.name);
-    expect(names).toEqual(['Linen', 'Vellum', 'Margin', 'Dotted Crème', 'Ruled Walnut', 'Communion', 'Folio']);
+  it('section 6 (spiritual canvas) leads with the canvas framing', () => {
+    expect(copy.section06.eyebrow).toBe('— SPIRITUAL CANVAS —');
+    expect(copy.section06.h2).toBe('A page that actually looks like yours.');
   });
 });

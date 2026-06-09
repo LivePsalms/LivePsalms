@@ -17,27 +17,26 @@ export function ScriptureMargin({ prm }: ScriptureMarginProps) {
       className={`section scripture-margin${staged ? ' is-staged' : ''}`}
       aria-labelledby="sec05-h2"
     >
-      <div className="section-grid">
-        <div className="section-copy">
-          <p className="eyebrow">{eyebrow}</p>
-          <h2 id="sec05-h2">{h2}</h2>
-          <p className="body">{body}</p>
-          <p className="supporting">{supporting}</p>
-        </div>
-        <div className="section-media">
+      <div className="scripture-margin-content">
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 id="sec05-h2">{h2}</h2>
+        <p className="body">{body}</p>
+        <p className="supporting">{supporting}</p>
+
+        <div className="scripture-margin-media">
           <video
-            className="section-video"
+            className="scripture-margin-feature-video"
             autoPlay={!prm}
             muted
             loop
             playsInline
             preload="metadata"
-            poster="/notepad-landing/templates/t1-poster.jpg"
+            poster="/notepad-bible-study-video-poster.jpg"
             controls={prm}
-            aria-label="Closeup of scripture hover-preview inside the notepad"
+            aria-label="Personal Bible study inside the Notepad — opening a passage, searching to a verse, and asking about it with your own notes in hand."
           >
-            <source src="/notepad-landing/templates/t1.webm" type="video/webm" />
-            <source src="/notepad-landing/templates/t1.mp4" type="video/mp4" />
+            <source src="/notepad-bible-study-video.webm" type="video/webm" />
+            <source src="/notepad-bible-study-video.mp4" type="video/mp4" />
           </video>
         </div>
       </div>

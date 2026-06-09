@@ -476,6 +476,28 @@
   background: var(--np-bg-paper-cool);
 }
 
+.scripture-margin-content {
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.scripture-margin-media {
+  width: 100%;
+  max-width: 760px;
+  margin: 2rem auto 0;
+}
+
+.scripture-margin-feature-video {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  display: block;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(102, 84, 79, 0.08);
+  background: var(--np-bg-paper-cool);
+}
+
 .seven-papers {
   background: var(--np-bg-paper);
 }
@@ -491,93 +513,20 @@
   margin: 1rem auto 2.6rem;
 }
 
-.paper-stage {
-  position: relative;
+.seven-papers-media {
   width: 100%;
-  max-width: 720px;
-  aspect-ratio: 16 / 10;
-  margin: 0 auto 1.6rem;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--np-bg-paper-cool);
+  max-width: 760px;
+  margin: 0 auto;
 }
 
-.paper-clip {
-  position: absolute;
-  inset: 0;
+.seven-papers-feature-video {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 2 / 1;
+  display: block;
   object-fit: cover;
-  opacity: 0;
-  filter: blur(22px);
-  transform: scale(1.05);
-  transition:
-    opacity 0.7s cubic-bezier(0.55, 0, 0.45, 1),
-    filter 0.7s cubic-bezier(0.55, 0, 0.45, 1),
-    transform 0.7s cubic-bezier(0.55, 0, 0.45, 1);
-}
-
-.paper-clip.is-active {
-  opacity: 1;
-  filter: blur(0);
-  transform: scale(1);
-  transition-delay: 0.1s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .paper-clip,
-  .paper-clip.is-active {
-    transition: none;
-    filter: none;
-    transform: none;
-  }
-}
-
-.paper-label {
-  margin-bottom: 1.4rem;
-  min-height: 3.2rem;
-}
-
-.paper-name {
-  font-family: var(--np-script);
-  font-size: clamp(2.2rem, 4vw, 3.2rem);
-  color: var(--np-ink);
-  line-height: 1;
-  margin-bottom: 0.4rem;
-}
-
-.paper-blurb {
-  font-family: var(--np-body);
-  font-style: italic;
-  font-size: 0.95rem;
-  color: var(--np-ink-warm);
-}
-
-.paper-dots {
-  display: inline-flex;
-  gap: 0.6rem;
-  justify-content: center;
-}
-
-.paper-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid var(--np-ink-warm);
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-  transition: background 0.3s var(--np-ease);
-}
-
-.paper-dot.is-active {
-  background: var(--np-ink);
-  border-color: var(--np-ink);
-}
-
-.paper-dot:focus-visible {
-  outline: 2px solid var(--np-ink);
-  outline-offset: 3px;
+  border-radius: 12px;
+  border: 1px solid rgba(102, 84, 79, 0.08);
+  background: var(--np-bg-paper-cool);
 }
 
 .tier-path {
@@ -911,38 +860,36 @@
           mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
 }
 
-/* Scripture Margin two-column pair (mirror of Living Graph; video on the left) */
+/* Scripture Margin two-column pair (same shape as Seven Papers; text left, video right) */
 .notepad-landing .garden-station--scripture-margin .garden-station-pair {
   width: 100%;
   max-width: min(1280px, 90vw);
   display: grid;
-  /* Named areas: video on the left, text on the right.
-     DOM order is text-first (a11y); grid-area pins each child to its
-     visual cell regardless of DOM order, so the row collapses to one. */
   grid-template-columns: 1fr 1fr;
-  grid-template-areas: "video text";
   gap: clamp(24px, 5vw, 64px);
   align-items: center;
 }
 
-.notepad-landing .garden-station--scripture-margin .garden-station-content--right {
-  margin-right: 0;
+.notepad-landing .garden-station--scripture-margin .garden-station-content--left {
+  margin-left: 0;
   max-width: 640px;
-  justify-self: start;
-  grid-area: text;
+  justify-self: end;
 }
 
 .notepad-landing .scripture-margin-video-wrap {
   width: 100%;
-  max-width: 540px;
-  justify-self: end;
-  grid-area: video;
+  max-width: 640px;
+  justify-self: start;
 }
 
 .notepad-landing .scripture-margin-video {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 2 / 1;
   display: block;
+  object-fit: cover;
+  background: transparent;
+  -webkit-mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
+          mask-image: radial-gradient(ellipse 95% 92% at 50% 50%, #000 60%, transparent 100%);
 }
 
 /* Seven Papers two-column pair (same shape as Living Graph; cinematic 16:9, feathered) */
@@ -969,7 +916,7 @@
 
 .notepad-landing .seven-papers-video {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2 / 1;
   display: block;
   object-fit: cover;
   background: transparent;
@@ -1251,13 +1198,9 @@
   }
   .notepad-landing .garden-station--scripture-margin .garden-station-pair {
     grid-template-columns: 1fr;
-    /* Mobile: text first, video second — matches DOM order. */
-    grid-template-areas:
-      "text"
-      "video";
     gap: 24px;
   }
-  .notepad-landing .garden-station--scripture-margin .garden-station-content--right {
+  .notepad-landing .garden-station--scripture-margin .garden-station-content--left {
     justify-self: center;
     max-width: 90vw;
   }

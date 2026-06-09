@@ -32,7 +32,7 @@ export function StationScriptureMargin({ isActive }: Props) {
       aria-hidden={isActive ? undefined : 'true'}
     >
       <div className="garden-station-pair">
-        <div className="garden-station-content garden-station-content--right">
+        <div className="garden-station-content garden-station-content--left">
           <p className="eyebrow">{eyebrow}</p>
           <h2>{h2}</h2>
           <p className="body">{body}</p>
@@ -42,15 +42,15 @@ export function StationScriptureMargin({ isActive }: Props) {
           <video
             ref={videoRef}
             className="scripture-margin-video"
-            poster="/notepad-landing/verses-poster.jpg"
+            poster="/notepad-bible-study-video-poster.jpg"
             preload="metadata"
             muted
             loop
             playsInline
-            aria-label="The Notepad with inline scripture references — typing a verse reference makes it a live, clickable link inside the prose."
+            aria-label="Personal Bible study inside the Notepad — opening a passage, searching to a verse, and asking about it with your own notes in hand."
           >
-            <source src="/notepad-landing/verses.webm" type="video/webm" />
-            <source src="/notepad-landing/verses.mp4"  type="video/mp4"  />
+            <source src="/notepad-bible-study-video.webm" type="video/webm" />
+            <source src="/notepad-bible-study-video.mp4"  type="video/mp4"  />
           </video>
         </div>
       </div>
