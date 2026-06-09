@@ -41,15 +41,15 @@ export function StationSevenPapers({ isActive }: Props) {
           <video
             ref={videoRef}
             className="seven-papers-video"
-            poster="/notepad-landing/templates-poster.jpg"
+            poster="/notepad-highlight-deco-feature-poster.jpg"
             preload="metadata"
             muted
             loop
             playsInline
-            aria-label="A cinematic drift through the seven paper styles available in the Notepad — Linen, Vellum, Margin, Dotted Crème, Ruled Walnut, Communion, and Folio."
+            aria-label="The Notepad's spiritual canvas — textured ink highlights and hand-drawn marks placed directly on a note."
           >
-            <source src="/notepad-landing/templates.webm" type="video/webm" />
-            <source src="/notepad-landing/templates.mp4"  type="video/mp4"  />
+            <source src="/notepad-highlight-deco-feature.webm" type="video/webm" />
+            <source src="/notepad-highlight-deco-feature.mp4"  type="video/mp4"  />
           </video>
         </div>
       </div>

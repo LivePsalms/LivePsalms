@@ -20,7 +20,7 @@ export const copy = {
     eyebrow: '— THE CONNECTION —',
     h2: 'Three kinds of writing. One thread running through them.',
     body: 'Mark each note a Devotion, Sermon, or Theme. Type a verse and it stays live — hover any time for the full text, all 66 books, without leaving the page.',
-    supporting: 'Then click a verse to see every note that shares it.',
+    supporting: 'Click a verse to see every note that shares it.',
     caption: 'That’s the moment in your reading that meets you: months of your own writing, suddenly in conversation.',
   },
   section04: {
@@ -41,15 +41,6 @@ export const copy = {
     eyebrow: '— SPIRITUAL CANVAS —',
     h2: 'A page that actually looks like yours.',
     body: 'Highlight in textures that read like real ink, not a flat bar. Drop hand-drawn arrows and marks anywhere on the page. Sort it into folders with their own color and icon. It should feel like your journal — because it is.',
-    papers: [
-      { name: 'Linen', blurb: 'the morning before the day arrives', clip: '/notepad-landing/templates/t1' },
-      { name: 'Vellum', blurb: 'for long-form devotional writing', clip: '/notepad-landing/templates/t2' },
-      { name: 'Margin', blurb: 'for sermon capture, fast', clip: '/notepad-landing/templates/t3' },
-      { name: 'Dotted Crème', blurb: 'for thinking in lists', clip: '/notepad-landing/templates/t4' },
-      { name: 'Ruled Walnut', blurb: 'for the heavier writing', clip: '/notepad-landing/templates/t1' },
-      { name: 'Communion', blurb: 'for the lament psalms', clip: '/notepad-landing/templates/t2' },
-      { name: 'Folio', blurb: 'for the slow morning, the long quiet', clip: '/notepad-landing/templates/t3' },
-    ] as const,
   },
   section07: {
     eyebrow: '— MARKED IN SCRIPTURE —',
