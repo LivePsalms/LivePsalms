@@ -5,7 +5,7 @@ import { useIntersectionStage } from '../hooks/use-intersection-stage';
 export function TrustImport() {
   const ref = useRef<HTMLElement>(null);
   const staged = useIntersectionStage(ref);
-  const { eyebrow, h2, lines } = copy.section08;
+  const { eyebrow, h2, supporting, lines } = copy.section08;
 
   return (
     <section
@@ -16,6 +16,7 @@ export function TrustImport() {
       <div className="trust-content">
         <p className="eyebrow">{eyebrow}</p>
         <h2 id="sec08-h2">{h2}</h2>
+        <p className="supporting trust-built">{supporting}</p>
         <ul className="trust-triptych">
           {lines.map((line) => (
             <li key={line}>{line}</li>

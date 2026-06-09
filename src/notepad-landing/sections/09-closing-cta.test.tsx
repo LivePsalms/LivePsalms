@@ -28,12 +28,11 @@ function renderCTA() {
 }
 
 describe('<ClosingCTA />', () => {
-  it('wraps the heading and subtitle in .closing-text-block', () => {
+  it('wraps the heading in .closing-text-block', () => {
     renderCTA();
     const block = document.querySelector('.closing-text-block');
     expect(block).not.toBeNull();
     expect(block?.querySelector('#sec09-h2')).not.toBeNull();
-    expect(block?.querySelector('.closing-sub')).not.toBeNull();
   });
 
   it('keeps both CTAs outside .closing-text-block (siblings, not children)', () => {

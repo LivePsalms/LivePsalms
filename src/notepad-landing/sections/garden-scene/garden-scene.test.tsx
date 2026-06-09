@@ -57,13 +57,13 @@ describe('<GardenScene /> — PRM mode (prm=true)', () => {
   it('renders all seven section components from FallbackStack', () => {
     renderScene(true);
     // Each fallback section has a known heading from data/copy.ts
-    expect(screen.getByRole('heading', { name: /three voices\. one quiet place\./i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /a map of how god has been speaking/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /a companion who’s been reading along/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /the bible, in the margin of your sentence/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /choose the paper that asks/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /the small thing, marked/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /private\. cited\. yours\./i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /you wrote it down\. find it anytime\./i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /three kinds of writing\. one thread running through them\./i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /most apps wait for you to type\. this one already knows\./i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /open any passage\. study it with your own notes in hand/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /a page that actually looks like yours/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /your work counts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /your personal journey\. your prayer life\. your intimate walk with god\./i })).toBeInTheDocument();
   });
 });
 

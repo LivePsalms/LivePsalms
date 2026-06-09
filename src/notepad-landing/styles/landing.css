@@ -108,9 +108,54 @@
   align-items: center;
 }
 
+.hero-cta-note {
+  font-family: var(--np-body);
+  font-style: italic;
+  font-size: clamp(0.8rem, 1vw, 0.9rem);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  margin-top: 1rem;
+  /* Shimmer: a bright highlight sweeps across the muted base text. */
+  background: linear-gradient(
+    100deg,
+    #8f867a 0%,
+    #8f867a 38%,
+    #f3ead9 50%,
+    #8f867a 62%,
+    #8f867a 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: hero-cta-shimmer 4.5s ease-in-out infinite;
+}
+
+@keyframes hero-cta-shimmer {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -30% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cta-note {
+    animation: none;
+    background: none;
+    color: #b7ada0;
+    -webkit-text-fill-color: #b7ada0;
+  }
+}
+
 .cta-primary,
 .cta-ghost {
   display: inline-block;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   font-family: var(--np-body);
   font-size: 0.85rem;
   letter-spacing: 0.04em;
@@ -118,6 +163,48 @@
   border-radius: 999px;
   text-decoration: none;
   transition: background 0.4s var(--np-ease), color 0.4s var(--np-ease), transform 0.4s var(--np-ease);
+}
+
+/* Shimmer: a warm highlight relays from the primary button to the ghost,
+   then pauses before repeating. */
+.cta-primary::before,
+.cta-ghost::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(243, 234, 217, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  animation: cta-shimmer 4.5s linear infinite;
+}
+
+/* The ghost button picks up the sweep as the primary's finishes. */
+.cta-ghost::before {
+  animation-delay: 1.5s;
+}
+
+@keyframes cta-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  33%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-primary::before,
+  .cta-ghost::before {
+    animation: none;
+    background: none;
+  }
 }
 
 .cta-primary {
@@ -360,49 +447,29 @@
   margin-top: 1rem;
 }
 
-.lamplight-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin: 3.5rem 0 2.5rem;
+.lamplight-supporting {
+  max-width: 620px;
 }
 
-.lamplight-card {
-  border-top: 1px solid rgba(102, 84, 79, 0.18);
-  padding-top: 1.4rem;
+.lamplight-actions {
+  margin-top: 2.2rem;
 }
 
-.lamplight-card h3 {
-  font-family: var(--np-display);
-  font-size: 1.2rem;
-  font-style: italic;
-  font-weight: 500;
-  margin-bottom: 0.6rem;
+/* CTA sits on light parchment in the Lamplight section — ink-on-light variant */
+.section.lamplight .cta-primary,
+.notepad-landing .garden-station--lamplight .cta-primary {
+  border-color: var(--np-ink-warm);
+  color: var(--np-ink);
 }
 
-.lamplight-card p {
-  font-family: var(--np-body);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--np-ink-mid);
+.section.lamplight .cta-primary:hover,
+.notepad-landing .garden-station--lamplight .cta-primary:hover {
+  background: var(--np-ink-warm);
+  color: var(--np-bg-paper);
 }
 
-.lamplight-trust {
-  font-family: var(--np-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--np-ink-warm);
+.notepad-landing .garden-station--lamplight .cta-primary {
   margin-top: 2rem;
-  padding-top: 1.4rem;
-  border-top: 1px solid rgba(102, 84, 79, 0.12);
-}
-
-@media (max-width: 768px) {
-  .lamplight-cards {
-    grid-template-columns: 1fr;
-    gap: 1.4rem;
-  }
 }
 
 .scripture-margin {
@@ -544,29 +611,25 @@
   text-align: center;
 }
 
+.trust-built {
+  text-align: center;
+  margin-top: 1.4rem;
+}
+
 .trust-triptych {
   list-style: none;
   padding: 0;
-  margin: 2.4rem 0 0;
+  margin: 2rem auto 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  gap: 1rem;
+  max-width: 560px;
 }
 
 .trust-triptych li {
-  font-family: var(--np-display);
-  font-style: italic;
-  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
-  line-height: 1.5;
+  font-family: var(--np-body);
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.6;
   color: var(--np-ink-mid);
-  padding-top: 1.4rem;
-  border-top: 1px solid rgba(102, 84, 79, 0.18);
-}
-
-@media (max-width: 768px) {
-  .trust-triptych {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ─── Section 09: Closing CTA ────────────────────────────────────── */
@@ -606,14 +669,6 @@
   margin-bottom: 1.2rem;
 }
 
-.closing-sub {
-  font-family: var(--np-body);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #b7ada0;
-  margin-bottom: 2rem;
-}
-
 .closing-cta-primary {
   background: transparent;
   border: 1.5px solid #c4b5a0;
@@ -625,10 +680,17 @@
   color: #0e0e0e;
 }
 
+.closing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.8rem;
+  margin-top: 1.6rem;
+}
+
 .closing-cta-secondary {
   display: inline-block;
-  margin-top: 1.2rem;
-  margin-left: 1.8rem;
   font-family: var(--np-mono);
   font-size: 0.65rem;
   letter-spacing: 0.15em;
