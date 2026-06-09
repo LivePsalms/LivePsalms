@@ -1,5 +1,5 @@
 // src/notepad/decorations/DecorationItem.tsx
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { getStyleAsset } from '../styles/manifest';
 import {
   moveTo, resizeWidthPct, rotationDeg, pinchTransform,
@@ -17,13 +17,14 @@ interface Props {
   onDuplicate: (id: string) => void;
   onBringToFront: (id: string) => void;
   onSendToBack: (id: string) => void;
+  onDeselect: () => void;
 }
 
 type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration };
 
 export function DecorationItem({
   decoration: d, selected, contentWidth,
-  onChange, onSelect, onDelete, onDuplicate, onBringToFront, onSendToBack,
+  onChange, onSelect, onDelete, onDuplicate, onBringToFront, onSendToBack, onDeselect,
 }: Props) {
   const asset = getStyleAsset(d.assetId);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,6 +34,42 @@ export function DecorationItem({
   >(null);
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinch = useRef<{ startDist: number; startAngle: number; base: NoteDecoration } | null>(null);
+
+  // Move focus to the selection chrome when a decoration becomes selected, so
+  // keyboard events target the decoration (not the contenteditable text).
+  useEffect(() => {
+    if (selected) rootRef.current?.focus();
+  }, [selected]);
+
+  const onChromeKeyDown = (e: React.KeyboardEvent) => {
+    // Only handle keys when the chrome itself is focused — let child controls
+    // (action-bar buttons, handles) keep their native keyboard behavior.
+    if (e.target !== e.currentTarget) return;
+    switch (e.key) {
+      case 'Delete':
+      case 'Backspace':
+        e.preventDefault();
+        onDelete(d.id);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        onDeselect();
+        break;
+      case 'ArrowLeft':
+      case 'ArrowRight':
+      case 'ArrowUp':
+      case 'ArrowDown': {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dxPx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dyPx = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        onChange(moveTo(d, { dxPx, dyPx, contentWidth }));
+        break;
+      }
+      default:
+        break;
+    }
+  };
 
   const twoPointerMetrics = () => {
     const pts = [...pointers.current.values()];
@@ -210,6 +247,10 @@ export function DecorationItem({
         <div
           ref={rootRef}
           data-testid={`decoration-chrome-${d.id}`}
+          tabIndex={0}
+          role="group"
+          aria-label="Decoration selected — arrow keys move, Delete removes, Escape deselects"
+          onKeyDown={onChromeKeyDown}
           style={{ ...geometry, height: renderedHeight, zIndex: SELECTED_Z, outline: '2px solid var(--deep-umber)', pointerEvents: 'none' }}
         >
           {/* Full-box drag/pinch surface (transparent), so a selected decoration

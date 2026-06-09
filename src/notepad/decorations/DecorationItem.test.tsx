@@ -19,6 +19,7 @@ const d: NoteDecoration = {
 const handlers = () => ({
   onChange: vi.fn(), onSelect: vi.fn(), onDelete: vi.fn(),
   onDuplicate: vi.fn(), onBringToFront: vi.fn(), onSendToBack: vi.fn(),
+  onDeselect: vi.fn(),
   contentWidth: 1000,
 });
 
@@ -184,5 +185,57 @@ describe('DecorationItem', () => {
     expect(h.onChange).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.4, 5) }),
     );
+  });
+
+  it('focuses the selection chrome when it becomes selected', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    expect(document.activeElement).toBe(getByTestId('decoration-chrome-a'));
+  });
+
+  it('nudges position with arrow keys (Shift = larger step)', () => {
+    const h = handlers(); // contentWidth: 1000, d.xPct 0.5, d.yPx 100
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const chrome = getByTestId('decoration-chrome-a');
+
+    fireEvent.keyDown(chrome, { key: 'ArrowRight' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ xPct: expect.closeTo(0.501, 5) }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowRight', shiftKey: true });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ xPct: expect.closeTo(0.51, 5) }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowUp' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ yPx: 99 }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowDown' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ yPx: 101 }));
+  });
+
+  it('deletes with Delete and Backspace', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const chrome = getByTestId('decoration-chrome-a');
+    fireEvent.keyDown(chrome, { key: 'Delete' });
+    fireEvent.keyDown(chrome, { key: 'Backspace' });
+    expect(h.onDelete).toHaveBeenCalledTimes(2);
+    expect(h.onDelete).toHaveBeenCalledWith('a');
+  });
+
+  it('deselects with Escape', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    fireEvent.keyDown(getByTestId('decoration-chrome-a'), { key: 'Escape' });
+    expect(h.onDeselect).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores key events bubbling from child controls (only the chrome itself handles keys)', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    // A keydown originating on a child action-bar button must NOT nudge or delete.
+    const deleteBtn = getByLabelText('Delete decoration');
+    fireEvent.keyDown(deleteBtn, { key: 'ArrowRight' });
+    fireEvent.keyDown(deleteBtn, { key: 'Delete' });
+    expect(h.onChange).not.toHaveBeenCalled();
+    expect(h.onDelete).not.toHaveBeenCalled();
   });
 });

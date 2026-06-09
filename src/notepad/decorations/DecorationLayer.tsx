@@ -93,6 +93,7 @@ export const DecorationLayer = forwardRef<DecorationLayerHandle, Props>(function
               onDuplicate={onDuplicate}
               onBringToFront={onBringToFront}
               onSendToBack={onSendToBack}
+              onDeselect={onDeselect}
             />
           </div>
         ))}

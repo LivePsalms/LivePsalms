@@ -453,9 +453,9 @@ export function NotepadEditor({
             decorations={decorationsApi.decorations}
             selectedId={selectedDecoration}
             onSelect={setSelectedDecoration}
-            onDeselect={() => setSelectedDecoration(null)}
+            onDeselect={() => { setSelectedDecoration(null); editor?.commands.focus(); }}
             onChange={(next) => decorationsApi.update(next.id, next)}
-            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); }}
+            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); editor?.commands.focus(); }}
             onDuplicate={(id) => decorationsApi.duplicate(id)}
             onBringToFront={(id) => decorationsApi.bringToFront(id)}
             onSendToBack={(id) => decorationsApi.sendToBack(id)}
