@@ -61,6 +61,52 @@ export function clampDecoration(d: NoteDecoration): NoteDecoration {
   };
 }
 
+export interface DecorationBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+// Axis-aligned px box a decoration occupies on the canvas, given the frozen
+// reference width. Height derives from the asset aspect ratio (stored as
+// width/height), matching the <img width:100% height:auto> render. Rotation is
+// ignored — the un-rotated AABB is accurate enough for click selection.
+export function decorationBox(
+  d: NoteDecoration,
+  refWidth: number,
+  aspectRatio: number,
+): DecorationBox {
+  const width = d.widthPct * refWidth;
+  const height = aspectRatio > 0 ? width / aspectRatio : width;
+  return { left: d.xPct * refWidth, top: d.yPx, width, height };
+}
+
+export function pointInBox(px: number, py: number, b: DecorationBox): boolean {
+  return px >= b.left && px <= b.left + b.width && py >= b.top && py <= b.top + b.height;
+}
+
+// Finds the topmost behind-text decoration whose box contains the point (canvas
+// px). Only behind-text decorations are considered — front ones receive clicks
+// directly through their own island, so they never need this fallback path.
+export function topmostBehindAtPoint(
+  decorations: NoteDecoration[],
+  px: number,
+  py: number,
+  refWidth: number,
+  aspectRatioOf: (assetId: string) => number | undefined,
+): string | null {
+  const behind = decorations
+    .filter((d) => d.behindText)
+    .sort((a, b) => b.z - a.z); // highest z is visually on top — test it first
+  for (const d of behind) {
+    const aspectRatio = aspectRatioOf(d.assetId);
+    if (aspectRatio == null) continue;
+    if (pointInBox(px, py, decorationBox(d, refWidth, aspectRatio))) return d.id;
+  }
+  return null;
+}
+
 export function pinchTransform(
   d: NoteDecoration,
   { startDist, dist, startAngle, angle }:

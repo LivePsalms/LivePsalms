@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
-import { DecorationLayer } from '../decorations/DecorationLayer';
+import { DecorationLayer, type DecorationLayerHandle } from '../decorations/DecorationLayer';
 import { TEXT_Z } from '../decorations/decoration-geometry';
 import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
@@ -77,10 +77,34 @@ export function NotepadEditor({
   const decorationsApi = useDecorations(activeNote, updateNote);
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
+  const decorationLayerRef = useRef<DecorationLayerHandle>(null);
+  const lastInteractionRef = useRef<'pointer' | 'keyboard'>('pointer');
+  useEffect(() => {
+    const onPointer = () => { lastInteractionRef.current = 'pointer'; };
+    const onKey = () => { lastInteractionRef.current = 'keyboard'; };
+    window.addEventListener('pointerdown', onPointer, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPointer, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, []);
+
+  // A behind-text decoration sits below the editor text, so a normal click lands
+  // on the text (keeping it editable). Alt-click or double-click over the
+  // decoration selects it instead — it then pops above the text and is movable.
+  const selectBehindDecoration = (e: React.MouseEvent): boolean => {
+    const id = decorationLayerRef.current?.hitTestBehind(e.clientX, e.clientY);
+    if (!id) return false;
+    e.preventDefault();
+    setSelectedDecoration(id);
+    return true;
+  };
 
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
   const [swatchDismissed, setSwatchDismissed] = useState(false);
+  const [swatchAutoFocus, setSwatchAutoFocus] = useState(false);
   const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   useEffect(() => {
@@ -95,6 +119,7 @@ export function NotepadEditor({
       }
       const start = editor.view.coordsAtPos(from);
       setSwatchAnchor({ top: start.bottom + 6, left: start.left });
+      setSwatchAutoFocus(lastInteractionRef.current === 'pointer');
       const dismissed = dismissedRangeRef.current;
       if (!dismissed || dismissed.from !== from || dismissed.to !== to) {
         setSwatchDismissed(false);
@@ -406,6 +431,9 @@ export function NotepadEditor({
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
             onClick={(e) => {
+              // Alt-click over a behind-text decoration selects it (it lives below
+              // the text, so the click reaches here) without disturbing the text.
+              if (e.altKey && selectBehindDecoration(e)) return;
               handleClick(e);
               // The decoration overlay is pointerEvents:none over empty space, so
               // clicks on the editor fall through to here — deselect any decoration.
@@ -417,6 +445,9 @@ export function NotepadEditor({
               // click event drives it correctly and clears it when tapping off a verse.
               if (isBottomToolbar) handleMouseOver(e);
             }}
+            // Double-click over a behind-text decoration selects it too (instead of
+            // selecting a word), so it is reachable without holding a modifier key.
+            onDoubleClick={selectBehindDecoration}
             // Text sits at TEXT_Z; decorations compute zIndex relative to this so
             // 'send to back' drops them below the text and 'bring to front' lifts
             // them above it (see decorationZIndex).
@@ -428,12 +459,16 @@ export function NotepadEditor({
           {/* Interactive decoration overlay — absolutely positioned within the
               relative scroll container so it overlays content and scrolls with it. */}
           <DecorationLayer
+            // Keyed by note id so the frozen reference width re-snapshots to the
+            // current container size each time a different note is opened.
+            key={activeNote.id}
+            ref={decorationLayerRef}
             decorations={decorationsApi.decorations}
             selectedId={selectedDecoration}
             onSelect={setSelectedDecoration}
-            onDeselect={() => setSelectedDecoration(null)}
+            onDeselect={() => { setSelectedDecoration(null); editor?.commands.focus(); }}
             onChange={(next) => decorationsApi.update(next.id, next)}
-            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); }}
+            onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); editor?.commands.focus(); }}
             onDuplicate={(id) => decorationsApi.duplicate(id)}
             onBringToFront={(id) => decorationsApi.bringToFront(id)}
             onSendToBack={(id) => decorationsApi.sendToBack(id)}
@@ -599,6 +634,8 @@ export function NotepadEditor({
             const { from, to } = editor.state.selection;
             dismissedRangeRef.current = { from, to };
           }}
+          autoFocus={swatchAutoFocus}
+          onRequestEditorFocus={() => editor.commands.focus()}
         />
       )}
 

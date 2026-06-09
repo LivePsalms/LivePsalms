@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, TEXT_Z, SELECTED_Z,
+  decorationBox, pointInBox, topmostBehindAtPoint,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -112,5 +113,51 @@ describe('applyRotationDrag', () => {
   it('normalizes the result via rotationDeg', () => {
     expect(applyRotationDrag(350, 0, 30)).toBe(20); // 350 + 30 = 380 → 20
     expect(applyRotationDrag(0, 30, 0)).toBe(330); // 0 + (0 - 30) = -30 → 330
+  });
+});
+
+describe('decorationBox', () => {
+  it('computes px bounds from the frozen reference width and aspect ratio (w/h)', () => {
+    // refWidth 1000, widthPct 0.2 → 200px wide; aspectRatio 2 (w/h) → 100px tall.
+    expect(decorationBox(d, 1000, 2)).toEqual({ left: 500, top: 100, width: 200, height: 100 });
+  });
+
+  it('falls back to a square when aspectRatio is non-positive', () => {
+    expect(decorationBox(d, 1000, 0)).toEqual({ left: 500, top: 100, width: 200, height: 200 });
+  });
+});
+
+describe('pointInBox', () => {
+  const box = { left: 500, top: 100, width: 200, height: 100 };
+  it('is true inside and on the edges, false outside', () => {
+    expect(pointInBox(550, 150, box)).toBe(true);
+    expect(pointInBox(500, 100, box)).toBe(true); // top-left corner
+    expect(pointInBox(700, 200, box)).toBe(true); // bottom-right corner
+    expect(pointInBox(499, 150, box)).toBe(false);
+    expect(pointInBox(550, 201, box)).toBe(false);
+  });
+});
+
+describe('topmostBehindAtPoint', () => {
+  const ar = () => 2; // every asset is 2:1
+  const back: NoteDecoration = { id: 'back', assetId: 'x', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1, behindText: true };
+  const front: NoteDecoration = { id: 'front', assetId: 'x', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1 };
+
+  it('returns the id of a behind-text decoration under the point', () => {
+    expect(topmostBehindAtPoint([back], 550, 150, 1000, ar)).toBe('back');
+  });
+
+  it('ignores decorations that are NOT behind text (they are reachable directly)', () => {
+    expect(topmostBehindAtPoint([front], 550, 150, 1000, ar)).toBeNull();
+  });
+
+  it('returns null when the point misses every behind decoration', () => {
+    expect(topmostBehindAtPoint([back], 0, 0, 1000, ar)).toBeNull();
+  });
+
+  it('picks the highest-z behind decoration when several overlap', () => {
+    const lo = { ...back, id: 'lo', z: 1 };
+    const hi = { ...back, id: 'hi', z: 5 };
+    expect(topmostBehindAtPoint([lo, hi], 550, 150, 1000, ar)).toBe('hi');
   });
 });

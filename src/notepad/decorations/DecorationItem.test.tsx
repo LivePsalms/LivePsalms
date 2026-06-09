@@ -19,12 +19,24 @@ const d: NoteDecoration = {
 const handlers = () => ({
   onChange: vi.fn(), onSelect: vi.fn(), onDelete: vi.fn(),
   onDuplicate: vi.fn(), onBringToFront: vi.fn(), onSendToBack: vi.fn(),
+  onDeselect: vi.fn(),
   contentWidth: 1000,
 });
 
 afterEach(cleanup);
 
 describe('DecorationItem', () => {
+  it('renders left/top/width as fixed pixels derived from the reference width', () => {
+    // Decorations are pinned to a frozen reference width (px), not container
+    // percentages, so a window resize never moves or rescales them.
+    const h = handlers(); // contentWidth: 1000
+    const { getByTestId } = render(<DecorationItem decoration={d} selected={false} {...h} />);
+    const root = getByTestId('decoration-body-a').parentElement!;
+    expect(root.style.left).toBe('500px'); // 0.5 * 1000
+    expect(root.style.top).toBe('100px'); // yPx, unchanged
+    expect(root.style.width).toBe('200px'); // 0.2 * 1000
+  });
+
   it('shows the action bar only when selected', () => {
     const h = handlers();
     const { rerender, queryByLabelText } = render(
@@ -48,13 +60,15 @@ describe('DecorationItem', () => {
     expect(h.onSendToBack).toHaveBeenCalledWith('a');
   });
 
-  it('emits a moved decoration on body drag', () => {
+  it('emits a moved decoration when the selection drag surface is dragged', () => {
     const h = handlers();
     const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
-    const body = getByTestId('decoration-body-a');
-    fireEvent.pointerDown(body, { clientX: 0, clientY: 0, pointerId: 1 });
-    fireEvent.pointerMove(body, { clientX: 100, clientY: 30, pointerId: 1 });
-    fireEvent.pointerUp(body, { pointerId: 1 });
+    // While selected, interaction lives on the top chrome surface so the body
+    // image can sit at its true layer (e.g. behind the text).
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 100, clientY: 30, pointerId: 1 });
+    fireEvent.pointerUp(surface, { pointerId: 1 });
     expect(h.onChange).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'a', xPct: expect.closeTo(0.6, 5), yPx: 130 }),
     );
@@ -109,17 +123,31 @@ describe('DecorationItem', () => {
     expect(body.parentElement!.style.transform).not.toContain('scaleY(-1)');
   });
 
-  it('renders the computed zIndex for selected, behind-text, and default cases', () => {
+  it('renders the body image at its true layer while the chrome stays on top', () => {
+    // The image z reflects behindText/front IMMEDIATELY (even while selected), so
+    // "send to back" / "bring to front" update live. The selection chrome stays at
+    // SELECTED_Z so handles remain grabbable.
     const h = handlers();
-    const { getByTestId, rerender } = render(<DecorationItem decoration={d} selected {...h} />);
-    const root = () => getByTestId('decoration-body-a').parentElement!;
-    expect(root().style.zIndex).toBe(String(SELECTED_Z));
+    const { getByTestId, queryByTestId, rerender } = render(<DecorationItem decoration={d} selected {...h} />);
+    const imageRoot = () => getByTestId('decoration-body-a').parentElement!;
+    const chrome = () => getByTestId('decoration-chrome-a');
 
+    // selected, in front of text: image at TEXT_Z + z, chrome at SELECTED_Z.
+    expect(imageRoot().style.zIndex).toBe(String(TEXT_Z + d.z));
+    expect(chrome().style.zIndex).toBe(String(SELECTED_Z));
+
+    // selected AND sent to back: image drops behind text instantly; chrome stays on top.
+    rerender(<DecorationItem decoration={{ ...d, behindText: true }} selected {...h} />);
+    expect(imageRoot().style.zIndex).toBe(String(d.z));
+    expect(chrome().style.zIndex).toBe(String(SELECTED_Z));
+
+    // not selected: no chrome; image carries the layer.
     rerender(<DecorationItem decoration={{ ...d, behindText: true }} selected={false} {...h} />);
-    expect(root().style.zIndex).toBe(String(d.z));
+    expect(imageRoot().style.zIndex).toBe(String(d.z));
+    expect(queryByTestId('decoration-chrome-a')).toBeNull();
 
     rerender(<DecorationItem decoration={d} selected={false} {...h} />);
-    expect(root().style.zIndex).toBe(String(TEXT_Z + d.z));
+    expect(imageRoot().style.zIndex).toBe(String(TEXT_Z + d.z));
   });
 
   it('drag-rotates via the rotate handle (jsdom center at origin)', () => {
@@ -150,12 +178,64 @@ describe('DecorationItem', () => {
   it('emits a pinch-scaled decoration when a second pointer is added and moved', () => {
     const h = handlers();
     const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
-    const body = getByTestId('decoration-body-a');
+    const body = getByTestId('decoration-surface-a');
     fireEvent.pointerDown(body, { clientX: 0, clientY: 0, pointerId: 1 });
     fireEvent.pointerDown(body, { clientX: 100, clientY: 0, pointerId: 2 });
     fireEvent.pointerMove(body, { clientX: 200, clientY: 0, pointerId: 2 });
     expect(h.onChange).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.4, 5) }),
     );
+  });
+
+  it('focuses the selection chrome when it becomes selected', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    expect(document.activeElement).toBe(getByTestId('decoration-chrome-a'));
+  });
+
+  it('nudges position with arrow keys (Shift = larger step)', () => {
+    const h = handlers(); // contentWidth: 1000, d.xPct 0.5, d.yPx 100
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const chrome = getByTestId('decoration-chrome-a');
+
+    fireEvent.keyDown(chrome, { key: 'ArrowRight' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ xPct: expect.closeTo(0.501, 5) }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowRight', shiftKey: true });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ xPct: expect.closeTo(0.51, 5) }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowUp' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ yPx: 99 }));
+
+    fireEvent.keyDown(chrome, { key: 'ArrowDown' });
+    expect(h.onChange).toHaveBeenLastCalledWith(expect.objectContaining({ yPx: 101 }));
+  });
+
+  it('deletes with Delete and Backspace', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const chrome = getByTestId('decoration-chrome-a');
+    fireEvent.keyDown(chrome, { key: 'Delete' });
+    fireEvent.keyDown(chrome, { key: 'Backspace' });
+    expect(h.onDelete).toHaveBeenCalledTimes(2);
+    expect(h.onDelete).toHaveBeenCalledWith('a');
+  });
+
+  it('deselects with Escape', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    fireEvent.keyDown(getByTestId('decoration-chrome-a'), { key: 'Escape' });
+    expect(h.onDeselect).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores key events bubbling from child controls (only the chrome itself handles keys)', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    // A keydown originating on a child action-bar button must NOT nudge or delete.
+    const deleteBtn = getByLabelText('Delete decoration');
+    fireEvent.keyDown(deleteBtn, { key: 'ArrowRight' });
+    fireEvent.keyDown(deleteBtn, { key: 'Delete' });
+    expect(h.onChange).not.toHaveBeenCalled();
+    expect(h.onDelete).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import { BibleVerse } from '../extensions/bible-verse';
 import { NoteLink } from '../extensions/note-link';
 import { TagMark } from '../extensions/tag-mark';
 import { StyleHighlight } from '../extensions/style-highlight';
+import { STYLE_ASSETS, filterAssets } from '../styles/manifest';
 import type { Note } from '../types';
 import { parseNoteContent } from './note-editor';
 import { extractTags } from '../utils/tags';
@@ -49,6 +50,8 @@ export function useNoteEditor({
   const activeNoteRef = useRef(activeNote);
   activeNoteRef.current = activeNote;
 
+  const defaultHighlightSwatchId = filterAssets(STYLE_ASSETS, 'highlight', '')[0]?.id ?? null;
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -56,7 +59,7 @@ export function useNoteEditor({
       BibleVerse,
       NoteLink,
       TagMark,
-      StyleHighlight,
+      StyleHighlight.configure({ defaultSwatchId: defaultHighlightSwatchId }),
     ],
     content: '',
     onUpdate({ editor: ed }) {
