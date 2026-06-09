@@ -78,6 +78,17 @@ export function NotepadEditor({
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
   const decorationLayerRef = useRef<DecorationLayerHandle>(null);
+  const lastInteractionRef = useRef<'pointer' | 'keyboard'>('pointer');
+  useEffect(() => {
+    const onPointer = () => { lastInteractionRef.current = 'pointer'; };
+    const onKey = () => { lastInteractionRef.current = 'keyboard'; };
+    window.addEventListener('pointerdown', onPointer, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPointer, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, []);
 
   // A behind-text decoration sits below the editor text, so a normal click lands
   // on the text (keeping it editable). Alt-click or double-click over the
@@ -93,6 +104,7 @@ export function NotepadEditor({
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
   const [swatchDismissed, setSwatchDismissed] = useState(false);
+  const [swatchAutoFocus, setSwatchAutoFocus] = useState(false);
   const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   useEffect(() => {
@@ -107,6 +119,7 @@ export function NotepadEditor({
       }
       const start = editor.view.coordsAtPos(from);
       setSwatchAnchor({ top: start.bottom + 6, left: start.left });
+      setSwatchAutoFocus(lastInteractionRef.current === 'pointer');
       const dismissed = dismissedRangeRef.current;
       if (!dismissed || dismissed.from !== from || dismissed.to !== to) {
         setSwatchDismissed(false);
@@ -621,6 +634,8 @@ export function NotepadEditor({
             const { from, to } = editor.state.selection;
             dismissedRangeRef.current = { from, to };
           }}
+          autoFocus={swatchAutoFocus}
+          onRequestEditorFocus={() => editor.commands.focus()}
         />
       )}
 
