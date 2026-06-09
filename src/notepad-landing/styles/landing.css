@@ -108,9 +108,54 @@
   align-items: center;
 }
 
+.hero-cta-note {
+  font-family: var(--np-body);
+  font-style: italic;
+  font-size: clamp(0.8rem, 1vw, 0.9rem);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  margin-top: 1rem;
+  /* Shimmer: a bright highlight sweeps across the muted base text. */
+  background: linear-gradient(
+    100deg,
+    #8f867a 0%,
+    #8f867a 38%,
+    #f3ead9 50%,
+    #8f867a 62%,
+    #8f867a 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: hero-cta-shimmer 4.5s ease-in-out infinite;
+}
+
+@keyframes hero-cta-shimmer {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -30% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cta-note {
+    animation: none;
+    background: none;
+    color: #b7ada0;
+    -webkit-text-fill-color: #b7ada0;
+  }
+}
+
 .cta-primary,
 .cta-ghost {
   display: inline-block;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   font-family: var(--np-body);
   font-size: 0.85rem;
   letter-spacing: 0.04em;
@@ -118,6 +163,48 @@
   border-radius: 999px;
   text-decoration: none;
   transition: background 0.4s var(--np-ease), color 0.4s var(--np-ease), transform 0.4s var(--np-ease);
+}
+
+/* Shimmer: a warm highlight relays from the primary button to the ghost,
+   then pauses before repeating. */
+.cta-primary::before,
+.cta-ghost::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(243, 234, 217, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  animation: cta-shimmer 4.5s linear infinite;
+}
+
+/* The ghost button picks up the sweep as the primary's finishes. */
+.cta-ghost::before {
+  animation-delay: 1.5s;
+}
+
+@keyframes cta-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  33%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-primary::before,
+  .cta-ghost::before {
+    animation: none;
+    background: none;
+  }
 }
 
 .cta-primary {

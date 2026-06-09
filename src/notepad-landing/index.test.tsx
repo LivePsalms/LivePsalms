@@ -16,7 +16,7 @@ describe('NotepadLanding (stub)', () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole('heading', { level: 1, name: /for what you cannot afford to forget/i }),
+      screen.getByRole('heading', { level: 1, name: /everything god’s said to you/i }),
     ).toBeInTheDocument();
   });
 
