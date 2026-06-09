@@ -5,7 +5,7 @@ import { useIntersectionStage } from '../hooks/use-intersection-stage';
 export function TierPath() {
   const ref = useRef<HTMLElement>(null);
   const staged = useIntersectionStage(ref);
-  const { eyebrow, h2, body, pullQuote, bodyContinued } = copy.section07;
+  const { eyebrow, h2, supporting, body, pullQuote } = copy.section07;
 
   return (
     <section
@@ -16,9 +16,9 @@ export function TierPath() {
       <div className="tier-path-content">
         <p className="eyebrow">{eyebrow}</p>
         <h2 id="sec07-h2">{h2}</h2>
+        <p className="supporting">{supporting}</p>
         <p className="body">{body}</p>
         <blockquote className="tier-pullquote">{pullQuote}</blockquote>
-        <p className="body">{bodyContinued}</p>
       </div>
     </section>
   );

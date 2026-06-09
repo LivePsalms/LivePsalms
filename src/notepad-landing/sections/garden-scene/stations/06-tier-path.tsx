@@ -6,7 +6,7 @@ interface Props {
 }
 
 export function StationTierPath({ isActive }: Props) {
-  const { eyebrow, h2, body, pullQuote, bodyContinued } = copy.section07;
+  const { eyebrow, h2, supporting, body, pullQuote } = copy.section07;
   return (
     <article
       id="section-07"
@@ -26,9 +26,9 @@ export function StationTierPath({ isActive }: Props) {
         <div className="garden-station-content garden-station-content--right">
           <p className="eyebrow">{eyebrow}</p>
           <h2>{h2}</h2>
+          <p className="supporting">{supporting}</p>
           <p className="body">{body}</p>
           <blockquote className="tier-pullquote">{pullQuote}</blockquote>
-          <p className="body">{bodyContinued}</p>
         </div>
       </div>
     </article>

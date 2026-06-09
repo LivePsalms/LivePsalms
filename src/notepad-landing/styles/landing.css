@@ -447,49 +447,29 @@
   margin-top: 1rem;
 }
 
-.lamplight-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin: 3.5rem 0 2.5rem;
+.lamplight-supporting {
+  max-width: 620px;
 }
 
-.lamplight-card {
-  border-top: 1px solid rgba(102, 84, 79, 0.18);
-  padding-top: 1.4rem;
+.lamplight-actions {
+  margin-top: 2.2rem;
 }
 
-.lamplight-card h3 {
-  font-family: var(--np-display);
-  font-size: 1.2rem;
-  font-style: italic;
-  font-weight: 500;
-  margin-bottom: 0.6rem;
+/* CTA sits on light parchment in the Lamplight section — ink-on-light variant */
+.section.lamplight .cta-primary,
+.notepad-landing .garden-station--lamplight .cta-primary {
+  border-color: var(--np-ink-warm);
+  color: var(--np-ink);
 }
 
-.lamplight-card p {
-  font-family: var(--np-body);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--np-ink-mid);
+.section.lamplight .cta-primary:hover,
+.notepad-landing .garden-station--lamplight .cta-primary:hover {
+  background: var(--np-ink-warm);
+  color: var(--np-bg-paper);
 }
 
-.lamplight-trust {
-  font-family: var(--np-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--np-ink-warm);
+.notepad-landing .garden-station--lamplight .cta-primary {
   margin-top: 2rem;
-  padding-top: 1.4rem;
-  border-top: 1px solid rgba(102, 84, 79, 0.12);
-}
-
-@media (max-width: 768px) {
-  .lamplight-cards {
-    grid-template-columns: 1fr;
-    gap: 1.4rem;
-  }
 }
 
 .scripture-margin {
@@ -631,29 +611,25 @@
   text-align: center;
 }
 
+.trust-built {
+  text-align: center;
+  margin-top: 1.4rem;
+}
+
 .trust-triptych {
   list-style: none;
   padding: 0;
-  margin: 2.4rem 0 0;
+  margin: 2rem auto 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  gap: 1rem;
+  max-width: 560px;
 }
 
 .trust-triptych li {
-  font-family: var(--np-display);
-  font-style: italic;
-  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
-  line-height: 1.5;
+  font-family: var(--np-body);
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.6;
   color: var(--np-ink-mid);
-  padding-top: 1.4rem;
-  border-top: 1px solid rgba(102, 84, 79, 0.18);
-}
-
-@media (max-width: 768px) {
-  .trust-triptych {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ─── Section 09: Closing CTA ────────────────────────────────────── */
@@ -693,14 +669,6 @@
   margin-bottom: 1.2rem;
 }
 
-.closing-sub {
-  font-family: var(--np-body);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #b7ada0;
-  margin-bottom: 2rem;
-}
-
 .closing-cta-primary {
   background: transparent;
   border: 1.5px solid #c4b5a0;
@@ -712,10 +680,17 @@
   color: #0e0e0e;
 }
 
+.closing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.8rem;
+  margin-top: 1.6rem;
+}
+
 .closing-cta-secondary {
   display: inline-block;
-  margin-top: 1.2rem;
-  margin-left: 1.8rem;
   font-family: var(--np-mono);
   font-size: 0.65rem;
   letter-spacing: 0.15em;
