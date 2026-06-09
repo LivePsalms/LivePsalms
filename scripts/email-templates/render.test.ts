@@ -47,4 +47,10 @@ describe('renderEmail', () => {
       ['confirmation', 'email_change', 'invite', 'magic_link', 'password_changed', 'reauthentication', 'recovery']
     );
   });
+
+  it('passes the NewEmail var through the email_change body', () => {
+    const emailChange = TEMPLATES.find((t) => t.name === 'email_change')!;
+    const html = renderEmail(baseHtml, emailChange);
+    expect(html).toContain('{{ .NewEmail }}');
+  });
 });
