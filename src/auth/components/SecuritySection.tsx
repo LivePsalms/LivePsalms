@@ -26,6 +26,7 @@ export function SecuritySection({
       <div className="flex flex-col gap-3">
         {canChange ? (
           <button
+            type="button"
             data-testid="security-change-password"
             onClick={onChangePassword}
             className="text-left text-xs hover:opacity-70 transition-opacity"

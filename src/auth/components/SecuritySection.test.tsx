@@ -36,6 +36,12 @@ describe('SecuritySection', () => {
       .toMatch(/managed by your Apple account/i);
   });
 
+  it('shows generic managed wording for unrecognized provider', () => {
+    render(<SecuritySection providers={[]} onChangePassword={vi.fn()} {...styles} />);
+    expect(screen.getByTestId('security-password-managed').textContent)
+      .toMatch(/managed by your linked account/i);
+  });
+
   it('shows linked status for each provider', () => {
     render(
       <SecuritySection providers={['email', 'google']} onChangePassword={vi.fn()} {...styles} />
