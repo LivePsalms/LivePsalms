@@ -714,8 +714,12 @@ Expected: a `RESEND_API_KEY` entry is listed.
 
 - [ ] **Step 2: Deploy the function**
 
-Run: `supabase functions deploy contact-message`
-Expected: "Deployed Function contact-message" success output. (Do NOT pass `--no-verify-jwt`.)
+Run: `supabase functions deploy contact-message --use-api --no-verify-jwt`
+Expected: "Deployed Functions … contact-message" success output.
+
+> **Two corrections discovered at deploy time:**
+> 1. **No Docker** — `supabase functions deploy` bundles with Docker by default. If Docker Desktop isn't running, the deploy hangs. Use `--use-api` to bundle server-side without Docker.
+> 2. **Public endpoint, `verify_jwt = false`** — this project's client key is a **non-JWT publishable key** (`sb_publishable_…`). The default JWT gate 401s it, so the anonymous form can't submit. Pin `verify_jwt = false` for `contact-message` in `supabase/config.toml` and deploy with `--no-verify-jwt`. (The original trust-model note in Task 2 — "default JWT verification, anon key works" — was wrong for this project.)
 
 - [ ] **Step 3: Confirm the production CORS allow-list**
 

@@ -78,9 +78,17 @@ discipline as `_shared/process-job.ts`.
 
 ### Trust model
 
-Deployed with **default JWT verification** (do NOT pass `--no-verify-jwt`).
-The browser invokes with the Supabase anon key, which is a valid JWT — identical
-to every other Edge Function in this project. No new auth surface.
+**PUBLIC endpoint — deployed with `verify_jwt = false`** (pinned in
+`supabase/config.toml`).
+
+> Correction (discovered at deploy time): this project's client key is a
+> **non-JWT publishable key** (`sb_publishable_…`, the new Supabase API-key
+> format). The default `verify_jwt = true` gate rejects it with **401**, so the
+> form could not be submitted anonymously. Because the contact form is public by
+> design, the correct fix is to disable JWT verification for this one function.
+> This is safe: the handler does no privileged DB work, validates its own input,
+> and its only side effect is sending one email. Spam/abuse hardening
+> (rate limiting, captcha) is a deliberate follow-up.
 
 ## Component 2 — Client (`src/components/sections/Contact.tsx`)
 
