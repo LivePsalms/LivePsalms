@@ -31,10 +31,6 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
-  "// exclude": "Pure-Node regression tests (read files via node:fs); type-checked under tsconfig.node so their node globals don't leak into the DOM-scoped app build.",
-  "exclude": [
-    "src/components/sections/moodboard-assets.test.ts",
-    "src/components/sections/moodboard-aspect.test.ts",
-    "src/data/devotion-moodboards.test.ts"
-  ]
+  "// exclude": "Test files are exercised + type-checked by Vitest, not the production build. Excluding them keeps `tsc -b` (npm run build / Vercel) scoped to shipped code, so test-only type drift never breaks a deploy.",
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
