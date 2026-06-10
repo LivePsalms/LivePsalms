@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   TextStaggerHover,
@@ -61,7 +61,6 @@ export function Contact() {
   const [subject, setSubject] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [submittedFirstName, setSubmittedFirstName] = useState('');
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -91,23 +90,29 @@ export function Contact() {
       <div className="max-w-[640px] w-full text-center">
         <p style={EYEBROW_STYLE}>Contact</p>
 
-        {status === 'success' ? (
-          <div aria-live="polite">
-            <h1 style={SERIF_HEADING_STYLE}>Thank you, {submittedFirstName}.</h1>
-            <p
-              style={{
-                fontFamily: '"Cormorant Garamond", Georgia, serif',
-                fontSize: '18px',
-                lineHeight: 1.5,
-                color: 'hsl(var(--mersi-dark) / 0.78)',
-                margin: '0 auto',
-                maxWidth: '480px',
-              }}
-            >
-              We will reach out to you as soon as we can. God bless.
-            </p>
-          </div>
-        ) : (
+        <div aria-live="polite">
+          {status === 'success' && (
+            <>
+              <h1 style={SERIF_HEADING_STYLE}>
+                {submittedFirstName ? `Thank you, ${submittedFirstName}.` : 'Thank you.'}
+              </h1>
+              <p
+                style={{
+                  fontFamily: '"Cormorant Garamond", Georgia, serif',
+                  fontSize: '18px',
+                  lineHeight: 1.5,
+                  color: 'hsl(var(--mersi-dark) / 0.78)',
+                  margin: '0 auto',
+                  maxWidth: '480px',
+                }}
+              >
+                We will reach out to you as soon as we can. God bless.
+              </p>
+            </>
+          )}
+        </div>
+
+        {status !== 'success' && (
           <>
             <h1 style={SERIF_HEADING_STYLE}>
               Feel free to reach out to us with any Prayer Request or any questions.
@@ -125,7 +130,6 @@ export function Contact() {
                 </label>
                 <input
                   id="contact-name"
-                  ref={nameInputRef}
                   type="text"
                   name="name"
                   required

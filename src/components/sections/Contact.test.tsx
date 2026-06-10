@@ -54,6 +54,16 @@ describe('Contact', () => {
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Sarah Lee');
   });
 
+  it('on a thrown network error also keeps the form and shows the error message', async () => {
+    invoke.mockRejectedValueOnce(new Error('network'));
+    render(<Contact />);
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+  });
+
   it('disables the submit button while submitting', async () => {
     let resolveInvoke: (v: unknown) => void = () => {};
     invoke.mockReturnValueOnce(new Promise((r) => { resolveInvoke = r; }));
@@ -64,5 +74,6 @@ describe('Contact', () => {
 
     await waitFor(() => expect(btn).toBeDisabled());
     resolveInvoke({ data: { ok: true }, error: null });
+    await screen.findByText(/thank you, sarah/i);
   });
 });
