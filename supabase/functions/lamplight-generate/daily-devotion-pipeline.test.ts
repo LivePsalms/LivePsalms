@@ -180,7 +180,7 @@ describe('runDailyDevotionPipeline', () => {
       period_key: '2026-05-27',
       source_note_ids: ['note-1'],
       source_verses: ['Psalm 23:4'],
-      prompt_version: 'daily-devotion-2026-05-28-v2',
+      prompt_version: 'daily-devotion-2026-06-09-v3',
     });
     await Promise.resolve(); // drain any stray microtask
     // The pipeline no longer records usage — the lifecycle (runGeneration) does.
@@ -212,7 +212,7 @@ describe('runDailyDevotionPipeline', () => {
     expect(capturedSystems).toHaveLength(2);
     // Voice fragment composed first.
     expect(capturedSystems[0]).toMatch(/You are Lamplight/);
-    expect(capturedSystems[0]).toMatch(/possibility, not pronouncement/);
+    expect(capturedSystems[0]).toMatch(/illumination, not pronouncement/);
     // Artifact stance composed second.
     expect(capturedSystems[0]).toMatch(/Write a brief daily devotion/);
     // {{local_date}} substituted, not left as a placeholder.
@@ -268,7 +268,7 @@ describe('runDailyDevotionPipeline', () => {
                         id: 'race-id',
                         body: cleanArtifact,
                         model_used: 'claude-sonnet-4-6',
-                        prompt_version: 'daily-devotion-2026-05-28-v2',
+                        prompt_version: 'daily-devotion-2026-06-09-v3',
                       },
                       error: null,
                     };

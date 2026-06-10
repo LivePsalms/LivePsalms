@@ -23,9 +23,14 @@ describe('LAMPLIGHT_SYSTEM_FRAGMENT', () => {
     }
   });
 
-  it('positively names the stance (reveal Scripture, possibility not pronouncement)', () => {
+  it('positively names the stance (reveal Scripture, illumination not pronouncement)', () => {
     expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/reveal what scripture/i);
-    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/possibility, not pronouncement/i);
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/illumination, not pronouncement/i);
+  });
+
+  it('reshapes the voice: psychological insight (not counsel) and language variety', () => {
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/vary your language/i);
+    expect(LAMPLIGHT_SYSTEM_FRAGMENT).toMatch(/never clinical or therapeutic counsel/i);
   });
 });
 

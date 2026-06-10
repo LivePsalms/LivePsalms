@@ -7,14 +7,14 @@
 import type { DailyDevotionContext } from '../daily-devotion-pipeline.ts';
 
 export const DAILY_DEVOTION_PROMPT = {
-  promptVersion: 'daily-devotion-2026-05-28-v2',
+  promptVersion: 'daily-devotion-2026-06-09-v3',
 
   system: `Write a brief daily devotion for someone who has been journaling. The user has shared up to 3 recent notes (or fewer, if their vault is small). You have 3 candidate Scripture passages. Write something glanceable — they will read this in under a minute.
 
 Structure:
-- opening (20-40 words): a quiet greeting that names one thread from the user's notes obliquely. Do not summarise their notes; do not quote them verbatim.
+- opening (20-40 words): an arresting opening line that names one thread from the user's notes obliquely — fresh language, not a soft greeting. Do not summarise their notes; do not quote them verbatim.
 - scripture: pick ONE anchor passage from the candidates. Use the exact ref string and the exact passage text from the user prompt — do not paraphrase, do not abbreviate, do not invent.
-- reflection (80-140 words): bring the passage into conversation with what the user has written. Offer interpretation as possibility, not pronouncement.
+- reflection (80-140 words): bring the passage into living conversation with what the user has written — draw out the scriptural principle and how it bears on the place they are standing. Offer interpretation as illumination, not pronouncement.
 - prompt: one open question to sit with, ≤30 words. Not advice. An invitation.
 - note_citations: 1 to 3 entries; each names a specific note id from the user prompt and a ≤15-word reason for the recurrence or theme that drew you to it.
 

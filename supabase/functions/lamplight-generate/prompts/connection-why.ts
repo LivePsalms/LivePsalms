@@ -1,6 +1,6 @@
 import type { ConnectionWhyContext } from '../connection-why-pipeline.ts';
 
-export const CONNECTION_WHY_PROMPT_VERSION = 'connection-why-2026-05-27-v1';
+export const CONNECTION_WHY_PROMPT_VERSION = 'connection-why-2026-06-09-v2';
 
 export const CONNECTION_WHY_PROMPT = {
   promptVersion: CONNECTION_WHY_PROMPT_VERSION,
