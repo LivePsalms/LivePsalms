@@ -106,10 +106,24 @@ export class AuthSession extends Observable<AuthSessionState> {
 
   signUp = async (email: string, password: string, fullName: string): Promise<void> => {
     if (!this.client) throw new Error('Supabase not configured');
+    const emailRedirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/notepad/notes` : undefined;
     const { error } = await this.client.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName }, emailRedirectTo },
+    });
+    if (error) throw error;
+  };
+
+  resendSignupEmail = async (email: string): Promise<void> => {
+    if (!this.client) throw new Error('Supabase not configured');
+    const emailRedirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/notepad/notes` : undefined;
+    const { error } = await this.client.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo },
     });
     if (error) throw error;
   };

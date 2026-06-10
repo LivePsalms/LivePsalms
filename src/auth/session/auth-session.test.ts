@@ -13,7 +13,8 @@ class FakeSupabaseAuth {
   listeners: AuthListener[] = [];
   initialSession: { user: User } | null = null;
   signOutCalls = 0;
-  signUpCalls: Array<{ email: string; password: string; fullName: string }> = [];
+  signUpCalls: Array<{ email: string; password: string; fullName: string; emailRedirectTo?: string }> = [];
+  resendCalls: Array<{ type: string; email: string; emailRedirectTo?: string }> = [];
   signInCalls: Array<{ email: string; password: string }> = [];
   oauthCalls: Array<{ provider: string }> = [];
   resetPasswordCalls: Array<{ email: string; redirectTo?: string }> = [];
@@ -40,11 +41,21 @@ class FakeSupabaseAuth {
     };
   }
 
-  async signUp(payload: { email: string; password: string; options?: { data?: { full_name?: string } } }) {
+  async signUp(payload: { email: string; password: string; options?: { data?: { full_name?: string }; emailRedirectTo?: string } }) {
     this.signUpCalls.push({
       email: payload.email,
       password: payload.password,
       fullName: payload.options?.data?.full_name ?? '',
+      emailRedirectTo: payload.options?.emailRedirectTo,
+    });
+    return { error: null };
+  }
+
+  async resend(payload: { type: string; email: string; options?: { emailRedirectTo?: string } }) {
+    this.resendCalls.push({
+      type: payload.type,
+      email: payload.email,
+      emailRedirectTo: payload.options?.emailRedirectTo,
     });
     return { error: null };
   }
@@ -236,6 +247,38 @@ describe('AuthSession — auth methods', () => {
     const session = new AuthSession(client, local, new FakeOAuthProbe());
     await session.signUp('a@b.com', 'pw', 'Alice Doe');
     expect(auth.signUpCalls[0]).toEqual({ email: 'a@b.com', password: 'pw', fullName: 'Alice Doe' });
+  });
+
+  it('signUp passes an emailRedirectTo to /notepad/notes when a window exists', async () => {
+    const originalWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = { location: { origin: 'https://example.test' } };
+    try {
+      const { client, auth } = makeFakeClient();
+      const session = new AuthSession(client, local, new FakeOAuthProbe());
+      await session.signUp('a@b.com', 'pw', 'Alice Doe');
+      expect(auth.signUpCalls[0].emailRedirectTo).toBe('https://example.test/notepad/notes');
+    } finally {
+      if (originalWindow === undefined) delete (globalThis as { window?: unknown }).window;
+      else (globalThis as { window?: unknown }).window = originalWindow;
+    }
+  });
+
+  it('resendSignupEmail calls auth.resend with type=signup and the emailRedirectTo', async () => {
+    const originalWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = { location: { origin: 'https://example.test' } };
+    try {
+      const { client, auth } = makeFakeClient();
+      const session = new AuthSession(client, local, new FakeOAuthProbe());
+      await session.resendSignupEmail('a@b.com');
+      expect(auth.resendCalls[0]).toEqual({
+        type: 'signup',
+        email: 'a@b.com',
+        emailRedirectTo: 'https://example.test/notepad/notes',
+      });
+    } finally {
+      if (originalWindow === undefined) delete (globalThis as { window?: unknown }).window;
+      else (globalThis as { window?: unknown }).window = originalWindow;
+    }
   });
 
   it('signIn calls signInWithPassword', async () => {
