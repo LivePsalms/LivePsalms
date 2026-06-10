@@ -21,6 +21,7 @@ afterEach(() => {
   cleanup();
   navigate.mockClear();
   updateProfile.mockClear();
+  importNote.mockClear();
 });
 
 describe('WelcomePage onboarding flow', () => {
