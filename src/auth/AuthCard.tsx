@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
+import { VerifyEmailNotice } from './VerifyEmailNotice';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): string {
@@ -43,7 +44,6 @@ export interface AuthCardProps {
  */
 export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const { session } = useAuthSession();
-  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +53,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,12 +79,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           return;
         }
         await session.signUp(email, password, fullName);
-        try {
-          sessionStorage.setItem('lp.verifyEmail', email);
-        } catch {
-          /* best-effort */
-        }
-        navigate('/verify-email');
+        setVerifyEmail(email);
       } else if (mode === 'reset') {
         await session.resetPassword(email);
         setSuccess('If an account exists for that email, a reset link is on its way.');
@@ -133,17 +129,27 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
         <img src="/logo-icon.png" alt="LivePsalms" className="h-10 w-auto mb-3" />
-        <h1
-          className="text-lg font-medium"
-          style={{
-            color: 'var(--deep-umber)',
-            fontFamily: 'Cormorant Garamond, serif',
-          }}
-        >
-          {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
-        </h1>
+        {!verifyEmail && (
+          <h1
+            className="text-lg font-medium"
+            style={{
+              color: 'var(--deep-umber)',
+              fontFamily: 'Cormorant Garamond, serif',
+            }}
+          >
+            {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
+          </h1>
+        )}
       </div>
 
+      {verifyEmail ? (
+        <VerifyEmailNotice
+          email={verifyEmail}
+          onBack={() => setVerifyEmail(null)}
+          onVerified={() => onAuthenticated?.()}
+        />
+      ) : (
+        <>
       {mode !== 'reset' && (
         <>
       {/* Google sign-in */}
@@ -404,6 +410,8 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             {mode === 'login' ? 'Sign up' : 'Sign in'}
           </button>
         </p>
+      )}
+        </>
       )}
     </div>
   );
