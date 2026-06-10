@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -43,6 +43,7 @@ export interface AuthCardProps {
  */
 export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const { session } = useAuthSession();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,7 +78,12 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           return;
         }
         await session.signUp(email, password, fullName);
-        setSuccess('Check your email to verify your account.');
+        try {
+          sessionStorage.setItem('lp.verifyEmail', email);
+        } catch {
+          /* best-effort */
+        }
+        navigate('/verify-email');
       } else if (mode === 'reset') {
         await session.resetPassword(email);
         setSuccess('If an account exists for that email, a reset link is on its way.');

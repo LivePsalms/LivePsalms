@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -33,6 +33,7 @@ import { AuthCard } from './AuthCard';
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  sessionStorage.clear();
 });
 
 function renderLogin() {
@@ -68,21 +69,28 @@ describe('AuthCard verify-password', () => {
     expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
   });
 
-  it('enables Create Account on a match and submits with signUp', async () => {
-    renderSignup();
+  it('on a match, stashes the email and navigates to /verify-email after signUp', async () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<AuthCard />} />
+          <Route path="/verify-email" element={<div>VERIFY EMAIL PAGE</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^sign up$/i }));
     fireEvent.change(screen.getByPlaceholderText('Full Name'), { target: { value: 'Sarah' } });
     fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sarah@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'secret1' } });
     fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'secret1' } });
-    expect(screen.getByText(/passwords match/i)).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole('checkbox'));
-    const submit = screen.getByRole('button', { name: /create account/i });
-    expect(submit).toBeEnabled();
-    fireEvent.click(submit);
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+
     await waitFor(() =>
       expect(signUp).toHaveBeenCalledWith('sarah@example.com', 'secret1', 'Sarah'),
     );
+    expect(await screen.findByText('VERIFY EMAIL PAGE')).toBeInTheDocument();
+    expect(sessionStorage.getItem('lp.verifyEmail')).toBe('sarah@example.com');
   });
 
   it('never shows the verify field in login mode', () => {
