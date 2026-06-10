@@ -349,6 +349,7 @@ describe('AuthSession — auth methods', () => {
   it('all sign-in/up methods throw when no client is configured', async () => {
     const session = new AuthSession(null, local);
     await expect(session.signUp('a', 'b', 'c')).rejects.toThrow(/not configured/i);
+    await expect(session.resendSignupEmail('a@b.com')).rejects.toThrow(/not configured/i);
     await expect(session.signIn('a', 'b')).rejects.toThrow(/not configured/i);
     await expect(session.signInWithGoogle()).rejects.toThrow(/not configured/i);
     await expect(session.signInWithApple()).rejects.toThrow(/not configured/i);
