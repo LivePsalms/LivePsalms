@@ -30,7 +30,7 @@ export function UsernameSection({
 
   const normalized = normalizeUsername(value);
   const format = validateUsername(value);
-  const unchanged = normalized === (currentUsername ?? '');
+  const unchanged = normalized === normalizeUsername(currentUsername ?? '');
 
   const { status: availability, markTaken } = useUsernameAvailability({
     checkAvailable,
@@ -40,14 +40,18 @@ export function UsernameSection({
   });
 
   const canSave =
-    format.valid && !unchanged && availability === 'available' && !submitting;
+    format.valid &&
+    !unchanged &&
+    (availability === 'available' || availability === 'error') &&
+    !submitting;
 
   const status = (() => {
-    if (unchanged) return 'This is your current username';
+    if (unchanged) return currentUsername ? 'This is your current username' : null;
     if (!format.valid) return format.reason ?? null;
     if (availability === 'checking') return 'Checking…';
     if (availability === 'available') return 'Available';
     if (availability === 'taken') return 'Taken';
+    if (availability === 'error') return 'Couldn’t check availability — you can still try saving.';
     return null;
   })();
 

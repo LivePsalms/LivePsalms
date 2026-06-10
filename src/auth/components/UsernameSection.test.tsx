@@ -53,7 +53,7 @@ describe('UsernameSection', () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(setUsername).toHaveBeenCalledWith('natalie'));
-    expect(toast.success).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('Username updated.');
   });
 
   it('shows Taken and disables Save when the name is unavailable', async () => {
@@ -80,5 +80,17 @@ describe('UsernameSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /save username/i }));
     await waitFor(() => expect(screen.getByText(/just taken/i)).toBeInTheDocument());
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('lets the user try saving when the availability check errors (fail open)', async () => {
+    const { setUsername } = renderSection({
+      checkAvailable: vi.fn().mockRejectedValue(new Error('network')),
+    });
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'natalie' } });
+    expect(await screen.findByText(/still try saving/i)).toBeInTheDocument();
+    const save = screen.getByRole('button', { name: /save username/i });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(setUsername).toHaveBeenCalledWith('natalie'));
   });
 });
