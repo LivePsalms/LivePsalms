@@ -3,15 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthSession } from './context/useAuthSession';
 import { useAccountProfile } from './context/useAccountProfile';
+import { WelcomeImportStep } from './WelcomeImportStep';
 
 export function WelcomePage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuthSession();
+  const { user, loading, adapter } = useAuthSession();
   const { profile, account } = useAccountProfile();
 
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState<'profile' | 'import'>('profile');
+  const goNotepad = () => navigate('/notepad/notes');
 
   if (!loading && !user) {
     navigate('/login');
@@ -43,7 +46,7 @@ export function WelcomePage() {
         dateOfBirth: dateOfBirth || null,
       });
       toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
-      navigate('/notepad/notes');
+      setStep('import');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save your profile.');
     } finally {
@@ -100,10 +103,13 @@ export function WelcomePage() {
             className="text-xs text-center"
             style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
           >
-            Just a couple of details to get you started.
+            {step === 'profile'
+              ? 'Just a couple of details to get you started.'
+              : 'Bring any notes you already have — or skip for now.'}
           </p>
         </div>
 
+        {step === 'profile' ? (
         <div className="flex flex-col gap-4">
           <div>
             <label
@@ -159,6 +165,9 @@ export function WelcomePage() {
           </button>
 
         </div>
+        ) : (
+          <WelcomeImportStep adapter={adapter} onDone={goNotepad} onSkip={goNotepad} />
+        )}
       </div>
     </div>
   );
