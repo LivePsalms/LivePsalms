@@ -165,9 +165,9 @@ export function ConnectionCardsPanel({
       {collapsible ? (
         <button
           type="button"
-          onClick={onToggleOpen}
+          onClick={() => onToggleOpen?.()}
           aria-expanded={open}
-          aria-controls="connection-cards-list"
+          aria-controls={open ? 'connection-cards-list' : undefined}
           className="flex items-center gap-1 text-[10px] uppercase tracking-wider mb-2 cursor-pointer"
           style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
         >
