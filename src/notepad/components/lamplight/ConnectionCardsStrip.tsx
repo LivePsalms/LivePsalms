@@ -15,12 +15,12 @@ export interface ConnectionCardsStripProps {
 /** Persisted across sessions; a single global preference, not per-note. */
 const CONNECTION_CARDS_OPEN_KEY = 'lp.notepad.connectionCards.open';
 
-/** Default open: only an explicit stored 'false' collapses. Safe if storage throws. */
+/** Default closed: only an explicit stored 'true' opens. Safe if storage throws. */
 function readInitialOpen(): boolean {
   try {
-    return localStorage.getItem(CONNECTION_CARDS_OPEN_KEY) !== 'false';
+    return localStorage.getItem(CONNECTION_CARDS_OPEN_KEY) === 'true';
   } catch {
-    return true;
+    return false;
   }
 }
 

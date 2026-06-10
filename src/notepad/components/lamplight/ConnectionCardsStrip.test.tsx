@@ -114,6 +114,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('renders header + chips when neighbors exist', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     const adapter = new FakeLamplightAdapter();
     adapter.__seedNoteEmbedding('note-1');
     adapter.__seedConnectionNeighbors('note-1', [
@@ -139,6 +140,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('chip click reveals the why detail; second click on same chip hides it', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     const adapter = new FakeLamplightAdapter();
     adapter.__seedNoteEmbedding('note-1');
     adapter.__seedConnectionNeighbors('note-1', [
@@ -173,6 +175,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('chip click shows why text prefixed with first name when user is authenticated', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthSession.mockReturnValue({ user: { user_metadata: { full_name: 'Sarah Mitchell' } }, loading: false } as any);
 
@@ -207,6 +210,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('open link invokes onOpenNote and does not toggle expand', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     const adapter = new FakeLamplightAdapter();
     adapter.__seedNoteEmbedding('note-1');
     adapter.__seedConnectionNeighbors('note-1', [
@@ -264,6 +268,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('renders neighbors when server-supplied threshold is loose enough', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     const adapter = new FakeLamplightAdapter();
     adapter.connectionCardThresholds = { minSimilarity: 0.3 };
     adapter.__seedNoteEmbedding('note-1');
@@ -289,6 +294,7 @@ describe('ConnectionCardsStrip', () => {
   });
 
   it('surfaces validators_failed error inline in detail zone', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
     const adapter = new FakeLamplightAdapter();
     adapter.__seedNoteEmbedding('note-1');
     adapter.__seedConnectionNeighbors('note-1', [
@@ -333,51 +339,7 @@ describe('ConnectionCardsStrip show/hide toggle', () => {
     return { adapter, note, loadNeighborNotes };
   }
 
-  it('defaults to open: header is expanded and cards are visible', async () => {
-    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
-    render(
-      <ConnectionCardsStrip
-        adapter={adapter}
-        userId="u1"
-        activeNote={note}
-        totalNoteCount={50}
-        loadNeighborNotes={loadNeighborNotes}
-        onOpenNote={() => {}}
-      />,
-    );
-    const header = await screen.findByRole('button', { name: /connection cards/i });
-    expect(header).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
-  });
-
-  it('clicking the header collapses the list and persists the choice', async () => {
-    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
-    render(
-      <ConnectionCardsStrip
-        adapter={adapter}
-        userId="u1"
-        activeNote={note}
-        totalNoteCount={50}
-        loadNeighborNotes={loadNeighborNotes}
-        onOpenNote={() => {}}
-      />,
-    );
-    const header = await screen.findByRole('button', { name: /connection cards/i });
-    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
-
-    act(() => {
-      fireEvent.click(header);
-    });
-
-    expect(screen.queryByText('Note note-2')).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /connection cards/i }),
-    ).toHaveAttribute('aria-expanded', 'false');
-    expect(localStorage.getItem('lp.notepad.connectionCards.open')).toBe('false');
-  });
-
-  it('renders collapsed on mount when localStorage has the closed preference', async () => {
-    localStorage.setItem('lp.notepad.connectionCards.open', 'false');
+  it('defaults to closed: header is collapsed and cards are hidden', async () => {
     const { adapter, note, loadNeighborNotes } = seedReadyStrip();
     render(
       <ConnectionCardsStrip
@@ -392,5 +354,50 @@ describe('ConnectionCardsStrip show/hide toggle', () => {
     const header = await screen.findByRole('button', { name: /connection cards/i });
     expect(header).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Note note-2')).not.toBeInTheDocument();
+  });
+
+  it('clicking the header opens the list and persists the choice', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    const header = await screen.findByRole('button', { name: /connection cards/i });
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Note note-2')).not.toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(header);
+    });
+
+    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /connection cards/i }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(localStorage.getItem('lp.notepad.connectionCards.open')).toBe('true');
+  });
+
+  it('renders open on mount when localStorage has the open preference', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'true');
+    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    const header = await screen.findByRole('button', { name: /connection cards/i });
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
   });
 });

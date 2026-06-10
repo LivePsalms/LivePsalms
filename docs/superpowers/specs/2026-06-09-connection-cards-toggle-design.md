@@ -36,7 +36,9 @@ Mobile is out of scope — this toggle is desktop-only.
 1. **Affordance:** a collapsible header bar. The existing `"Connection Cards"`
    label row becomes a clickable header with a rotating chevron. Collapsing hides
    the card list; the header bar stays as the re-open affordance.
-2. **Default:** shown (open). Preserves today's behavior; users opt out.
+2. **Default:** hidden (closed). The cards stay collapsed until the user opens
+   them; the choice then persists. (Updated 2026-06-09: originally shipped
+   default-open, then changed to default-closed for a quieter writing surface.)
 3. **Persistence:** remembered across sessions via `localStorage`, one global
    preference (not per-note).
 4. **Architecture (Approach A):** collapse rendering lives **inside**
@@ -57,9 +59,9 @@ open/closed preference.
 
 - New module-level constant `CONNECTION_CARDS_OPEN_KEY = 'lp.notepad.connectionCards.open'`.
 - `useState<boolean>` initialized lazily from `localStorage`:
-  `localStorage.getItem(KEY) !== 'false'` (i.e. default **open**; only an explicit
-  stored `'false'` collapses). The initializer is wrapped in `try/catch` returning
-  `true` so a throwing/absent `localStorage` (jsdom edge cases, privacy mode) falls
+  `localStorage.getItem(KEY) === 'true'` (i.e. default **closed**; only an explicit
+  stored `'true'` opens). The initializer is wrapped in `try/catch` returning
+  `false` so a throwing/absent `localStorage` (jsdom edge cases, privacy mode) falls
   back to the default.
 - `toggle = () => setOpen(prev => { const next = !prev; try { localStorage.setItem(KEY, String(next)); } catch {} return next; })`.
 - Renders `<ConnectionCardsPanel {...props} showEmptyStates={false} collapsible open={open} onToggleOpen={toggle} />`.
@@ -102,11 +104,14 @@ the header height when collapsed.
 - **`ConnectionCardsStrip` persistence** (`ConnectionCardsStrip.test.tsx`, jsdom;
   mock the discovery hook into a `ready` state with ≥1 card, as the existing test
   file already does):
-  - Defaults to open: card list visible on first render with empty `localStorage`.
-  - Clicking the header collapses: list (`#connection-cards-list`) removed, header
-    button still present with `aria-expanded="false"`.
-  - Pre-seeded `localStorage` `KEY='false'` → renders collapsed on mount.
+  - Defaults to closed: header present but card list hidden on first render with
+    empty `localStorage`.
+  - Clicking the header opens: list (`#connection-cards-list`) appears, header
+    button `aria-expanded="true"`.
+  - Pre-seeded `localStorage` `KEY='true'` → renders open on mount.
   - Toggling writes `'true'`/`'false'` to `localStorage` under the key.
+  - (Behavior tests that exercise the underlying panel — chip/why/threshold —
+    pre-seed `KEY='true'` so the cards are visible.)
 - **`ConnectionCardsPanel` collapsible rendering** (extend existing panel tests):
   - `collapsible open={false}` → header button present, list absent.
   - `collapsible` + not-ready → renders `null` (no header).

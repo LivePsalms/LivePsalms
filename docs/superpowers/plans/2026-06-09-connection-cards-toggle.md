@@ -10,6 +10,11 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-09-connection-cards-toggle-design.md`
 
+> **Superseded (2026-06-09):** Task 2 below shipped default-**open** (`readInitialOpen`
+> returned `getItem(KEY) !== 'false'`). The default was subsequently flipped to
+> **closed** (`=== 'true'`, fallback `false`), and the strip tests updated to match
+> (behavior tests pre-seed `KEY='true'`). See the spec for current semantics.
+
 ---
 
 ## File Structure
