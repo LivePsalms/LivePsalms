@@ -42,6 +42,7 @@ export function VerifyEmailPage({ cooldownSeconds = 45 }: VerifyEmailPageProps) 
   );
 
   const startCooldown = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setCooldown(cooldownSeconds);
     intervalRef.current = setInterval(() => {
       setCooldown((c) => {
