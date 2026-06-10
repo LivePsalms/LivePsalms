@@ -415,6 +415,14 @@ verify_jwt = true
 [functions.embed-note]
 verify_jwt = true
 
+# contact-message is a PUBLIC endpoint: anonymous site visitors submit the
+# contact form, and this project's client key is a non-JWT publishable key
+# (sb_publishable_...), which the default verify_jwt gate rejects with 401.
+# Disabling JWT verification is intentional and correct here — the handler does
+# no privileged work, validates its own input, and only sends one email.
+[functions.contact-message]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

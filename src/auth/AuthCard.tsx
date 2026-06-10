@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): string {
   if (mode === 'reset') return message;
@@ -42,9 +43,11 @@ export interface AuthCardProps {
  */
 export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const { session } = useAuthSession();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +72,18 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           setLoading(false);
           return;
         }
+        if (password !== confirmPassword) {
+          setError('Passwords don’t match.');
+          setLoading(false);
+          return;
+        }
         await session.signUp(email, password, fullName);
-        setSuccess('Check your email to verify your account.');
+        try {
+          sessionStorage.setItem('lp.verifyEmail', email);
+        } catch {
+          /* best-effort */
+        }
+        navigate('/verify-email');
       } else if (mode === 'reset') {
         await session.resetPassword(email);
         setSuccess('If an account exists for that email, a reset link is on its way.');
@@ -103,6 +116,10 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
+
+  const reduce = useReducedMotion();
+  const showConfirm = mode === 'signup' && password.length > 0;
+  const passwordsMatch = password === confirmPassword;
 
   return (
     <div
@@ -216,7 +233,10 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             type="password"
             placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (e.target.value === '') setConfirmPassword('');
+            }}
             required
             minLength={6}
             className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
@@ -229,6 +249,46 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           />
         )}
 
+        <AnimatePresence initial={false}>
+          {showConfirm && (
+            <motion.div
+              key="confirm-password"
+              style={{ overflow: 'hidden' }}
+              initial={{ height: 0, opacity: 0, y: -8 }}
+              animate={{ height: 'auto', opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -8 }}
+              transition={{ duration: reduce ? 0 : 0.25, ease: 'easeOut' }}
+            >
+              <input
+                type="password"
+                placeholder="Verify Password"
+                aria-label="Verify Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                style={{
+                  border: '1px solid var(--pale-stone)',
+                  background: 'var(--plaster)',
+                  fontFamily: 'Outfit, sans-serif',
+                  color: 'var(--deep-umber)',
+                }}
+              />
+              {confirmPassword.length > 0 && (
+                <p
+                  aria-live="polite"
+                  className="text-xs mt-1.5"
+                  style={{
+                    color: passwordsMatch ? '#27ae60' : '#c0392b',
+                    fontFamily: 'Outfit, sans-serif',
+                  }}
+                >
+                  {passwordsMatch ? '✓ Passwords match' : 'Passwords don’t match'}
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {mode === 'login' && (
           <button
             type="button"
@@ -236,6 +296,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               setMode('reset');
               setError(null);
               setSuccess(null);
+              setConfirmPassword('');
             }}
             className="self-end text-xs underline hover:opacity-70 transition-opacity"
             style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
@@ -285,13 +346,13 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
 
         <button
           type="submit"
-          disabled={loading || (mode === 'signup' && !agreedToTerms)}
+          disabled={loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword))}
           className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
           style={{
             background: 'var(--deep-umber)',
             color: 'var(--plaster)',
             fontFamily: 'Outfit, sans-serif',
-            opacity: loading || (mode === 'signup' && !agreedToTerms) ? 0.6 : 1,
+            opacity: loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword)) ? 0.6 : 1,
           }}
         >
           {loading
@@ -315,6 +376,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               setMode('login');
               setError(null);
               setSuccess(null);
+              setConfirmPassword('');
             }}
             className="underline hover:opacity-70 transition-opacity"
             style={{ color: 'var(--deep-umber)' }}
@@ -334,6 +396,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               setError(null);
               setSuccess(null);
               setAgreedToTerms(false);
+              setConfirmPassword('');
             }}
             className="underline hover:opacity-70 transition-opacity"
             style={{ color: 'var(--deep-umber)' }}
