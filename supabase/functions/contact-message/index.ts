@@ -27,7 +27,12 @@ serve(async (req) => {
   if (req.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405);
 
   const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) return jsonResp({ error: 'RESEND_API_KEY missing' }, 500);
+  if (!apiKey) {
+    // Misconfiguration — log the specific cause server-side, but return a
+    // generic message so this public endpoint doesn't reveal internal env names.
+    console.error('contact-message: RESEND_API_KEY missing');
+    return jsonResp({ error: 'server configuration error' }, 500);
+  }
 
   let raw: unknown;
   try {
