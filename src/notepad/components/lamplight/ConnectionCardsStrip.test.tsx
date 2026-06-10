@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { ConnectionCardsStrip } from './ConnectionCardsStrip';
 import { FakeLamplightAdapter } from '../../storage/fake-lamplight-adapter';
 import type { Note } from '../../types';
@@ -15,6 +15,7 @@ vi.mock('@/auth/context/useAuthSession', () => ({
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   mockUseAuthSession.mockReset();
   mockUseAuthSession.mockImplementation(() => ({ user: null, loading: false }));
 });
@@ -316,5 +317,80 @@ describe('ConnectionCardsStrip', () => {
       expect(screen.getByText(/Couldn't read this connection/i)).toBeInTheDocument(),
     );
     expect(screen.getByText(/Try again/i)).toBeInTheDocument();
+  });
+});
+
+describe('ConnectionCardsStrip show/hide toggle', () => {
+  function seedReadyStrip() {
+    const adapter = new FakeLamplightAdapter();
+    adapter.__seedNoteEmbedding('note-1');
+    adapter.__seedConnectionNeighbors('note-1', [
+      { relatedNoteId: 'note-2', similarity: 0.95 },
+    ]);
+    const note = fakeNote({ id: 'note-1' });
+    const loadNeighborNotes = async (ids: string[]) =>
+      ids.map((id) => fakeNote({ id, title: `Note ${id}` }));
+    return { adapter, note, loadNeighborNotes };
+  }
+
+  it('defaults to open: header is expanded and cards are visible', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    const header = await screen.findByRole('button', { name: /connection cards/i });
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
+  });
+
+  it('clicking the header collapses the list and persists the choice', async () => {
+    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    const header = await screen.findByRole('button', { name: /connection cards/i });
+    expect(await screen.findByText('Note note-2')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(header);
+    });
+
+    expect(screen.queryByText('Note note-2')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /connection cards/i }),
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(localStorage.getItem('lp.notepad.connectionCards.open')).toBe('false');
+  });
+
+  it('renders collapsed on mount when localStorage has the closed preference', async () => {
+    localStorage.setItem('lp.notepad.connectionCards.open', 'false');
+    const { adapter, note, loadNeighborNotes } = seedReadyStrip();
+    render(
+      <ConnectionCardsStrip
+        adapter={adapter}
+        userId="u1"
+        activeNote={note}
+        totalNoteCount={50}
+        loadNeighborNotes={loadNeighborNotes}
+        onOpenNote={() => {}}
+      />,
+    );
+    const header = await screen.findByRole('button', { name: /connection cards/i });
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Note note-2')).not.toBeInTheDocument();
   });
 });

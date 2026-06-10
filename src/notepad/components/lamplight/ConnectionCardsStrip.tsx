@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ConnectionCardsPanel } from './ConnectionCardsPanel';
 import type { LamplightAdapter } from '../../storage/lamplight-adapter';
 import type { Note } from '../../types';
@@ -11,12 +12,47 @@ export interface ConnectionCardsStripProps {
   onOpenNote: (noteId: string) => void;
 }
 
+/** Persisted across sessions; a single global preference, not per-note. */
+const CONNECTION_CARDS_OPEN_KEY = 'lp.notepad.connectionCards.open';
+
+/** Default open: only an explicit stored 'false' collapses. Safe if storage throws. */
+function readInitialOpen(): boolean {
+  try {
+    return localStorage.getItem(CONNECTION_CARDS_OPEN_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Inline strip for the desktop Content tab. Self-hides for every state
  * except `ready` — no empty-state placeholders in the writing surface.
- * (Empty states live in the mobile Connection Cards segment via
- * ConnectionCardsPanel with showEmptyStates.)
+ * Owns the desktop show/hide preference and renders a collapsible header.
+ * (Empty states and the always-on stack live on mobile via
+ * ConnectionCardsPanel directly.)
  */
 export function ConnectionCardsStrip(props: ConnectionCardsStripProps) {
-  return <ConnectionCardsPanel {...props} showEmptyStates={false} />;
+  const [open, setOpen] = useState<boolean>(readInitialOpen);
+
+  const toggle = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(CONNECTION_CARDS_OPEN_KEY, String(next));
+      } catch {
+        // Best-effort persistence; ignore storage failures.
+      }
+      return next;
+    });
+  };
+
+  return (
+    <ConnectionCardsPanel
+      {...props}
+      showEmptyStates={false}
+      collapsible
+      open={open}
+      onToggleOpen={toggle}
+    />
+  );
 }
