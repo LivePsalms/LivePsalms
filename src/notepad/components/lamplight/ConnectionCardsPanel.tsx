@@ -20,6 +20,12 @@ export interface ConnectionCardsPanelProps {
   showEmptyStates?: boolean;
   /** 'strip' = horizontal inline strip (desktop). 'stack' = vertical full-width cards (mobile). */
   layout?: 'strip' | 'stack';
+  /** When true, the label row becomes a clickable header that shows/hides the card list (desktop strip). */
+  collapsible?: boolean;
+  /** Whether the card list is shown. Only meaningful when `collapsible`. Default true. */
+  open?: boolean;
+  /** Toggle handler invoked when the collapsible header is clicked. */
+  onToggleOpen?: () => void;
 }
 
 export function ConnectionCardsPanel({
@@ -30,6 +36,9 @@ export function ConnectionCardsPanel({
   onOpenNote,
   showEmptyStates = false,
   layout = 'strip',
+  collapsible = false,
+  open = true,
+  onToggleOpen,
 }: ConnectionCardsPanelProps) {
   // Pull the server-authoritative similarity threshold so the panel never
   // renders a card the edge function will refuse to explain. While the fetch
@@ -93,6 +102,9 @@ export function ConnectionCardsPanel({
   };
 
   const isStack = layout === 'stack';
+  // When not collapsible the list is always shown (mobile/stack and any other
+  // caller keep today's behavior). When collapsible, `open` drives visibility.
+  const showList = !collapsible || open;
 
   const renderWhy = (card: typeof cards[number]) => {
     const why = whyState(card.relatedNoteId);
@@ -142,7 +154,7 @@ export function ConnectionCardsPanel({
       className="border-t px-4 py-3"
       style={{ borderColor: 'var(--pale-stone)', background: 'var(--plaster)' }}
     >
-      {!isStack && activeCard && (
+      {!isStack && showList && activeCard && (
         <div
           className="mb-2 border rounded px-3 py-2"
           style={{ borderColor: 'var(--pale-stone)', background: 'var(--alabaster)' }}
@@ -150,13 +162,38 @@ export function ConnectionCardsPanel({
           {renderWhy(activeCard)}
         </div>
       )}
-      <p
-        className="text-[10px] uppercase tracking-wider mb-2"
-        style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
-      >
-        Connection Cards
-      </p>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggleOpen}
+          aria-expanded={open}
+          aria-controls="connection-cards-list"
+          className="flex items-center gap-1 text-[10px] uppercase tracking-wider mb-2 cursor-pointer"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          Connection Cards
+          <span
+            aria-hidden="true"
+            style={{
+              display: 'inline-block',
+              transition: 'transform 0.2s',
+              transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+            }}
+          >
+            ⌄
+          </span>
+        </button>
+      ) : (
+        <p
+          className="text-[10px] uppercase tracking-wider mb-2"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          Connection Cards
+        </p>
+      )}
+      {showList && (
       <div
+        id="connection-cards-list"
         className={isStack ? 'flex flex-col gap-2' : 'flex gap-2 overflow-x-auto pb-1'}
         role="list"
       >
@@ -252,6 +289,7 @@ export function ConnectionCardsPanel({
           );
         })}
       </div>
+      )}
     </section>
   );
 }
