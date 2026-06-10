@@ -224,7 +224,7 @@ function DesktopNotepadWorkspace() {
           {activeTab === 'backlinks' && <BacklinksPanel />}
           {activeTab === 'info' && <InfoPanel />}
           {activeTab === 'lamplight' && lamplightAdapter && (
-            <LamplightTabPanel lamplightAdapter={lamplightAdapter} />
+            <LamplightTabPanel lamplightAdapter={lamplightAdapter} autoGenerate={false} />
           )}
           {activeTab === 'lamplight' && !lamplightAdapter && (
             <div
