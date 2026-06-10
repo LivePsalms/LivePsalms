@@ -70,6 +70,14 @@ describe('buildResendPayload', () => {
     expect(p.subject.endsWith('…')).toBe(true);
   });
 
+  it('does not truncate at exactly the 80-char limit but does at 81', () => {
+    const atLimit = buildResendPayload({ ...input, subject: 'a'.repeat(80) });
+    expect(atLimit.subject).toBe(`New contact form message: ${'a'.repeat(80)}`);
+
+    const oneOver = buildResendPayload({ ...input, subject: 'a'.repeat(81) });
+    expect(oneOver.subject).toBe(`New contact form message: ${'a'.repeat(80)}…`);
+  });
+
   it('includes name, email, and subject in the text body', () => {
     const p = buildResendPayload(input);
     expect(p.text).toContain('Sarah Lee');

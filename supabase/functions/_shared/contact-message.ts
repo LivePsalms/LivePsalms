@@ -20,6 +20,9 @@ export interface ValidationResult {
 const NAME_MAX = 100;
 const SUBJECT_MAX = 2000;
 // Pragmatic shape check: non-space + @ + non-space + . + non-space.
+// Intentionally permissive (matches the repo's existing validators) — it
+// catches obviously-broken input cheaply; Resend hard-rejects addresses that
+// are well-formed here but undeliverable.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateContactInput(raw: unknown): ValidationResult {
