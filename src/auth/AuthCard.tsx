@@ -259,8 +259,6 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
                 aria-label="Verify Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
                 style={{
                   border: '1px solid var(--pale-stone)',
