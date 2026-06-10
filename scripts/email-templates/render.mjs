@@ -1,4 +1,4 @@
-export const LOGO_URL = 'https://auth.livepsalms.com/storage/v1/object/public/brand-assets/Psalms_logo_(80%20x%2080).png';
+export const LOGO_URL = 'https://auth.livepsalms.com/storage/v1/object/public/brand-assets/psalms-logo-80.png';
 
 const BUTTON = (label, url) =>
   `<a href="${url}" style="display:inline-block;background:#3A3426;color:#F0ECE8;text-decoration:none;font-family:'Outfit',Arial,Helvetica,sans-serif;font-size:14px;font-weight:500;padding:14px 36px;border-radius:100px;">${label}</a>`;
