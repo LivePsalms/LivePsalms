@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -69,28 +69,41 @@ describe('AuthCard verify-password', () => {
     expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
   });
 
-  it('on a match, stashes the email and navigates to /verify-email after signUp', async () => {
+  it('on a match, swaps the card to the verify notice inline (no navigation, no sessionStorage)', async () => {
     render(
-      <MemoryRouter initialEntries={['/login']}>
-        <Routes>
-          <Route path="/login" element={<AuthCard />} />
-          <Route path="/verify-email" element={<div>VERIFY EMAIL PAGE</div>} />
-        </Routes>
+      <MemoryRouter>
+        <AuthCard />
       </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^sign up$/i }));
     fireEvent.change(screen.getByPlaceholderText('Full Name'), { target: { value: 'Sarah' } });
     fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sarah@example.com' } });
-    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'secret1' } });
-    fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'secret1' } });
+    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'Secret1!' } });
+    fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'Secret1!' } });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() =>
-      expect(signUp).toHaveBeenCalledWith('sarah@example.com', 'secret1', 'Sarah'),
+      expect(signUp).toHaveBeenCalledWith('sarah@example.com', 'Secret1!', 'Sarah'),
     );
-    expect(await screen.findByText('VERIFY EMAIL PAGE')).toBeInTheDocument();
-    expect(sessionStorage.getItem('lp.verifyEmail')).toBe('sarah@example.com');
+    expect(await screen.findByText('Check your email')).toBeInTheDocument();
+    expect(screen.getByText('sarah@example.com')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Full Name')).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('lp.verifyEmail')).toBeNull();
+  });
+
+  it('keeps Create Account disabled until the password meets the requirements', () => {
+    renderSignup();
+    fireEvent.change(screen.getByPlaceholderText('Full Name'), { target: { value: 'Sarah' } });
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sarah@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'secret1' } });
+    fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'secret1' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'Secret1!' } });
+    fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'Secret1!' } });
+    expect(screen.getByRole('button', { name: /create account/i })).toBeEnabled();
   });
 
   it('never shows the verify field in login mode', () => {

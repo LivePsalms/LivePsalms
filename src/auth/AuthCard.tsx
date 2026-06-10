@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
+import { VerifyEmailNotice } from './VerifyEmailNotice';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { isPasswordValid } from './password-rules';
+import { PasswordChecklist } from './PasswordChecklist';
 
 function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): string {
   if (mode === 'reset') return message;
@@ -21,7 +24,7 @@ function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): stri
       return 'An account with that email already exists.';
     }
     if (m.includes('password should be at least')) {
-      return 'Password must be at least 6 characters.';
+      return 'Password must be at least 8 characters.';
     }
     if (m.includes('unable to validate email')) {
       return 'Please enter a valid email address.';
@@ -43,7 +46,6 @@ export interface AuthCardProps {
  */
 export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const { session } = useAuthSession();
-  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +55,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,13 +80,16 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           setLoading(false);
           return;
         }
-        await session.signUp(email, password, fullName);
-        try {
-          sessionStorage.setItem('lp.verifyEmail', email);
-        } catch {
-          /* best-effort */
+        if (!isPasswordValid(password)) {
+          setError('Password doesn’t meet the requirements.');
+          setLoading(false);
+          return;
         }
-        navigate('/verify-email');
+        await session.signUp(email, password, fullName);
+        // Swap the card to the inline verify notice. We never reset verifyEmail in
+        // handleSubmit: the form (and thus this handler) is unreachable while the
+        // notice is shown — `onBack` is the only exit and it clears verifyEmail.
+        setVerifyEmail(email);
       } else if (mode === 'reset') {
         await session.resetPassword(email);
         setSuccess('If an account exists for that email, a reset link is on its way.');
@@ -120,6 +126,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const reduce = useReducedMotion();
   const showConfirm = mode === 'signup' && password.length > 0;
   const passwordsMatch = password === confirmPassword;
+  const passwordValid = isPasswordValid(password);
 
   return (
     <div
@@ -133,17 +140,27 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
         <img src="/logo-icon.png" alt="LivePsalms" className="h-10 w-auto mb-3" />
-        <h1
-          className="text-lg font-medium"
-          style={{
-            color: 'var(--deep-umber)',
-            fontFamily: 'Cormorant Garamond, serif',
-          }}
-        >
-          {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
-        </h1>
+        {!verifyEmail && (
+          <h1
+            className="text-lg font-medium"
+            style={{
+              color: 'var(--deep-umber)',
+              fontFamily: 'Cormorant Garamond, serif',
+            }}
+          >
+            {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
+          </h1>
+        )}
       </div>
 
+      {verifyEmail ? (
+        <VerifyEmailNotice
+          email={verifyEmail}
+          onBack={() => setVerifyEmail(null)}
+          onVerified={() => onAuthenticated?.()}
+        />
+      ) : (
+        <>
       {mode !== 'reset' && (
         <>
       {/* Google sign-in */}
@@ -238,7 +255,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               if (e.target.value === '') setConfirmPassword('');
             }}
             required
-            minLength={6}
+            minLength={8}
             className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
             style={{
               border: '1px solid var(--pale-stone)',
@@ -247,6 +264,10 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               color: 'var(--deep-umber)',
             }}
           />
+        )}
+
+        {mode === 'signup' && password.length > 0 && (
+          <PasswordChecklist password={password} />
         )}
 
         <AnimatePresence initial={false}>
@@ -346,13 +367,13 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
 
         <button
           type="submit"
-          disabled={loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword))}
+          disabled={loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword || !passwordValid))}
           className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
           style={{
             background: 'var(--deep-umber)',
             color: 'var(--plaster)',
             fontFamily: 'Outfit, sans-serif',
-            opacity: loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword)) ? 0.6 : 1,
+            opacity: loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword || !passwordValid)) ? 0.6 : 1,
           }}
         >
           {loading
@@ -404,6 +425,8 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
             {mode === 'login' ? 'Sign up' : 'Sign in'}
           </button>
         </p>
+      )}
+        </>
       )}
     </div>
   );

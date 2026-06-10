@@ -2,8 +2,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
-const navigate = vi.fn();
-vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const resendSignupEmail = vi.fn().mockResolvedValue(undefined);
@@ -12,30 +10,22 @@ vi.mock('./context/useAuthSession', () => ({
   useAuthSession: () => ({ user: mockUser, session: { resendSignupEmail } }),
 }));
 
-import { VerifyEmailPage } from './VerifyEmailPage';
+import { VerifyEmailNotice } from './VerifyEmailNotice';
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  sessionStorage.clear();
   mockUser = null;
 });
 
-describe('VerifyEmailPage', () => {
-  it('renders the stashed email', () => {
-    sessionStorage.setItem('lp.verifyEmail', 'sarah@example.com');
-    render(<VerifyEmailPage />);
+describe('VerifyEmailNotice', () => {
+  it('renders the email', () => {
+    render(<VerifyEmailNotice email="sarah@example.com" onBack={() => {}} />);
     expect(screen.getByText('sarah@example.com')).toBeInTheDocument();
   });
 
-  it('navigates to /login when there is no stashed email', () => {
-    render(<VerifyEmailPage />);
-    expect(navigate).toHaveBeenCalledWith('/login', { replace: true });
-  });
-
   it('resend calls resendSignupEmail then enters cooldown (button disabled, countdown shown)', async () => {
-    sessionStorage.setItem('lp.verifyEmail', 'sarah@example.com');
-    render(<VerifyEmailPage cooldownSeconds={3} />);
+    render(<VerifyEmailNotice email="sarah@example.com" onBack={() => {}} cooldownSeconds={3} />);
     fireEvent.click(screen.getByRole('button', { name: /resend email/i }));
     await waitFor(() => expect(resendSignupEmail).toHaveBeenCalledWith('sarah@example.com'));
     await waitFor(() =>
@@ -43,17 +33,17 @@ describe('VerifyEmailPage', () => {
     );
   });
 
-  it('back to sign in navigates to /login', () => {
-    sessionStorage.setItem('lp.verifyEmail', 'sarah@example.com');
-    render(<VerifyEmailPage />);
+  it('back calls onBack', () => {
+    const onBack = vi.fn();
+    render(<VerifyEmailNotice email="sarah@example.com" onBack={onBack} />);
     fireEvent.click(screen.getByRole('button', { name: /back to sign in/i }));
-    expect(navigate).toHaveBeenCalledWith('/login');
+    expect(onBack).toHaveBeenCalled();
   });
 
-  it('auto-advances to the notepad when a user session appears', () => {
-    sessionStorage.setItem('lp.verifyEmail', 'sarah@example.com');
+  it('calls onVerified when a user session appears', () => {
+    const onVerified = vi.fn();
     mockUser = { id: 'u1' };
-    render(<VerifyEmailPage />);
-    expect(navigate).toHaveBeenCalledWith('/notepad/notes', { replace: true });
+    render(<VerifyEmailNotice email="sarah@example.com" onBack={() => {}} onVerified={onVerified} />);
+    expect(onVerified).toHaveBeenCalled();
   });
 });

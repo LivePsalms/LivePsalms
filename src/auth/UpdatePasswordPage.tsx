@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
+import { isPasswordValid } from './password-rules';
+import { PasswordChecklist } from './PasswordChecklist';
 
 /**
  * Landing page for the password-reset email link. Supabase exchanges the
@@ -17,11 +19,17 @@ export function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  const passwordValid = isPasswordValid(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (password !== confirm) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!isPasswordValid(password)) {
+      setError('Password doesn’t meet the requirements.');
       return;
     }
     setLoading(true);
@@ -86,7 +94,7 @@ export function UpdatePasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
               style={{
                 border: '1px solid var(--pale-stone)',
@@ -95,13 +103,14 @@ export function UpdatePasswordPage() {
                 color: 'var(--deep-umber)',
               }}
             />
+            {password.length > 0 && <PasswordChecklist password={password} />}
             <input
               type="password"
               placeholder="Confirm New Password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
               style={{
                 border: '1px solid var(--pale-stone)',
@@ -119,13 +128,13 @@ export function UpdatePasswordPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !passwordValid}
               className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
               style={{
                 background: 'var(--deep-umber)',
                 color: 'var(--plaster)',
                 fontFamily: 'Outfit, sans-serif',
-                opacity: loading ? 0.6 : 1,
+                opacity: loading || !passwordValid ? 0.6 : 1,
               }}
             >
               {loading ? 'Please wait...' : 'Update Password'}

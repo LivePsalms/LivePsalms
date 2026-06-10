@@ -32,7 +32,6 @@ import { LoginPage } from '@/auth/LoginPage';
 import { ProfilePage } from '@/auth/ProfilePage';
 import { UpdatePasswordPage } from '@/auth/UpdatePasswordPage';
 import { WelcomePage } from '@/auth/WelcomePage';
-import { VerifyEmailPage } from '@/auth/VerifyEmailPage';
 import { AdminLamplightPage } from '@/admin/AdminLamplightPage';
 import { useRouteTransition } from '@/transitions/useRouteTransition';
 import { RouteTransitionProvider } from '@/transitions/RouteTransitionContext';
@@ -122,12 +121,11 @@ function App() {
   const isLoginPage = location.pathname === '/login';
   const isProfilePage = location.pathname === '/profile';
   const isWelcomePage = location.pathname === '/welcome';
-  const isVerifyEmailPage = location.pathname === '/verify-email';
   const isCommunityPage = location.pathname === '/community';
   const isContactPage = location.pathname === '/contact';
   const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
-  const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isVerifyEmailPage || isCommunityPage || isContactPage || isLegalPage;
-  const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage && !isVerifyEmailPage;
+  const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage || isLegalPage;
+  const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage;
 
   const handleProjectClick = useCallback(
     (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
@@ -199,7 +197,6 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/update-password" element={<UpdatePasswordPage />} />
             <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin/lamplight" element={<AdminLamplightPage />} />
             <Route
