@@ -79,6 +79,9 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           return;
         }
         await session.signUp(email, password, fullName);
+        // Swap the card to the inline verify notice. We never reset verifyEmail in
+        // handleSubmit: the form (and thus this handler) is unreachable while the
+        // notice is shown — `onBack` is the only exit and it clears verifyEmail.
         setVerifyEmail(email);
       } else if (mode === 'reset') {
         await session.resetPassword(email);
