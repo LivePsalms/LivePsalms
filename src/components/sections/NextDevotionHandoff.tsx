@@ -5,7 +5,6 @@ import { ScrollTrigger } from 'gsap/all';
 import type { Project } from '@/types';
 import type { Devotion } from '@/data/devotions';
 import { extractDominantColor } from '@/utils/extractDominantColor';
-import { usePillExpandNavigation } from '@/transitions/usePillExpandNavigation';
 import { useRouteTransitionContext } from '@/transitions/RouteTransitionContext';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { decideHandoffEntrance } from './next-handoff-entrance-plan';
@@ -105,22 +104,14 @@ export function NextDevotionHandoff({
   });
   useIdleLoop({ rootRef, leftImgRef, rightImgRef, pillRef, reducedMotion });
 
-  const { startFromPill } = usePillExpandNavigation();
   const routeTransition = useRouteTransitionContext();
   const startExpand = () => {
-    if (navigatedRef.current) return;
-    const targetUrl = `/purpose/${nextProject.id}`;
-    // Mobile fires the same SplitTransition curtain the home grid uses; desktop
-    // keeps the cinematic pill-expand morph.
-    if (variant === 'mobile' && routeTransition) {
-      navigatedRef.current = true;
-      routeTransition.beginCurtainNavigation(targetUrl, pillColor);
-      return;
-    }
-    const pill = pillRef.current;
-    if (!pill) return;
+    if (navigatedRef.current || !routeTransition) return;
+    // Both mobile and desktop fire the same SplitTransition curtain the home
+    // grid uses, for a reveal that's consistent with every other entry into a
+    // purpose detail.
     navigatedRef.current = true;
-    startFromPill({ pillEl: pill, pillColor, targetUrl, reducedMotion });
+    routeTransition.beginCurtainNavigation(`/purpose/${nextProject.id}`, pillColor);
   };
 
   const layoutProps: LayoutProps = {

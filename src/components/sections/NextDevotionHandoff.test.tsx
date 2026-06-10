@@ -34,8 +34,9 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router-dom')>()),
   useNavigate: () => vi.fn(),
 }));
-vi.mock('@/transitions/usePillExpandNavigation', () => ({
-  usePillExpandNavigation: () => ({ startFromPill: vi.fn() }),
+const beginCurtain = vi.hoisted(() => vi.fn());
+vi.mock('@/transitions/RouteTransitionContext', () => ({
+  useRouteTransitionContext: () => ({ beginCurtainNavigation: beginCurtain }),
 }));
 vi.mock('@/utils/extractDominantColor', () => ({
   extractDominantColor: () => Promise.resolve('#000'),
@@ -76,7 +77,7 @@ describe('applyCuratedBreak', () => {
   });
 });
 
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach } from 'vitest';
 import { NextDevotionHandoff } from './NextDevotionHandoff';
@@ -205,5 +206,24 @@ describe('NextDevotionHandoff — desktop guard', () => {
 
     const eyebrow = document.querySelector('.next-handoff-label') as HTMLElement;
     expect(eyebrow.style.fontSize).toBe('10px');
+  });
+});
+
+describe('NextDevotionHandoff — desktop pill curtain reveal', () => {
+  it('fires the SplitTransition curtain (beginCurtainNavigation) on click', () => {
+    beginCurtain.mockClear();
+    render(
+      <MemoryRouter>
+        <NextDevotionHandoff
+          currentProject={baseProject}
+          nextProject={baseProject}
+          nextDevotion={peaceDevotion}
+          variant="desktop"
+          inHorizontalTrack
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('link', { name: /next devotion/i }));
+    expect(beginCurtain).toHaveBeenCalledWith('/purpose/peace', expect.any(String));
   });
 });
