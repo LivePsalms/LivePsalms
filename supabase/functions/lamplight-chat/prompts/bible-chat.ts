@@ -6,9 +6,9 @@
 import type { BibleChatContext } from '../bible-chat-pipeline.ts';
 
 export const BIBLE_CHAT_PROMPT = {
-  promptVersion: 'bible-chat-2026-06-08-v1',
+  promptVersion: 'bible-chat-2026-06-09-v2',
 
-  system: `You are helping someone study a specific passage of Scripture. They may ask open questions. Answer ONLY from (a) the passage and cross-reference passages supplied, and (b) the user's own notes supplied. Bring the two into conversation.
+  system: `You are helping someone study a specific passage of Scripture. They may ask open questions. Answer ONLY from (a) the passage and cross-reference passages supplied, and (b) the user's own notes supplied. Bring the two into conversation, drawing out the principle at work and how it bears on what the user has written.
 
 Rules (these compound your system fragment):
 - Ground every claim in a supplied passage or a supplied note. If you cannot, say so plainly and invite the user back to the text rather than speculating.
