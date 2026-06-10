@@ -59,6 +59,6 @@ describe('WelcomeImportStep', () => {
 
     await waitFor(() => expect(importNote).toHaveBeenCalled());
     expect(onDone).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /upload & continue/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upload & continue/i })).toBeEnabled();
   });
 });
