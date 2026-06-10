@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { LamplightSettingsSection } from './components/LamplightSettingsSection';
+import { UsernameSection } from './components/UsernameSection';
 import { AdminEntryLink } from './components/AdminEntryLink';
 import { SecuritySection } from './components/SecuritySection';
 import { SupabaseLamplightAdapter } from '@/notepad/storage/supabase-lamplight-adapter';
@@ -302,6 +303,16 @@ export function ProfilePage() {
             </button>
           </div>
         </div>
+
+        {/* Username */}
+        <UsernameSection
+          currentUsername={profile?.username ?? null}
+          checkAvailable={account.checkUsernameAvailable}
+          setUsername={account.setUsername}
+          sectionStyle={sectionStyle}
+          labelStyle={labelStyle}
+          inputStyle={inputStyle}
+        />
 
         {/* Auth Management */}
         <SecuritySection
