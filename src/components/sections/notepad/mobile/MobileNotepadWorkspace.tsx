@@ -16,7 +16,9 @@ import { LamplightMobileView } from './LamplightMobileView';
 import { MobileMoreSheet } from './MobileMoreSheet';
 import { MobileAuthModal } from './MobileAuthModal';
 import { MobileAccountSheet } from './MobileAccountSheet';
+import { MobileNewNoteTypeSheet } from './MobileNewNoteTypeSheet';
 import { useMobileWorkspaceModel } from './useMobileWorkspaceModel';
+import type { NoteType } from '../../../../notepad/types';
 import { useHasConnections } from './useHasConnections';
 import { ScanCapturePanel } from '../../../../notepad/components/ScanCapturePanel';
 import { TranscriptionReview } from '../../../../notepad/components/TranscriptionReview';
@@ -37,6 +39,7 @@ export function MobileNotepadWorkspace() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [newTypeOpen, setNewTypeOpen] = useState(false);
   const [scan, setScan] = useState<ScanStage>(null);
 
   const openAccount = useCallback(() => {
@@ -84,10 +87,20 @@ export function MobileNotepadWorkspace() {
     [openNote],
   );
 
+  // Mobile previously created a Devotion note directly; now we ask which kind
+  // of note first (matching the desktop type picker).
   const handleNewNote = useCallback(() => {
-    createNote('root', 'devotion');
-    setTab('editor');
-  }, [createNote]);
+    setNewTypeOpen(true);
+  }, []);
+
+  const handleSelectNoteType = useCallback(
+    (type: NoteType) => {
+      setNewTypeOpen(false);
+      createNote('root', type);
+      setTab('editor');
+    },
+    [createNote],
+  );
 
   const handleUploadFiles = useCallback(
     async (files: File[]) => {
@@ -190,6 +203,12 @@ export function MobileNotepadWorkspace() {
           navigate('/profile');
         }}
         onSignOut={handleSignOut}
+      />
+
+      <MobileNewNoteTypeSheet
+        open={newTypeOpen}
+        onClose={() => setNewTypeOpen(false)}
+        onSelect={handleSelectNoteType}
       />
 
       {scan !== null && model.user && (

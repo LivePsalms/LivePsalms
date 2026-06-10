@@ -151,7 +151,7 @@ describe('buildFolderTreeView — NoteType grouping', () => {
   });
 
   it('exposes NOTE_TYPE_ORDER for stable iteration', () => {
-    expect(NOTE_TYPE_ORDER).toEqual(['devotion', 'sermon', 'theme']);
+    expect(NOTE_TYPE_ORDER).toEqual(['general', 'devotion', 'sermon', 'theme']);
   });
 
   it('iterates NoteType buckets in NOTE_TYPE_ORDER', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { BookOpen, Mic, PenLine, Sparkles, Maximize2, Minimize2, Settings2 } from 'lucide-react';
+import { BookOpen, Mic, PenLine, Sparkles, FileText, Maximize2, Minimize2, Settings2 } from 'lucide-react';
 import { useNoteCollection } from '@/notepad/context/useNoteCollection';
 import { useReferenceGraph } from '@/notepad/context/useReferenceGraph';
 import { projectGraph } from '@/notepad/graph/project-graph';
@@ -17,6 +17,7 @@ const NODE_COLORS: Record<string, string> = {
   sermon: '#7A9BAE',
   devotion: '#6B8B7A',
   theme: '#D4A0A0',
+  general: '#9E9484',
 };
 
 const NODE_ICONS: Record<string, typeof BookOpen> = {
@@ -24,6 +25,7 @@ const NODE_ICONS: Record<string, typeof BookOpen> = {
   sermon: Mic,
   devotion: PenLine,
   theme: Sparkles,
+  general: FileText,
 };
 
 interface GraphPaneProps {

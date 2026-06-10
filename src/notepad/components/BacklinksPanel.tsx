@@ -11,6 +11,7 @@ import { buildBacklinks } from './backlinks';
 // ---------------------------------------------------------------------------
 
 const SECTION_LABELS: Record<NoteType, string> = {
+  general: 'GENERAL NOTES',
   devotion: 'DEVOTION NOTES',
   sermon: 'SERMON NOTES',
   theme: 'THEMES',

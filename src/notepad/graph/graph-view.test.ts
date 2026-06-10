@@ -259,7 +259,7 @@ describe('GraphView — setFilters', () => {
       [],
       null,
     );
-    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true, general: true });
     const ids = view.getSimNodes().map((n) => n.id).sort();
     expect(ids).toEqual(['a', 'c']);
   });
@@ -271,7 +271,7 @@ describe('GraphView — setFilters', () => {
       [edge({ id: 'r1', source: 'a', target: 'b' })],
       null,
     );
-    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true, general: true });
     expect(view.getSimLinks()).toEqual([]);
   });
 
@@ -286,7 +286,7 @@ describe('GraphView — setFilters', () => {
     before.find((n) => n.id === 'a')!.x = 50;
     before.find((n) => n.id === 'a')!.y = 60;
 
-    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true });
+    view.setFilters({ scripture: true, sermon: false, devotion: true, theme: true, general: true });
     const after = view.getSimNodes();
     const a = after.find((n) => n.id === 'a')!;
     expect(a.x).toBe(50);

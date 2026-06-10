@@ -42,6 +42,7 @@ export function NewNoteDialog({ open, onOpenChange, folderId, onCreate }: NewNot
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="general">General</SelectItem>
               <SelectItem value="devotion">Devotion</SelectItem>
               <SelectItem value="sermon">Sermon</SelectItem>
               <SelectItem value="theme">Theme</SelectItem>
