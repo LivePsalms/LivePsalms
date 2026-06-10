@@ -1,4 +1,4 @@
-export type NoteType = 'devotion' | 'sermon' | 'theme';
+export type NoteType = 'general' | 'devotion' | 'sermon' | 'theme';
 
 export interface NoteDecoration {
   id: string;        // local uuid

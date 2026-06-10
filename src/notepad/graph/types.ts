@@ -29,7 +29,7 @@ export interface GraphEdge {
 
 export interface GraphNode {
   id: string;
-  type: 'devotion' | 'sermon' | 'theme' | 'scripture';
+  type: 'general' | 'devotion' | 'sermon' | 'theme' | 'scripture';
   title: string;
   weight: number;
   tags: string[];

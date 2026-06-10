@@ -28,6 +28,7 @@ export interface NodeTypeFilters {
   sermon: boolean;
   devotion: boolean;
   theme: boolean;
+  general: boolean;
 }
 
 export interface GraphSettings {
@@ -63,7 +64,7 @@ export interface GraphViewDeps {
 }
 
 export const DEFAULT_FILTERS: NodeTypeFilters = {
-  scripture: true, sermon: true, devotion: true, theme: true,
+  scripture: true, sermon: true, devotion: true, theme: true, general: true,
 };
 
 export const DEFAULT_SETTINGS: GraphSettings = {
@@ -80,6 +81,7 @@ const NODE_COLORS: Record<string, string> = {
   sermon: '#7A9BAE',
   devotion: '#6B8B7A',
   theme: '#D4A0A0',
+  general: '#9E9484',
 };
 
 const ZOOM_IN_FACTOR = 1.08;

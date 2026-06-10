@@ -153,6 +153,12 @@ export function NotepadToolbar({
               style={{ fontFamily: 'Outfit, sans-serif', minWidth: 140 }}
             >
               <DropdownMenuItem
+                onClick={() => handleNewNote('general')}
+                style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12 }}
+              >
+                General
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => handleNewNote('devotion')}
                 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12 }}
               >

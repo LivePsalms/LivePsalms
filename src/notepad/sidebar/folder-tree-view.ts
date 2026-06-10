@@ -24,7 +24,7 @@ export interface FolderTreeView {
   allTags: Array<[string, number]>;
 }
 
-export const NOTE_TYPE_ORDER: NoteType[] = ['devotion', 'sermon', 'theme'];
+export const NOTE_TYPE_ORDER: NoteType[] = ['general', 'devotion', 'sermon', 'theme'];
 
 export function buildFolderTreeView(
   notes: Note[],

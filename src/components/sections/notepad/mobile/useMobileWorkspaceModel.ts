@@ -7,7 +7,7 @@ import { useLamplightSettings } from '../../../../notepad/hooks/useLamplightSett
 import { useLamplightEmbeddingTrigger } from '../../../../notepad/hooks/useLamplightEmbeddingTrigger';
 import { SupabaseLamplightAdapter } from '../../../../notepad/storage/supabase-lamplight-adapter';
 import type { LamplightAdapter } from '../../../../notepad/storage/lamplight-adapter';
-import type { Note } from '../../../../notepad/types';
+import type { Note, NoteType } from '../../../../notepad/types';
 import type { InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { supabase } from '@/lib/supabase';
 
@@ -18,7 +18,7 @@ export interface MobileWorkspaceModel {
   totalNoteCount: number;
   isOnline: boolean;
   openNote: (id: string) => void;
-  createNote: (folderId: string, type: 'devotion' | 'sermon' | 'theme') => void;
+  createNote: (folderId: string, type: NoteType) => void;
   lamplightAdapter: LamplightAdapter | null;
   onAfterSave: (note: Note) => void;
   loadNeighborNotes: (ids: string[]) => Promise<Note[]>;
