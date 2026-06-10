@@ -4,10 +4,12 @@
 // the message to support@livepsalms.com via Resend, with reply_to set to the
 // submitter so replying in the inbox goes straight back to them.
 //
-// Trust model: deployed with default JWT verification (do NOT pass
-// --no-verify-jwt). The browser invokes with the Supabase anon key — a valid
-// JWT — identical to every other Edge Function in this project. The handler
-// does no privileged DB work; its only side effect is sending one email.
+// Trust model: PUBLIC endpoint — deployed with verify_jwt = false (pinned in
+// supabase/config.toml). Anonymous visitors submit the form, and this project's
+// client key is a non-JWT publishable key (sb_publishable_...) that the default
+// JWT gate would 401. This is safe: the handler does no privileged DB work,
+// validates its own input, and its only side effect is sending one email.
+// (Spam/abuse hardening — rate limiting, captcha — is a deliberate follow-up.)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
