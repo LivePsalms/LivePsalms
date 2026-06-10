@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuthSession } from './context/useAuthSession';
 import { VerifyEmailNotice } from './VerifyEmailNotice';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { isPasswordValid } from './password-rules';
+import { PasswordChecklist } from './PasswordChecklist';
 
 function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): string {
   if (mode === 'reset') return message;
@@ -22,7 +24,7 @@ function mapAuthError(message: string, mode: 'login' | 'signup' | 'reset'): stri
       return 'An account with that email already exists.';
     }
     if (m.includes('password should be at least')) {
-      return 'Password must be at least 6 characters.';
+      return 'Password must be at least 8 characters.';
     }
     if (m.includes('unable to validate email')) {
       return 'Please enter a valid email address.';
@@ -78,6 +80,11 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
           setLoading(false);
           return;
         }
+        if (!isPasswordValid(password)) {
+          setError('Password doesn’t meet the requirements.');
+          setLoading(false);
+          return;
+        }
         await session.signUp(email, password, fullName);
         // Swap the card to the inline verify notice. We never reset verifyEmail in
         // handleSubmit: the form (and thus this handler) is unreachable while the
@@ -119,6 +126,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
   const reduce = useReducedMotion();
   const showConfirm = mode === 'signup' && password.length > 0;
   const passwordsMatch = password === confirmPassword;
+  const passwordValid = isPasswordValid(password);
 
   return (
     <div
@@ -247,7 +255,7 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               if (e.target.value === '') setConfirmPassword('');
             }}
             required
-            minLength={6}
+            minLength={8}
             className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
             style={{
               border: '1px solid var(--pale-stone)',
@@ -256,6 +264,10 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
               color: 'var(--deep-umber)',
             }}
           />
+        )}
+
+        {mode === 'signup' && password.length > 0 && (
+          <PasswordChecklist password={password} />
         )}
 
         <AnimatePresence initial={false}>
@@ -355,13 +367,13 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
 
         <button
           type="submit"
-          disabled={loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword))}
+          disabled={loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword || !passwordValid))}
           className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
           style={{
             background: 'var(--deep-umber)',
             color: 'var(--plaster)',
             fontFamily: 'Outfit, sans-serif',
-            opacity: loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword)) ? 0.6 : 1,
+            opacity: loading || (mode === 'signup' && (!agreedToTerms || password !== confirmPassword || !passwordValid)) ? 0.6 : 1,
           }}
         >
           {loading
