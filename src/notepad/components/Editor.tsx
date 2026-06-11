@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
+import { createPortal } from 'react-dom';
 import {
   Undo2,
   Redo2,
@@ -164,6 +165,17 @@ export function NotepadEditor({
 
   // Heading dropdown
   const [headingOpen, setHeadingOpen] = useState(false);
+  const headingBtnRef = useRef<HTMLDivElement>(null);
+  const [headingCoords, setHeadingCoords] = useState<{ bottom: number; left: number }>({ bottom: 0, left: 0 });
+
+  const openHeadingMenu = () => {
+    if (!headingOpen && headingBtnRef.current) {
+      const r = headingBtnRef.current.getBoundingClientRect();
+      // Anchor the menu's bottom 4px above the trigger (it opens upward on mobile).
+      setHeadingCoords({ bottom: window.innerHeight - r.top + 4, left: r.left });
+    }
+    setHeadingOpen((v) => !v);
+  };
 
   const currentHeading = editor
     ? editor.isActive('heading', { level: 1 }) ? 'H1'
@@ -200,12 +212,18 @@ export function NotepadEditor({
 
   const isBottomToolbar = toolbarPlacement === 'bottom';
   return (
-    <div style={{ display: 'flex', flexDirection: isBottomToolbar ? 'column-reverse' : 'column', height: '100%', position: 'relative' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: isBottomToolbar ? 'column-reverse' : 'column',
+      height: '100%',
+      position: 'relative',
+      ...(isBottomToolbar ? { width: '100%', minWidth: 0, maxWidth: '100%' } : {}),
+    }}>
       {/* Fixed formatting toolbar */}
       {editor && (
         <div
           data-toolbar-placement={toolbarPlacement}
-          className="shrink-0 flex items-center gap-0.5 px-3"
+          className={`shrink-0 flex items-center gap-0.5 px-3${isBottomToolbar ? ' scrollbar-hide' : ''}`}
           style={{
             height: 40,
             background: 'rgba(240, 236, 232, 0.97)',
@@ -216,6 +234,8 @@ export function NotepadEditor({
             position: isBottomToolbar ? 'sticky' : undefined,
             bottom: isBottomToolbar ? `${toolbarBottomOffset}px` : undefined,
             zIndex: isBottomToolbar ? 20 : undefined,
+            minWidth: isBottomToolbar ? 0 : undefined,
+            overflowX: isBottomToolbar ? 'auto' : undefined,
           }}
         >
           {/* Undo / Redo */}
@@ -223,6 +243,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
             title="Undo"
+            mobile={isBottomToolbar}
           >
             <Undo2 size={15} />
           </ToolbarButton>
@@ -230,51 +251,83 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
             title="Redo"
+            mobile={isBottomToolbar}
           >
             <Redo2 size={15} />
           </ToolbarButton>
 
-          <ToolbarDivider />
+          <ToolbarDivider mobile={isBottomToolbar} />
 
           {/* Heading dropdown */}
-          <div className="relative">
+          <div className="relative" ref={headingBtnRef}>
             <ToolbarButton
-              onClick={() => setHeadingOpen(!headingOpen)}
+              onClick={openHeadingMenu}
               active={currentHeading !== 'H'}
               title="Heading"
+              mobile={isBottomToolbar}
             >
               <Heading size={15} />
               <span className="text-[9px] ml-0.5">{currentHeading !== 'H' ? currentHeading : ''}</span>
               <ChevronDown size={10} className="ml-0.5 opacity-50" />
             </ToolbarButton>
-            {headingOpen && (
-              <div
-                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 rounded-md shadow-lg z-50 py-1`}
-                style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
-              >
-                {([1, 2, 3] as const).map((level) => (
+            {headingOpen && (() => {
+              const menuItems = (
+                <>
+                  {([1, 2, 3] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => { editor.chain().focus().toggleHeading({ level }).run(); setHeadingOpen(false); }}
+                      className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                      style={{
+                        color: editor.isActive('heading', { level }) ? 'var(--charred)' : 'var(--deep-umber)',
+                        fontWeight: editor.isActive('heading', { level }) ? 600 : 400,
+                        fontFamily: 'Outfit, sans-serif',
+                      }}
+                    >
+                      Heading {level}
+                    </button>
+                  ))}
                   <button
-                    key={level}
-                    onClick={() => { editor.chain().focus().toggleHeading({ level }).run(); setHeadingOpen(false); }}
+                    onClick={() => { editor.chain().focus().setParagraph().run(); setHeadingOpen(false); }}
                     className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                    style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    Paragraph
+                  </button>
+                </>
+              );
+
+              if (isBottomToolbar) {
+                return createPortal(
+                  <div
+                    data-testid="heading-menu"
+                    className="rounded-md shadow-lg py-1"
                     style={{
-                      color: editor.isActive('heading', { level }) ? 'var(--charred)' : 'var(--deep-umber)',
-                      fontWeight: editor.isActive('heading', { level }) ? 600 : 400,
-                      fontFamily: 'Outfit, sans-serif',
+                      position: 'fixed',
+                      bottom: headingCoords.bottom,
+                      left: headingCoords.left,
+                      background: 'rgba(240, 236, 232, 0.97)',
+                      border: '1px solid var(--pale-stone)',
+                      minWidth: 100,
+                      zIndex: 60,
                     }}
                   >
-                    Heading {level}
-                  </button>
-                ))}
-                <button
-                  onClick={() => { editor.chain().focus().setParagraph().run(); setHeadingOpen(false); }}
-                  className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
-                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                    {menuItems}
+                  </div>,
+                  document.body,
+                );
+              }
+
+              return (
+                <div
+                  data-testid="heading-menu"
+                  className="absolute top-full mt-1 left-0 rounded-md shadow-lg z-50 py-1"
+                  style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
                 >
-                  Paragraph
-                </button>
-              </div>
-            )}
+                  {menuItems}
+                </div>
+              );
+            })()}
           </div>
 
           {/* List buttons */}
@@ -282,6 +335,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             active={editor.isActive('bulletList')}
             title="Bullet List"
+            mobile={isBottomToolbar}
           >
             <List size={15} />
           </ToolbarButton>
@@ -289,6 +343,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             active={editor.isActive('orderedList')}
             title="Ordered List"
+            mobile={isBottomToolbar}
           >
             <ListOrdered size={15} />
           </ToolbarButton>
@@ -296,17 +351,19 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             active={editor.isActive('blockquote')}
             title="Blockquote"
+            mobile={isBottomToolbar}
           >
             <Quote size={15} />
           </ToolbarButton>
 
-          <ToolbarDivider />
+          <ToolbarDivider mobile={isBottomToolbar} />
 
           {/* Inline formatting */}
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             active={editor.isActive('bold')}
             title="Bold"
+            mobile={isBottomToolbar}
           >
             <Bold size={15} />
           </ToolbarButton>
@@ -314,6 +371,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             active={editor.isActive('italic')}
             title="Italic"
+            mobile={isBottomToolbar}
           >
             <Italic size={15} />
           </ToolbarButton>
@@ -321,6 +379,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleStrike().run()}
             active={editor.isActive('strike')}
             title="Strikethrough"
+            mobile={isBottomToolbar}
           >
             <Strikethrough size={15} />
           </ToolbarButton>
@@ -328,6 +387,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleCode().run()}
             active={editor.isActive('code')}
             title="Inline Code"
+            mobile={isBottomToolbar}
           >
             <Code size={15} />
           </ToolbarButton>
@@ -335,10 +395,11 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             active={editor.isActive('underline')}
             title="Underline"
+            mobile={isBottomToolbar}
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate">
+          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar}>
             <Sparkles size={15} />
           </ToolbarButton>
         </div>
@@ -346,10 +407,12 @@ export function NotepadEditor({
 
       {/* Scrollable content area */}
       <div
+        data-testid="editor-scroll"
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '2rem 2.5rem',
+          overflowX: isBottomToolbar ? 'hidden' : undefined,
+          padding: isBottomToolbar ? '2rem 1.25rem' : '2rem 2.5rem',
           position: 'relative',
         }}
       >
@@ -662,9 +725,10 @@ interface ToolbarButtonProps {
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  mobile?: boolean;
 }
 
-function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarButtonProps) {
+function ToolbarButton({ active, disabled, onClick, title, children, mobile }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -674,6 +738,7 @@ function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarBu
       style={{
         width: 30,
         height: 28,
+        flexShrink: mobile ? 0 : undefined,
         cursor: disabled ? 'default' : 'pointer',
         background: active ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
         color: disabled ? 'var(--pale-stone)' : active ? 'var(--charred)' : 'var(--deep-umber)',
@@ -694,12 +759,13 @@ function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarBu
   );
 }
 
-function ToolbarDivider() {
+function ToolbarDivider({ mobile }: { mobile?: boolean }) {
   return (
     <div
       style={{
         width: 1,
         height: 20,
+        flexShrink: mobile ? 0 : undefined,
         background: 'var(--pale-stone)',
         margin: '0 4px',
         alignSelf: 'center',
