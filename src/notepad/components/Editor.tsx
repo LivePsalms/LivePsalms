@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
+import { createPortal } from 'react-dom';
 import {
   Undo2,
   Redo2,
@@ -164,6 +165,17 @@ export function NotepadEditor({
 
   // Heading dropdown
   const [headingOpen, setHeadingOpen] = useState(false);
+  const headingBtnRef = useRef<HTMLDivElement>(null);
+  const [headingCoords, setHeadingCoords] = useState<{ bottom: number; left: number }>({ bottom: 0, left: 0 });
+
+  const openHeadingMenu = () => {
+    if (!headingOpen && headingBtnRef.current) {
+      const r = headingBtnRef.current.getBoundingClientRect();
+      // Anchor the menu's bottom 4px above the trigger (it opens upward on mobile).
+      setHeadingCoords({ bottom: window.innerHeight - r.top + 4, left: r.left });
+    }
+    setHeadingOpen((v) => !v);
+  };
 
   const currentHeading = editor
     ? editor.isActive('heading', { level: 1 }) ? 'H1'
@@ -245,9 +257,9 @@ export function NotepadEditor({
           <ToolbarDivider />
 
           {/* Heading dropdown */}
-          <div className="relative">
+          <div className="relative" ref={headingBtnRef}>
             <ToolbarButton
-              onClick={() => setHeadingOpen(!headingOpen)}
+              onClick={openHeadingMenu}
               active={currentHeading !== 'H'}
               title="Heading"
             >
@@ -255,34 +267,64 @@ export function NotepadEditor({
               <span className="text-[9px] ml-0.5">{currentHeading !== 'H' ? currentHeading : ''}</span>
               <ChevronDown size={10} className="ml-0.5 opacity-50" />
             </ToolbarButton>
-            {headingOpen && (
-              <div
-                className={`absolute ${isBottomToolbar ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 rounded-md shadow-lg z-50 py-1`}
-                style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
-              >
-                {([1, 2, 3] as const).map((level) => (
+            {headingOpen && (() => {
+              const menuItems = (
+                <>
+                  {([1, 2, 3] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => { editor.chain().focus().toggleHeading({ level }).run(); setHeadingOpen(false); }}
+                      className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                      style={{
+                        color: editor.isActive('heading', { level }) ? 'var(--charred)' : 'var(--deep-umber)',
+                        fontWeight: editor.isActive('heading', { level }) ? 600 : 400,
+                        fontFamily: 'Outfit, sans-serif',
+                      }}
+                    >
+                      Heading {level}
+                    </button>
+                  ))}
                   <button
-                    key={level}
-                    onClick={() => { editor.chain().focus().toggleHeading({ level }).run(); setHeadingOpen(false); }}
+                    onClick={() => { editor.chain().focus().setParagraph().run(); setHeadingOpen(false); }}
                     className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
+                    style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    Paragraph
+                  </button>
+                </>
+              );
+
+              if (isBottomToolbar) {
+                return createPortal(
+                  <div
+                    data-testid="heading-menu"
+                    className="rounded-md shadow-lg py-1"
                     style={{
-                      color: editor.isActive('heading', { level }) ? 'var(--charred)' : 'var(--deep-umber)',
-                      fontWeight: editor.isActive('heading', { level }) ? 600 : 400,
-                      fontFamily: 'Outfit, sans-serif',
+                      position: 'fixed',
+                      bottom: headingCoords.bottom,
+                      left: headingCoords.left,
+                      background: 'rgba(240, 236, 232, 0.97)',
+                      border: '1px solid var(--pale-stone)',
+                      minWidth: 100,
+                      zIndex: 60,
                     }}
                   >
-                    Heading {level}
-                  </button>
-                ))}
-                <button
-                  onClick={() => { editor.chain().focus().setParagraph().run(); setHeadingOpen(false); }}
-                  className="flex items-center w-full px-3 py-1.5 text-[12px] hover:bg-black/5 transition-colors"
-                  style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+                    {menuItems}
+                  </div>,
+                  document.body,
+                );
+              }
+
+              return (
+                <div
+                  data-testid="heading-menu"
+                  className="absolute top-full mt-1 left-0 rounded-md shadow-lg z-50 py-1"
+                  style={{ background: 'rgba(240, 236, 232, 0.97)', border: '1px solid var(--pale-stone)', minWidth: 100 }}
                 >
-                  Paragraph
-                </button>
-              </div>
-            )}
+                  {menuItems}
+                </div>
+              );
+            })()}
           </div>
 
           {/* List buttons */}

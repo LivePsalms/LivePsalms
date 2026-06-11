@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Complete editor mock — includes on/off (the stale toolbar-placement mock omits these).
@@ -78,5 +78,24 @@ describe('NotepadEditor mobile toolbar scroll', () => {
     const scroll = getByTestId('editor-scroll') as HTMLElement;
     expect(scroll.style.padding).toBe('2rem 2.5rem');
     expect(scroll.style.overflowX).toBe('');
+  });
+
+  it('portals the heading dropdown out of the toolbar on mobile', () => {
+    const { container } = render(<NotepadEditor toolbarPlacement="bottom" />);
+    const bar = container.querySelector('[data-toolbar-placement="bottom"]') as HTMLElement;
+    fireEvent.click(bar.querySelector('[title="Heading"]') as HTMLElement);
+    const menu = document.querySelector('[data-testid="heading-menu"]') as HTMLElement;
+    expect(menu).not.toBeNull();
+    // Escapes the scroll-clipping toolbar.
+    expect(bar.contains(menu)).toBe(false);
+  });
+
+  it('keeps the heading dropdown inline inside the desktop toolbar', () => {
+    const { container } = render(<NotepadEditor />);
+    const bar = container.querySelector('[data-toolbar-placement="top"]') as HTMLElement;
+    fireEvent.click(bar.querySelector('[title="Heading"]') as HTMLElement);
+    const menu = document.querySelector('[data-testid="heading-menu"]') as HTMLElement;
+    expect(menu).not.toBeNull();
+    expect(bar.contains(menu)).toBe(true);
   });
 });
