@@ -49,10 +49,16 @@ in the component, consistent with the other hardcoded strings in this card.
 
 ## Voice cleanup (related)
 
-- Remove "quietly" from the existing intro copy in
-  `src/notepad/lamplight/lamplight-copy.ts` (`todaysLampIntro`): "draws quietly
-  from your recent notes" → "draws from your recent notes".
-- Update any test asserting that exact string.
+Remove "quietly" from the Lamplight-voice messaging surfaces (leave the
+devotional-prose occurrences in `src/data/devotion-moodboards/*`, where "quietly"
+is natural sentence wording, not product messaging):
+
+- `src/notepad/lamplight/lamplight-copy.ts` (`todaysLampIntro`): "draws quietly
+  from your recent notes" → "draws from your recent notes". Update the asserting
+  tests in `lamplight-copy.test.ts` and `TodaysLampIntro.test.tsx`.
+- `src/notepad-landing/data/copy.ts` (`section01.sub`): "connected, and quietly
+  read back to you when you need it" → "connected, and read back to you when you
+  need it". Update the asserting test in `copy.test.ts`.
 
 ## Tests
 
