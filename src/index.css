@@ -132,6 +132,12 @@
   
   html {
     scroll-behavior: smooth;
+    /* framer-motion's useScroll defaults its container to document.scrollingElement
+       (the <html> element). Its measure() warns when that container is statically
+       positioned. Keep <html> non-static so the scroll offset math is correct and
+       the dev-only warning stays silent. See MobileProjectTile's useScroll. */
+    position: relative;
+    overscroll-behavior: none;
   }
   
   body {
@@ -141,6 +147,7 @@
     color: var(--deep-umber);
     position: relative;
     overflow-x: hidden;
+    overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
   }
 }
