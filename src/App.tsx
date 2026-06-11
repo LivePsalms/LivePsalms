@@ -133,7 +133,7 @@ function App() {
   const isContactPage = location.pathname === '/contact';
   const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
   const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage || isLegalPage;
-  const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage;
+  const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage && !isUpdatePasswordPage;
 
   useAppShellLock(isAppShell);
 

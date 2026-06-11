@@ -35,4 +35,13 @@ describe('useAppShellLock', () => {
     rerender({ locked: false });
     expect(document.documentElement.classList.contains(LOCK_CLASS)).toBe(false);
   });
+
+  it('adds the class when locked flips from false to true', () => {
+    const { rerender } = renderHook(({ locked }) => useAppShellLock(locked), {
+      initialProps: { locked: false },
+    });
+    expect(document.documentElement.classList.contains(LOCK_CLASS)).toBe(false);
+    rerender({ locked: true });
+    expect(document.documentElement.classList.contains(LOCK_CLASS)).toBe(true);
+  });
 });

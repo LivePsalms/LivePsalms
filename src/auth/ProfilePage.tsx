@@ -132,7 +132,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--app-bg)' }}>
+    <div className="overflow-y-auto" style={{ height: '100dvh', background: 'var(--app-bg)' }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-6 py-4 border-b"
