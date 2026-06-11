@@ -1,6 +1,17 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+const BENEFITS: { icon: string; label: string; text: string }[] = [
+  { icon: '🕯', label: "Today's Lamp", text: 'a piece of Scripture and a short reflection, drawn from your recent notes' },
+  { icon: '💬', label: 'Reflective chat', text: 'ask about the passage and follow the thread, grounded in Scripture and your own notes' },
+  { icon: '🔗', label: 'Connection Cards', text: 'see the threads linking your notes together' },
+  { icon: '☁️', label: 'Saved & synced', text: 'your notepad travels with you across devices' },
+  { icon: '🔒', label: 'Yours alone', text: 'your writing stays private to you' },
+];
+
 export function SignInGate() {
+  const [showBenefits, setShowBenefits] = useState(false);
+
   return (
     <div
       className="relative flex items-center justify-center min-h-[420px] px-6"
@@ -37,7 +48,7 @@ export function SignInGate() {
         <div className="flex gap-2 justify-center mb-3">
           <Link
             to="/login"
-            className="px-4 py-2 text-xs rounded transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 text-xs rounded transition-colors"
             style={{
               background: 'var(--deep-umber)',
               color: 'var(--alabaster)',
@@ -48,7 +59,7 @@ export function SignInGate() {
           </Link>
           <Link
             to="/login"
-            className="px-4 py-2 text-xs rounded transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 text-xs rounded transition-colors"
             style={{
               background: 'transparent',
               border: '1px solid var(--pale-stone)',
@@ -59,16 +70,32 @@ export function SignInGate() {
             Sign up
           </Link>
         </div>
-        <a
-          href="https://livepsalms.com/privacy#lamplight"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Lamplight privacy details"
-          className="text-[10px] underline"
+        <button
+          type="button"
+          onClick={() => setShowBenefits((v) => !v)}
+          aria-expanded={showBenefits}
+          aria-controls="signin-benefits"
+          className="text-[10px] underline cursor-pointer bg-transparent border-0"
           style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
         >
           Why sign in?
-        </a>
+        </button>
+        {showBenefits && (
+          <ul
+            id="signin-benefits"
+            className="mt-3 pt-3 text-left space-y-2 list-none"
+            style={{ borderTop: '1px solid var(--pale-stone)' }}
+          >
+            {BENEFITS.map((b) => (
+              <li key={b.label} className="text-[11px] leading-relaxed flex gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <span aria-hidden className="shrink-0">{b.icon}</span>
+                <span style={{ color: 'var(--silica)' }}>
+                  <span style={{ color: 'var(--deep-umber)', fontWeight: 600 }}>{b.label}</span> — {b.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
