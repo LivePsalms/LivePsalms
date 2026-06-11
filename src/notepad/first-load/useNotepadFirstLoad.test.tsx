@@ -29,6 +29,7 @@ beforeEach(() => {
     loading: false,
   });
   useAccountProfile.mockReturnValue({ profile: { fullName: 'Ada Lovelace' }, profileStatus: 'ready' });
+  getNotes.mockReset();
   getNotes.mockResolvedValue([]);
   navigate.mockReset();
   toastSuccess.mockReset();
@@ -58,8 +59,9 @@ describe('useNotepadFirstLoad — one-time welcome', () => {
 
     // Second mount: the flag is already in localStorage from the first mount.
     renderHook(() => useNotepadFirstLoad());
-    // Let the async first-load effect settle.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Wait for the second mount's effect to actually run (it fetches notes),
+    // so the no-toast assertion below can't pass vacuously.
+    await waitFor(() => expect(getNotes).toHaveBeenCalledTimes(2));
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 
