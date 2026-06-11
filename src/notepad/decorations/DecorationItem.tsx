@@ -353,20 +353,22 @@ export function DecorationItem({
               {Math.round(liveAngle)}&deg;
             </div>
           )}
-          <div style={{
-            position: 'absolute', top: -34, left: 0, display: 'flex', gap: 4,
-            background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
-            padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)', pointerEvents: 'auto',
-          }}>
-            <button aria-label="Rotate decoration counterclockwise 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation - 15) })} style={barBtn}>↺</button>
-            <button aria-label="Rotate decoration 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation + 15) })} style={barBtn}>↻</button>
-            <button aria-label="Flip horizontal" onClick={() => onChange({ ...d, flipH: !d.flipH })} style={barBtn}>⇋</button>
-            <button aria-label="Flip vertical" onClick={() => onChange({ ...d, flipV: !d.flipV })} style={barBtn}>⇅</button>
-            <button aria-label="Bring to front" onClick={() => onBringToFront(d.id)} style={barBtn}>⤒</button>
-            <button aria-label="Send to back" onClick={() => onSendToBack(d.id)} style={barBtn}>⤓</button>
-            <button aria-label="Duplicate decoration" onClick={() => onDuplicate(d.id)} style={barBtn}>⎘</button>
-            <button aria-label="Delete decoration" onClick={() => onDelete(d.id)} style={barBtn}>✕</button>
-          </div>
+          {!mobile && (
+            <div style={{
+              position: 'absolute', top: -34, left: 0, display: 'flex', gap: 4,
+              background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
+              padding: '2px 4px', boxShadow: '0 2px 8px rgba(0,0,0,.14)', pointerEvents: 'auto',
+            }}>
+              <button aria-label="Rotate decoration counterclockwise 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation - 15) })} style={barBtn}>↺</button>
+              <button aria-label="Rotate decoration 15 degrees" onClick={() => onChange({ ...d, rotation: rotationDeg(d.rotation + 15) })} style={barBtn}>↻</button>
+              <button aria-label="Flip horizontal" onClick={() => onChange({ ...d, flipH: !d.flipH })} style={barBtn}>⇋</button>
+              <button aria-label="Flip vertical" onClick={() => onChange({ ...d, flipV: !d.flipV })} style={barBtn}>⇅</button>
+              <button aria-label="Bring to front" onClick={() => onBringToFront(d.id)} style={barBtn}>⤒</button>
+              <button aria-label="Send to back" onClick={() => onSendToBack(d.id)} style={barBtn}>⤓</button>
+              <button aria-label="Duplicate decoration" onClick={() => onDuplicate(d.id)} style={barBtn}>⎘</button>
+              <button aria-label="Delete decoration" onClick={() => onDelete(d.id)} style={barBtn}>✕</button>
+            </div>
+          )}
         </div>
       )}
     </>

@@ -363,4 +363,17 @@ describe('DecorationItem', () => {
     const last = h.onChange.mock.calls.at(-1)![0] as NoteDecoration;
     expect(last.rotation).toBeCloseTo(43, 0); // ~43, NOT snapped to 45
   });
+
+  it('mobile: does NOT render the floating action bar', () => {
+    const h = handlers();
+    const { queryByLabelText } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    expect(queryByLabelText('Delete decoration')).toBeNull();
+    expect(queryByLabelText('Flip horizontal')).toBeNull();
+  });
+
+  it('desktop: still renders the floating action bar (regression)', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    expect(getByLabelText('Delete decoration')).not.toBeNull();
+  });
 });
