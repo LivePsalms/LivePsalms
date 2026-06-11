@@ -105,7 +105,7 @@ export function NotepadEditor({
     return true;
   };
 
-  const [swatchAnchor, setSwatchAnchor] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
+  const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
   const [swatchDismissed, setSwatchDismissed] = useState(false);
   const [swatchAutoFocus, setSwatchAutoFocus] = useState(false);
