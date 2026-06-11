@@ -1257,3 +1257,17 @@ input[type="email"]::placeholder {
   padding: 0.1em 0.35em;
   border-radius: 3px;
 }
+
+/* App-shell lock: on app routes (notepad/auth) the document is pinned so the
+   fixed overlay has no draggable surface underneath it. This is what stops the
+   iOS chrome-drift during rubber-band scroll / pinch. Toggled by
+   useAppShellLock via the .app-shell-locked class on <html>. */
+html.app-shell-locked,
+html.app-shell-locked body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}

@@ -23,6 +23,7 @@ import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
 import { useLoadingOverlay } from '@/hooks/useLoadingOverlay';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAppShellLock } from '@/hooks/useAppShellLock';
 import { scaleForMobile } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useProjectColors } from '@/hooks/useProjectColors';
@@ -121,11 +122,20 @@ function App() {
   const isLoginPage = location.pathname === '/login';
   const isProfilePage = location.pathname === '/profile';
   const isWelcomePage = location.pathname === '/welcome';
+  const isUpdatePasswordPage = location.pathname === '/update-password';
+  const isAppShell =
+    isNotepadEditor ||
+    isLoginPage ||
+    isProfilePage ||
+    isWelcomePage ||
+    isUpdatePasswordPage;
   const isCommunityPage = location.pathname === '/community';
   const isContactPage = location.pathname === '/contact';
   const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
   const hideFooter = isDetailPage || isPurposePage || isNotepadAny || isLoginPage || isProfilePage || isWelcomePage || isCommunityPage || isContactPage || isLegalPage;
   const dockMounted = !isNotepadEditor && !isLoginPage && !isProfilePage && !isWelcomePage;
+
+  useAppShellLock(isAppShell);
 
   const handleProjectClick = useCallback(
     (project: Project) => transition.beginNavigation(`/purpose/${project.id}`, project.overlayColor),
