@@ -1271,3 +1271,13 @@ html.app-shell-locked body {
   overflow: hidden;
   overscroll-behavior: none;
 }
+
+@keyframes decoration-snap-pulse-kf {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.decoration-snap-pulse { animation: decoration-snap-pulse-kf 140ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .decoration-snap-pulse { animation: none; }
+}

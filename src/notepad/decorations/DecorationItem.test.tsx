@@ -342,6 +342,15 @@ describe('DecorationItem', () => {
     expect(queryByTestId('decoration-angle-badge-a')).toBeNull();
   });
 
+  it('mobile: marks the rotate handle as snapped at a cardinal angle (drives the pulse)', () => {
+    const h = handlers();
+    const { getByLabelText, getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const handle = getByLabelText('Rotate decoration');
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 7.31, clientY: 6.82, pointerId: 1 }); // ~43 -> snaps 45
+    expect(getByTestId('decoration-angle-badge-a').getAttribute('data-snapped')).toBe('true');
+  });
+
   it('mobile: two-finger pinch rotation snaps to 45 multiples', () => {
     const h = handlers();
     const { getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);

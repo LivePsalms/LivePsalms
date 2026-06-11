@@ -42,7 +42,7 @@ export function DecorationItem({
   >(null);
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinch = useRef<{ startDist: number; startAngle: number; base: NoteDecoration } | null>(null);
-  const [liveAngle, setLiveAngle] = useState<number | null>(null);
+  const [liveAngle, setLiveAngle] = useState<{ deg: number; snapped: boolean } | null>(null);
 
   const snapRotation = (deg: number): number => {
     const snapped = snapAngle(deg, SNAP);
@@ -188,7 +188,13 @@ export function DecorationItem({
         startDist: pinch.current.startDist, dist: m.dist,
         startAngle: pinch.current.startAngle, angle: m.angle,
       });
-      onChange(mobile ? { ...transformed, rotation: snapRotation(transformed.rotation) } : transformed);
+      if (mobile) {
+        const snappedRot = snapRotation(transformed.rotation);
+        setLiveAngle({ deg: snappedRot, snapped: snappedRot % SNAP.step === 0 });
+        onChange({ ...transformed, rotation: snappedRot });
+      } else {
+        onChange(transformed);
+      }
       return;
     }
     move(e);
@@ -221,7 +227,7 @@ export function DecorationItem({
     );
     const raw = applyRotationDrag(g.startRotation, g.startAngle, currentAngle);
     const next = mobile ? snapRotation(raw) : raw;
-    if (mobile) setLiveAngle(next);
+    if (mobile) setLiveAngle({ deg: next, snapped: next % SNAP.step === 0 });
     onChange({ ...d, rotation: next });
   };
 
@@ -343,6 +349,8 @@ export function DecorationItem({
           {mobile && liveAngle !== null && (
             <div
               data-testid={`decoration-angle-badge-${d.id}`}
+              data-snapped={liveAngle.snapped ? 'true' : 'false'}
+              className={liveAngle.snapped ? 'decoration-snap-pulse' : undefined}
               style={{
                 position: 'absolute', top: -58, left: 'calc(50% + 26px)',
                 background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 4,
@@ -350,7 +358,7 @@ export function DecorationItem({
                 fontFamily: 'Outfit, sans-serif', pointerEvents: 'none', whiteSpace: 'nowrap',
               }}
             >
-              {Math.round(liveAngle)}&deg;
+              {Math.round(liveAngle.deg)}&deg;
             </div>
           )}
           {!mobile && (
