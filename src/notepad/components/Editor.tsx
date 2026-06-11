@@ -15,9 +15,9 @@ import {
   Underline as UnderlineIcon,
   ChevronDown,
   Sparkles,
-  Highlighter,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
+import { HighlightPill } from './HighlightPill';
 import { useDecorations } from '../decorations/useDecorations';
 import { DecorationLayer, type DecorationLayerHandle } from '../decorations/DecorationLayer';
 import { TEXT_Z } from '../decorations/decoration-geometry';
@@ -110,34 +110,39 @@ export function NotepadEditor({
   const [swatchDismissed, setSwatchDismissed] = useState(false);
   const [swatchAutoFocus, setSwatchAutoFocus] = useState(false);
   const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
-  const [hasSelection, setHasSelection] = useState(false);
-  const highlightBtnRef = useRef<HTMLDivElement>(null);
-
-  // Mobile-only: open the swatch picker for the current selection, docked above
-  // the bottom toolbar. autoFocus stays off so the soft keyboard doesn't pop.
-  const openHighlightSwatch = () => {
-    const el = highlightBtnRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setSwatchAnchor({ bottom: window.innerHeight - r.top + 6, left: r.left });
-    setSwatchDismissed(false);
-    setSwatchAutoFocus(false);
-  };
+  // Mobile-only highlight pill, shown just above the selection once it settles.
+  const [pillAnchor, setPillAnchor] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
+  const pillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pillRangeRef = useRef<{ from: number; to: number } | null>(null);
+  const PILL_SETTLE_MS = 250;
+  const PILL_TOP_MARGIN = 56; // if the selection sits this close to the top, flip the pill below it
 
   useEffect(() => {
     if (!editor) return;
     const update = () => {
       const { from, to } = editor.state.selection;
       if (isBottomToolbar) {
-        // Mobile: never auto-open. Track selection for the toolbar button and
-        // close the picker if the selection collapses.
-        const selected = from !== to;
-        setHasSelection(selected);
-        if (!selected) {
-          setSwatchAnchor(null);
-          setSwatchDismissed(false);
-          dismissedRangeRef.current = null;
+        // Mobile: never show the pill mid-drag. Hide while the range is moving,
+        // then reveal ~250ms after it settles. Recompute the anchor on fire.
+        if (from === to) {
+          if (pillTimerRef.current) { clearTimeout(pillTimerRef.current); pillTimerRef.current = null; }
+          pillRangeRef.current = null;
+          setPillAnchor(null);
+          return;
         }
+        const prev = pillRangeRef.current;
+        if (prev && prev.from === from && prev.to === to) return; // unchanged → no-op, avoid flicker
+        pillRangeRef.current = { from, to };
+        setPillAnchor(null);
+        if (pillTimerRef.current) clearTimeout(pillTimerRef.current);
+        pillTimerRef.current = setTimeout(() => {
+          const coords = editor.view.coordsAtPos(from);
+          const left = Math.max(8, Math.min(coords.left, window.innerWidth - 8));
+          const anchor = coords.top < PILL_TOP_MARGIN
+            ? { top: coords.bottom + 6, left }                       // near top → below
+            : { bottom: window.innerHeight - coords.top + 6, left }; // default → above
+          setPillAnchor(anchor);
+        }, PILL_SETTLE_MS);
         return;
       }
       // Desktop: unchanged auto-open behavior.
@@ -157,7 +162,10 @@ export function NotepadEditor({
       }
     };
     editor.on('selectionUpdate', update);
-    return () => { editor.off('selectionUpdate', update); };
+    return () => {
+      editor.off('selectionUpdate', update);
+      if (pillTimerRef.current) { clearTimeout(pillTimerRef.current); pillTimerRef.current = null; }
+    };
   }, [editor, isBottomToolbar]);
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
@@ -430,18 +438,6 @@ export function NotepadEditor({
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-          {isBottomToolbar && (
-            <div ref={highlightBtnRef} className="relative">
-              <ToolbarButton
-                onClick={openHighlightSwatch}
-                disabled={!(hasSelection || editor.isActive('styleHighlight'))}
-                title="Highlight"
-                mobile={isBottomToolbar}
-              >
-                <Highlighter size={15} />
-              </ToolbarButton>
-            </div>
-          )}
           <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar}>
             <Sparkles size={15} />
           </ToolbarButton>
@@ -742,6 +738,22 @@ export function NotepadEditor({
           }}
           autoFocus={swatchAutoFocus}
           onRequestEditorFocus={() => editor.commands.focus()}
+        />
+      )}
+
+      {editor && isBottomToolbar && pillAnchor && (
+        <HighlightPill
+          assets={STYLE_ASSETS}
+          anchor={pillAnchor}
+          onPick={(id) => {
+            editor.chain().focus().setStyleHighlight(id).run();
+            setPillAnchor(null);
+          }}
+          onRemove={() => {
+            editor.chain().focus().unsetStyleHighlight().run();
+            setPillAnchor(null);
+          }}
+          onClose={() => setPillAnchor(null)}
         />
       )}
 

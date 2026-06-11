@@ -3,18 +3,26 @@ import { render, cleanup, fireEvent, act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Editor mock that captures event handlers so tests can drive selectionUpdate,
-// and exposes a mutable selection. coordsAtPos is needed for the desktop branch.
+// and exposes a mutable selection. coordsAtPos drives pill positioning.
 const handlers: Record<string, Array<() => void>> = {};
+const setStyleHighlight = vi.fn(() => ({ run() {} }));
+const unsetStyleHighlight = vi.fn(() => ({ run() {} }));
 const fakeEditor = {
   state: { selection: { from: 0, to: 0 } },
-  view: { coordsAtPos: () => ({ top: 10, bottom: 20, left: 30, right: 40 }) },
+  view: { coordsAtPos: () => ({ top: 200, bottom: 220, left: 30, right: 40 }) },
   on: (event: string, cb: () => void) => {
     (handlers[event] ||= []).push(cb);
   },
   off: (event: string, cb: () => void) => {
     handlers[event] = (handlers[event] || []).filter((h) => h !== cb);
   },
-  chain: () => ({ focus: () => ({ setStyleHighlight: () => ({ run() {} }), unsetStyleHighlight: () => ({ run() {} }), undo: () => ({ run() {} }), redo: () => ({ run() {} }), toggleHeading: () => ({ run() {} }), setParagraph: () => ({ run() {} }) }) }),
+  chain: () => ({
+    focus: () => ({
+      setStyleHighlight, unsetStyleHighlight,
+      undo: () => ({ run() {} }), redo: () => ({ run() {} }),
+      toggleHeading: () => ({ run() {} }), setParagraph: () => ({ run() {} }),
+    }),
+  }),
   can: () => ({ undo: () => true, redo: () => true }),
   isActive: () => false,
   commands: { focus: () => {} },
@@ -50,49 +58,73 @@ vi.mock('../../auth/context/useAccountProfile', () => ({ useAccountProfile: () =
 vi.mock('../decorations/DecorationLayer', () => ({ DecorationLayer: () => null }));
 vi.mock('../decorations/useDecorations', () => ({ useDecorations: () => ({ decorations: [], applyDecoration: vi.fn() }) }));
 vi.mock('../decorations/DecorationTray', () => ({ DecorationTray: () => null }));
-// Render a visible marker so presence of the popover is assertable.
 vi.mock('./HighlightSwatchPopover', () => ({ HighlightSwatchPopover: () => <div data-testid="swatch-popover" /> }));
+// Render a visible, interactive marker so the pill's presence + pick/remove are assertable.
+vi.mock('./HighlightPill', () => ({
+  HighlightPill: ({ onPick, onRemove }: { onPick: (id: string) => void; onRemove: () => void }) => (
+    <div data-testid="highlight-pill">
+      <button data-testid="pill-swatch" onClick={() => onPick('highlight-01')}>pick</button>
+      <button data-testid="pill-remove" onClick={onRemove}>remove</button>
+    </div>
+  ),
+}));
 
 import { NotepadEditor } from './Editor';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setStyleHighlight.mockClear();
+  unsetStyleHighlight.mockClear();
+  vi.useRealTimers();
+});
 
-describe('NotepadEditor mobile highlight button', () => {
-  it('does NOT auto-open the popover on a non-empty selection (mobile)', () => {
+describe('NotepadEditor mobile highlight pill', () => {
+  it('does NOT show the pill immediately on selection; shows it after the settle debounce', () => {
+    vi.useFakeTimers();
     const { queryByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
     fireSelection(2, 8);
-    expect(queryByTestId('swatch-popover')).toBeNull();
+    expect(queryByTestId('highlight-pill')).toBeNull(); // not yet — still "moving"
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(queryByTestId('highlight-pill')).not.toBeNull(); // settled
   });
 
-  it('disables the Highlight button with no selection and enables it with one', () => {
-    const { container } = render(<NotepadEditor toolbarPlacement="bottom" />);
-    const btn = container.querySelector('[title="Highlight"]') as HTMLButtonElement;
-    expect(btn).not.toBeNull();
-    expect(btn.disabled).toBe(true);
+  it('hides the pill when the selection collapses', () => {
+    vi.useFakeTimers();
+    const { queryByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
     fireSelection(2, 8);
-    expect(btn.disabled).toBe(false);
-  });
-
-  it('opens the popover when the Highlight button is tapped', () => {
-    const { container, queryByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
-    fireSelection(2, 8);
-    fireEvent.click(container.querySelector('[title="Highlight"]') as HTMLElement);
-    expect(queryByTestId('swatch-popover')).not.toBeNull();
-  });
-
-  it('closes the popover when the selection collapses', () => {
-    const { container, queryByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
-    fireSelection(2, 8);
-    fireEvent.click(container.querySelector('[title="Highlight"]') as HTMLElement);
-    expect(queryByTestId('swatch-popover')).not.toBeNull();
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(queryByTestId('highlight-pill')).not.toBeNull();
     fireSelection(5, 5);
-    expect(queryByTestId('swatch-popover')).toBeNull();
+    expect(queryByTestId('highlight-pill')).toBeNull();
   });
 
-  it('still auto-opens on the desktop toolbar and renders no Highlight button', () => {
-    const { container, queryByTestId } = render(<NotepadEditor />);
-    expect(container.querySelector('[title="Highlight"]')).toBeNull();
+  it('applies a highlight via setStyleHighlight when a pill swatch is tapped', () => {
+    vi.useFakeTimers();
+    const { getByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
     fireSelection(2, 8);
-    expect(queryByTestId('swatch-popover')).not.toBeNull();
+    act(() => { vi.advanceTimersByTime(250); });
+    act(() => { fireEvent.click(getByTestId('pill-swatch')); });
+    expect(setStyleHighlight).toHaveBeenCalledWith('highlight-01');
+  });
+
+  it('removes a highlight via unsetStyleHighlight when the pill remove chip is tapped', () => {
+    vi.useFakeTimers();
+    const { getByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
+    fireSelection(2, 8);
+    act(() => { vi.advanceTimersByTime(250); });
+    act(() => { fireEvent.click(getByTestId('pill-remove')); });
+    expect(unsetStyleHighlight).toHaveBeenCalled();
+  });
+
+  it('renders no Highlight toolbar button on mobile', () => {
+    const { container } = render(<NotepadEditor toolbarPlacement="bottom" />);
+    expect(container.querySelector('[title="Highlight"]')).toBeNull();
+  });
+
+  it('does not show the pill on desktop and keeps the auto-open popover', () => {
+    const { queryByTestId } = render(<NotepadEditor />);
+    fireSelection(2, 8);
+    expect(queryByTestId('highlight-pill')).toBeNull();
+    expect(queryByTestId('swatch-popover')).not.toBeNull(); // desktop unchanged
   });
 });
