@@ -45,7 +45,6 @@ export function WelcomePage() {
         fullName: fullName.trim(),
         dateOfBirth: dateOfBirth || null,
       });
-      toast.success(`Welcome, ${fullName.trim().split(' ')[0]}!`);
       setStep('import');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save your profile.');
