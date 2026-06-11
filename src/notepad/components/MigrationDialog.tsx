@@ -71,7 +71,7 @@ export function MigrationDialog({
       }}
     >
       <DialogContent
-        className="max-w-sm p-8"
+        className="w-[calc(100vw-2rem)] max-w-sm p-8"
         style={{
           background: 'var(--alabaster)',
           border: '1px solid var(--pale-stone)',
