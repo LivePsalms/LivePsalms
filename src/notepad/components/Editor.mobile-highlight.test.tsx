@@ -7,9 +7,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const handlers: Record<string, Array<() => void>> = {};
 const setStyleHighlight = vi.fn(() => ({ run() {} }));
 const unsetStyleHighlight = vi.fn(() => ({ run() {} }));
+// Mutable coords — mutate fields in-place so the formatter can't turn `let` into `const`.
+const coords = { top: 200, bottom: 220, left: 30, right: 40 };
+function resetCoords() {
+  coords.top = 200;
+  coords.bottom = 220;
+  coords.left = 30;
+  coords.right = 40;
+}
 const fakeEditor = {
   state: { selection: { from: 0, to: 0 } },
-  view: { coordsAtPos: () => ({ top: 200, bottom: 220, left: 30, right: 40 }) },
+  view: { coordsAtPos: () => coords },
   on: (event: string, cb: () => void) => {
     (handlers[event] ||= []).push(cb);
   },
@@ -60,11 +68,29 @@ vi.mock('../decorations/useDecorations', () => ({ useDecorations: () => ({ decor
 vi.mock('../decorations/DecorationTray', () => ({ DecorationTray: () => null }));
 vi.mock('./HighlightSwatchPopover', () => ({ HighlightSwatchPopover: () => <div data-testid="swatch-popover" /> }));
 // Render a visible, interactive marker so the pill's presence + pick/remove are assertable.
+// The anchor prop is exposed via data attributes so tests can assert which branch was taken.
 vi.mock('./HighlightPill', () => ({
-  HighlightPill: ({ onPick, onRemove }: { onPick: (id: string) => void; onRemove: () => void }) => (
-    <div data-testid="highlight-pill">
-      <button data-testid="pill-swatch" onClick={() => onPick('highlight-01')}>pick</button>
-      <button data-testid="pill-remove" onClick={onRemove}>remove</button>
+  HighlightPill: ({
+    anchor,
+    onPick,
+    onRemove,
+  }: {
+    anchor: { top?: number; bottom?: number; left: number };
+    onPick: (id: string) => void;
+    onRemove: () => void;
+  }) => (
+    <div
+      data-testid="highlight-pill"
+      data-anchor-top={anchor.top ?? ''}
+      data-anchor-bottom={anchor.bottom ?? ''}
+      data-anchor-left={anchor.left}
+    >
+      <button data-testid="pill-swatch" onClick={() => onPick('highlight-01')}>
+        pick
+      </button>
+      <button data-testid="pill-remove" onClick={onRemove}>
+        remove
+      </button>
     </div>
   ),
 }));
@@ -76,6 +102,7 @@ afterEach(() => {
   setStyleHighlight.mockClear();
   unsetStyleHighlight.mockClear();
   vi.useRealTimers();
+  resetCoords();
 });
 
 describe('NotepadEditor mobile highlight pill', () => {
@@ -126,5 +153,33 @@ describe('NotepadEditor mobile highlight pill', () => {
     fireSelection(2, 8);
     expect(queryByTestId('highlight-pill')).toBeNull();
     expect(queryByTestId('swatch-popover')).not.toBeNull(); // desktop unchanged
+  });
+
+  it('anchors the pill above by default and flips below when the selection is near the top', () => {
+    vi.useFakeTimers();
+    const { getByTestId, queryByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
+
+    // Default coords (top: 200, well above PILL_TOP_MARGIN=56) → pill anchored ABOVE
+    // (bottom set, no top).
+    fireSelection(2, 8);
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    const above = getByTestId('highlight-pill');
+    expect(above.dataset.anchorBottom).not.toBe('');
+    expect(above.dataset.anchorTop).toBe('');
+
+    // Near the top of the viewport (top < 56) → pill flips BELOW (top set, no bottom).
+    coords.top = 10;
+    coords.bottom = 30;
+    // Use a different range so the unchanged-range no-op guard doesn't skip it.
+    fireSelection(3, 9);
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    const below = getByTestId('highlight-pill');
+    expect(below.dataset.anchorTop).not.toBe('');
+    expect(below.dataset.anchorBottom).toBe('');
+    expect(queryByTestId('highlight-pill')).not.toBeNull();
   });
 });
