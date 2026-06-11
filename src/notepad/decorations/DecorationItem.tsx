@@ -11,6 +11,9 @@ interface Props {
   decoration: NoteDecoration;
   selected: boolean;
   contentWidth: number;
+  /** Mobile (bottom-toolbar) layout: enables finger-first handles, snapping
+   *  rotation, drag threshold, and hides the floating action bar. */
+  mobile?: boolean;
   onChange: (next: NoteDecoration) => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -23,7 +26,7 @@ interface Props {
 type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration };
 
 export function DecorationItem({
-  decoration: d, selected, contentWidth,
+  decoration: d, selected, contentWidth, mobile: _mobile = false,
   onChange, onSelect, onDelete, onDuplicate, onBringToFront, onSendToBack, onDeselect,
 }: Props) {
   const asset = getStyleAsset(d.assetId);

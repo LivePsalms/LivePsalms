@@ -16,6 +16,7 @@ export interface DecorationLayerHandle {
 interface Props {
   decorations: NoteDecoration[];
   selectedId: string | null;
+  mobile?: boolean;
   onSelect: (id: string) => void;
   onDeselect: () => void;
   onChange: (next: NoteDecoration) => void;
@@ -26,7 +27,7 @@ interface Props {
 }
 
 export const DecorationLayer = forwardRef<DecorationLayerHandle, Props>(function DecorationLayer({
-  decorations, selectedId, onSelect, onDeselect,
+  decorations, selectedId, mobile = false, onSelect, onDeselect,
   onChange, onDelete, onDuplicate, onBringToFront, onSendToBack,
 }: Props, handleRef) {
   const ref = useRef<HTMLDivElement>(null);
@@ -87,6 +88,7 @@ export const DecorationLayer = forwardRef<DecorationLayerHandle, Props>(function
               decoration={d}
               selected={selectedId === d.id}
               contentWidth={contentWidth}
+              mobile={mobile}
               onChange={onChange}
               onSelect={onSelect}
               onDelete={onDelete}

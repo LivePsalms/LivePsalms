@@ -228,6 +228,13 @@ describe('DecorationItem', () => {
     expect(h.onDeselect).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts a mobile prop without altering desktop default rendering', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected mobile={false} {...h} />);
+    // Desktop default still shows the floating action bar.
+    expect(getByLabelText('Delete decoration')).not.toBeNull();
+  });
+
   it('ignores key events bubbling from child controls (only the chrome itself handles keys)', () => {
     const h = handlers();
     const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
