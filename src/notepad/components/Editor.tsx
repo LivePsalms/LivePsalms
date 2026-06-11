@@ -205,7 +205,7 @@ export function NotepadEditor({
       {editor && (
         <div
           data-toolbar-placement={toolbarPlacement}
-          className="shrink-0 flex items-center gap-0.5 px-3"
+          className={`shrink-0 flex items-center gap-0.5 px-3${isBottomToolbar ? ' scrollbar-hide' : ''}`}
           style={{
             height: 40,
             background: 'rgba(240, 236, 232, 0.97)',
@@ -216,6 +216,8 @@ export function NotepadEditor({
             position: isBottomToolbar ? 'sticky' : undefined,
             bottom: isBottomToolbar ? `${toolbarBottomOffset}px` : undefined,
             zIndex: isBottomToolbar ? 20 : undefined,
+            minWidth: isBottomToolbar ? 0 : undefined,
+            overflowX: isBottomToolbar ? 'auto' : undefined,
           }}
         >
           {/* Undo / Redo */}
@@ -674,6 +676,7 @@ function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarBu
       style={{
         width: 30,
         height: 28,
+        flexShrink: 0,
         cursor: disabled ? 'default' : 'pointer',
         background: active ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
         color: disabled ? 'var(--pale-stone)' : active ? 'var(--charred)' : 'var(--deep-umber)',
@@ -700,6 +703,7 @@ function ToolbarDivider() {
       style={{
         width: 1,
         height: 20,
+        flexShrink: 0,
         background: 'var(--pale-stone)',
         margin: '0 4px',
         alignSelf: 'center',
