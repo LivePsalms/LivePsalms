@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, TEXT_Z, SELECTED_Z,
-  decorationBox, pointInBox, topmostBehindAtPoint, snapAngle,
+  decorationBox, pointInBox, topmostBehindAtPoint, snapAngle, resizeFromCorner,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -177,5 +177,56 @@ describe('snapAngle', () => {
   it('snaps across the 360/0 wrap', () => {
     expect(snapAngle(359, { step: 45, threshold: 5 })).toBe(0);
     expect(snapAngle(-2, { step: 45, threshold: 5 })).toBe(0);
+  });
+});
+
+describe('resizeFromCorner', () => {
+  // base: left=500, top=100, width=200 (0.2*1000), aspectRatio 2 => height=100.
+  const base: NoteDecoration = {
+    id: 'a', assetId: 'arrow-01', xPct: 0.5, yPx: 100, widthPct: 0.2, rotation: 0, z: 1,
+  };
+  const cw = 1000;
+  const ar = 2;
+
+  it('bottom-right: grows width, anchors top-left (position unchanged)', () => {
+    const out = resizeFromCorner(base, { corner: 'bottom-right', dxPx: 100, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(out.widthPct).toBeCloseTo(0.3, 5); // (200+100)/1000
+    expect(out.xPct).toBeCloseTo(0.5, 5);     // left anchored
+    expect(out.yPx).toBeCloseTo(100, 5);      // top anchored
+  });
+
+  it('bottom-left: grows width leftward, anchors top-right', () => {
+    const out = resizeFromCorner(base, { corner: 'bottom-left', dxPx: -100, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(out.widthPct).toBeCloseTo(0.3, 5);
+    expect(out.xPct).toBeCloseTo(0.4, 5);
+    expect(out.yPx).toBeCloseTo(100, 5);
+  });
+
+  it('top-right: grows width, anchors bottom-left (top moves up by height delta)', () => {
+    const out = resizeFromCorner(base, { corner: 'top-right', dxPx: 100, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(out.widthPct).toBeCloseTo(0.3, 5);
+    expect(out.xPct).toBeCloseTo(0.5, 5);  // left anchored
+    expect(out.yPx).toBeCloseTo(50, 5);
+  });
+
+  it('top-left: grows width leftward, anchors bottom-right', () => {
+    const out = resizeFromCorner(base, { corner: 'top-left', dxPx: -100, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(out.widthPct).toBeCloseTo(0.3, 5);
+    expect(out.xPct).toBeCloseTo(0.4, 5);
+    expect(out.yPx).toBeCloseTo(50, 5);
+  });
+
+  it('clamps width to the MIN/MAX range', () => {
+    const wide = resizeFromCorner({ ...base, widthPct: 0.98 }, { corner: 'bottom-right', dxPx: 1000, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(wide.widthPct).toBe(1);
+    const tiny = resizeFromCorner({ ...base, widthPct: 0.05 }, { corner: 'bottom-right', dxPx: -1000, dyPx: 0, contentWidth: cw, aspectRatio: ar });
+    expect(tiny.widthPct).toBe(0.03);
+  });
+
+  it('leaves the decoration unchanged when contentWidth is 0', () => {
+    const out = resizeFromCorner(base, { corner: 'bottom-right', dxPx: 100, dyPx: 0, contentWidth: 0, aspectRatio: ar });
+    expect(out.widthPct).toBe(0.2);
+    expect(out.xPct).toBe(0.5);
+    expect(out.yPx).toBe(100);
   });
 });

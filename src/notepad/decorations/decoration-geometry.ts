@@ -120,6 +120,45 @@ export function snapAngle(
   return Math.abs(norm - nearest) <= threshold ? rotationDeg(nearest) : norm;
 }
 
+export type ResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+// Proportional (aspect-locked) resize from a corner, keeping the diagonally
+// opposite corner fixed on the canvas. Width is the driver; height follows the
+// asset aspect ratio (width / aspectRatio), matching the <img> render. Width is
+// clamped to [MIN_WIDTH_PCT, MAX_WIDTH_PCT]; position is recomputed from the
+// anchored corner and intentionally NOT passed through clampDecoration so the
+// anchor stays exact (the move path owns position clamping).
+export function resizeFromCorner(
+  d: NoteDecoration,
+  { corner, dxPx, contentWidth, aspectRatio }:
+    { corner: ResizeCorner; dxPx: number; dyPx: number; contentWidth: number; aspectRatio: number },
+): NoteDecoration {
+  if (contentWidth <= 0) return d;
+
+  const left = d.xPct * contentWidth;
+  const top = d.yPx;
+  const width = d.widthPct * contentWidth;
+  const height = aspectRatio > 0 ? width / aspectRatio : width;
+  const right = left + width;
+  const bottom = top + height;
+
+  // Left-edge corners grow as the pointer moves left (negative dx).
+  const growsRight = corner === 'top-right' || corner === 'bottom-right';
+  const rawWidth = growsRight ? width + dxPx : width - dxPx;
+
+  const widthPct = Math.min(MAX_WIDTH_PCT, Math.max(MIN_WIDTH_PCT, rawWidth / contentWidth));
+  const newWidth = widthPct * contentWidth;
+  const newHeight = aspectRatio > 0 ? newWidth / aspectRatio : newWidth;
+
+  // Anchor the opposite corner.
+  const anchorsLeft = corner === 'top-left' || corner === 'bottom-left'; // opposite corner is on the right
+  const anchorsTop = corner === 'top-left' || corner === 'top-right';    // opposite corner is on the bottom
+  const newLeft = anchorsLeft ? right - newWidth : left;
+  const newTop = anchorsTop ? bottom - newHeight : top;
+
+  return { ...d, widthPct, xPct: newLeft / contentWidth, yPx: newTop };
+}
+
 export function pinchTransform(
   d: NoteDecoration,
   { startDist, dist, startAngle, angle }:
