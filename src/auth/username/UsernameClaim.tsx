@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAccountProfile } from '@/auth/context/useAccountProfile';
@@ -12,6 +12,7 @@ export function UsernameClaim() {
   const { account } = useAccountProfile();
   const navigate = useNavigate();
   const skipInFlight = useRef(false);
+  const [skipping, setSkipping] = useState(false);
 
   function goToNotepad(username: string) {
     navigate(`/notepad/u/${username}`, { replace: true });
@@ -20,6 +21,7 @@ export function UsernameClaim() {
   async function handleSkip() {
     if (skipInFlight.current) return;
     skipInFlight.current = true;
+    setSkipping(true);
     try {
       for (let attempt = 0; attempt < MAX_SKIP_ATTEMPTS; attempt++) {
         const candidate = generateUsername();
@@ -36,6 +38,7 @@ export function UsernameClaim() {
       toast.error('Something went wrong. Please try again.');
     } finally {
       skipInFlight.current = false;
+      setSkipping(false);
     }
   }
 
@@ -45,6 +48,7 @@ export function UsernameClaim() {
       claim={account.setUsername}
       onClaimed={goToNotepad}
       onSkip={handleSkip}
+      skipping={skipping}
     />
   );
 }

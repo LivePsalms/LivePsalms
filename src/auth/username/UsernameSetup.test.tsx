@@ -87,4 +87,12 @@ describe('UsernameSetup', () => {
     setup();
     expect(screen.queryByRole('button', { name: /skip/i })).not.toBeInTheDocument();
   });
+
+  it('disables the skip button and shows a busy label while skipping', () => {
+    const onSkip = vi.fn();
+    setup({ onSkip, skipping: true });
+    const btn = screen.getByRole('button', { name: /setting up/i });
+    expect(btn).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /skip for now/i })).not.toBeInTheDocument();
+  });
 });
