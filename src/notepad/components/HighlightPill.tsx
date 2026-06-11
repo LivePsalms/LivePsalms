@@ -14,7 +14,8 @@ interface Props {
 
 // Mobile-only floating pill, rendered just above (or below) the settled
 // selection. Presentational: it consumes a ready-made anchor; positioning math
-// lives in the editor. A single horizontal-scrolling row: remove chip + swatches.
+// lives in the editor. The remove chip stays pinned at the left while the
+// swatches scroll horizontally in their own track beside it.
 export function HighlightPill({ assets, anchor, onPick, onRemove, onClose }: Props) {
   const shown = filterAssets(assets, 'highlight', '');
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,7 +35,6 @@ export function HighlightPill({ assets, anchor, onPick, onRemove, onClose }: Pro
       ref={rootRef}
       role="dialog"
       aria-label="Highlight swatches"
-      className="scrollbar-hide"
       style={{
         position: 'fixed',
         top: anchor.top,
@@ -50,7 +50,7 @@ export function HighlightPill({ assets, anchor, onPick, onRemove, onClose }: Pro
         borderRadius: 9,
         boxShadow: '0 8px 22px rgba(0,0,0,.16)',
         padding: 6,
-        overflowX: 'auto',
+        overflow: 'hidden',
       }}
     >
       <button
@@ -60,16 +60,21 @@ export function HighlightPill({ assets, anchor, onPick, onRemove, onClose }: Pro
       >
         ✕
       </button>
-      {shown.map((a) => (
-        <button
-          key={a.id}
-          aria-label={`Highlight ${a.id}`}
-          onClick={() => onPick(a.id)}
-          style={{ flex: '0 0 auto', height: 28, width: 36, border: '1px solid var(--pale-stone)', borderRadius: 6, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0 }}
-        >
-          <img src={a.thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </button>
-      ))}
+      <div
+        className="scrollbar-hide"
+        style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: 5, overflowX: 'auto' }}
+      >
+        {shown.map((a) => (
+          <button
+            key={a.id}
+            aria-label={`Highlight ${a.id}`}
+            onClick={() => onPick(a.id)}
+            style={{ flex: '0 0 auto', height: 28, width: 36, border: '1px solid var(--pale-stone)', borderRadius: 6, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0 }}
+          >
+            <img src={a.thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

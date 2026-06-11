@@ -57,6 +57,19 @@ describe('HighlightPill', () => {
     expect(elTop.style.top).toBe('80px');
   });
 
+  it('keeps the remove chip pinned outside the swatch scroll track', () => {
+    const { getByLabelText } = render(
+      <HighlightPill assets={assets} anchor={{ bottom: 100, left: 30 }} onPick={vi.fn()} onRemove={vi.fn()} onClose={vi.fn()} />
+    );
+    const removeChip = getByLabelText('Remove highlight');
+    const swatch = getByLabelText('Highlight highlight-01');
+    // The swatches live inside a horizontally-scrolling track...
+    const scrollTrack = swatch.parentElement as HTMLElement;
+    expect(scrollTrack.style.overflowX).toBe('auto');
+    // ...but the remove chip stays pinned beside it, not within it.
+    expect(scrollTrack.contains(removeChip)).toBe(false);
+  });
+
   it('closes on an outside pointerdown', () => {
     const onClose = vi.fn();
     render(
