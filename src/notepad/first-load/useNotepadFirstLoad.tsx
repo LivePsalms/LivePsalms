@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthSession } from '@/auth/context/useAuthSession';
@@ -20,6 +20,10 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
   const { profile, profileStatus } = useAccountProfile();
   const navigate = useNavigate();
   const [showMigration, setShowMigration] = useState(false);
+  // Fire the one-time welcome at most once per mount, synchronously, so two
+  // overlapping first-load runs (effect re-run during the async notes fetch)
+  // can never double-toast — independent of the localStorage flag's timing.
+  const welcomedRef = useRef(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -42,6 +46,8 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
             navigate('/welcome');
             break;
           case 'welcome':
+            if (welcomedRef.current) break;
+            welcomedRef.current = true;
             markWelcomedOnce(user.id, localStorage);
             toast.success(`Welcome${action.firstName ? `, ${action.firstName}` : ''}!`);
             break;
