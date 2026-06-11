@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { filterAssets, type StyleAsset } from '../styles/manifest';
 
-interface Anchor { top?: number; bottom?: number; left: number; }
+interface Anchor { top: number; left: number; }
 
 interface Props {
   assets: StyleAsset[];
@@ -80,7 +80,6 @@ export function HighlightSwatchPopover({
       style={{
         position: 'fixed',
         top: anchor.top,
-        bottom: anchor.bottom,
         left: anchor.left,
         zIndex: 60,
         width: 200,
