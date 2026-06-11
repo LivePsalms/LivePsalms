@@ -107,6 +107,19 @@ export function topmostBehindAtPoint(
   return null;
 }
 
+// Snaps an angle to the nearest multiple of `step` when within `threshold`
+// degrees of it (handling the 360/0 wrap), else returns the normalized angle.
+// Used on mobile so rotation locks onto cardinal/diagonal angles instead of
+// drifting. Pure — desktop never calls it, keeping desktop rotation unchanged.
+export function snapAngle(
+  deg: number,
+  { step, threshold }: { step: number; threshold: number },
+): number {
+  const norm = rotationDeg(deg);
+  const nearest = Math.round(norm / step) * step;
+  return Math.abs(norm - nearest) <= threshold ? rotationDeg(nearest) : norm;
+}
+
 export function pinchTransform(
   d: NoteDecoration,
   { startDist, dist, startAngle, angle }:

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   moveTo, resizeWidthPct, rotationDeg, clampDecoration, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, TEXT_Z, SELECTED_Z,
-  decorationBox, pointInBox, topmostBehindAtPoint,
+  decorationBox, pointInBox, topmostBehindAtPoint, snapAngle,
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
@@ -159,5 +159,23 @@ describe('topmostBehindAtPoint', () => {
     const lo = { ...back, id: 'lo', z: 1 };
     const hi = { ...back, id: 'hi', z: 5 };
     expect(topmostBehindAtPoint([lo, hi], 550, 150, 1000, ar)).toBe('hi');
+  });
+});
+
+describe('snapAngle', () => {
+  it('snaps to the nearest step when within the threshold', () => {
+    expect(snapAngle(2, { step: 45, threshold: 5 })).toBe(0);
+    expect(snapAngle(43, { step: 45, threshold: 5 })).toBe(45);
+    expect(snapAngle(88, { step: 45, threshold: 5 })).toBe(90);
+  });
+
+  it('passes the angle through unchanged when outside the threshold', () => {
+    expect(snapAngle(20, { step: 45, threshold: 5 })).toBe(20);
+    expect(snapAngle(60, { step: 45, threshold: 5 })).toBe(60);
+  });
+
+  it('snaps across the 360/0 wrap', () => {
+    expect(snapAngle(359, { step: 45, threshold: 5 })).toBe(0);
+    expect(snapAngle(-2, { step: 45, threshold: 5 })).toBe(0);
   });
 });
