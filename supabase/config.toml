@@ -151,12 +151,18 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://livepsalms.com"
+# Canonical host is www (apex livepsalms.com 301-redirects to www.livepsalms.com), and the SPA's
+# OAuth redirect_to is built from window.location.origin, i.e. https://www.livepsalms.com/...
+site_url = "https://www.livepsalms.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs (glob patterns allowed) that auth providers are permitted to redirect to
 # post authentication. The `/**` wildcards cover deep paths like /notepad/notes and /update-password.
+# Both www and apex are listed so an OAuth redirect_to from either host is honored rather than
+# silently falling back to site_url.
 additional_redirect_urls = [
+  "https://www.livepsalms.com",
+  "https://www.livepsalms.com/**",
   "https://livepsalms.com",
   "https://livepsalms.com/**",
   "http://127.0.0.1:3000",

@@ -48,4 +48,28 @@ describe('runBibleChatPipeline', () => {
     expect(out.ok).toBe(true);
     if (out.ok) expect(out.promptVersion).toBe(BIBLE_INSIGHT_PROMPT.promptVersion);
   });
+
+  it('uses the bumped insight prompt version', () => {
+    expect(BIBLE_INSIGHT_PROMPT.promptVersion).toBe('bible-insight-2026-06-10-v3');
+  });
+
+  it('runs the insight path cleanly with an empty-notes context', async () => {
+    const emptyNotesCtx: BibleChatContext = {
+      ...baseCtx,
+      notes: [],
+      allowedNoteIds: new Set<string>(),
+      userMessage: '',
+    };
+    // buildMessages must still emit the no-notes marker the model relies on.
+    const msg = BIBLE_INSIGHT_PROMPT.buildMessages(emptyNotesCtx)[0].content;
+    expect(msg).toContain('no related notes yet');
+
+    const llm = fakeLLM({
+      reply: 'You haven’t connected any notes here yet — still, the shepherd lays down his life freely.',
+      citations: [{ type: 'verse', ref: 'jhn 10:11' }],
+    });
+    const out = await runBibleChatPipeline({ llm, ctx: emptyNotesCtx, prompt: BIBLE_INSIGHT_PROMPT });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.citations).toEqual([{ type: 'verse', ref: 'jhn 10:11' }]);
+  });
 });
