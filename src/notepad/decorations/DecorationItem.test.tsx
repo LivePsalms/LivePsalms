@@ -277,4 +277,45 @@ describe('DecorationItem', () => {
     fireEvent.pointerUp(surface, { pointerId: 1 });
     expect(h.onChange).toHaveBeenCalled();
   });
+
+  it('mobile: renders four corner resize handles with a >=44px hit area', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    for (const label of ['Resize top-left', 'Resize top-right', 'Resize bottom-left', 'Resize bottom-right']) {
+      const handle = getByLabelText(label) as HTMLElement;
+      expect(parseInt(handle.style.width, 10)).toBeGreaterThanOrEqual(44);
+      expect(parseInt(handle.style.height, 10)).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('mobile: dragging the bottom-right corner grows width, anchoring top-left', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const handle = getByLabelText('Resize bottom-right');
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 100, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.3, 5), xPct: expect.closeTo(0.5, 5), yPx: 100 }),
+    );
+  });
+
+  it('mobile: dragging the bottom-left corner grows width, anchoring top-right', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const handle = getByLabelText('Resize bottom-left');
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: -100, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', widthPct: expect.closeTo(0.3, 5), xPct: expect.closeTo(0.4, 5) }),
+    );
+  });
+
+  it('desktop: still renders the single bottom-right resize handle, not the four mobile ones', () => {
+    const h = handlers();
+    const { getByLabelText, queryByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    expect(getByLabelText('Resize decoration')).not.toBeNull();
+    expect(queryByLabelText('Resize top-left')).toBeNull();
+  });
 });

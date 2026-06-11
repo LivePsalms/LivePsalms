@@ -4,7 +4,9 @@ import { getStyleAsset } from '../styles/manifest';
 import {
   moveTo, resizeWidthPct, rotationDeg, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, SELECTED_Z,
+  resizeFromCorner,
 } from './decoration-geometry';
+import type { ResizeCorner } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 const MOBILE_DRAG_THRESHOLD_PX = 6;
@@ -25,7 +27,7 @@ interface Props {
   onDeselect: () => void;
 }
 
-type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration; movedEnough: boolean };
+type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration; movedEnough: boolean; corner?: ResizeCorner };
 
 export function DecorationItem({
   decoration: d, selected, contentWidth, mobile = false,
@@ -104,6 +106,16 @@ export function DecorationItem({
     if (kind === 'move') onSelect(d.id);
   };
 
+  const startCorner = (corner: ResizeCorner) => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    gesture.current = { kind: 'resize', startX: e.clientX, startY: e.clientY, base: d, movedEnough: true, corner };
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* jsdom may not implement pointer capture; harmless no-op */
+    }
+  };
+
   const move = (e: React.PointerEvent) => {
     const g = gesture.current;
     if (!g) return;
@@ -115,6 +127,10 @@ export function DecorationItem({
         g.movedEnough = true;
       }
       onChange(moveTo(g.base, { dxPx, dyPx, contentWidth }));
+    } else if (g.corner) {
+      onChange(resizeFromCorner(g.base, {
+        corner: g.corner, dxPx, dyPx, contentWidth, aspectRatio: asset.aspectRatio,
+      }));
     } else {
       onChange(resizeWidthPct(g.base, { dxPx, contentWidth }));
     }
@@ -274,14 +290,29 @@ export function DecorationItem({
           />
 
           {/* Relies on pointer capture (set in `start`) to keep receiving moves once the pointer leaves the 12px handle; no-op in jsdom. */}
-          <div
-            aria-label="Resize decoration"
-            onPointerDown={start('resize')}
-            onPointerMove={move}
-            onPointerUp={end}
-            onPointerCancel={end}
-            style={{ ...handleStyle('-6px', '-6px', 'nwse-resize', 'bottom-right'), pointerEvents: 'auto' }}
-          />
+          {!mobile && (
+            <div
+              aria-label="Resize decoration"
+              onPointerDown={start('resize')}
+              onPointerMove={move}
+              onPointerUp={end}
+              onPointerCancel={end}
+              style={{ ...handleStyle('-6px', '-6px', 'nwse-resize', 'bottom-right'), pointerEvents: 'auto' }}
+            />
+          )}
+          {mobile && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => (
+            <div
+              key={corner}
+              aria-label={`Resize ${corner}`}
+              onPointerDown={startCorner(corner)}
+              onPointerMove={move}
+              onPointerUp={end}
+              onPointerCancel={end}
+              style={{ ...cornerHitArea(corner), pointerEvents: 'auto' }}
+            >
+              <span style={visualDot} />
+            </div>
+          ))}
           <div
             aria-label="Rotate decoration"
             onPointerDown={rotateDown}
@@ -324,3 +355,23 @@ function handleStyle(
   if (kind === 'bottom-right') return { ...base, bottom: top, right };
   return { ...base, top, left: right };
 }
+
+// 44px transparent touch target centered on the box corner (negative offsets =
+// half the hit-area size so the corner sits at its center).
+function cornerHitArea(corner: ResizeCorner): React.CSSProperties {
+  const SIZE = 44;
+  const off = -SIZE / 2;
+  const base: React.CSSProperties = {
+    position: 'absolute', width: SIZE, height: SIZE,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    touchAction: 'none', cursor: (corner === 'top-left' || corner === 'bottom-right') ? 'nwse-resize' : 'nesw-resize', background: 'transparent',
+  };
+  const top = corner.startsWith('top');
+  const left = corner.endsWith('left');
+  return { ...base, top: top ? off : undefined, bottom: top ? undefined : off, left: left ? off : undefined, right: left ? undefined : off };
+}
+
+export const visualDot: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: '50%', background: '#fff',
+  border: '2px solid var(--deep-umber)', boxShadow: '0 1px 3px rgba(0,0,0,.18)',
+};
