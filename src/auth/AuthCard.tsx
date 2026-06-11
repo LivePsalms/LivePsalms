@@ -156,7 +156,18 @@ export function AuthCard({ onAuthenticated }: AuthCardProps) {
       {verifyEmail ? (
         <VerifyEmailNotice
           email={verifyEmail}
-          onBack={() => setVerifyEmail(null)}
+          onBack={() => {
+            // Return to the sign-in form (not the populated sign-up form). Keep the
+            // email they just signed up with prefilled; clear everything else.
+            setVerifyEmail(null);
+            setMode('login');
+            setPassword('');
+            setConfirmPassword('');
+            setFullName('');
+            setAgreedToTerms(false);
+            setError(null);
+            setSuccess(null);
+          }}
           onVerified={() => onAuthenticated?.()}
         />
       ) : (
