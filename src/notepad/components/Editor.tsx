@@ -20,6 +20,7 @@ import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { HighlightPill } from './HighlightPill';
 import { useDecorations } from '../decorations/useDecorations';
 import { DecorationLayer, type DecorationLayerHandle } from '../decorations/DecorationLayer';
+import { DecorationToolbar } from '../decorations/DecorationToolbar';
 import { TEXT_Z } from '../decorations/decoration-geometry';
 import { DecorationTray } from '../decorations/DecorationTray';
 import { STYLE_ASSETS } from '../styles/manifest';
@@ -81,6 +82,13 @@ export function NotepadEditor({
   const decorationsApi = useDecorations(activeNote, updateNote);
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
+  // When the bottom toolbar is active and a decoration is selected, the
+  // contextual DecorationToolbar takes the toolbar slot in place of the
+  // formatting toolbar (mobile-only — desktop keeps its on-canvas action bar).
+  const selectedDecorationObj = selectedDecoration
+    ? decorationsApi.decorations.find((x) => x.id === selectedDecoration) ?? null
+    : null;
+  const showDecorationToolbar = isBottomToolbar && !!selectedDecorationObj;
   const decorationLayerRef = useRef<DecorationLayerHandle>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const lastInteractionRef = useRef<'pointer' | 'keyboard'>('pointer');
@@ -266,7 +274,7 @@ export function NotepadEditor({
       ...(isBottomToolbar ? { width: '100%', minWidth: 0, maxWidth: '100%' } : {}),
     }}>
       {/* Fixed formatting toolbar */}
-      {editor && (
+      {editor && !showDecorationToolbar && (
         <div
           data-toolbar-placement={toolbarPlacement}
           className={`shrink-0 flex items-center gap-0.5 px-3${isBottomToolbar ? ' scrollbar-hide' : ''}`}
@@ -454,6 +462,21 @@ export function NotepadEditor({
         </div>
       )}
 
+      {/* Contextual decoration toolbar — swaps in for the formatting toolbar on
+          mobile while a decoration is selected. */}
+      {showDecorationToolbar && selectedDecorationObj && (
+        <DecorationToolbar
+          decoration={selectedDecorationObj}
+          bottomOffset={toolbarBottomOffset}
+          onChange={(next) => decorationsApi.update(next.id, next)}
+          onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); editor?.commands.focus(); }}
+          onDuplicate={(id) => decorationsApi.duplicate(id)}
+          onBringToFront={(id) => decorationsApi.bringToFront(id)}
+          onSendToBack={(id) => decorationsApi.sendToBack(id)}
+          onDone={() => { setSelectedDecoration(null); editor?.commands.focus(); }}
+        />
+      )}
+
       {/* Scrollable content area */}
       <div
         data-testid="editor-scroll"
@@ -593,6 +616,7 @@ export function NotepadEditor({
             key={activeNote.id}
             ref={decorationLayerRef}
             decorations={decorationsApi.decorations}
+            mobile={isBottomToolbar}
             selectedId={selectedDecoration}
             onSelect={setSelectedDecoration}
             onDeselect={() => { setSelectedDecoration(null); editor?.commands.focus(); }}
