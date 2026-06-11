@@ -8,13 +8,13 @@ afterEach(cleanup);
 describe('TodaysLampIntro', () => {
   it('renders the intro copy and start button', () => {
     render(<TodaysLampIntro firstName={null} onStart={() => {}} />);
-    expect(screen.getByText(/Today's Lamp draws quietly from your recent notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Today's Lamp draws from your recent notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show Me Today's Lamp/i })).toBeInTheDocument();
   });
 
   it('personalizes the intro with firstName', () => {
     render(<TodaysLampIntro firstName="Natalie" onStart={() => {}} />);
-    expect(screen.getByText(/Natalie, Today's Lamp draws quietly/i)).toBeInTheDocument();
+    expect(screen.getByText(/Natalie, Today's Lamp draws/i)).toBeInTheDocument();
   });
 
   it('calls onStart when the button is tapped', () => {

@@ -23,6 +23,6 @@ export function generationFailedToast(firstName: string | null): string {
 
 export function todaysLampIntro(firstName: string | null): string {
   return firstName
-    ? `${firstName}, Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.`
-    : `Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.`;
+    ? `${firstName}, Today's Lamp draws from your recent notes — a piece of Scripture and a short reflection for where you are right now.`
+    : `Today's Lamp draws from your recent notes — a piece of Scripture and a short reflection for where you are right now.`;
 }

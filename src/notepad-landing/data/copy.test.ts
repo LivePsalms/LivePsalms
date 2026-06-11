@@ -8,7 +8,7 @@ describe('notepad landing copy (locked)', () => {
 
   it('hero subtitle matches the locked copy', () => {
     expect(copy.section01.sub).toBe(
-      'Your devotions, your sermon notes, the verses you keep coming back to — written down, connected, and quietly read back to you when you need it.',
+      'Your devotions, your sermon notes, the verses you keep coming back to — written down, connected, and read back to you when you need it.',
     );
   });
 

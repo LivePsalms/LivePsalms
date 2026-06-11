@@ -2,7 +2,7 @@ export const copy = {
   section01: {
     eyebrow: '— THE NOTEPAD —',
     h1: 'Everything God’s said to you. In one place that remembers.',
-    sub: 'Your devotions, your sermon notes, the verses you keep coming back to — written down, connected, and quietly read back to you when you need it.',
+    sub: 'Your devotions, your sermon notes, the verses you keep coming back to — written down, connected, and read back to you when you need it.',
     activeFormLabel: 'ACTIVE FORM',
     shapeNames: ['Pencil', 'Heart', 'Journal'] as const,
     ctaPrimary: 'Open your notepad →',
