@@ -7,6 +7,8 @@ import {
 } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
+const MOBILE_DRAG_THRESHOLD_PX = 6;
+
 interface Props {
   decoration: NoteDecoration;
   selected: boolean;
@@ -23,10 +25,10 @@ interface Props {
   onDeselect: () => void;
 }
 
-type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration };
+type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: NoteDecoration; movedEnough: boolean };
 
 export function DecorationItem({
-  decoration: d, selected, contentWidth, mobile: _mobile = false,
+  decoration: d, selected, contentWidth, mobile = false,
   onChange, onSelect, onDelete, onDuplicate, onBringToFront, onSendToBack, onDeselect,
 }: Props) {
   const asset = getStyleAsset(d.assetId);
@@ -93,7 +95,7 @@ export function DecorationItem({
     e.stopPropagation();
     // Assign gesture state BEFORE touching pointer capture so a jsdom
     // limitation in setPointerCapture can never prevent the drag from starting.
-    gesture.current = { kind, startX: e.clientX, startY: e.clientY, base: d };
+    gesture.current = { kind, startX: e.clientX, startY: e.clientY, base: d, movedEnough: false };
     try {
       (e.target as Element).setPointerCapture?.(e.pointerId);
     } catch {
@@ -108,6 +110,10 @@ export function DecorationItem({
     const dxPx = e.clientX - g.startX;
     const dyPx = e.clientY - g.startY;
     if (g.kind === 'move') {
+      if (mobile && !g.movedEnough) {
+        if (Math.hypot(dxPx, dyPx) < MOBILE_DRAG_THRESHOLD_PX) return;
+        g.movedEnough = true;
+      }
       onChange(moveTo(g.base, { dxPx, dyPx, contentWidth }));
     } else {
       onChange(resizeWidthPct(g.base, { dxPx, contentWidth }));
@@ -136,7 +142,7 @@ export function DecorationItem({
       pinch.current = { startDist: m.dist, startAngle: m.angle, base: d };
       gesture.current = null;
     } else {
-      gesture.current = { kind: 'move', startX: e.clientX, startY: e.clientY, base: d };
+      gesture.current = { kind: 'move', startX: e.clientX, startY: e.clientY, base: d, movedEnough: false };
       onSelect(d.id);
     }
     try {

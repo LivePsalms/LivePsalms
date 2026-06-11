@@ -245,4 +245,36 @@ describe('DecorationItem', () => {
     expect(h.onChange).not.toHaveBeenCalled();
     expect(h.onDelete).not.toHaveBeenCalled();
   });
+
+  it('mobile: a sub-threshold pointer move selects but does not move the decoration', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 3, clientY: 2, pointerId: 1 }); // ~3.6px < 6
+    fireEvent.pointerUp(surface, { pointerId: 1 });
+    expect(h.onChange).not.toHaveBeenCalled();
+  });
+
+  it('mobile: a past-threshold pointer move updates position', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 100, clientY: 30, pointerId: 1 });
+    fireEvent.pointerUp(surface, { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', xPct: expect.closeTo(0.6, 5), yPx: 130 }),
+    );
+  });
+
+  it('desktop: moves immediately with no threshold (regression)', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected {...h} />);
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 3, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(surface, { pointerId: 1 });
+    expect(h.onChange).toHaveBeenCalled();
+  });
 });
