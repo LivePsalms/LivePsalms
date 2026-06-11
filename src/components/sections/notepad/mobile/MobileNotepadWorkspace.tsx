@@ -124,7 +124,10 @@ export function MobileNotepadWorkspace() {
   }, [model.user]);
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--plaster)' }}>
+    <div
+      className="fixed inset-x-0 top-0 flex flex-col"
+      style={{ height: '100dvh', background: 'var(--plaster)' }}
+    >
       {!model.isOnline && model.user && (
         <div
           className="flex items-center justify-center gap-2 py-2 text-xs shrink-0"
