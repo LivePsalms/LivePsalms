@@ -56,6 +56,32 @@ describe('BibleStudyPane', () => {
     expect(screen.getByTestId('signin')).toBeInTheDocument();
   });
 
+  it('disables the chat button and shows the Settings hint when Lamplight is off', () => {
+    useLamplightSettings.mockReturnValue({ isLoading: false, settings: { enabled: false } });
+    render(<BibleStudyPane lamplightAdapter={adapter} invoke={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /lamplight/i });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/enable lamplight in settings/i)).toBeInTheDocument();
+  });
+
+  it('does not open the chat when the button is clicked while Lamplight is off', () => {
+    useLamplightSettings.mockReturnValue({ isLoading: false, settings: { enabled: false } });
+    render(<BibleStudyPane lamplightAdapter={adapter} invoke={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /lamplight/i }));
+    expect(screen.queryByTestId('chat')).not.toBeInTheDocument();
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
+
+  it('keeps the button enabled for signed-out users (sign-in flow preserved)', () => {
+    useAuthSession.mockReturnValue({ user: null });
+    useLamplightSettings.mockReturnValue({ isLoading: false, settings: null });
+    render(<BibleStudyPane lamplightAdapter={adapter} invoke={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /lamplight/i });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    expect(screen.getByTestId('signin')).toBeInTheDocument();
+  });
+
   it('shows a resize handle between reader and chat only when chat is open', async () => {
     render(<BibleStudyPane lamplightAdapter={adapter} invoke={vi.fn()} />);
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
