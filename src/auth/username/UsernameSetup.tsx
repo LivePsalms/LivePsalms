@@ -8,10 +8,13 @@ export interface UsernameSetupProps {
   checkAvailable: (name: string) => Promise<boolean>;
   claim: (name: string) => Promise<UsernameClaimResult>;
   onClaimed: (username: string) => void;
+  onSkip?: () => void | Promise<void>;
+  /** Drives the skip button's busy/disabled state while the skip flow runs. */
+  skipping?: boolean;
   debounceMs?: number;
 }
 
-export function UsernameSetup({ checkAvailable, claim, onClaimed, debounceMs = 300 }: UsernameSetupProps) {
+export function UsernameSetup({ checkAvailable, claim, onClaimed, onSkip, skipping, debounceMs = 300 }: UsernameSetupProps) {
   const [value, setValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -90,6 +93,17 @@ export function UsernameSetup({ checkAvailable, claim, onClaimed, debounceMs = 3
         >
           Claim username
         </button>
+        {onSkip && (
+          <button
+            type="button"
+            onClick={() => onSkip()}
+            disabled={submitting || skipping}
+            aria-busy={skipping || undefined}
+            className="w-full rounded-md px-4 py-2 text-sm text-mersi-dark/60 hover:text-mersi-dark disabled:opacity-50"
+          >
+            {skipping ? 'Setting up…' : 'Skip for now'}
+          </button>
+        )}
       </form>
     </div>
   );

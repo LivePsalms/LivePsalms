@@ -111,4 +111,30 @@ describe('AuthCard verify-password', () => {
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'secret1' } });
     expect(screen.queryByLabelText('Verify Password')).not.toBeInTheDocument();
   });
+
+  it('returns to sign-in mode (with email retained) when clicking "Back to sign in" from the verify notice', async () => {
+    render(
+      <MemoryRouter>
+        <AuthCard />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^sign up$/i }));
+    fireEvent.change(screen.getByPlaceholderText('Full Name'), { target: { value: 'Sarah' } });
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sarah@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'Secret1!' } });
+    fireEvent.change(screen.getByLabelText('Verify Password'), { target: { value: 'Secret1!' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(await screen.findByText('Check your email')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /back to sign in/i }));
+
+    // Now in sign-in mode: Welcome Back shown, Create Account gone.
+    expect(screen.getByText('Welcome Back')).toBeInTheDocument();
+    expect(screen.queryByText('Create Account')).not.toBeInTheDocument();
+    // Email is retained; password is cleared.
+    expect(screen.getByPlaceholderText('Email')).toHaveValue('sarah@example.com');
+    expect(screen.getByPlaceholderText('Password')).toHaveValue('');
+  });
 });

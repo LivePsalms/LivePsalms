@@ -75,4 +75,24 @@ describe('UsernameSetup', () => {
     expect(screen.queryByText(/available/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/taken/i)).not.toBeInTheDocument();
   });
+
+  it('renders a skip button and calls onSkip when clicked', () => {
+    const onSkip = vi.fn();
+    setup({ onSkip });
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render a skip button when onSkip is not provided', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: /skip/i })).not.toBeInTheDocument();
+  });
+
+  it('disables the skip button and shows a busy label while skipping', () => {
+    const onSkip = vi.fn();
+    setup({ onSkip, skipping: true });
+    const btn = screen.getByRole('button', { name: /setting up/i });
+    expect(btn).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /skip for now/i })).not.toBeInTheDocument();
+  });
 });
