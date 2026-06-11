@@ -1236,4 +1236,7 @@
     justify-self: center;
     max-width: min(360px, 80vw);
   }
+  .notepad-landing .closing-cta-secondary {
+    display: none;
+  }
 }
