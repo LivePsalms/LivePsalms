@@ -82,7 +82,17 @@ export function NotepadEditor({
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
   const decorationLayerRef = useRef<DecorationLayerHandle>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const lastInteractionRef = useRef<'pointer' | 'keyboard'>('pointer');
+  // The title is a textarea so long titles wrap within the column instead of
+  // running off the edge. Auto-grow its height to fit the wrapped content,
+  // re-measuring when the active note or its title changes.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [activeNote?.id, activeNote?.title]);
   useEffect(() => {
     const onPointer = () => { lastInteractionRef.current = 'pointer'; };
     const onKey = () => { lastInteractionRef.current = 'keyboard'; };
@@ -458,21 +468,38 @@ export function NotepadEditor({
         {/* isolate: contains the text + decoration zIndex contest in one
             stacking context so decorations can render behind OR in front of text. */}
         <div style={{ isolation: 'isolate' }}>
-          {/* Title */}
-          <input
-            type="text"
+          {/* Title — a textarea so long titles wrap within the column instead
+              of overflowing the screen edge (auto-grown via the effect above). */}
+          <textarea
+            ref={titleRef}
+            rows={1}
             value={activeNote.title}
             onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
+            onKeyDown={(e) => {
+              // Keep title single-logical-line: Enter commits rather than
+              // inserting a newline (it still wraps visually when too long).
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
             placeholder="Untitled"
             style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: '2rem',
               fontWeight: 300,
+              lineHeight: 1.15,
               color: 'var(--charred)',
               background: 'transparent',
               border: 'none',
               outline: 'none',
+              display: 'block',
               width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+              resize: 'none',
+              overflow: 'hidden',
+              wordBreak: 'break-word',
               marginBottom: '0.35rem',
               padding: 0,
             }}

@@ -32,7 +32,7 @@ export function MobileEditorView({
     <div className="relative flex flex-col h-full min-h-0" style={{ background: 'var(--plaster)' }}>
       <header
         className="shrink-0 flex items-center justify-between gap-1 px-3"
-        style={{ height: 44, borderBottom: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}
+        style={{ height: 48, borderBottom: '1px solid var(--pale-stone)', fontFamily: 'Outfit, sans-serif' }}
       >
         <button
           aria-label="Home"
