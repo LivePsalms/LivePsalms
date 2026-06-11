@@ -1,15 +1,16 @@
 // src/notepad/decorations/DecorationItem.tsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getStyleAsset } from '../styles/manifest';
 import {
   moveTo, resizeWidthPct, rotationDeg, pinchTransform,
   decorationZIndex, pointerAngleDeg, applyRotationDrag, SELECTED_Z,
-  resizeFromCorner,
+  resizeFromCorner, snapAngle,
 } from './decoration-geometry';
 import type { ResizeCorner } from './decoration-geometry';
 import type { NoteDecoration } from '../types';
 
 const MOBILE_DRAG_THRESHOLD_PX = 6;
+const SNAP = { step: 45, threshold: 5 };
 
 interface Props {
   decoration: NoteDecoration;
@@ -41,6 +42,15 @@ export function DecorationItem({
   >(null);
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinch = useRef<{ startDist: number; startAngle: number; base: NoteDecoration } | null>(null);
+  const [liveAngle, setLiveAngle] = useState<number | null>(null);
+
+  const snapRotation = (deg: number): number => {
+    const snapped = snapAngle(deg, SNAP);
+    if (snapped !== rotationDeg(deg)) {
+      try { navigator.vibrate?.(10); } catch { /* unsupported (iOS Safari) — visual feedback only */ }
+    }
+    return snapped;
+  };
 
   // Move focus to the selection chrome when a decoration becomes selected, so
   // keyboard events target the decoration (not the contenteditable text).
@@ -174,10 +184,11 @@ export function DecorationItem({
     }
     if (pinch.current && pointers.current.size >= 2) {
       const m = twoPointerMetrics();
-      onChange(pinchTransform(pinch.current.base, {
+      const transformed = pinchTransform(pinch.current.base, {
         startDist: pinch.current.startDist, dist: m.dist,
         startAngle: pinch.current.startAngle, angle: m.angle,
-      }));
+      });
+      onChange(mobile ? { ...transformed, rotation: snapRotation(transformed.rotation) } : transformed);
       return;
     }
     move(e);
@@ -208,7 +219,10 @@ export function DecorationItem({
       { x: g.centerX, y: g.centerY },
       { x: e.clientX, y: e.clientY },
     );
-    onChange({ ...d, rotation: applyRotationDrag(g.startRotation, g.startAngle, currentAngle) });
+    const raw = applyRotationDrag(g.startRotation, g.startAngle, currentAngle);
+    const next = mobile ? snapRotation(raw) : raw;
+    if (mobile) setLiveAngle(next);
+    onChange({ ...d, rotation: next });
   };
 
   const rotateEnd = (e: React.PointerEvent) => {
@@ -220,6 +234,7 @@ export function DecorationItem({
       /* jsdom may not implement pointer capture; harmless no-op */
     }
     rotateGesture.current = null;
+    setLiveAngle(null);
   };
 
   // Shared geometry: position + size + rotation. The image layer and the chrome
@@ -319,8 +334,25 @@ export function DecorationItem({
             onPointerMove={rotateMove}
             onPointerUp={rotateEnd}
             onPointerCancel={rotateEnd}
-            style={{ ...handleStyle('-22px', 'calc(50% - 6px)', 'grab', 'top'), pointerEvents: 'auto' }}
-          />
+            style={mobile
+              ? { ...rotateHitAreaMobile, pointerEvents: 'auto' }
+              : { ...handleStyle('-22px', 'calc(50% - 6px)', 'grab', 'top'), pointerEvents: 'auto' }}
+          >
+            {mobile && <span style={visualDot} />}
+          </div>
+          {mobile && liveAngle !== null && (
+            <div
+              data-testid={`decoration-angle-badge-${d.id}`}
+              style={{
+                position: 'absolute', top: -58, left: 'calc(50% + 26px)',
+                background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 4,
+                padding: '1px 5px', fontSize: 11, color: 'var(--charred)',
+                fontFamily: 'Outfit, sans-serif', pointerEvents: 'none', whiteSpace: 'nowrap',
+              }}
+            >
+              {Math.round(liveAngle)}&deg;
+            </div>
+          )}
           <div style={{
             position: 'absolute', top: -34, left: 0, display: 'flex', gap: 4,
             background: '#fff', border: '1px solid var(--pale-stone)', borderRadius: 6,
@@ -374,4 +406,10 @@ function cornerHitArea(corner: ResizeCorner): React.CSSProperties {
 export const visualDot: React.CSSProperties = {
   width: 24, height: 24, borderRadius: '50%', background: '#fff',
   border: '2px solid var(--deep-umber)', boxShadow: '0 1px 3px rgba(0,0,0,.18)',
+};
+
+const rotateHitAreaMobile: React.CSSProperties = {
+  position: 'absolute', width: 44, height: 44, top: -62, left: 'calc(50% - 22px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  touchAction: 'none', cursor: 'grab', background: 'transparent',
 };

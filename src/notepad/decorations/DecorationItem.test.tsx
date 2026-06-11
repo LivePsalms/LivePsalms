@@ -318,4 +318,49 @@ describe('DecorationItem', () => {
     expect(getByLabelText('Resize decoration')).not.toBeNull();
     expect(queryByLabelText('Resize top-left')).toBeNull();
   });
+
+  it('mobile: rotate handle output snaps to the nearest 45 within 5 degrees', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const handle = getByLabelText('Rotate decoration');
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 7.31, clientY: 6.82, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    const last = h.onChange.mock.calls.at(-1)![0] as NoteDecoration;
+    expect(last.rotation).toBe(45);
+  });
+
+  it('mobile: shows a live angle badge during a rotate gesture, hidden otherwise', () => {
+    const h = handlers();
+    const { getByLabelText, queryByTestId, getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    expect(queryByTestId('decoration-angle-badge-a')).toBeNull();
+    const handle = getByLabelText('Rotate decoration');
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 0, clientY: 10, pointerId: 1 });
+    expect(getByTestId('decoration-angle-badge-a').textContent).toContain('90');
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(queryByTestId('decoration-angle-badge-a')).toBeNull();
+  });
+
+  it('mobile: two-finger pinch rotation snaps to 45 multiples', () => {
+    const h = handlers();
+    const { getByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerDown(surface, { clientX: 100, clientY: 0, pointerId: 2 });   // startAngle 0
+    fireEvent.pointerMove(surface, { clientX: 73.1, clientY: 68.2, pointerId: 2 }); // ~43deg
+    const last = h.onChange.mock.calls.at(-1)![0] as NoteDecoration;
+    expect(last.rotation).toBe(45);
+  });
+
+  it('desktop: rotate handle does NOT snap (regression)', () => {
+    const h = handlers();
+    const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);
+    const handle = getByLabelText('Rotate decoration');
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 7.31, clientY: 6.82, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    const last = h.onChange.mock.calls.at(-1)![0] as NoteDecoration;
+    expect(last.rotation).toBeCloseTo(43, 0); // ~43, NOT snapped to 45
+  });
 });
