@@ -243,6 +243,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
             title="Undo"
+            mobile={isBottomToolbar}
           >
             <Undo2 size={15} />
           </ToolbarButton>
@@ -250,11 +251,12 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
             title="Redo"
+            mobile={isBottomToolbar}
           >
             <Redo2 size={15} />
           </ToolbarButton>
 
-          <ToolbarDivider />
+          <ToolbarDivider mobile={isBottomToolbar} />
 
           {/* Heading dropdown */}
           <div className="relative" ref={headingBtnRef}>
@@ -262,6 +264,7 @@ export function NotepadEditor({
               onClick={openHeadingMenu}
               active={currentHeading !== 'H'}
               title="Heading"
+              mobile={isBottomToolbar}
             >
               <Heading size={15} />
               <span className="text-[9px] ml-0.5">{currentHeading !== 'H' ? currentHeading : ''}</span>
@@ -332,6 +335,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             active={editor.isActive('bulletList')}
             title="Bullet List"
+            mobile={isBottomToolbar}
           >
             <List size={15} />
           </ToolbarButton>
@@ -339,6 +343,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             active={editor.isActive('orderedList')}
             title="Ordered List"
+            mobile={isBottomToolbar}
           >
             <ListOrdered size={15} />
           </ToolbarButton>
@@ -346,17 +351,19 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             active={editor.isActive('blockquote')}
             title="Blockquote"
+            mobile={isBottomToolbar}
           >
             <Quote size={15} />
           </ToolbarButton>
 
-          <ToolbarDivider />
+          <ToolbarDivider mobile={isBottomToolbar} />
 
           {/* Inline formatting */}
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             active={editor.isActive('bold')}
             title="Bold"
+            mobile={isBottomToolbar}
           >
             <Bold size={15} />
           </ToolbarButton>
@@ -364,6 +371,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             active={editor.isActive('italic')}
             title="Italic"
+            mobile={isBottomToolbar}
           >
             <Italic size={15} />
           </ToolbarButton>
@@ -371,6 +379,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleStrike().run()}
             active={editor.isActive('strike')}
             title="Strikethrough"
+            mobile={isBottomToolbar}
           >
             <Strikethrough size={15} />
           </ToolbarButton>
@@ -378,6 +387,7 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleCode().run()}
             active={editor.isActive('code')}
             title="Inline Code"
+            mobile={isBottomToolbar}
           >
             <Code size={15} />
           </ToolbarButton>
@@ -385,10 +395,11 @@ export function NotepadEditor({
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             active={editor.isActive('underline')}
             title="Underline"
+            mobile={isBottomToolbar}
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate">
+          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar}>
             <Sparkles size={15} />
           </ToolbarButton>
         </div>
@@ -714,9 +725,10 @@ interface ToolbarButtonProps {
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  mobile?: boolean;
 }
 
-function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarButtonProps) {
+function ToolbarButton({ active, disabled, onClick, title, children, mobile }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -726,7 +738,7 @@ function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarBu
       style={{
         width: 30,
         height: 28,
-        flexShrink: 0,
+        flexShrink: mobile ? 0 : undefined,
         cursor: disabled ? 'default' : 'pointer',
         background: active ? 'rgba(188, 179, 163, 0.35)' : 'transparent',
         color: disabled ? 'var(--pale-stone)' : active ? 'var(--charred)' : 'var(--deep-umber)',
@@ -747,13 +759,13 @@ function ToolbarButton({ active, disabled, onClick, title, children }: ToolbarBu
   );
 }
 
-function ToolbarDivider() {
+function ToolbarDivider({ mobile }: { mobile?: boolean }) {
   return (
     <div
       style={{
         width: 1,
         height: 20,
-        flexShrink: 0,
+        flexShrink: mobile ? 0 : undefined,
         background: 'var(--pale-stone)',
         margin: '0 4px',
         alignSelf: 'center',
