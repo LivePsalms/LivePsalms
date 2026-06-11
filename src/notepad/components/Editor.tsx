@@ -15,6 +15,7 @@ import {
   Underline as UnderlineIcon,
   ChevronDown,
   Sparkles,
+  Highlighter,
 } from 'lucide-react';
 import { HighlightSwatchPopover } from './HighlightSwatchPopover';
 import { useDecorations } from '../decorations/useDecorations';
@@ -74,6 +75,8 @@ export function NotepadEditor({
   // The TipTap↔NotepadActions bridge for the active Note. See NoteEditor in CONTEXT.md.
   const { editor } = useNoteEditor({ activeNote, updateNote, onAfterSave });
 
+  const isBottomToolbar = toolbarPlacement === 'bottom';
+
   // Read-only decoration overlay state (style stickers placed over the note).
   const decorationsApi = useDecorations(activeNote, updateNote);
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
@@ -102,16 +105,42 @@ export function NotepadEditor({
     return true;
   };
 
-  const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [swatchAnchor, setSwatchAnchor] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
   const [swatchDismissed, setSwatchDismissed] = useState(false);
   const [swatchAutoFocus, setSwatchAutoFocus] = useState(false);
   const dismissedRangeRef = useRef<{ from: number; to: number } | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
+  const highlightBtnRef = useRef<HTMLDivElement>(null);
+
+  // Mobile-only: open the swatch picker for the current selection, docked above
+  // the bottom toolbar. autoFocus stays off so the soft keyboard doesn't pop.
+  const openHighlightSwatch = () => {
+    const el = highlightBtnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setSwatchAnchor({ bottom: window.innerHeight - r.top + 6, left: r.left });
+    setSwatchDismissed(false);
+    setSwatchAutoFocus(false);
+  };
 
   useEffect(() => {
     if (!editor) return;
     const update = () => {
       const { from, to } = editor.state.selection;
+      if (isBottomToolbar) {
+        // Mobile: never auto-open. Track selection for the toolbar button and
+        // close the picker if the selection collapses.
+        const selected = from !== to;
+        setHasSelection(selected);
+        if (!selected) {
+          setSwatchAnchor(null);
+          setSwatchDismissed(false);
+          dismissedRangeRef.current = null;
+        }
+        return;
+      }
+      // Desktop: unchanged auto-open behavior.
       if (from === to) {
         setSwatchAnchor(null);
         setSwatchDismissed(false);
@@ -129,7 +158,7 @@ export function NotepadEditor({
     };
     editor.on('selectionUpdate', update);
     return () => { editor.off('selectionUpdate', update); };
-  }, [editor]);
+  }, [editor, isBottomToolbar]);
 
   // `[[` popup controller — owns trigger detection, anchor, search, insertion.
   const {
@@ -210,7 +239,6 @@ export function NotepadEditor({
   // Main render
   // -------------------------------------------------------------------------
 
-  const isBottomToolbar = toolbarPlacement === 'bottom';
   return (
     <div style={{
       display: 'flex',
@@ -402,6 +430,18 @@ export function NotepadEditor({
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
+          {isBottomToolbar && (
+            <div ref={highlightBtnRef} className="relative">
+              <ToolbarButton
+                onClick={openHighlightSwatch}
+                disabled={!(hasSelection || editor.isActive('styleHighlight'))}
+                title="Highlight"
+                mobile={isBottomToolbar}
+              >
+                <Highlighter size={15} />
+              </ToolbarButton>
+            </div>
+          )}
           <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar}>
             <Sparkles size={15} />
           </ToolbarButton>
