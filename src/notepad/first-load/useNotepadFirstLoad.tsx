@@ -6,9 +6,8 @@ import { useAccountProfile } from '@/auth/context/useAccountProfile';
 import { localAdapter } from '@/notepad/storage/local-storage';
 import {
   decideFirstLoadActions,
-  hasBeenGreetedToday,
-  markGreetedToday,
-  todayDateString,
+  hasBeenWelcomedOnce,
+  markWelcomedOnce,
 } from './notepad-first-load';
 
 interface UseNotepadFirstLoadResult {
@@ -29,13 +28,12 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
     (async () => {
       const notes = await localAdapter.getNotes();
       if (cancelled) return;
-      const today = todayDateString(new Date());
       const actions = decideFirstLoadActions({
         user,
         authLoading,
         profileLoading: false, // guarded above: profileStatus === 'loading' already returned
         hasBeenWelcomed: !!profile?.fullName?.trim(),
-        hasBeenGreetedToday: hasBeenGreetedToday(user.id, today, sessionStorage),
+        hasBeenWelcomedOnce: hasBeenWelcomedOnce(user.id, localStorage),
         localNoteCount: notes.length,
       });
       for (const action of actions) {
@@ -43,9 +41,9 @@ export function useNotepadFirstLoad(): UseNotepadFirstLoadResult {
           case 'redirect-welcome':
             navigate('/welcome');
             break;
-          case 'greet':
-            markGreetedToday(user.id, today, sessionStorage);
-            toast.success(`Welcome back${action.firstName ? `, ${action.firstName}` : ''}!`);
+          case 'welcome':
+            markWelcomedOnce(user.id, localStorage);
+            toast.success(`Welcome${action.firstName ? `, ${action.firstName}` : ''}!`);
             break;
           case 'offer-migration':
             setShowMigration(true);

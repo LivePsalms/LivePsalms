@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js';
 
 export type FirstLoadAction =
   | { kind: 'redirect-welcome' }
-  | { kind: 'greet'; firstName: string | null }
+  | { kind: 'welcome'; firstName: string | null }
   | { kind: 'offer-migration' };
 
 export interface FirstLoadInput {
@@ -10,7 +10,7 @@ export interface FirstLoadInput {
   authLoading: boolean;
   profileLoading: boolean;
   hasBeenWelcomed: boolean;
-  hasBeenGreetedToday: boolean;
+  hasBeenWelcomedOnce: boolean;
   localNoteCount: number;
 }
 
@@ -24,34 +24,30 @@ export function firstNameOf(user: User): string | null {
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
-export const greetedKey = (userId: string, today: string): string =>
-  `greeted_${userId}_${today}`;
+export const welcomedOnceKey = (userId: string): string =>
+  `welcomed_once_${userId}`;
 
-export const hasBeenGreetedToday = (
+export const hasBeenWelcomedOnce = (
   userId: string,
-  today: string,
   storage: StorageLike,
-): boolean => storage.getItem(greetedKey(userId, today)) !== null;
+): boolean => storage.getItem(welcomedOnceKey(userId)) !== null;
 
-export const markGreetedToday = (
+export const markWelcomedOnce = (
   userId: string,
-  today: string,
   storage: StorageLike,
 ): void => {
-  storage.setItem(greetedKey(userId, today), 'true');
+  storage.setItem(welcomedOnceKey(userId), 'true');
 };
 
-export const todayDateString = (now: Date): string => now.toDateString();
-
 export function decideFirstLoadActions(input: FirstLoadInput): FirstLoadAction[] {
-  const { user, authLoading, profileLoading, hasBeenWelcomed, hasBeenGreetedToday, localNoteCount } = input;
+  const { user, authLoading, profileLoading, hasBeenWelcomed, hasBeenWelcomedOnce, localNoteCount } = input;
   if (authLoading || profileLoading || !user) return [];
 
   const actions: FirstLoadAction[] = [];
   if (!hasBeenWelcomed) {
     actions.push({ kind: 'redirect-welcome' });
-  } else if (!hasBeenGreetedToday) {
-    actions.push({ kind: 'greet', firstName: firstNameOf(user) });
+  } else if (!hasBeenWelcomedOnce) {
+    actions.push({ kind: 'welcome', firstName: firstNameOf(user) });
   }
   if (localNoteCount > 0) {
     actions.push({ kind: 'offer-migration' });

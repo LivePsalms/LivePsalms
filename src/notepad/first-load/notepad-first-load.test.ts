@@ -2,10 +2,9 @@ import { describe, it, expect } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import {
   firstNameOf,
-  greetedKey,
-  hasBeenGreetedToday,
-  markGreetedToday,
-  todayDateString,
+  welcomedOnceKey,
+  hasBeenWelcomedOnce,
+  markWelcomedOnce,
   decideFirstLoadActions,
 } from './notepad-first-load';
 
@@ -67,48 +66,26 @@ describe('firstNameOf', () => {
   });
 });
 
-describe('storage keys', () => {
-  it('greetedKey embeds the user id and date string', () => {
-    expect(greetedKey('user-42', 'Wed May 07 2026')).toBe('greeted_user-42_Wed May 07 2026');
-  });
-});
-
-describe('hasBeenGreetedToday / markGreetedToday', () => {
-  it('returns false when the key is absent', () => {
-    const storage = makeFakeStorage();
-    expect(hasBeenGreetedToday('u1', 'Wed May 07 2026', storage)).toBe(false);
+describe('welcomed-once storage', () => {
+  it('welcomedOnceKey embeds the user id (no date)', () => {
+    expect(welcomedOnceKey('user-42')).toBe('welcomed_once_user-42');
   });
 
-  it('returns true after markGreetedToday for the same date', () => {
+  it('hasBeenWelcomedOnce returns false when the key is absent', () => {
     const storage = makeFakeStorage();
-    markGreetedToday('u1', 'Wed May 07 2026', storage);
-    expect(hasBeenGreetedToday('u1', 'Wed May 07 2026', storage)).toBe(true);
+    expect(hasBeenWelcomedOnce('u1', storage)).toBe(false);
   });
 
-  it('is scoped per-day (yesterday’s mark does not satisfy today)', () => {
+  it('returns true after markWelcomedOnce for the same user', () => {
     const storage = makeFakeStorage();
-    markGreetedToday('u1', 'Tue May 06 2026', storage);
-    expect(hasBeenGreetedToday('u1', 'Wed May 07 2026', storage)).toBe(false);
+    markWelcomedOnce('u1', storage);
+    expect(hasBeenWelcomedOnce('u1', storage)).toBe(true);
   });
 
   it('is scoped per-user', () => {
     const storage = makeFakeStorage();
-    markGreetedToday('u1', 'Wed May 07 2026', storage);
-    expect(hasBeenGreetedToday('u2', 'Wed May 07 2026', storage)).toBe(false);
-  });
-});
-
-describe('todayDateString', () => {
-  it('returns the same shape as Date.toDateString', () => {
-    const now = new Date('2026-05-07T13:00:00Z');
-    expect(todayDateString(now)).toBe(now.toDateString());
-  });
-
-  it('does not include the time-of-day, so two times on the same day produce the same key', () => {
-    // Local-time constructor so the assertion is timezone-independent.
-    const morning = new Date(2026, 4, 7, 9, 0);
-    const evening = new Date(2026, 4, 7, 21, 0);
-    expect(todayDateString(morning)).toBe(todayDateString(evening));
+    markWelcomedOnce('u1', storage);
+    expect(hasBeenWelcomedOnce('u2', storage)).toBe(false);
   });
 });
 
@@ -121,7 +98,7 @@ describe('decideFirstLoadActions — gating', () => {
         authLoading: true,
         profileLoading: false,
         hasBeenWelcomed: false,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 5,
       }),
     ).toEqual([]);
@@ -134,7 +111,7 @@ describe('decideFirstLoadActions — gating', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 5,
       }),
     ).toEqual([]);
@@ -148,14 +125,14 @@ describe('decideFirstLoadActions — gating', () => {
         authLoading: false,
         profileLoading: true,
         hasBeenWelcomed: false,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 5,
       }),
     ).toEqual([]);
   });
 });
 
-describe('decideFirstLoadActions — welcome redirect short-circuits greet', () => {
+describe('decideFirstLoadActions — welcome redirect short-circuits the greeting', () => {
   it('first sign-in (no welcomed flag): emits redirect-welcome only', () => {
     const user = makeUser({ id: 'u1', email: 'a@b.com' });
     expect(
@@ -164,7 +141,7 @@ describe('decideFirstLoadActions — welcome redirect short-circuits greet', () 
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: false,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 0,
       }),
     ).toEqual([{ kind: 'redirect-welcome' }]);
@@ -178,15 +155,15 @@ describe('decideFirstLoadActions — welcome redirect short-circuits greet', () 
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: false,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 3,
       }),
     ).toEqual([{ kind: 'redirect-welcome' }, { kind: 'offer-migration' }]);
   });
 });
 
-describe('decideFirstLoadActions — returning user', () => {
-  it('welcomed and not greeted today: emits greet with firstName', () => {
+describe('decideFirstLoadActions — one-time welcome', () => {
+  it('welcomed and not welcomed-once: emits welcome with firstName', () => {
     const user = makeUser({
       id: 'u1',
       user_metadata: { full_name: 'Grace Hopper' },
@@ -198,13 +175,13 @@ describe('decideFirstLoadActions — returning user', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 0,
       }),
-    ).toEqual([{ kind: 'greet', firstName: 'Grace' }]);
+    ).toEqual([{ kind: 'welcome', firstName: 'Grace' }]);
   });
 
-  it('emits greet with firstName: null when user has no name or email', () => {
+  it('emits welcome with firstName: null when user has no name or email', () => {
     const user = makeUser({ id: 'u1', email: undefined, user_metadata: {} });
     expect(
       decideFirstLoadActions({
@@ -212,13 +189,13 @@ describe('decideFirstLoadActions — returning user', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 0,
       }),
-    ).toEqual([{ kind: 'greet', firstName: null }]);
+    ).toEqual([{ kind: 'welcome', firstName: null }]);
   });
 
-  it('welcomed and already greeted today: emits no actions', () => {
+  it('welcomed and already welcomed-once: emits no greeting', () => {
     const user = makeUser({ id: 'u1', email: 'a@b.com' });
     expect(
       decideFirstLoadActions({
@@ -226,13 +203,13 @@ describe('decideFirstLoadActions — returning user', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: true,
+        hasBeenWelcomedOnce: true,
         localNoteCount: 0,
       }),
     ).toEqual([]);
   });
 
-  it('welcomed, not greeted, with local notes: emits greet AND offer-migration in order', () => {
+  it('welcomed, not welcomed-once, with local notes: emits welcome AND offer-migration in order', () => {
     const user = makeUser({ id: 'u1', email: 'ada@ex.com' });
     expect(
       decideFirstLoadActions({
@@ -240,13 +217,13 @@ describe('decideFirstLoadActions — returning user', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: false,
+        hasBeenWelcomedOnce: false,
         localNoteCount: 1,
       }),
-    ).toEqual([{ kind: 'greet', firstName: 'ada' }, { kind: 'offer-migration' }]);
+    ).toEqual([{ kind: 'welcome', firstName: 'ada' }, { kind: 'offer-migration' }]);
   });
 
-  it('welcomed, already greeted, with local notes: emits offer-migration only', () => {
+  it('welcomed, already welcomed-once, with local notes: emits offer-migration only', () => {
     const user = makeUser({ id: 'u1', email: 'a@b.com' });
     expect(
       decideFirstLoadActions({
@@ -254,7 +231,7 @@ describe('decideFirstLoadActions — returning user', () => {
         authLoading: false,
         profileLoading: false,
         hasBeenWelcomed: true,
-        hasBeenGreetedToday: true,
+        hasBeenWelcomedOnce: true,
         localNoteCount: 7,
       }),
     ).toEqual([{ kind: 'offer-migration' }]);
