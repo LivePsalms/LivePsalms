@@ -50,6 +50,8 @@ describe('NotepadEditor mobile toolbar scroll', () => {
     const { container } = render(<NotepadEditor toolbarPlacement="bottom" />);
     const bar = container.querySelector('[data-toolbar-placement="bottom"]') as HTMLElement;
     expect(bar.style.overflowX).toBe('auto');
+    // Horizontal-only: overflow-y pinned to hidden so the toolbar can't scroll/clip vertically.
+    expect(bar.style.overflowY).toBe('hidden');
     expect(bar.style.minWidth).toBe('0px');
     expect(bar.className).toContain('scrollbar-hide');
   });

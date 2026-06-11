@@ -236,6 +236,9 @@ export function NotepadEditor({
             zIndex: isBottomToolbar ? 20 : undefined,
             minWidth: isBottomToolbar ? 0 : undefined,
             overflowX: isBottomToolbar ? 'auto' : undefined,
+            // Setting only overflow-x forces computed overflow-y to 'auto' too, which lets
+            // the toolbar scroll vertically and clip the icons. Pin it to horizontal-only.
+            overflowY: isBottomToolbar ? 'hidden' : undefined,
           }}
         >
           {/* Undo / Redo */}
