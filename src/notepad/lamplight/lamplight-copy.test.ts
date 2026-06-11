@@ -43,13 +43,13 @@ describe('generationFailedToast', () => {
 describe('todaysLampIntro', () => {
   it('returns personalized form when firstName is present', () => {
     expect(todaysLampIntro('Sarah')).toBe(
-      "Sarah, Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
+      "Sarah, Today's Lamp draws from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
     );
   });
 
   it('returns unpersonalized form when firstName is null', () => {
     expect(todaysLampIntro(null)).toBe(
-      "Today's Lamp draws quietly from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
+      "Today's Lamp draws from your recent notes — a piece of Scripture and a short reflection for where you are right now.",
     );
   });
 });
