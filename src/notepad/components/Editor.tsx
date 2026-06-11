@@ -200,7 +200,13 @@ export function NotepadEditor({
 
   const isBottomToolbar = toolbarPlacement === 'bottom';
   return (
-    <div style={{ display: 'flex', flexDirection: isBottomToolbar ? 'column-reverse' : 'column', height: '100%', position: 'relative' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: isBottomToolbar ? 'column-reverse' : 'column',
+      height: '100%',
+      position: 'relative',
+      ...(isBottomToolbar ? { width: '100%', minWidth: 0, maxWidth: '100%' } : {}),
+    }}>
       {/* Fixed formatting toolbar */}
       {editor && (
         <div
@@ -348,10 +354,12 @@ export function NotepadEditor({
 
       {/* Scrollable content area */}
       <div
+        data-testid="editor-scroll"
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '2rem 2.5rem',
+          overflowX: isBottomToolbar ? 'hidden' : undefined,
+          padding: isBottomToolbar ? '2rem 1.25rem' : '2rem 2.5rem',
           position: 'relative',
         }}
       >

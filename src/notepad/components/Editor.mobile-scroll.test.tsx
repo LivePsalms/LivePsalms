@@ -60,4 +60,23 @@ describe('NotepadEditor mobile toolbar scroll', () => {
     expect(bar.style.overflowX).toBe('');
     expect(bar.className).not.toContain('scrollbar-hide');
   });
+
+  it('clamps the writing pad to vertical-only scroll with tighter padding on mobile', () => {
+    const { container, getByTestId } = render(<NotepadEditor toolbarPlacement="bottom" />);
+    const scroll = getByTestId('editor-scroll') as HTMLElement;
+    expect(scroll.style.overflowY).toBe('auto');
+    expect(scroll.style.overflowX).toBe('hidden');
+    expect(scroll.style.padding).toBe('2rem 1.25rem');
+    // Editor column is clamped so the wide toolbar can't push it past the viewport.
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.minWidth).toBe('0px');
+    expect(root.style.maxWidth).toBe('100%');
+  });
+
+  it('keeps the desktop writing pad padding and no horizontal clamp', () => {
+    const { getByTestId } = render(<NotepadEditor />);
+    const scroll = getByTestId('editor-scroll') as HTMLElement;
+    expect(scroll.style.padding).toBe('2rem 2.5rem');
+    expect(scroll.style.overflowX).toBe('');
+  });
 });
