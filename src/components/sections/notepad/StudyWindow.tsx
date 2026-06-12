@@ -1,10 +1,11 @@
 // src/components/sections/notepad/StudyWindow.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { BibleStudyPane } from '@/notepad/bible/BibleStudyPane';
 import type { LamplightAdapter } from '@/notepad/storage/lamplight-adapter';
 import type { InvokeFn } from '@/notepad/bible/lamplight-chat-client';
 import { GraphPane } from './GraphPane';
+import { loadEnum, saveEnum, KEY_STUDY_TAB } from '@/notepad/session/session-storage';
 
 type StudyTab = 'bible' | 'graph';
 
@@ -18,7 +19,13 @@ interface StudyWindowProps {
 }
 
 export function StudyWindow({ graphOpen, expanded = false, onToggleExpand, lamplightAdapter, invoke }: StudyWindowProps) {
-  const [tab, setTab] = useState<StudyTab>('bible');
+  const [tab, setTab] = useState<StudyTab>(() =>
+    loadEnum<StudyTab>(KEY_STUDY_TAB, ['bible', 'graph'], 'bible'),
+  );
+
+  useEffect(() => {
+    saveEnum(KEY_STUDY_TAB, tab);
+  }, [tab]);
 
   const tabStyle = (active: boolean) => ({
     flex: 1,

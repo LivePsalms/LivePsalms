@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { PanelLeftClose, PanelLeftOpen, WifiOff } from 'lucide-react';
 import { NotepadProvider } from '@/notepad/context/NotepadProvider';
 import { useAuthSession } from '@/auth/context/useAuthSession';
@@ -22,12 +22,19 @@ import { useLamplightEmbeddingTrigger } from '@/notepad/hooks/useLamplightEmbedd
 import { supabase } from '@/lib/supabase';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileNotepadWorkspace } from './notepad/mobile/MobileNotepadWorkspace';
+import { loadEnum, saveEnum, KEY_EDITOR_TAB } from '@/notepad/session/session-storage';
 
 function DesktopNotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [graphOpen, setGraphOpen] = useState(true);
   const [graphExpanded, setGraphExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info' | 'lamplight'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'backlinks' | 'info' | 'lamplight'>(() =>
+    loadEnum(KEY_EDITOR_TAB, ['content', 'backlinks', 'info', 'lamplight'] as const, 'content'),
+  );
+
+  useEffect(() => {
+    saveEnum(KEY_EDITOR_TAB, activeTab);
+  }, [activeTab]);
 
   const { user, adapter } = useAuthSession();
   const lamplightAdapter = useMemo(
