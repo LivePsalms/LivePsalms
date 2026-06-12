@@ -4,7 +4,7 @@ import { serviceClient } from '../_shared/supabase.ts';
 import { resolveAllowedOrigins, corsHeaders } from '../_shared/cors.ts';
 import { bearerToken } from '../_shared/auth-identity.ts';
 import { hashToken } from '../_shared/pat-hash.ts';
-import { handleImport, type ImportDeps, type NoteInsert, type NoteUpdate } from './handler.ts';
+import { handleImport, type ImportDeps, type NoteInsert } from './handler.ts';
 
 // Bounds a runaway Shortcut loop; enforced atomically in the consume_pat RPC.
 const MAX_PER_HOUR = 600;
@@ -33,20 +33,15 @@ serve(async (req) => {
       },
       findExistingNote: async (userId, externalId) => {
         const { data, error } = await supabase
-          .from('notes').select('id, apple_modified_at')
+          .from('notes').select('id')
           .eq('user_id', userId).eq('external_id', externalId).maybeSingle();
         if (error) throw new Error(error.message);
-        return data ? { id: data.id as string, appleModifiedAt: (data.apple_modified_at as string) ?? null } : null;
+        return data ? { id: data.id as string } : null;
       },
       insertNote: async (row: NoteInsert) => {
         const { data, error } = await supabase.from('notes').insert(row).select('id').single();
         if (error) throw new Error(error.message);
         return data!.id as string;
-      },
-      updateNote: async (id: string, fields: NoteUpdate) => {
-        const { error } = await supabase.from('notes')
-          .update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id);
-        if (error) throw new Error(error.message);
       },
       findOrCreateFolder: async (userId, name, parentId) => {
         const base = supabase.from('folders').select('id').eq('user_id', userId).eq('name', name);

@@ -7,9 +7,12 @@ export const MAX_TITLE_LEN = 512;
 export interface ImportBody {
   title?: unknown;
   text?: unknown;
+  folder_name?: unknown;
+  // created_at / modified_at may still be sent by older Shortcuts but are
+  // ignored: Apple Shortcuts cannot expose a note's real id or dates, so
+  // identity is derived from the note's content instead (see below).
   created_at?: unknown;
   modified_at?: unknown;
-  folder_name?: unknown;
 }
 
 export interface NoteInsert {
@@ -22,27 +25,17 @@ export interface NoteInsert {
   word_count: number;
   source: 'apple_notes';
   external_id: string;
-  apple_modified_at: string;
-}
-
-export interface NoteUpdate {
-  title: string;
-  content: string;
-  word_count: number;
-  apple_modified_at: string;
 }
 
 export interface ImportDeps {
   // Resolves token → user, enforcing revocation + hourly rate limit atomically.
   consumeToken: (tokenHash: string) => Promise<{ userId: string | null; rateLimited: boolean }>;
-  findExistingNote: (userId: string, externalId: string) =>
-    Promise<{ id: string; appleModifiedAt: string | null } | null>;
+  findExistingNote: (userId: string, externalId: string) => Promise<{ id: string } | null>;
   insertNote: (row: NoteInsert) => Promise<string>;
-  updateNote: (id: string, fields: NoteUpdate) => Promise<void>;
   findOrCreateFolder: (userId: string, name: string, parentId: string | null) => Promise<string>;
 }
 
-export type ImportStatus = 'created' | 'updated' | 'unchanged';
+export type ImportStatus = 'created' | 'unchanged';
 export interface HandlerResponse {
   status: number;
   body: { status: ImportStatus; note_id: string } | { error: string };
@@ -67,13 +60,13 @@ export async function handleImport(
   }
   let title = (asString(body.title) ?? '').trim() || 'Untitled';
   if (title.length > MAX_TITLE_LEN) title = title.slice(0, MAX_TITLE_LEN);
-
-  const createdAt = asString(body.created_at);
-  if (!createdAt) return { status: 400, body: { error: 'created_at required' } };
-  const modifiedAt = asString(body.modified_at) ?? createdAt;
   const folderName = asString(body.folder_name);
 
-  const externalId = await computeExternalId(createdAt, title);
+  // Dedup identity = hash of the note's content (title + body). Apple Shortcuts
+  // cannot supply a stable note id or its creation/modification dates, so the
+  // content itself is the key: re-importing an unchanged note is a no-op, and a
+  // note that was edited in Apple Notes imports as a new note (its hash differs).
+  const externalId = await computeExternalId(title, text);
   const content = textToTipTap(text);
   const wordCount = countWords(text);
 
@@ -84,23 +77,14 @@ export async function handleImport(
     : rootId;
 
   const existing = await deps.findExistingNote(userId, externalId);
-  if (!existing) {
-    const id = await deps.insertNote({
-      user_id: userId, title, content, folder_id: folderId,
-      type: 'general', tags: [], word_count: wordCount,
-      source: 'apple_notes', external_id: externalId, apple_modified_at: modifiedAt,
-    });
-    return { status: 200, body: { status: 'created', note_id: id } };
-  }
-
-  // Upsert guard: overwrite only when the Apple note is genuinely newer than
-  // what we last imported. Equal/older modified_at → no write (no-op re-run,
-  // and a Psalms-side edit is preserved).
-  const isNewer = existing.appleModifiedAt === null ||
-    new Date(modifiedAt).getTime() > new Date(existing.appleModifiedAt).getTime();
-  if (!isNewer) {
+  if (existing) {
     return { status: 200, body: { status: 'unchanged', note_id: existing.id } };
   }
-  await deps.updateNote(existing.id, { title, content, word_count: wordCount, apple_modified_at: modifiedAt });
-  return { status: 200, body: { status: 'updated', note_id: existing.id } };
+
+  const id = await deps.insertNote({
+    user_id: userId, title, content, folder_id: folderId,
+    type: 'general', tags: [], word_count: wordCount,
+    source: 'apple_notes', external_id: externalId,
+  });
+  return { status: 200, body: { status: 'created', note_id: id } };
 }

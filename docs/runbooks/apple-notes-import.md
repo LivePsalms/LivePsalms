@@ -15,19 +15,24 @@ personal access token (PAT).
    `https://<project-ref>.functions.supabase.co/import-apple-note`
    (or `${VITE_SUPABASE_URL}/functions/v1/import-apple-note`).
 2. **Find Notes** → filter to a folder the user picks (use "Ask Each Time" for the folder).
-3. **Repeat with Each** (the found notes):
-   - **Get Details of Notes** → Name → set variable `noteTitle`.
-   - **Get Details of Notes** → Body → **Get Text from Input** → variable `noteText`.
-   - **Get Details of Notes** → Creation Date → **Format Date** (ISO 8601) → `createdAt`.
-   - **Get Details of Notes** → Modification Date → **Format Date** (ISO 8601) → `modifiedAt`.
+3. **Repeat with Each** (the found notes). Inside the loop, the current note is the
+   **Repeat Item** variable; pull its details by inserting Repeat Item and tapping the
+   token to pick a detail (there is **no** "Get Details of Notes" action):
+   - Repeat Item → **Name** → set variable `noteTitle`.
+   - Repeat Item → **Body** → set variable `noteText`.
    - **Get Contents of URL**:
      - Method: `POST`
      - Headers: `Authorization: Bearer <stored token>`, `Content-Type: application/json`
      - Request Body: JSON →
-       `{ "title": noteTitle, "text": noteText, "created_at": createdAt, "modified_at": modifiedAt, "folder_name": "<picked folder name>" }`
-4. (Optional) Show a final count of created/updated/unchanged responses.
+       `{ "title": noteTitle, "text": noteText, "folder_name": "<picked folder name>" }`
+4. (Optional) Show a final count of created/unchanged responses.
 
-The endpoint returns `{ status: "created" | "updated" | "unchanged", note_id }` per note.
+The endpoint returns `{ status: "created" | "unchanged", note_id }` per note.
+
+> **Why no dates?** Apple Shortcuts cannot read a note's id or its creation/
+> modification dates (the Note variable only exposes Name, Summary, Body, Folder,
+> Tags). So the server identifies a note by a **hash of its title + body**, not by
+> date. Sending `created_at`/`modified_at` is unnecessary (and they'd be empty).
 
 ## Building the Shortcut step by step (maintainer, one-time)
 
@@ -61,44 +66,41 @@ is *not* needed — this runs standalone.
    step 3. Everything below goes *inside* the Repeat block (between "Repeat with Each"
    and "End Repeat"). Inside the block, the current note is the **Repeat Item** variable.
 
-   4a. **Get Details of Notes** → detail: **Name**, input: **Repeat Item** →
+   There is **no** "Get Details of Notes" action. To read a note's fields, insert the
+   **Repeat Item** variable and click the token to choose which detail to use (the Note
+   type exposes **Name, Summary, Body, Folder, Tags** — note that **dates are not
+   available**, which is why the server keys off content, not dates).
+
+   4a. **Text** action → insert **Repeat Item**, click the token → choose **Name** →
        **Set Variable** `noteTitle`.
 
-   4b. **Get Details of Notes** → detail: **Body**, input: **Repeat Item**. Add
-       **Get Text from Input** (input = that Body) → **Set Variable** `noteText`.
+   4b. **Text** action → insert **Repeat Item**, click the token → choose **Body** →
+       **Set Variable** `noteText`.
 
-   4c. **Get Details of Notes** → detail: **Creation Date**, input: **Repeat Item**.
-       Add **Format Date** → Date Format: **Custom** → format string `yyyy-MM-dd'T'HH:mm:ss'Z'`
-       (or pick **ISO 8601**) → **Set Variable** `createdAt`.
-
-   4d. **Get Details of Notes** → detail: **Modification Date**, input: **Repeat Item**.
-       Add **Format Date** (same ISO 8601 format) → **Set Variable** `modifiedAt`.
-
-   4e. **Get Contents of URL** (search "Get Contents of URL"), input = the `endpoint`
+   4c. **Get Contents of URL** (search "Get Contents of URL"), input = the `endpoint`
        variable. Tap **Show More** and set:
        - **Method:** `POST`
        - **Headers:** add two —
          - `Authorization` = `Bearer ` followed by the `token` variable
            (type `Bearer `, then insert the variable right after the space)
          - `Content-Type` = `application/json`
-       - **Request Body:** **JSON**, then **Add new field** for each (pick the right type):
+       - **Request Body:** **JSON**, then **Add new field** for each (Type = Text):
          - `title` (Text) = `noteTitle`
          - `text` (Text) = `noteText`
-         - `created_at` (Text) = `createdAt`
-         - `modified_at` (Text) = `modifiedAt`
          - `folder_name` (Text) = the folder name (a Text value, or the folder the user
            picked in step 3 — you can reuse an **Ask Each Time** value here)
 
-   4f. *(Optional)* **Get Dictionary Value** → key `status` from the **Contents of URL**
+   4d. *(Optional)* **Get Dictionary Value** → key `status` from the **Contents of URL**
        output, then **Add to Variable** `results` to tally outcomes.
 
 5. *(After End Repeat, optional)* **Show Notification** or **Show Result** with the
-   `results` count so the user sees how many notes were created/updated/unchanged.
+   `results` count so the user sees how many notes were created/unchanged.
 
 **Test before sharing:** run the Shortcut against a small test folder (2–3 notes).
-First run should report `created`; an immediate re-run should report `unchanged`;
-editing a note in Apple Notes then re-running should report `updated`. Confirm the
-notes appear under **Apple Notes › <folder>** in the Psalms notepad.
+First run should report `created`; an immediate re-run should report `unchanged`.
+(Editing a note's text then re-running imports it as a *new* note, because identity is
+the title+body hash — see Behaviour.) Confirm the notes appear under
+**Apple Notes › <folder>** in the Psalms notepad.
 
 **Distribute:** Shortcuts → right-click the shortcut → **Share** → **Copy iCloud Link**
 (enable iCloud sharing if prompted). Put that link in the Settings → Connect Apple
@@ -111,9 +113,17 @@ one tap; on first run it prompts for their own token.
 
 ## Behaviour
 - Imported notes land in an auto-created **Apple Notes** folder (a named subfolder
-  when `folder_name` is sent), with `type = general`.
-- Dedup key = SHA-256 of `creation-date|title`. Re-running is safe: a note is only
-  rewritten when its Apple modification date is newer than the last import.
+  when `folder_name` is sent), with `type = general`. The note's date in Psalms is its
+  import time (Apple's original dates are not available to Shortcuts).
+- **Dedup key = SHA-256 of `title|body`** (the note's content). Re-running is safe:
+  an unchanged note returns `unchanged` and is not re-inserted.
+  - Two notes with the *same title AND same body* are treated as one.
+  - A note **edited** in Apple Notes hashes differently, so it imports as a **new**
+    note (the previous version remains; the server never overwrites a different note).
+    If you re-import frequently after edits, expect extra copies — delete stale ones in
+    Psalms.
+- Statuses: `created` (new) or `unchanged` (identical content already imported). There
+  is no `updated` status — see the edit behaviour above.
 - Rate limit: 600 requests/hour per token (HTTP 429 beyond that).
 
 ## Deployment (run by a maintainer)
