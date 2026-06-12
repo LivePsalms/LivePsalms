@@ -53,10 +53,10 @@ describe('HeroNotepadLink', () => {
     );
   }
 
-  it('renders a link to /notepad with an accessible name', () => {
+  it('renders a link to /notepad/notes with an accessible name', () => {
     renderLink();
     const link = screen.getByRole('link', { name: /open your notepad/i });
-    expect(link).toHaveAttribute('href', '/notepad');
+    expect(link).toHaveAttribute('href', '/notepad/notes');
   });
 
   it('renders the arrow glyph, hidden from assistive tech', () => {
@@ -66,17 +66,36 @@ describe('HeroNotepadLink', () => {
     expect(arrow).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('fires onNavTrigger and navigates to /notepad on click', () => {
+  it('fires onNavTrigger and navigates to /notepad/notes on click', () => {
     const onNavTrigger = vi.fn();
     renderLink({ onNavTrigger });
     fireEvent.click(screen.getByRole('link', { name: /open your notepad/i }));
     expect(onNavTrigger).toHaveBeenCalledTimes(1);
-    expect(navigateMock).toHaveBeenCalledWith('/notepad');
+    expect(navigateMock).toHaveBeenCalledWith('/notepad/notes');
   });
 
   it('does not throw when onNavTrigger is omitted, still navigates', () => {
     renderLink();
     fireEvent.click(screen.getByRole('link', { name: /open your notepad/i }));
-    expect(navigateMock).toHaveBeenCalledWith('/notepad');
+    expect(navigateMock).toHaveBeenCalledWith('/notepad/notes');
+  });
+
+  it('renders a compact label and animates the arrow when requested', () => {
+    render(
+      <MemoryRouter>
+        <HeroNotepadLink label="Notepad" animateArrow />
+      </MemoryRouter>,
+    );
+    // Accessible name stays the descriptive phrase (which contains "Notepad").
+    const link = screen.getByRole('link', { name: /open your notepad/i });
+    expect(link).toHaveTextContent('Notepad');
+    const arrow = link.querySelector('[data-testid="hero-notepad-arrow"]');
+    expect(arrow?.className).toContain('hero-notepad-arrow--bob');
+  });
+
+  it('does not animate the arrow by default', () => {
+    const { container } = renderLink();
+    const arrow = container.querySelector('[data-testid="hero-notepad-arrow"]');
+    expect(arrow?.className).not.toContain('hero-notepad-arrow--bob');
   });
 });

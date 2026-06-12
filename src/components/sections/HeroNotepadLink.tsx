@@ -25,25 +25,36 @@ export function heroNotepadLinkOpacity(introRevealed: boolean, progress: number)
 }
 
 const LINK_LABEL = 'Open Your Notepad';
+const NOTEPAD_NOTES_PATH = '/notepad/notes';
 
 export interface HeroNotepadLinkProps {
   onNavTrigger?: () => void;
   className?: string;
   style?: CSSProperties;
+  /** Visible link text. Defaults to the full phrase; mobile passes "Notepad". */
+  label?: string;
+  /** When true, the arrow gently oscillates left↔right to invite a tap (mobile). */
+  animateArrow?: boolean;
 }
 
-export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadLinkProps) {
+export function HeroNotepadLink({
+  onNavTrigger,
+  className,
+  style,
+  label = LINK_LABEL,
+  animateArrow = false,
+}: HeroNotepadLinkProps) {
   const navigate = useNavigate();
 
   return (
     <TextStaggerHover
       as="a"
-      href="/notepad"
+      href={NOTEPAD_NOTES_PATH}
       aria-label={LINK_LABEL}
       data-testid="hero-notepad-link"
       className={[
         'psalms-nav-link hero-notepad-link',
-        'text-sm md:text-base font-bold tracking-wide',
+        'text-base md:text-lg font-bold tracking-wide',
         className,
       ]
         .filter(Boolean)
@@ -59,15 +70,15 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
       onClick={(e: React.MouseEvent) => {
         e.preventDefault();
         onNavTrigger?.();
-        navigate('/notepad');
+        navigate(NOTEPAD_NOTES_PATH);
       }}
     >
-      <TextStaggerHoverActive animation="blur">{LINK_LABEL}</TextStaggerHoverActive>
-      <TextStaggerHoverHidden animation="blur">{LINK_LABEL}</TextStaggerHoverHidden>
+      <TextStaggerHoverActive animation="blur">{label}</TextStaggerHoverActive>
+      <TextStaggerHoverHidden animation="blur">{label}</TextStaggerHoverHidden>
       <span
         data-testid="hero-notepad-arrow"
         aria-hidden="true"
-        className="hero-notepad-arrow inline-block"
+        className={`hero-notepad-arrow inline-block${animateArrow ? ' hero-notepad-arrow--bob' : ''}`}
       >
         →
       </span>
