@@ -90,6 +90,10 @@ export function NotepadEditor({
     : null;
   const showDecorationToolbar = isBottomToolbar && !!selectedDecorationObj;
   const decorationLayerRef = useRef<DecorationLayerHandle>(null);
+  // Monotonic ms (performance.now) of the last tap/click that established a
+  // decoration selection. Used on mobile to swallow the trailing synthesized
+  // click that would otherwise immediately clear that fresh selection.
+  const justSelectedAtRef = useRef(0);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const lastInteractionRef = useRef<'pointer' | 'keyboard'>('pointer');
   // The title is a textarea so long titles wrap within the column instead of
@@ -120,6 +124,7 @@ export function NotepadEditor({
     if (!id) return false;
     e.preventDefault();
     setSelectedDecoration(id);
+    justSelectedAtRef.current = performance.now();
     return true;
   };
 
@@ -616,6 +621,13 @@ export function NotepadEditor({
                   return;
                 }
               }
+              // A tap that just selected a decoration also fires a synthesized click here
+              // (the island is now pointerEvents:none). Swallow that one trailing click on
+              // mobile so it can't immediately clear the selection we just made.
+              if (isBottomToolbar && performance.now() - justSelectedAtRef.current < 400) {
+                justSelectedAtRef.current = 0; // consume: only the immediate trailing click
+                return;
+              }
               handleClick(e);
               // The decoration overlay is pointerEvents:none over empty space, so
               // clicks on the editor fall through to here — deselect any decoration.
@@ -648,7 +660,7 @@ export function NotepadEditor({
             decorations={decorationsApi.decorations}
             mobile={isBottomToolbar}
             selectedId={selectedDecoration}
-            onSelect={setSelectedDecoration}
+            onSelect={(id) => { setSelectedDecoration(id); justSelectedAtRef.current = performance.now(); }}
             onDeselect={() => { setSelectedDecoration(null); editor?.commands.focus(); }}
             onChange={(next) => decorationsApi.update(next.id, next)}
             onDelete={(id) => { decorationsApi.remove(id); setSelectedDecoration(null); editor?.commands.focus(); }}
