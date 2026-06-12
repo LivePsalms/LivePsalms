@@ -83,4 +83,13 @@ describe('ApplePersonalTokensSection', () => {
     render(<ApplePersonalTokensSection client={client} userId="u-1" />);
     expect(screen.queryByText(/functions\/v1\/import-apple-note/)).toBeNull();
   });
+
+  it('shows a "Copied" confirmation after clicking Copy', async () => {
+    render(<ApplePersonalTokensSection client={client} userId="u-1" />);
+    fireEvent.click(screen.getByRole('button', { name: /generate token/i }));
+    await waitFor(() => expect(screen.getByText('psalms_pat_RAWVALUE123')).toBeInTheDocument());
+    expect(screen.queryByText(/^copied$/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^copy$/i }));
+    expect(screen.getByText(/^copied$/i)).toBeInTheDocument();
+  });
 });

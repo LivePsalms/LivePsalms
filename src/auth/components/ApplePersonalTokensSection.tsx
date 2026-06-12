@@ -30,6 +30,7 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
   const [raw, setRaw] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [platform] = useState(() => detectApplePlatform(navigator.userAgent));
 
   const refresh = useCallback(async () => {
@@ -48,8 +49,21 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  // Clear the "Copied" confirmation a moment after it appears.
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+
+  const onCopy = () => {
+    if (!raw) return;
+    void navigator.clipboard?.writeText(raw);
+    setCopied(true);
+  };
+
   const onGenerate = async () => {
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setCopied(false);
     try {
       const token = await createToken(client, userId, 'Apple Notes Shortcut');
       setRaw(token);
@@ -183,14 +197,25 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
           >
             {raw}
           </code>
-          <button
-            type="button"
-            onClick={() => void navigator.clipboard?.writeText(raw)}
-            className="text-xs underline"
-            style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
-          >
-            Copy
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCopy}
+              className="text-xs underline"
+              style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Copy
+            </button>
+            {copied && (
+              <span
+                role="status"
+                className="text-xs"
+                style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+              >
+                Copied
+              </span>
+            )}
+          </div>
         </div>
       )}
 
