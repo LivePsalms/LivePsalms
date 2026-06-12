@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseOnboardingAdapter } from './supabase-onboarding-adapter';
 import { defaultAccountProgress } from '../onboarding-types';
 
@@ -9,7 +10,7 @@ function fakeClient(row: unknown) {
   const eqUpdate = vi.fn().mockResolvedValue({ error: null });
   const update = vi.fn(() => ({ eq: eqUpdate }));
   const from = vi.fn(() => ({ select, update }));
-  return { client: { from } as any, from, select, update, eqUpdate };
+  return { client: { from } as unknown as SupabaseClient, from, select, update, eqUpdate };
 }
 
 describe('SupabaseOnboardingAdapter', () => {
