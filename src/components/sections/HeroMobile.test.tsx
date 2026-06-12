@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
-import { render, screen, cleanup } from '@testing-library/react';
+import { render as rtlRender, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+
+function render(ui: ReactElement, options?: Parameters<typeof rtlRender>[1]) {
+  return rtlRender(ui, { wrapper: MemoryRouter, ...options });
+}
 
 function setMatchMedia(opts: { mobile: boolean; reducedMotion?: boolean }) {
   const { mobile, reducedMotion = false } = opts;
