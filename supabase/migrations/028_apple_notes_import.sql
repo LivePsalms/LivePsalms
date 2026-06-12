@@ -80,6 +80,13 @@ begin
 end;
 $$;
 
+-- consume_pat is called only by the edge function via the service-role client.
+-- Postgres grants EXECUTE to PUBLIC by default; lock it down so a logged-in user
+-- cannot probe token existence or bump usage counters by calling the RPC directly
+-- (mirrors the service-role-only definer functions in 012_lamplight_match_rpcs.sql).
+revoke execute on function public.consume_pat(text, integer) from public, anon, authenticated;
+grant execute on function public.consume_pat(text, integer) to service_role;
+
 -- ── Imported-note provenance + dedup on notes ────────────────────────────
 alter table public.notes
   add column if not exists source text not null default 'app',
