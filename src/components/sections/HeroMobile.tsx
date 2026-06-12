@@ -176,12 +176,18 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
             Psalm 23:2-3
           </p>
           </div>
-          <HeroNotepadLink
-            onNavTrigger={onNavTrigger}
-            label="Notepad"
-            animateArrow
-            className="absolute bottom-0 right-0"
-          />
+          {/* Wrapper owns the positioning: HeroNotepadLink's root carries its
+              own `position: relative` (from TextStaggerHover), so an `absolute`
+              class on the link itself is overridden. The negative right offset
+              pulls it past the column's px-5 padding to sit near the screen
+              edge, level with the "Psalm 23:2-3" attribution. */}
+          <div className="absolute bottom-0 -right-3">
+            <HeroNotepadLink
+              onNavTrigger={onNavTrigger}
+              label="Notepad"
+              animateArrow
+            />
+          </div>
         </div>
         <div
           data-testid="hero-mobile-video-mask"
