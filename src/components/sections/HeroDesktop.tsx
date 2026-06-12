@@ -10,7 +10,12 @@ import { maskExpandKeyframes, VIDEO_PLAY_AT } from './hero-choreography/mask-exp
 import { quoteFadeKeyframes } from './hero-choreography/quote-fade-keyframes';
 import { HeroIntroSequence } from './hero-choreography/hero-intro-sequence';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
-import { setNavCollapseProgress } from '@/lib/nav-collapse-progress';
+import {
+  setNavCollapseProgress,
+  subscribeNavCollapseProgress,
+  getNavCollapseProgress,
+} from '@/lib/nav-collapse-progress';
+import { HeroNotepadLink, heroNotepadLinkOpacity } from './HeroNotepadLink';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -18,9 +23,11 @@ export interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
   onHandoff?: () => void;
+  /** Fires the loading-veil transition before routing to /notepad (same as nav clicks). */
+  onNavTrigger?: () => void;
 }
 
-export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
+export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff, onNavTrigger }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const darkCanvasRef = useRef<HTMLDivElement>(null);
@@ -291,6 +298,13 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
     () => introRef.current!.getSnapshot().status,
   );
   const showNav = !introActive || introStatus === 'revealed';
+  const collapseProgress = useSyncExternalStore(
+    subscribeNavCollapseProgress,
+    getNavCollapseProgress,
+    () => 0,
+  );
+  const introRevealed = !introActive || introStatus === 'revealed';
+  const notepadLinkOpacity = heroNotepadLinkOpacity(introRevealed, collapseProgress);
 
   useLayoutEffect(() => {
     if (!introActive) return;
@@ -518,6 +532,25 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
               zIndex: 5,
             }}
           />
+
+          {/* Subtle shortcut into the journaling space. Lives in the calm
+              opening frame: fades in once the intro reveals, fades out early
+              as the wordmark begins to collapse (well before the manifesto).
+              Its own pointer-events layer — the wordmark layer above is
+              pointer-events-none. */}
+          <div
+            className="absolute bottom-8 right-10 z-[6]"
+            style={{
+              opacity: notepadLinkOpacity,
+              pointerEvents: notepadLinkOpacity < 0.05 ? 'none' : 'auto',
+              // Spring the link in at intro-reveal (top of page, progress 0); once
+              // scrolling begins, drop the CSS transition so GSAP's scrubbed
+              // progress owns the fade-out without double-smoothing.
+              transition: collapseProgress === 0 ? 'opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+            }}
+          >
+            <HeroNotepadLink onNavTrigger={onNavTrigger} />
+          </div>
         </div>
       </div>
 

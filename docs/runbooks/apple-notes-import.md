@@ -7,8 +7,16 @@ personal access token (PAT).
 ## User setup
 1. In Psalms → Settings → **Connect Apple Notes**, tap **Generate token** and
    copy the `psalms_pat_…` value (shown once).
-2. Install the Psalms "Import Apple Notes" Shortcut (link distributed separately).
+2. On an iPhone, iPad, or Mac, tap **Install Shortcut** in the same panel (it opens
+   the iCloud Shortcut link directly in the Shortcuts app). If Shortcuts isn't
+   installed, use **Get the Shortcuts app** to install it first.
 3. On first run the Shortcut prompts for the token and stores it; paste the value.
+4. Back in the panel, the status banner confirms imports ("✅ N notes imported ·
+   last import …") once a run completes.
+
+> The panel is platform-aware: on a non-Apple browser it shows a "needs an Apple
+> device" note but still lets you generate a token to use on your Apple device.
+> The raw endpoint URL is no longer shown — it's baked into the distributed Shortcut.
 
 ## Shortcut recipe (build once, distribute as an iCloud link)
 1. **Text** action → the import endpoint:

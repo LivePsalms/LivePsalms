@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { hashToken, generateRawToken, createToken, revokeToken } from './personal-tokens';
+import { hashToken, generateRawToken, createToken, revokeToken, countImportedNotes } from './personal-tokens';
 
 describe('hashToken parity', () => {
   it('matches the shared known-answer vector (must equal the edge helper)', async () => {
@@ -40,5 +40,35 @@ describe('revokeToken', () => {
     await revokeToken(client, 'tok-1');
     expect(update.mock.calls[0][0]).toHaveProperty('revoked_at');
     expect(eq).toHaveBeenCalledWith('id', 'tok-1');
+  });
+});
+
+describe('countImportedNotes', () => {
+  it('counts only apple_notes-sourced notes via a head/exact count query', async () => {
+    const eq = vi.fn(async () => ({ count: 7, error: null }));
+    const select = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ select }));
+    const client = { from } as never;
+
+    const n = await countImportedNotes(client);
+
+    expect(n).toBe(7);
+    expect(from).toHaveBeenCalledWith('notes');
+    expect(select).toHaveBeenCalledWith('id', { count: 'exact', head: true });
+    expect(eq).toHaveBeenCalledWith('source', 'apple_notes');
+  });
+
+  it('returns 0 when the count comes back null', async () => {
+    const eq = vi.fn(async () => ({ count: null, error: null }));
+    const select = vi.fn(() => ({ eq }));
+    const client = { from: () => ({ select }) } as never;
+    expect(await countImportedNotes(client)).toBe(0);
+  });
+
+  it('throws when the query errors', async () => {
+    const eq = vi.fn(async () => ({ count: null, error: { message: 'boom' } }));
+    const select = vi.fn(() => ({ eq }));
+    const client = { from: () => ({ select }) } as never;
+    await expect(countImportedNotes(client)).rejects.toBeTruthy();
   });
 });

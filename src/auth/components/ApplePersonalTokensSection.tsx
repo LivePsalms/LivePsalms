@@ -2,10 +2,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  createToken, listTokens, revokeToken, type PersonalToken,
+  createToken, listTokens, revokeToken, countImportedNotes, type PersonalToken,
 } from '../personal-tokens';
+import { detectApplePlatform, deriveImportStatus, type ImportTone } from '../apple-import-status';
 
-const IMPORT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1/import-apple-note`;
+// Baked into the distributed Apple Shortcut by maintainers; intentionally NOT
+// rendered in the panel anymore (users never need the raw endpoint). Exported
+// so it stays available to maintainers/tooling without tripping noUnusedLocals.
+export const IMPORT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1/import-apple-note`;
+const APPLE_SHORTCUT_ICLOUD_URL = 'https://www.icloud.com/shortcuts/bcf5f879ac954f3cbf7d99c3d5ffe29a';
+const SHORTCUTS_APP_STORE_URL = 'https://apps.apple.com/app/shortcuts/id915249334';
+
+const TONE_BG: Record<ImportTone, string> = {
+  success: 'rgba(120, 160, 110, 0.16)',
+  waiting: 'var(--pale-stone)',
+  idle: 'var(--pale-stone)',
+};
 
 export interface ApplePersonalTokensSectionProps {
   client: SupabaseClient;
@@ -14,19 +26,44 @@ export interface ApplePersonalTokensSectionProps {
 
 export function ApplePersonalTokensSection({ client, userId }: ApplePersonalTokensSectionProps) {
   const [list, setList] = useState<PersonalToken[]>([]);
+  const [importedCount, setImportedCount] = useState(0);
   const [raw, setRaw] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [platform] = useState(() => detectApplePlatform(navigator.userAgent));
 
   const refresh = useCallback(async () => {
-    try { setList(await listTokens(client)); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Failed to load tokens'); }
+    try {
+      const [t, count] = await Promise.all([
+        listTokens(client),
+        // A count failure must not block the panel — treat as 0 (spec error handling).
+        countImportedNotes(client).catch(() => 0),
+      ]);
+      setList(t);
+      setImportedCount(count);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load tokens');
+    }
   }, [client]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  // Clear the "Copied" confirmation a moment after it appears.
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+
+  const onCopy = () => {
+    if (!raw) return;
+    void navigator.clipboard?.writeText(raw);
+    setCopied(true);
+  };
+
   const onGenerate = async () => {
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setCopied(false);
     try {
       const token = await createToken(client, userId, 'Apple Notes Shortcut');
       setRaw(token);
@@ -43,6 +80,17 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
     finally { setBusy(false); }
   };
 
+  // Most-recent last-used across active tokens (ISO strings sort lexicographically).
+  const lastUsedAt = list.reduce<string | null>((acc, t) => {
+    if (!t.lastUsedAt) return acc;
+    return !acc || t.lastUsedAt > acc ? t.lastUsedAt : acc;
+  }, null);
+
+  const status = deriveImportStatus({ tokenCount: list.length, lastUsedAt, importedCount });
+
+  const isApple = platform === 'ios' || platform === 'macos';
+  const devicePhrase = platform === 'ios' ? 'on your iPhone or iPad' : 'on your Mac';
+
   return (
     <section
       aria-labelledby="apple-notes-heading"
@@ -56,23 +104,66 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
       >
         Connect Apple Notes
       </h3>
-      <p
-        className="text-xs mb-3"
-        style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+
+      <div
+        role="status"
+        className="mb-4 px-3 py-2 rounded-lg"
+        style={{ background: TONE_BG[status.tone], fontFamily: 'Outfit, sans-serif' }}
       >
-        Generate a token, then install the Apple Notes import Shortcut and paste the
-        token plus this endpoint into it:
-      </p>
-      <code
-        className="block text-xs mb-4 break-all px-3 py-2 rounded-lg"
-        style={{
-          background: 'var(--pale-stone)',
-          color: 'var(--deep-umber)',
-          fontFamily: 'monospace',
-        }}
-      >
-        {IMPORT_ENDPOINT}
-      </code>
+        <p
+          className="text-xs"
+          style={{ color: status.tone === 'idle' ? 'var(--silica)' : 'var(--deep-umber)' }}
+        >
+          {status.headline}
+        </p>
+        {status.detail && (
+          <p className="text-xs mt-1" style={{ color: 'var(--silica)' }}>{status.detail}</p>
+        )}
+      </div>
+
+      {isApple ? (
+        <>
+          <p
+            className="text-xs mb-3"
+            style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+          >
+            Generate a token, then install the Shortcut and run it {devicePhrase} to bring
+            your Apple Notes into Psalms.
+          </p>
+          <div className="flex flex-col gap-2 mb-4">
+            <a
+              href={APPLE_SHORTCUT_ICLOUD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-3 py-2 rounded-lg text-center"
+              style={{
+                background: 'var(--deep-umber)',
+                color: 'var(--alabaster)',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              Install Shortcut
+            </a>
+            <a
+              href={SHORTCUTS_APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs underline text-center"
+              style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Get the Shortcuts app
+            </a>
+          </div>
+        </>
+      ) : (
+        <p
+          className="text-xs mb-4"
+          style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+        >
+          Apple Notes import needs an iPhone, iPad, or Mac. You can still generate a token
+          here to use on your Apple device.
+        </p>
+      )}
 
       <button
         type="button"
@@ -106,14 +197,25 @@ export function ApplePersonalTokensSection({ client, userId }: ApplePersonalToke
           >
             {raw}
           </code>
-          <button
-            type="button"
-            onClick={() => void navigator.clipboard?.writeText(raw)}
-            className="text-xs underline"
-            style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
-          >
-            Copy
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCopy}
+              className="text-xs underline"
+              style={{ color: 'var(--deep-umber)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              Copy
+            </button>
+            {copied && (
+              <span
+                role="status"
+                className="text-xs"
+                style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
+              >
+                Copied
+              </span>
+            )}
+          </div>
         </div>
       )}
 
