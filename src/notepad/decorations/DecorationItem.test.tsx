@@ -362,6 +362,22 @@ describe('DecorationItem', () => {
     expect(last.rotation).toBe(45);
   });
 
+  it('mobile: clears the angle badge when a two-finger pinch ends', () => {
+    // Regression: pinch-rotate SETS liveAngle during the gesture, but the
+    // pinch-end path must clear it so the badge does not stay stranded after
+    // both fingers lift.
+    const h = handlers();
+    const { getByTestId, queryByTestId } = render(<DecorationItem decoration={d} selected mobile {...h} />);
+    const surface = getByTestId('decoration-surface-a');
+    fireEvent.pointerDown(surface, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerDown(surface, { clientX: 100, clientY: 0, pointerId: 2 });   // startAngle 0
+    fireEvent.pointerMove(surface, { clientX: 73.1, clientY: 68.2, pointerId: 2 }); // ~43deg -> badge appears
+    expect(getByTestId('decoration-angle-badge-a')).not.toBeNull();
+    fireEvent.pointerUp(surface, { pointerId: 2 });
+    fireEvent.pointerUp(surface, { pointerId: 1 });
+    expect(queryByTestId('decoration-angle-badge-a')).toBeNull();
+  });
+
   it('desktop: rotate handle does NOT snap (regression)', () => {
     const h = handlers();
     const { getByLabelText } = render(<DecorationItem decoration={d} selected {...h} />);

@@ -97,7 +97,12 @@ export function DecorationItem({
 
   const endPointer = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size < 2 && pinch.current) {
+      // Pinch is ending: tear it down and clear the live angle badge so it does
+      // not stay stranded on screen after the fingers lift.
+      pinch.current = null;
+      setLiveAngle(null);
+    }
     end(e);
   };
 
@@ -413,7 +418,7 @@ function cornerHitArea(corner: ResizeCorner): React.CSSProperties {
   return { ...base, top: top ? off : undefined, bottom: top ? undefined : off, left: left ? off : undefined, right: left ? undefined : off };
 }
 
-export const visualDot: React.CSSProperties = {
+const visualDot: React.CSSProperties = {
   width: 24, height: 24, borderRadius: '50%', background: '#fff',
   border: '2px solid var(--deep-umber)', boxShadow: '0 1px 3px rgba(0,0,0,.18)',
 };

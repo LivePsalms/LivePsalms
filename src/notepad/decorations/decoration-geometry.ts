@@ -130,6 +130,8 @@ export type ResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-ri
 // anchor stays exact (the move path owns position clamping).
 export function resizeFromCorner(
   d: NoteDecoration,
+  // `dyPx` is accepted for call-site symmetry but intentionally unused: resize is
+  // width-driven and aspect-locked, so height follows width.
   { corner, dxPx, contentWidth, aspectRatio }:
     { corner: ResizeCorner; dxPx: number; dyPx: number; contentWidth: number; aspectRatio: number },
 ): NoteDecoration {
