@@ -74,4 +74,16 @@ describe('deriveImportStatus', () => {
     expect(deriveImportStatus({ tokenCount: 1, lastUsedAt: twoDays, importedCount: 2, now: T0 }).detail)
       .toBe('last import 2 days ago');
   });
+
+  it('singularizes minute/hour/day relative time', () => {
+    const oneMinute = new Date(T0 - 60_000).toISOString();
+    expect(deriveImportStatus({ tokenCount: 1, lastUsedAt: oneMinute, importedCount: 2, now: T0 }).detail)
+      .toBe('last import 1 minute ago');
+    const oneHour = new Date(T0 - 3_600_000).toISOString();
+    expect(deriveImportStatus({ tokenCount: 1, lastUsedAt: oneHour, importedCount: 2, now: T0 }).detail)
+      .toBe('last import 1 hour ago');
+    const oneDay = new Date(T0 - 86_400_000).toISOString();
+    expect(deriveImportStatus({ tokenCount: 1, lastUsedAt: oneDay, importedCount: 2, now: T0 }).detail)
+      .toBe('last import 1 day ago');
+  });
 });
