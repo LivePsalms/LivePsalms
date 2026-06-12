@@ -57,3 +57,15 @@ export async function revokeToken(client: SupabaseClient, id: string): Promise<v
     .update({ revoked_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
+
+// Count of the signed-in user's Apple-Notes-imported notes (RLS scopes to own rows).
+// head:true => no rows returned, just the exact count. The `source` column exists
+// from migration 028.
+export async function countImportedNotes(client: SupabaseClient): Promise<number> {
+  const { count, error } = await client
+    .from('notes')
+    .select('id', { count: 'exact', head: true })
+    .eq('source', 'apple_notes');
+  if (error) throw error;
+  return count ?? 0;
+}
