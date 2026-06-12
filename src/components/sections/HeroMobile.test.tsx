@@ -71,14 +71,14 @@ describe('HeroMobile content', () => {
     expect(screen.getByLabelText(/psalms/i)).toBeInTheDocument();
   });
 
-  it('renders a <video> with /hero_main_video.mp4 src and /tropical_jungle.png poster', async () => {
+  it('renders a <video> with /hero_main_video.mp4 src and /tropical_jungle.webp poster', async () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
     const video = container.querySelector<HTMLVideoElement>('video');
     expect(video).not.toBeNull();
     expect(video?.getAttribute('src')).toBe('/hero_main_video.mp4');
-    expect(video?.getAttribute('poster')).toBe('/tropical_jungle.png');
+    expect(video?.getAttribute('poster')).toBe('/tropical_jungle.webp');
     // Use DOM properties (not hasAttribute) — React may set these as
     // properties rather than attributes on the rendered element.
     expect(video?.muted).toBe(true);
@@ -90,7 +90,7 @@ describe('HeroMobile content', () => {
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { container } = render(<Hero introActive={false} />);
-    expect(container.querySelector('img[src="/tropical_jungle.png"]')).toBeNull();
+    expect(container.querySelector('img[src="/tropical_jungle.webp"]')).toBeNull();
   });
 
   it('mounts and unmounts cleanly when prefers-reduced-motion is set', async () => {

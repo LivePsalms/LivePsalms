@@ -10,8 +10,8 @@ const peaceProject: Project = {
   id: 'peace',
   name: 'Restoration 01',
   category: 'residential',
-  thumbnail: '/mid_section/restoration1.png',
-  images: ['/mid_section/restoration1.png'],
+  thumbnail: '/mid_section/restoration1.webp',
+  images: ['/mid_section/restoration1.webp'],
   overlayColor: '#8B8378',
 };
 
@@ -28,8 +28,8 @@ const forgivenessProject: Project = {
   id: 'forgiveness',
   name: 'Serenity 02',
   category: 'hospitality',
-  thumbnail: '/mid_section/serenity2.png',
-  images: ['/mid_section/serenity2.png'],
+  thumbnail: '/mid_section/serenity2.webp',
+  images: ['/mid_section/serenity2.webp'],
   overlayColor: '#B08A6A',
 };
 

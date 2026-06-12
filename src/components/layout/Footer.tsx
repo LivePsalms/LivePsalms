@@ -64,7 +64,7 @@ export function Footer() {
             {/* Subtle grain overlay */}
             <div
               className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none"
-              style={{ backgroundImage: "url('/grain-overlay.png')" }}
+              style={{ backgroundImage: "url('/grain-overlay.webp')" }}
             />
 
             {/* A logo watermark overlay */}

@@ -8,8 +8,8 @@ const baseProject: Project = {
   id: 'strength',
   name: 'Restoration 03',
   category: 'residential',
-  thumbnail: '/mid_section/restoration5.png',
-  images: ['/mid_section/restoration5.png'],
+  thumbnail: '/mid_section/restoration5.webp',
+  images: ['/mid_section/restoration5.webp'],
   overlayColor: '#A09688',
 };
 
@@ -33,7 +33,7 @@ describe('computePillData — with devotion attached', () => {
 
   it('uses project.thumbnail as left image, devotion.firstMoodboardImage as right image', () => {
     const data = computePillData(baseProject, baseDevotion);
-    expect(data.leftImage).toBe('/mid_section/restoration5.png');
+    expect(data.leftImage).toBe('/mid_section/restoration5.webp');
     expect(data.rightImage).toBe('/restoration5/img1.png');
   });
 
@@ -63,6 +63,6 @@ describe('computePillData — without devotion (fallback)', () => {
     expect(computePillData(withSecond, undefined).rightImage).toBe('/b.png');
 
     const withOnlyOne: Project = { ...baseProject, images: ['/a.png'] };
-    expect(computePillData(withOnlyOne, undefined).rightImage).toBe('/mid_section/restoration5.png'); // thumbnail
+    expect(computePillData(withOnlyOne, undefined).rightImage).toBe('/mid_section/restoration5.webp'); // thumbnail
   });
 });

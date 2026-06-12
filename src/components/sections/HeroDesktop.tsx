@@ -603,7 +603,7 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }:
           >
             <img
               ref={maskImgRef}
-              src="/tropical_jungle.png"
+              src="/tropical_jungle.webp"
               alt=""
               className="w-full h-full object-cover"
               style={{ transform: 'scale(1.15)' }}

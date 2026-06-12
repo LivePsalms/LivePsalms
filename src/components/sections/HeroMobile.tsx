@@ -179,7 +179,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
             data-testid="hero-mobile-video"
             aria-hidden="true"
             src="/hero_main_video.mp4"
-            poster="/tropical_jungle.png"
+            poster="/tropical_jungle.webp"
             autoPlay={!prefersReducedMotion}
             muted
             playsInline

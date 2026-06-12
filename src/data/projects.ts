@@ -30,20 +30,20 @@ export const overlayLabelById: Record<string, string> = {
 // public/mid_section is named by its category so it can be wired directly
 // into the grid. IDs and display names are derived from the filename.
 const restorationImages = [
-  'restoration1.png',
+  'restoration1.webp',
   'restoration3.jpg',
-  'restoration5.png',
-  'restoration6.png',
-  'restoration7.png',
-  'restoration8.png',
-  'restoration9.png',
-  'restoration10.png',
+  'restoration5.webp',
+  'restoration6.webp',
+  'restoration7.webp',
+  'restoration8.webp',
+  'restoration9.webp',
+  'restoration10.webp',
 ];
 
 const serenityImages = [
-  'serenity2.png',
-  'serenity3.png',
-  'serenity5.png',
+  'serenity2.webp',
+  'serenity3.webp',
+  'serenity5.webp',
 ];
 
 // Devotional slugs override the default filename-derived id for projects that

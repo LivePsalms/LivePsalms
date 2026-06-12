@@ -30,7 +30,7 @@ const FALLBACK_DEVOTION: Devotion = {
   title: 'Continue Reading',
   scriptureRef: '—',
   monogram: 'ND',
-  firstMoodboardImage: '/mid_section/restoration1.png',
+  firstMoodboardImage: '/mid_section/restoration1.webp',
 };
 
 gsap.registerPlugin(ScrollTrigger);
