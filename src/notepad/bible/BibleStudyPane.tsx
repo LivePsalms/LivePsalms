@@ -10,8 +10,10 @@ import { PaywallCard } from '@/notepad/components/lamplight/PaywallCard';
 import { LamplightChat } from '@/notepad/components/lamplight/chat/LamplightChat';
 import type { InvokeFn } from './lamplight-chat-client';
 import { BibleReader, type PassageRef } from './BibleReader';
+import { bookByAbbrev } from './bible-books';
 import { SplitResizeHandle } from './SplitResizeHandle';
 import { useDragResize } from './useDragResize';
+import { loadBiblePassage, saveBiblePassage } from '@/notepad/session/session-storage';
 
 export interface BibleStudyPaneProps {
   lamplightAdapter: LamplightAdapter | null;
@@ -22,7 +24,17 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
   const { user } = useAuthSession();
   const userId = user?.id ?? null;
   const [chatOpen, setChatOpen] = useState(false);
-  const [passage, setPassage] = useState<PassageRef>({ book: 'jhn', chapter: 1 });
+  const [passage, setPassage] = useState<PassageRef>(() => {
+    const stored = loadBiblePassage();
+    if (stored) {
+      const meta = bookByAbbrev(stored.book);
+      // Only restore when the book is real and the chapter is in range.
+      if (meta && stored.chapter >= 1 && stored.chapter <= meta.chapterCount) {
+        return { book: stored.book, chapter: stored.chapter };
+      }
+    }
+    return { book: 'jhn', chapter: 1 };
+  });
   const splitRef = useRef<HTMLDivElement | null>(null);
   const { fraction, handleProps } = useDragResize(splitRef);
 
@@ -31,7 +43,11 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
   // (and tests) may re-emit the same passage every render; returning the previous
   // object short-circuits a render loop.
   const handlePassageChange = useCallback((ref: PassageRef) => {
-    setPassage((prev) => (prev.book === ref.book && prev.chapter === ref.chapter ? prev : ref));
+    setPassage((prev) => {
+      if (prev.book === ref.book && prev.chapter === ref.chapter) return prev;
+      saveBiblePassage(ref);
+      return ref;
+    });
   }, []);
 
   // Hooks are always called (Rules of Hooks); they no-op on a null adapter/user.
@@ -95,7 +111,11 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
           className={chatOpen ? 'min-h-0 overflow-hidden' : 'h-full'}
           style={chatOpen ? { flexGrow: 1 - fraction, flexBasis: 0 } : undefined}
         >
-          <BibleReader onPassageChange={handlePassageChange} />
+          <BibleReader
+            initialBook={passage.book}
+            initialChapter={passage.chapter}
+            onPassageChange={handlePassageChange}
+          />
         </div>
         {chatOpen && (
           <>
