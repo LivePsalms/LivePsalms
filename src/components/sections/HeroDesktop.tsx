@@ -543,7 +543,10 @@ export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff, o
             style={{
               opacity: notepadLinkOpacity,
               pointerEvents: notepadLinkOpacity < 0.05 ? 'none' : 'auto',
-              transition: 'opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
+              // Spring the link in at intro-reveal (top of page, progress 0); once
+              // scrolling begins, drop the CSS transition so GSAP's scrubbed
+              // progress owns the fade-out without double-smoothing.
+              transition: collapseProgress === 0 ? 'opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           >
             <HeroNotepadLink onNavTrigger={onNavTrigger} />
