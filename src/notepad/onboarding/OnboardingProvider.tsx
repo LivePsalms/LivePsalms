@@ -30,6 +30,7 @@ import {
   writeAnonProgress,
 } from './onboarding-storage';
 import { OnboardingContext, type OnboardingContextValue } from './useOnboarding';
+import { setOnboardingSink } from './onboarding-events';
 
 const nowIso = (): string => new Date().toISOString();
 const todayYMD = (): string => nowIso().slice(0, 10);
@@ -183,6 +184,16 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     },
     [signedIn, eligibleForJourney, persistAccount],
   );
+
+  // Register the provider as the global onboarding-event sink so React-free
+  // domain classes (NoteCollection, FolderHierarchy) and TipTap extensions can
+  // emit progress events via emitOnboardingEvent without importing the provider.
+  // reportOnboardingEvent is a stable useCallback; depending on it keeps the
+  // registered fn current so emitted events always reach the latest handler.
+  useEffect(() => {
+    setOnboardingSink(reportOnboardingEvent);
+    return () => setOnboardingSink(null);
+  }, [reportOnboardingEvent]);
 
   const completeGuidedNote = useCallback(
     (status: 'done' | 'skipped') => {

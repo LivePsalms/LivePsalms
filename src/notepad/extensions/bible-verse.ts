@@ -4,6 +4,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { VERSE_REGEX } from '../graph/reference-parser';
 import { VERSE_PASTE_REGEX } from './bible-verse-utils';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 
 const bibleVersePluginKey = new PluginKey('bibleVerseHighlight');
 
@@ -66,7 +67,19 @@ export const BibleVerse = Mark.create({
       markPasteRule({
         find: VERSE_PASTE_REGEX,
         type: this.type,
-        getAttributes: (match) => ({ reference: match[1] }),
+        getAttributes: (match) => {
+          // The paste rule is the single user-driven path in this file that
+          // commits a bibleVerse mark to the doc (the decoration plugin only
+          // auto-highlights on render). Treat a matched verse paste as the
+          // representative "user linked a verse" action.
+          //
+          // Idempotency contract: getAttributes fires once PER regex match in a
+          // paste, so a single paste of multiple verses emits 'verse-linked'
+          // multiple times. Consumers of 'verse-linked' must therefore be
+          // idempotent (the provider's reportOnboardingEvent is).
+          emitOnboardingEvent('verse-linked');
+          return { reference: match[1] };
+        },
       }),
     ];
   },

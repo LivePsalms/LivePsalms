@@ -1,4 +1,5 @@
 import { Observable } from './observable';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Folder, FolderIcon } from '../types';
 
@@ -31,6 +32,7 @@ export class FolderHierarchy extends Observable<FolderHierarchyState> {
     const order = folders.filter((f) => f.parentId === parentId).length;
     const created = await this.adapter.createFolder({ name, parentId, order, icon, color });
     this.setState((prev) => ({ ...prev, folders: [...prev.folders, created] }));
+    emitOnboardingEvent('folder-created');
     return created;
   };
 

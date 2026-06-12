@@ -11,6 +11,7 @@ import {
   type GraphSettings,
 } from '@/notepad/graph/graph-view';
 import type { GraphNode } from '@/notepad/graph/types';
+import { emitOnboardingEvent } from '@/notepad/onboarding/onboarding-events';
 
 const NODE_COLORS: Record<string, string> = {
   scripture: '#C49A78',
@@ -74,6 +75,17 @@ export function GraphPane({ graphOpen, expanded = false, onToggleExpand, embedde
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Onboarding: emit 'graph-visited' exactly once, the first time the graph is
+  // actually shown (desktop: graphOpen toggles true; embedded: the mobile sheet
+  // only mounts this component when opened). Ref-guarded so re-renders never spam.
+  const graphVisitedRef = useRef(false);
+  useEffect(() => {
+    if (graphVisitedRef.current) return;
+    if (!(embedded || graphOpen)) return;
+    graphVisitedRef.current = true;
+    emitOnboardingEvent('graph-visited');
+  }, [embedded, graphOpen]);
 
   // Attach / detach
   useEffect(() => {

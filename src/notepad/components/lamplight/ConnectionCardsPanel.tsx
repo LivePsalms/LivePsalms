@@ -6,6 +6,7 @@ import { firstNameOf } from '../../first-load/notepad-first-load';
 import { sanitizeFirstName } from '../../utils/personalization';
 import { prefixWhyWithName } from '../../connection-cards/why-render';
 import { ConnectionCardsEmpty } from './ConnectionCardsEmpty';
+import { emitOnboardingEvent } from '../../onboarding/onboarding-events';
 import type { LamplightAdapter } from '../../storage/lamplight-adapter';
 import type { Note } from '../../types';
 
@@ -98,6 +99,7 @@ export function ConnectionCardsPanel({
     setActiveChipId(relatedNoteId);
     if (whyState(relatedNoteId).phase === 'collapsed') {
       await expand(relatedNoteId);
+      emitOnboardingEvent('lamplight-connection');
     }
   };
 

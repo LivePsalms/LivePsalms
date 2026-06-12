@@ -1,5 +1,6 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { getStyleAsset } from '../styles/manifest';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 
 export type HighlightAction =
   | { type: 'unset' }
@@ -91,7 +92,10 @@ export const StyleHighlight = Mark.create<StyleHighlightOptions, StyleHighlightS
         (swatchId) =>
         ({ commands }) => {
           const applied = commands.setMark(this.name, { swatchId });
-          if (applied) this.storage.lastSwatchId = swatchId;
+          if (applied) {
+            this.storage.lastSwatchId = swatchId;
+            emitOnboardingEvent('highlight-created');
+          }
           return applied;
         },
       unsetStyleHighlight:

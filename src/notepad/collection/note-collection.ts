@@ -1,5 +1,6 @@
 import { Observable } from './observable';
 import { loadLastNoteId, saveLastNoteId } from '../session/session-storage';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Note, NoteType } from '../types';
 
@@ -54,6 +55,7 @@ export class NoteCollection extends Observable<NoteCollectionState> {
       notes: [...prev.notes, created],
       activeNoteId: created.id,
     }));
+    emitOnboardingEvent('note-created');
     return created;
   };
 

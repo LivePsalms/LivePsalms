@@ -7,6 +7,7 @@ import { signedScanUrl, markTranscriptionSaved, discardScan } from '../scan/tran
 import { buildNoteFromTranscriptionDoc } from '../scan/build-note-from-transcription';
 import { locateUncertainSpans, uncertainDecorationPlugin, uncertainPluginKey } from '../scan/uncertain-decoration';
 import { linkNotesByVerses } from '../import/document-importer';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 import type { TranscriptionResult } from '../scan/types';
 import type { Note } from '../types';
 
@@ -81,6 +82,7 @@ export function TranscriptionReview({ result, folderId, persistNotes, onSaved, o
       const toSave = linked ?? note;
       await persistNotes([toSave]);                 // runs importNote + refetchAll + syncAll
       await markTranscriptionSaved(result.transcription_id, toSave.id); // id is preserved by importNote
+      emitOnboardingEvent('scan-completed');
       onSaved(toSave);
     } catch {
       toast.error('Failed to save note — please try again.');

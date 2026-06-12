@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BookOpen, FileText, Hash } from 'lucide-react';
+import { emitOnboardingEvent } from '../onboarding/onboarding-events';
 import {
   CommandDialog,
   CommandEmpty,
@@ -16,17 +17,38 @@ export function SearchDialog() {
   const openNote = collection.openNote;
   const [open, setOpen] = useState(false);
 
+  // Centralize open-state changes so the onboarding 'search-used' event fires
+  // exactly once per open (on the false -> true transition), regardless of
+  // whether the change came from the keyboard shortcut or the dialog itself.
+  const changeOpen = useCallback((next: boolean) => {
+    setOpen((prev) => {
+      if (next && !prev) emitOnboardingEvent('search-used');
+      return next;
+    });
+  }, []);
+
+  // Toggle via the keyboard shortcut using a functional updater so the keydown
+  // effect can keep stable/empty deps (no `open` in the closure). This avoids
+  // re-registering the listener on every toggle and the stale-state window on
+  // rapid double-presses. Emits 'search-used' once on the false -> true edge.
+  const handleToggleShortcut = useCallback(() => {
+    setOpen((prev) => {
+      if (!prev) emitOnboardingEvent('search-used');
+      return !prev;
+    });
+  }, []);
+
   // Cmd+K / Ctrl+K toggles the dialog
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        handleToggleShortcut();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [handleToggleShortcut]);
 
   const { verses: uniqueVerses, tags: uniqueTags } = useMemo(
     () => buildSearchIndex(notes),
@@ -35,13 +57,13 @@ export function SearchDialog() {
 
   const handleSelectNote = (id: string) => {
     openNote(id);
-    setOpen(false);
+    changeOpen(false);
   };
 
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={changeOpen}
       title="Search"
       description="Search notes, verses, tags..."
     >
