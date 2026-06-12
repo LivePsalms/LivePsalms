@@ -435,6 +435,14 @@ verify_jwt = true
 [functions.contact-message]
 verify_jwt = false
 
+# import-apple-note is invoked by the user's Apple Notes Shortcut, which carries
+# a personal access token (NOT a Supabase JWT) in the Authorization header. The
+# default verify_jwt gate would reject it, so verification is disabled here and
+# the function authenticates the PAT itself (hash → consume_pat RPC → user_id),
+# never trusting a client-supplied identity.
+[functions.import-apple-note]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
