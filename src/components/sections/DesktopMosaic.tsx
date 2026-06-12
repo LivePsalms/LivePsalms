@@ -265,17 +265,24 @@ export function DesktopMosaic({
       });
       morphTimelineRef.current = tl;
 
-      // Trigger when 80% of the first row of strip items is visible.
-      // Use the first item as trigger — its bottom + 80% of its height.
+      // Trigger when the strip's top reaches 75% of the viewport — i.e. as
+      // the strip enters the lower quarter of the screen — so the morph
+      // plays while the strip is actually visible. The previous trigger
+      // (first item's bottom at viewport bottom) sat ~450px lower: scrolling
+      // down at normal speed blew past it before the 1.2s morph finished,
+      // and anyone viewing the section with its top pinned near the
+      // viewport top was ABOVE the line, so onLeaveBack held the layout
+      // frozen in the strip state forever. The grid container is the
+      // trigger (not an item) because items translate during the morph,
+      // which would shift an item-based start position on refresh.
       //
       // Hover activation is delayed by the morph duration to guarantee
       // the visual transition finishes first (GSAP's onComplete can
       // fire early in React Strict-Mode dev builds where the Flip
       // timeline ends up with near-zero effective duration).
-      const firstItem = items[0];
       ScrollTrigger.create({
-        trigger: firstItem,
-        start: 'bottom bottom',
+        trigger: grid,
+        start: 'top 75%',
         invalidateOnRefresh: true,
         onEnter: () => {
           tl.play();
