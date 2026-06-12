@@ -205,6 +205,7 @@ function DesktopNotepadWorkspace() {
               |
             </span>
             <button
+              data-tour="lamplight-panel-entry"
               onClick={() => setActiveTab('lamplight')}
               className="px-5 py-3 text-[11px] font-medium tracking-wider transition-colors relative"
               style={{

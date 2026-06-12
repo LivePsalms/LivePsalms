@@ -133,6 +133,7 @@ export function NotepadToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                data-tour="new-note-sidebar-button"
                 className={`${btnClass} flex items-center gap-1.5 px-3 h-8`}
                 style={{
                   background: 'var(--deep-umber)',
@@ -201,6 +202,7 @@ export function NotepadToolbar({
 
           {/* Graph toggle */}
           <button
+            data-tour="graph-toggle-button"
             onClick={onToggleGraph}
             className={`${btnClass} w-8 h-8`}
             title={graphOpen ? 'Close graph' : 'Open graph'}

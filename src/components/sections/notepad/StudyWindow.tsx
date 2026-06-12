@@ -54,7 +54,7 @@ export function StudyWindow({ graphOpen, expanded = false, onToggleExpand, lampl
     >
       {/* tab bar */}
       <div className="flex shrink-0" style={{ borderBottom: '1px solid var(--pale-stone)' }} role="tablist">
-        <button role="tab" aria-selected={tab === 'bible'} onClick={() => setTab('bible')} style={tabStyle(tab === 'bible')}>
+        <button data-tour="editor-bible-panel" role="tab" aria-selected={tab === 'bible'} onClick={() => setTab('bible')} style={tabStyle(tab === 'bible')}>
           BIBLE
         </button>
         <button role="tab" aria-selected={tab === 'graph'} onClick={() => setTab('graph')} style={tabStyle(tab === 'graph')}>

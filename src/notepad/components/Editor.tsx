@@ -481,7 +481,7 @@ export function NotepadEditor({
           >
             <UnderlineIcon size={15} />
           </ToolbarButton>
-          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar}>
+          <ToolbarButton onClick={() => setTrayOpen((v) => !v)} active={trayOpen} title="Decorate" mobile={isBottomToolbar} dataTour="highlight-toolbar">
             <Sparkles size={15} />
           </ToolbarButton>
         </div>
@@ -874,11 +874,13 @@ interface ToolbarButtonProps {
   title: string;
   children: React.ReactNode;
   mobile?: boolean;
+  dataTour?: string;
 }
 
-function ToolbarButton({ active, disabled, onClick, title, children, mobile }: ToolbarButtonProps) {
+function ToolbarButton({ active, disabled, onClick, title, children, mobile, dataTour }: ToolbarButtonProps) {
   return (
     <button
+      data-tour={dataTour}
       onClick={onClick}
       disabled={disabled}
       title={title}
