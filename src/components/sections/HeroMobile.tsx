@@ -148,16 +148,20 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
       <HeroMaskClipDef />
       <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
-        <HeroNotepadLink onNavTrigger={onNavTrigger} className="self-end -mt-4" />
-        <div
-          ref={quoteRef}
-          data-testid="hero-mobile-quote"
-          data-visible={quoteVisible ? 'true' : 'false'}
-          className={cn(
-            'self-start text-left w-[70vw] max-w-md mt-2 transition-opacity duration-1000',
-            quoteVisible ? 'opacity-100' : 'opacity-0',
-          )}
-        >
+        {/* Quote + Notepad link share a row so the link sits directly across
+            from the "Psalm 23:2-3" attribution on the right. The link is a
+            sibling of the fading quote block (absolutely anchored), so it stays
+            visible while the quote cross-fades in. */}
+        <div className="relative w-full mt-2">
+          <div
+            ref={quoteRef}
+            data-testid="hero-mobile-quote"
+            data-visible={quoteVisible ? 'true' : 'false'}
+            className={cn(
+              'text-left w-[70vw] max-w-md transition-opacity duration-1000',
+              quoteVisible ? 'opacity-100' : 'opacity-0',
+            )}
+          >
           <p className="quote-text italic text-[15px] leading-relaxed">
             "He leads me beside still waters.
           </p>
@@ -171,6 +175,11 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
             />
             Psalm 23:2-3
           </p>
+          </div>
+          <HeroNotepadLink
+            onNavTrigger={onNavTrigger}
+            className="absolute bottom-0 right-0"
+          />
         </div>
         <div
           data-testid="hero-mobile-video-mask"

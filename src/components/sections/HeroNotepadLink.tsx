@@ -25,6 +25,7 @@ export function heroNotepadLinkOpacity(introRevealed: boolean, progress: number)
 }
 
 const LINK_LABEL = 'Open Your Notepad';
+const NOTEPAD_NOTES_PATH = '/notepad/notes';
 
 export interface HeroNotepadLinkProps {
   onNavTrigger?: () => void;
@@ -38,12 +39,12 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
   return (
     <TextStaggerHover
       as="a"
-      href="/notepad"
+      href={NOTEPAD_NOTES_PATH}
       aria-label={LINK_LABEL}
       data-testid="hero-notepad-link"
       className={[
         'psalms-nav-link hero-notepad-link',
-        'text-sm md:text-base font-bold tracking-wide',
+        'text-base md:text-lg font-bold tracking-wide',
         className,
       ]
         .filter(Boolean)
@@ -59,7 +60,7 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
       onClick={(e: React.MouseEvent) => {
         e.preventDefault();
         onNavTrigger?.();
-        navigate('/notepad');
+        navigate(NOTEPAD_NOTES_PATH);
       }}
     >
       <TextStaggerHoverActive animation="blur">{LINK_LABEL}</TextStaggerHoverActive>

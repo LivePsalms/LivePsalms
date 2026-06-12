@@ -293,17 +293,21 @@ describe('HeroMobile content', () => {
     expect(accent?.className).toMatch(/bg-\[var\(--accent-red,#d9483a\)\]/);
   });
 
-  it('quote container is left-anchored (self-start, text-left, no text-center, no px-8)', async () => {
+  it('quote container is left-anchored (text-left block in a full-width row, no text-center, no px-8)', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { getByTestId } = render(<Hero introActive={false} />);
     const quote = getByTestId('hero-mobile-quote');
-    expect(quote.className).toContain('self-start');
+    // Left-anchoring is now structural: a text-left w-[70vw] block inside the
+    // relative full-width row it shares with the Notepad link.
     expect(quote.className).toContain('text-left');
     expect(quote.className).not.toContain('text-center');
     expect(quote.className).not.toContain('px-8');
+    const row = quote.parentElement;
+    expect(row?.className).toContain('relative');
+    expect(row?.className).toContain('w-full');
   });
 
   it('quote container is sized to w-[70vw]', async () => {
