@@ -189,7 +189,7 @@ function App() {
                     maxRipples={6}
                     disabled={introActive}
                   >
-                    <Hero introActive={introActive} onIntroComplete={handleIntroComplete} onHandoff={handleIntroHandoff} />
+                    <Hero introActive={introActive} onIntroComplete={handleIntroComplete} onHandoff={handleIntroHandoff} onNavTrigger={handleNavTrigger} />
                   </WaterRipple>
                   <MidSectionMotion />
                   <TwoPathInterlude />

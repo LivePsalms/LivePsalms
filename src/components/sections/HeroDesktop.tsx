@@ -18,6 +18,8 @@ export interface HeroProps {
   introActive?: boolean;
   onIntroComplete?: () => void;
   onHandoff?: () => void;
+  /** Fires the loading-veil transition before routing to /notepad (same as nav clicks). */
+  onNavTrigger?: () => void;
 }
 
 export function HeroDesktop({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
