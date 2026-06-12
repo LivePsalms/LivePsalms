@@ -178,6 +178,8 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
           </div>
           <HeroNotepadLink
             onNavTrigger={onNavTrigger}
+            label="Notepad"
+            animateArrow
             className="absolute bottom-0 right-0"
           />
         </div>
