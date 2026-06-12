@@ -197,6 +197,9 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
           aria-label="Open your Notepad"
           data-testid="hero-mobile-notepad-cta"
           className="two-path-cta two-path-cta-notepad"
+          // Trim the inherited .two-path-cta margin-top (36px) so the pill sits
+          // a little closer beneath the video mask.
+          style={{ marginTop: '0.5rem' }}
           onClick={() => onNavTrigger?.()}
         >
           <span className="two-path-cta-label">Open your Notepad</span>
