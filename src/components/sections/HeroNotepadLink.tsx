@@ -1,5 +1,4 @@
-import type { CSSProperties } from 'react';
-import React from 'react';
+import React, { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TextStaggerHover,
@@ -40,11 +39,11 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
     <TextStaggerHover
       as="a"
       href="/notepad"
-      aria-label="Open your Notepad"
+      aria-label={LINK_LABEL}
       data-testid="hero-notepad-link"
       className={[
         'psalms-nav-link hero-notepad-link',
-        'text-sm md:text-base font-bold tracking-wide cursor-pointer',
+        'text-sm md:text-base font-bold tracking-wide',
         className,
       ]
         .filter(Boolean)
@@ -63,10 +62,8 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
         navigate('/notepad');
       }}
     >
-      <span className="relative inline-block align-baseline">
-        <TextStaggerHoverActive animation="blur">{LINK_LABEL}</TextStaggerHoverActive>
-        <TextStaggerHoverHidden animation="blur">{LINK_LABEL}</TextStaggerHoverHidden>
-      </span>
+      <TextStaggerHoverActive animation="blur">{LINK_LABEL}</TextStaggerHoverActive>
+      <TextStaggerHoverHidden animation="blur">{LINK_LABEL}</TextStaggerHoverHidden>
       <span
         data-testid="hero-notepad-arrow"
         aria-hidden="true"
