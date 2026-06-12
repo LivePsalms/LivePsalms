@@ -1,5 +1,5 @@
 // src/components/sections/notepad/mobile/MobileNotepadWorkspace.tsx
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { useAuthSession } from '@/auth/context/useAuthSession';
@@ -24,6 +24,7 @@ import { ScanCapturePanel } from '../../../../notepad/components/ScanCapturePane
 import { TranscriptionReview } from '../../../../notepad/components/TranscriptionReview';
 import type { TranscriptionResult } from '../../../../notepad/scan/types';
 import type { MobileTab } from './types';
+import { loadEnum, saveEnum, KEY_MOBILE_TAB } from '../../../../notepad/session/session-storage';
 
 type ScanStage = null | 'capture' | { review: TranscriptionResult };
 
@@ -35,12 +36,24 @@ export function MobileNotepadWorkspace() {
   const { profile } = useAccountProfile();
   const { showMigration, dismissMigration } = useNotepadFirstLoad();
 
-  const [tab, setTab] = useState<MobileTab>('notes');
+  const [tab, setTab] = useState<MobileTab>(() =>
+    loadEnum<MobileTab>(KEY_MOBILE_TAB, ['notes', 'editor', 'lamplight'], 'notes'),
+  );
   const [moreOpen, setMoreOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [newTypeOpen, setNewTypeOpen] = useState(false);
   const [scan, setScan] = useState<ScanStage>(null);
+
+  // Persist the active tab so a refresh lands the user back on it. If 'editor'
+  // was restored but no note became active, drop back to the notes list.
+  useEffect(() => {
+    if (tab === 'editor' && !model.activeNote) {
+      setTab('notes');
+      return;
+    }
+    saveEnum(KEY_MOBILE_TAB, tab);
+  }, [tab, model.activeNote]);
 
   const openAccount = useCallback(() => {
     if (model.user) {
