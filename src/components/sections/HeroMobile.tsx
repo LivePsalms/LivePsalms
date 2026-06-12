@@ -9,6 +9,7 @@ import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
 import type { HeroProps } from './HeroDesktop';
+import { HeroNotepadLink } from './HeroNotepadLink';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -23,7 +24,7 @@ const MOBILE_COLLAPSE_VH = 60;
  * video (with poster fallback for reduced-motion), Psalm 23 quote sitting
  * directly under the wordmark, bridge copy — rebuilt for one-thumb scroll.
  */
-export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: HeroProps) {
+export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, onNavTrigger }: HeroProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const quoteRef = useRef<HTMLDivElement>(null);
@@ -147,6 +148,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff }: 
       <HeroMaskClipDef />
       <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
+        <HeroNotepadLink onNavTrigger={onNavTrigger} className="self-end -mt-4" />
         <div
           ref={quoteRef}
           data-testid="hero-mobile-quote"
