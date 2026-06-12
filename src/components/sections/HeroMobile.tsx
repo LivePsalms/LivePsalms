@@ -8,8 +8,8 @@ import { WORDMARK_COLLAPSE } from './hero-choreography/wordmark-geometry';
 import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
+import { Link } from 'react-router-dom';
 import type { HeroProps } from './HeroDesktop';
-import { HeroNotepadLink } from './HeroNotepadLink';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -148,20 +148,15 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
       <HeroMaskClipDef />
       <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
-        {/* Quote + Notepad link share a row so the link sits directly across
-            from the "Psalm 23:2-3" attribution on the right. The link is a
-            sibling of the fading quote block (absolutely anchored), so it stays
-            visible while the quote cross-fades in. */}
-        <div className="relative w-full mt-2">
-          <div
-            ref={quoteRef}
-            data-testid="hero-mobile-quote"
-            data-visible={quoteVisible ? 'true' : 'false'}
-            className={cn(
-              'text-left w-[70vw] max-w-md transition-opacity duration-1000',
-              quoteVisible ? 'opacity-100' : 'opacity-0',
-            )}
-          >
+        <div
+          ref={quoteRef}
+          data-testid="hero-mobile-quote"
+          data-visible={quoteVisible ? 'true' : 'false'}
+          className={cn(
+            'self-start text-left w-[70vw] max-w-md mt-2 transition-opacity duration-1000',
+            quoteVisible ? 'opacity-100' : 'opacity-0',
+          )}
+        >
           <p className="quote-text italic text-[15px] leading-relaxed">
             "He leads me beside still waters.
           </p>
@@ -175,19 +170,6 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
             />
             Psalm 23:2-3
           </p>
-          </div>
-          {/* Wrapper owns the positioning: HeroNotepadLink's root carries its
-              own `position: relative` (from TextStaggerHover), so an `absolute`
-              class on the link itself is overridden. The negative right offset
-              pulls it past the column's px-5 padding to sit near the screen
-              edge, level with the "Psalm 23:2-3" attribution. */}
-          <div className="absolute bottom-0 -right-3">
-            <HeroNotepadLink
-              onNavTrigger={onNavTrigger}
-              label="Notepad"
-              animateArrow
-            />
-          </div>
         </div>
         <div
           data-testid="hero-mobile-video-mask"
@@ -207,6 +189,18 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
             className="w-full h-full object-cover"
           />
         </div>
+        {/* Primary CTA into the journaling space — the app's pill button,
+            centered directly under the video mask. Fires the same loading-veil
+            nav-trigger as the rest of the hero before routing to the editor. */}
+        <Link
+          to="/notepad/notes"
+          aria-label="Open your Notepad"
+          data-testid="hero-mobile-notepad-cta"
+          className="two-path-cta two-path-cta-notepad"
+          onClick={() => onNavTrigger?.()}
+        >
+          <span className="two-path-cta-label">Open your Notepad</span>
+        </Link>
         {prefersReducedMotion ? (
           <section
             ref={bridgeRef}
