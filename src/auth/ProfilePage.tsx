@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { LamplightSettingsSection } from './components/LamplightSettingsSection';
+import { ApplePersonalTokensSection } from './components/ApplePersonalTokensSection';
 import { UsernameSection } from './components/UsernameSection';
 import { AdminEntryLink } from './components/AdminEntryLink';
 import { SecuritySection } from './components/SecuritySection';
@@ -333,6 +334,11 @@ export function ProfilePage() {
         {/* Lamplight */}
         {user && lamplightAdapter && (
           <LamplightSettingsSection adapter={lamplightAdapter} userId={user.id} />
+        )}
+
+        {/* Connect Apple Notes */}
+        {user && supabaseClient && (
+          <ApplePersonalTokensSection client={supabaseClient} userId={user.id} />
         )}
 
         {/* Account Actions */}
