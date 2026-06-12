@@ -1,9 +1,14 @@
 // src/notepad/bible/BibleReader.tsx
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, CornerDownLeft, Search } from 'lucide-react';
 import { bookByAbbrev, type BibleBook } from './bible-books';
 import { searchBooks } from './book-search';
 import { useBiblePassages } from './useBiblePassages';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { STYLE_ASSETS, getStyleAsset } from '../styles/manifest';
+import { highlightBackgroundStyle } from '../extensions/style-highlight';
+import { HighlightSwatchPopover } from '../components/HighlightSwatchPopover';
+import { HighlightPill } from '../components/HighlightPill';
 
 export interface PassageRef {
   book: string;
@@ -21,6 +26,12 @@ export interface BibleReaderProps {
   onPassageChange?: (ref: PassageRef) => void;
   /** Fires when the user taps a verse (chat focus in Phase 2). */
   onSelectVerse?: (ref: VerseRef) => void;
+  /** verse number -> swatchId for the current chapter. */
+  highlightSwatchByVerse?: Record<number, string>;
+  /** Persist (or recolor) a verse highlight. */
+  onSetHighlight?: (verse: number, swatchId: string) => void;
+  /** Remove a verse highlight. */
+  onRemoveHighlight?: (verse: number) => void;
 }
 
 export function BibleReader({
@@ -28,10 +39,20 @@ export function BibleReader({
   initialChapter = 1,
   onPassageChange,
   onSelectVerse,
+  highlightSwatchByVerse = {},
+  onSetHighlight,
+  onRemoveHighlight,
 }: BibleReaderProps) {
   const [book, setBook] = useState(initialBook);
   const [chapter, setChapter] = useState(initialChapter);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+
+  const isMobile = useIsMobile();
+  // The verse whose swatch picker is open (null = closed).
+  const [pickerVerse, setPickerVerse] = useState<number | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const highlightingEnabled = !!onSetHighlight;
 
   const [navOpen, setNavOpen] = useState(false);
   const [navBook, setNavBook] = useState<BibleBook | null>(null);
@@ -53,6 +74,11 @@ export function BibleReader({
 
   const openNav = () => { setNavOpen((o) => !o); setNavBook(null); setQuery(''); };
 
+  const closePicker = useCallback(() => {
+    setPickerVerse(null);
+    setPickerAnchor(null);
+  }, []);
+
   const jumpTo = (abbrev: string, ch: number, verse: number | null = null) => {
     setBook(abbrev);
     setChapter(ch);
@@ -61,6 +87,8 @@ export function BibleReader({
     setNavOpen(false);
     setNavBook(null);
     setQuery('');
+    setPickerVerse(null);
+    setPickerAnchor(null);
   };
 
   const meta = bookByAbbrev(book);
@@ -85,17 +113,31 @@ export function BibleReader({
     if (chapter > 1) {
       setChapter((c) => c - 1);
       setSelectedVerse(null);
+      setPickerVerse(null);
+      setPickerAnchor(null);
     }
   };
   const goNext = () => {
     if (meta && chapter < meta.chapterCount) {
       setChapter((c) => c + 1);
       setSelectedVerse(null);
+      setPickerVerse(null);
+      setPickerAnchor(null);
     }
   };
   const selectVerse = (verse: number) => {
     setSelectedVerse(verse);
     onSelectVerse?.({ book, chapter, verse });
+    if (highlightingEnabled) {
+      const rect = document.getElementById(`bible-verse-${verse}`)?.getBoundingClientRect();
+      if (rect) {
+        // Clamp left so a wide popover/pill stays on-screen.
+        const left = Math.min(rect.left, window.innerWidth - 210);
+        setPickerAnchor({ top: rect.bottom + 6, left: Math.max(8, left) });
+        setPickerVerse(verse);
+        setPickerQuery('');
+      }
+    }
   };
 
   const label = `${meta?.name ?? book} ${chapter}`;
@@ -253,23 +295,56 @@ export function BibleReader({
         )}
         {!loading && !error && verses.length > 0 && (
           <p className="text-[13px] leading-[1.9]" style={{ color: 'var(--deep-umber)' }}>
-            {verses.map((v) => (
-              <span
-                key={v.verse}
-                id={`bible-verse-${v.verse}`}
-                onClick={() => selectVerse(v.verse)}
-                className="cursor-pointer"
-                style={{
-                  background: selectedVerse === v.verse ? 'rgba(196,154,120,0.22)' : 'transparent',
-                  borderRadius: 3,
-                  padding: '0 2px',
-                }}
-              >
-                <sup className="text-[9px] font-bold mr-1" style={{ color: '#C49A78' }}>{v.verse}</sup>
-                {v.text}{' '}
-              </span>
-            ))}
+            {verses.map((v) => {
+              const swatchId = highlightSwatchByVerse[v.verse];
+              const asset = swatchId ? getStyleAsset(swatchId) : undefined;
+              const highlightStyle = asset ? highlightBackgroundStyle(asset.displayUrl) : '';
+              return (
+                <span
+                  key={v.verse}
+                  id={`bible-verse-${v.verse}`}
+                  onClick={() => selectVerse(v.verse)}
+                  className="cursor-pointer"
+                  // A persisted swatch wins; otherwise show the transient tap tint.
+                  style={
+                    asset
+                      ? cssTextToStyle(highlightStyle)
+                      : {
+                          background:
+                            selectedVerse === v.verse ? 'rgba(196,154,120,0.22)' : 'transparent',
+                          borderRadius: 3,
+                          padding: '0 2px',
+                        }
+                  }
+                >
+                  <sup className="text-[9px] font-bold mr-1" style={{ color: '#C49A78' }}>{v.verse}</sup>
+                  {v.text}{' '}
+                </span>
+              );
+            })}
           </p>
+        )}
+        {highlightingEnabled && pickerVerse != null && pickerAnchor && (
+          isMobile ? (
+            <HighlightPill
+              assets={STYLE_ASSETS}
+              anchor={{ top: pickerAnchor.top, left: pickerAnchor.left }}
+              onPick={(swatchId) => { onSetHighlight?.(pickerVerse, swatchId); closePicker(); }}
+              onRemove={() => { onRemoveHighlight?.(pickerVerse); closePicker(); }}
+              onClose={closePicker}
+            />
+          ) : (
+            <HighlightSwatchPopover
+              assets={STYLE_ASSETS}
+              query={pickerQuery}
+              onQueryChange={setPickerQuery}
+              anchor={pickerAnchor}
+              autoFocus
+              onPick={(swatchId) => { onSetHighlight?.(pickerVerse, swatchId); closePicker(); }}
+              onRemove={() => { onRemoveHighlight?.(pickerVerse); closePicker(); }}
+              onClose={closePicker}
+            />
+          )
         )}
       </div>
     </div>
@@ -296,4 +371,20 @@ function NavSection({ title, books, onPick }: { title: string; books: readonly B
       </div>
     </div>
   );
+}
+
+// Convert a "prop:value;prop:value;" CSS string into a React style object.
+function cssTextToStyle(cssText: string): Record<string, string> {
+  const style: Record<string, string> = {};
+  for (const decl of cssText.split(';')) {
+    const idx = decl.indexOf(':');
+    if (idx === -1) continue;
+    const prop = decl.slice(0, idx).trim();
+    const value = decl.slice(idx + 1).trim();
+    if (!prop) continue;
+    // camelCase the CSS property (e.g. background-image -> backgroundImage).
+    const camel = prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    style[camel] = value;
+  }
+  return style;
 }
