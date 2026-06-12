@@ -23,6 +23,9 @@ import { supabase } from '@/lib/supabase';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileNotepadWorkspace } from './notepad/mobile/MobileNotepadWorkspace';
 import { loadEnum, saveEnum, KEY_EDITOR_TAB } from '@/notepad/session/session-storage';
+import { OnboardingProvider } from '@/notepad/onboarding/OnboardingProvider';
+import { OnboardingSurfaces } from '@/notepad/onboarding/OnboardingSurfaces';
+import { buildGuidedNote } from '@/notepad/onboarding/guided-note/guided-note-template';
 
 function DesktopNotepadWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -287,9 +290,41 @@ function DesktopNotepadWorkspace() {
   );
 }
 
+/**
+ * Renders the onboarding overlay (tour / checklist / guided-note offer) above
+ * the workspace. Lives inside NotepadProvider so it can create the guided note
+ * through the existing NoteCollection API. Mounted as a fixed overlay so it
+ * never disturbs the existing workspace layout.
+ */
+function NotepadOnboardingOverlay() {
+  const { collection } = useNoteCollection();
+
+  const createGuidedNote = useCallback(async () => {
+    try {
+      const note = await collection.createNote('root', 'devotion');
+      const { title, content } = buildGuidedNote();
+      await collection.updateNote(note.id, { title, content });
+      collection.openNote(note.id);
+    } catch (err) {
+      console.warn('[Notepad] createGuidedNote failed:', err);
+    }
+  }, [collection]);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-3 pointer-events-none [&>*]:pointer-events-auto">
+      <OnboardingSurfaces onStartGuidedNote={createGuidedNote} />
+    </div>
+  );
+}
+
 function NotepadWorkspace() {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileNotepadWorkspace /> : <DesktopNotepadWorkspace />;
+  return (
+    <OnboardingProvider>
+      {isMobile ? <MobileNotepadWorkspace /> : <DesktopNotepadWorkspace />}
+      <NotepadOnboardingOverlay />
+    </OnboardingProvider>
+  );
 }
 
 export function Notepad() {
