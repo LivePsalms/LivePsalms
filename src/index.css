@@ -171,12 +171,20 @@
   text-decoration-color: currentColor;
 }
 
+.hero-notepad-link {
+  border-radius: 2px;
+}
+
+.hero-notepad-link:focus-visible {
+  outline: 2px solid var(--deep-umber);
+  outline-offset: 4px;
+}
+
 .hero-notepad-link .hero-notepad-arrow {
   margin-left: 0.5ch;
   font-size: 0.85em;
   opacity: 0.7;
   transition: transform 300ms ease, opacity 300ms ease;
-  will-change: transform;
 }
 
 .hero-notepad-link:hover .hero-notepad-arrow,

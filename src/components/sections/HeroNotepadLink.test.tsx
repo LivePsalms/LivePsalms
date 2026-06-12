@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { heroNotepadLinkOpacity } from './HeroNotepadLink';
+import { heroNotepadLinkOpacity, HeroNotepadLink } from './HeroNotepadLink';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, vi } from 'vitest';
-import { HeroNotepadLink } from './HeroNotepadLink';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
