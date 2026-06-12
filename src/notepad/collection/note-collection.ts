@@ -1,4 +1,5 @@
 import { Observable } from './observable';
+import { loadLastNoteId, saveLastNoteId } from '../session/session-storage';
 import type { StorageAdapter } from '../storage/adapter';
 import type { Note, NoteType } from '../types';
 
@@ -24,10 +25,17 @@ export class NoteCollection extends Observable<NoteCollectionState> {
 
   async init(): Promise<void> {
     const notes = await this.adapter.getNotes();
-    this.update((prev) => ({ ...prev, notes }));
+    // Restore the last-open note only if it's present in the loaded set. The
+    // signed-in (Supabase) and signed-out (local) id spaces never collide, so a
+    // stored id from the other scope simply won't be found and we fall back to null.
+    const restoredId = loadLastNoteId();
+    const activeNoteId =
+      restoredId && notes.some((n) => n.id === restoredId) ? restoredId : null;
+    this.update((prev) => ({ ...prev, notes, activeNoteId }));
   }
 
   openNote = (id: string | null): void => {
+    saveLastNoteId(id);
     this.update((prev) => ({ ...prev, activeNoteId: id }));
   };
 
@@ -40,6 +48,7 @@ export class NoteCollection extends Observable<NoteCollectionState> {
       tags: [],
       wordCount: 0,
     });
+    saveLastNoteId(created.id);
     this.update((prev) => ({
       ...prev,
       notes: [...prev.notes, created],
@@ -59,6 +68,7 @@ export class NoteCollection extends Observable<NoteCollectionState> {
 
   deleteNote = async (id: string): Promise<void> => {
     await this.adapter.deleteNote(id);
+    if (this.getSnapshot().activeNoteId === id) saveLastNoteId(null);
     this.update((prev) => ({
       ...prev,
       notes: prev.notes.filter((n) => n.id !== id),

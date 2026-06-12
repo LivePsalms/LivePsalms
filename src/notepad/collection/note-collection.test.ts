@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { NoteCollection } from './note-collection';
 import { FakeStorageAdapter, resetFakeAdapterIds } from './fake-storage-adapter';
+import { loadLastNoteId, saveLastNoteId } from '../session/session-storage';
 
 function seedNote(adapter: FakeStorageAdapter, overrides: Partial<{ id: string; title: string; folderId: string }> = {}) {
   const id = overrides.id ?? `id-seed-${adapter.notes.length}`;
@@ -212,6 +214,64 @@ describe('NoteCollection — sugar & bulk', () => {
     collection.rebindAdapter(next);
     await collection.init();
     expect(collection.getSnapshot().notes.map((n) => n.id)).toEqual(['fresh']);
+  });
+});
+
+describe('NoteCollection — session restore', () => {
+  let adapter: FakeStorageAdapter;
+  let collection: NoteCollection;
+
+  beforeEach(() => {
+    resetFakeAdapterIds();
+    adapter = new FakeStorageAdapter();
+    collection = new NoteCollection(adapter);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('persists the id when a note is opened', () => {
+    seedNote(adapter, { id: 'a' });
+    seedNote(adapter, { id: 'b' });
+    collection.openNote('b');
+    expect(loadLastNoteId()).toBe('b');
+  });
+
+  it('persists the id when a note is created', async () => {
+    await collection.init();
+    const created = await collection.createNote('root', 'devotion');
+    expect(loadLastNoteId()).toBe(created.id);
+  });
+
+  it('restores the persisted note on init when it still exists', async () => {
+    seedNote(adapter, { id: 'a' });
+    seedNote(adapter, { id: 'b' });
+    saveLastNoteId('b');
+    await collection.init();
+    expect(collection.getSnapshot().activeNoteId).toBe('b');
+  });
+
+  it('does not restore a persisted note that no longer exists', async () => {
+    seedNote(adapter, { id: 'a' });
+    saveLastNoteId('gone');
+    await collection.init();
+    expect(collection.getSnapshot().activeNoteId).toBeNull();
+  });
+
+  it('clears the persisted id when the open note is deleted', async () => {
+    seedNote(adapter, { id: 'a' });
+    await collection.init();
+    collection.openNote('a');
+    await collection.deleteNote('a');
+    expect(loadLastNoteId()).toBeNull();
+  });
+
+  it('keeps the persisted id when a different note is deleted', async () => {
+    seedNote(adapter, { id: 'a' });
+    seedNote(adapter, { id: 'b' });
+    await collection.init();
+    collection.openNote('a');
+    await collection.deleteNote('b');
+    expect(loadLastNoteId()).toBe('a');
   });
 });
 
