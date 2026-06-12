@@ -45,15 +45,16 @@ export function MobileNotepadWorkspace() {
   const [newTypeOpen, setNewTypeOpen] = useState(false);
   const [scan, setScan] = useState<ScanStage>(null);
 
-  // Persist the active tab so a refresh lands the user back on it. If 'editor'
-  // was restored but no note became active, drop back to the notes list.
+  // While 'editor' is the stored tab but no note is active yet (notes still
+  // loading, or the note no longer exists), render the notes list instead of an
+  // empty editor. Deriving this avoids a setState-in-effect and the mount-time
+  // race where the restored note loads after the tab guard would have run.
+  const effectiveTab: MobileTab = tab === 'editor' && !model.activeNote ? 'notes' : tab;
+
+  // Persist the active tab so a refresh lands the user back on it.
   useEffect(() => {
-    if (tab === 'editor' && !model.activeNote) {
-      setTab('notes');
-      return;
-    }
-    saveEnum(KEY_MOBILE_TAB, tab);
-  }, [tab, model.activeNote]);
+    saveEnum(KEY_MOBILE_TAB, effectiveTab);
+  }, [effectiveTab]);
 
   const openAccount = useCallback(() => {
     if (model.user) {
@@ -157,7 +158,7 @@ export function MobileNotepadWorkspace() {
       )}
 
       <div className="flex-1 min-h-0 relative">
-        {tab === 'notes' && (
+        {effectiveTab === 'notes' && (
           <MobileNotesView
             onExit={() => navigate('/')}
             onOpenSearch={openSearch}
@@ -169,7 +170,7 @@ export function MobileNotepadWorkspace() {
             avatarUrl={profile?.avatarUrl ?? null}
           />
         )}
-        {tab === 'editor' && (
+        {effectiveTab === 'editor' && (
           <MobileEditorView
             onExit={() => navigate('/')}
             onAfterSave={model.onAfterSave}
@@ -179,7 +180,7 @@ export function MobileNotepadWorkspace() {
             onNewNote={handleNewNote}
           />
         )}
-        {tab === 'lamplight' && model.lamplightAdapter && (
+        {effectiveTab === 'lamplight' && model.lamplightAdapter && (
           <LamplightMobileView
             lamplightAdapter={model.lamplightAdapter}
             userId={model.user?.id ?? null}
@@ -189,7 +190,7 @@ export function MobileNotepadWorkspace() {
             onOpenNote={handleOpenNote}
           />
         )}
-        {tab === 'lamplight' && !model.lamplightAdapter && (
+        {effectiveTab === 'lamplight' && !model.lamplightAdapter && (
           <div
             className="flex items-center justify-center h-full text-xs"
             style={{ color: 'var(--silica)', fontFamily: 'Outfit, sans-serif' }}
@@ -199,7 +200,7 @@ export function MobileNotepadWorkspace() {
         )}
       </div>
 
-      <MobileTabBar active={tab} onSelect={handleSelectTab} lamplightHasConnections={hasConnections} />
+      <MobileTabBar active={effectiveTab} onSelect={handleSelectTab} lamplightHasConnections={hasConnections} />
 
       <MobileMoreSheet
         open={moreOpen}
