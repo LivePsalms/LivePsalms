@@ -10,6 +10,7 @@ import { PaywallCard } from '@/notepad/components/lamplight/PaywallCard';
 import { LamplightChat } from '@/notepad/components/lamplight/chat/LamplightChat';
 import type { InvokeFn } from './lamplight-chat-client';
 import { BibleReader, type PassageRef } from './BibleReader';
+import { useBibleHighlights } from './highlights/useBibleHighlights';
 import { bookByAbbrev } from './bible-books';
 import { SplitResizeHandle } from './SplitResizeHandle';
 import { useDragResize } from './useDragResize';
@@ -49,6 +50,11 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
       return ref;
     });
   }, []);
+
+  const { swatchByVerse, setHighlight, removeHighlight } = useBibleHighlights(
+    passage.book,
+    passage.chapter,
+  );
 
   // Hooks are always called (Rules of Hooks); they no-op on a null adapter/user.
   const settings = useLamplightSettings({ adapter: lamplightAdapter as LamplightAdapter, userId: lamplightAdapter ? userId : null });
@@ -115,6 +121,9 @@ export function BibleStudyPane({ lamplightAdapter, invoke }: BibleStudyPaneProps
             initialBook={passage.book}
             initialChapter={passage.chapter}
             onPassageChange={handlePassageChange}
+            highlightSwatchByVerse={swatchByVerse}
+            onSetHighlight={setHighlight}
+            onRemoveHighlight={removeHighlight}
           />
         </div>
         {chatOpen && (
