@@ -123,6 +123,26 @@ export function NotepadEditor({
     return true;
   };
 
+  // Mobile has no double-click event and no alt key, so a behind-text decoration
+  // (which is covered by the text layer and unreachable via its own island) can
+  // never be re-selected to move/rotate/resize. Detect a DOUBLE-TAP from two
+  // close, quick taps and route it through selectBehindDecoration. e.timeStamp is
+  // monotonic; gated to mobile so desktop's dblclick/alt paths stay untouched.
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const DOUBLE_TAP_MS = 300;
+  const DOUBLE_TAP_PX = 24;
+  const isDoubleTap = (e: React.MouseEvent): boolean => {
+    const prev = lastTapRef.current;
+    const isDbl =
+      prev != null &&
+      e.timeStamp - prev.t <= DOUBLE_TAP_MS &&
+      Math.abs(e.clientX - prev.x) <= DOUBLE_TAP_PX &&
+      Math.abs(e.clientY - prev.y) <= DOUBLE_TAP_PX;
+    if (isDbl) return true;
+    lastTapRef.current = { t: e.timeStamp, x: e.clientX, y: e.clientY };
+    return false;
+  };
+
   const [swatchAnchor, setSwatchAnchor] = useState<{ top: number; left: number } | null>(null);
   const [swatchQuery, setSwatchQuery] = useState('');
   const [swatchDismissed, setSwatchDismissed] = useState(false);
@@ -586,6 +606,16 @@ export function NotepadEditor({
               // Alt-click over a behind-text decoration selects it (it lives below
               // the text, so the click reaches here) without disturbing the text.
               if (e.altKey && selectBehindDecoration(e)) return;
+              // Mobile: a double-tap over a behind-text decoration re-selects it
+              // (no dblclick/alt available). On a hit, short-circuit before the
+              // deselect below; otherwise record the tap and fall through to the
+              // normal single-tap flow (cursor placement, deselect, tooltip).
+              if (isBottomToolbar && isDoubleTap(e)) {
+                if (selectBehindDecoration(e)) {
+                  lastTapRef.current = null;
+                  return;
+                }
+              }
               handleClick(e);
               // The decoration overlay is pointerEvents:none over empty space, so
               // clicks on the editor fall through to here — deselect any decoration.
