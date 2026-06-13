@@ -54,7 +54,8 @@ export function HeroNotepadLink({
       data-testid="hero-notepad-link"
       className={[
         'psalms-nav-link hero-notepad-link',
-        'text-base md:text-lg font-bold tracking-wide',
+        // Mobile (base) is intentionally larger than desktop here; desktop keeps md:text-lg.
+        'text-xl md:text-lg font-bold tracking-wide',
         className,
       ]
         .filter(Boolean)
