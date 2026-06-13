@@ -33,9 +33,17 @@ export interface HeroNotepadLinkProps {
   style?: CSSProperties;
   /** Visible link text. Defaults to the full phrase; mobile passes "Open your Notepad". */
   label?: string;
+  /** When true, the arrow gently slides left↔right to invite a tap (mobile). */
+  animateArrow?: boolean;
 }
 
-export function HeroNotepadLink({ onNavTrigger, className, style, label = LINK_LABEL }: HeroNotepadLinkProps) {
+export function HeroNotepadLink({
+  onNavTrigger,
+  className,
+  style,
+  label = LINK_LABEL,
+  animateArrow = false,
+}: HeroNotepadLinkProps) {
   const navigate = useNavigate();
 
   return (
@@ -70,7 +78,7 @@ export function HeroNotepadLink({ onNavTrigger, className, style, label = LINK_L
       <span
         data-testid="hero-notepad-arrow"
         aria-hidden="true"
-        className="hero-notepad-arrow inline-block"
+        className={`hero-notepad-arrow inline-block${animateArrow ? ' hero-notepad-arrow--bob' : ''}`}
       >
         →
       </span>

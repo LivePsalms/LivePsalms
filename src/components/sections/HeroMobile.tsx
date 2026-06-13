@@ -192,7 +192,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
         {/* Primary CTA into the journaling space — the hero text link with arrow
             (no pill), centered directly under the video mask. Fires the same
             loading-veil nav-trigger as the rest of the hero. */}
-        <HeroNotepadLink onNavTrigger={onNavTrigger} label="Open your Notepad" />
+        <HeroNotepadLink onNavTrigger={onNavTrigger} label="Open your Notepad" animateArrow />
         {prefersReducedMotion ? (
           <section
             ref={bridgeRef}

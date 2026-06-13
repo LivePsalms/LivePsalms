@@ -320,7 +320,10 @@ describe('HeroMobile content', () => {
     // No pill chrome — it's the hero text link with an arrow.
     expect(cta.className).not.toContain('two-path-cta-notepad');
     expect(cta).toHaveTextContent('Open your Notepad');
-    expect(cta.querySelector('[data-testid="hero-notepad-arrow"]')).not.toBeNull();
+    const arrow = cta.querySelector('[data-testid="hero-notepad-arrow"]');
+    expect(arrow).not.toBeNull();
+    // Arrow carries the subtle left↔right nudge animation on mobile.
+    expect(arrow?.className).toContain('hero-notepad-arrow--bob');
   });
 
   it('quote container is sized to w-[70vw]', async () => {

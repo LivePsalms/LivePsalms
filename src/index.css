@@ -193,6 +193,21 @@
   opacity: 1;
 }
 
+/* Subtle continuous left↔right nudge on the arrow, inviting a tap (mobile). */
+@keyframes hero-notepad-arrow-bob {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+.hero-notepad-arrow--bob {
+  animation: hero-notepad-arrow-bob 1.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-notepad-link .hero-notepad-arrow {
     transition: none;
@@ -200,6 +215,9 @@
   .hero-notepad-link:hover .hero-notepad-arrow,
   .hero-notepad-link:focus-visible .hero-notepad-arrow {
     transform: none;
+  }
+  .hero-notepad-arrow--bob {
+    animation: none;
   }
 }
 
