@@ -73,7 +73,7 @@ function RestorationCTA({ purposeWord, overlayColor, variant = 'desktop' }: Rest
         </p>
         <Link
           to="/notepad/notes"
-          className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-white/30 bg-white/5 text-sm text-white/95 tracking-wide hover:bg-white/10 hover:border-white/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 mt-2"
+          className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-white/30 bg-white/5 text-base text-white/95 tracking-wide hover:bg-white/10 hover:border-white/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 mt-2"
         >
           Open your notepad
           <span
@@ -90,7 +90,7 @@ function RestorationCTA({ purposeWord, overlayColor, variant = 'desktop' }: Rest
               type="button"
               className="underline underline-offset-4 decoration-white/30 text-white/70 hover:text-white hover:decoration-white/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm"
             >
-              join the newsletter
+              join our newsletter
             </button>
           </NewsletterDialog>
         </p>
