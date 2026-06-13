@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useNoteCollection } from '../context/useNoteCollection';
 import { useFolderHierarchy } from '../context/useFolderHierarchy';
-import { VERSE_REGEX } from '../extensions/bible-verse-utils';
+import { useReferenceGraph } from '../context/useReferenceGraph';
+import { buildNoteStats } from '../graph/note-stats';
 import { extractTextFromNote } from '../utils/tiptap-text';
 
 // ---------------------------------------------------------------------------
@@ -12,12 +13,6 @@ function countWords(text: string): number {
   const trimmed = text.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
-}
-
-function countVerses(text: string): number {
-  const regex = new RegExp(VERSE_REGEX.source, 'g');
-  const matches = text.match(regex);
-  return matches ? matches.length : 0;
 }
 
 function formatDate(iso: string): string {
@@ -34,20 +29,20 @@ function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 export function InfoPanel() {
-  const { notes, activeNote } = useNoteCollection();
+  const { activeNote } = useNoteCollection();
   const { folders } = useFolderHierarchy();
+  const { references } = useReferenceGraph();
 
   const stats = useMemo(() => {
     if (!activeNote) return null;
 
     const plainText = extractTextFromNote(activeNote);
-
     const wordCount = countWords(plainText);
-    const verseCount = countVerses(plainText);
-    const outgoingLinks = (activeNote.content.match(/"noteLink"/g) ?? []).length;
-    const incomingBacklinks = notes.filter(
-      (n) => n.id !== activeNote.id && n.content.includes(activeNote.title),
-    ).length;
+
+    const { backlinkCount, outgoingLinkCount, verseCount } = buildNoteStats(
+      activeNote.id,
+      references,
+    );
 
     const folder = folders.find((f) => f.id === activeNote.folderId);
     const folderName = folder?.name ?? '—';
@@ -62,14 +57,14 @@ export function InfoPanel() {
     return {
       wordCount,
       verseCount,
-      outgoingLinks,
-      incomingBacklinks,
+      outgoingLinkCount,
+      backlinkCount,
       folderName,
       noteType,
       created: formatDate(activeNote.createdAt),
       updated: formatDate(activeNote.updatedAt),
     };
-  }, [activeNote, notes, folders]);
+  }, [activeNote, references, folders]);
 
   if (!activeNote || !stats) {
     return (
@@ -82,8 +77,8 @@ export function InfoPanel() {
     { label: 'Folder', value: stats.folderName },
     { label: 'Words', value: stats.wordCount },
     { label: 'Bible References', value: stats.verseCount },
-    { label: 'Outgoing Links', value: stats.outgoingLinks },
-    { label: 'Incoming Links', value: stats.incomingBacklinks },
+    { label: 'Outgoing Links', value: stats.outgoingLinkCount },
+    { label: 'Incoming Links', value: stats.backlinkCount },
     { label: 'Created', value: stats.created },
     { label: 'Last Updated', value: stats.updated },
   ];

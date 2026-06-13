@@ -254,6 +254,22 @@ The pure function that turns `(Note[], Reference[], ScriptureNode[])` into `{ no
 
 Lives next to `reference-graph.ts` because the rules are about References, not layout. The previous `useGraph` hook collapses to a thin `useMemo` around this function, or is dropped entirely if the shell prefers to project inline.
 
+## NoteStats
+
+The pure function that derives one Note's connection counts from `Reference[]`, for `InfoPanel`. Surfaced as `buildNoteStats(noteId, references): NoteStats` returning `{ backlinkCount, outgoingLinkCount, verseCount }`. Lives next to `project-graph.ts` because the rules are about References, not the panel.
+
+- `backlinkCount` — distinct Notes with an inbound `explicit` Reference targeting this Note (the §Backlink definition; replaces the rejected title-substring heuristic that had survived inline in `InfoPanel`).
+- `outgoingLinkCount` — distinct Notes this Note explicitly links to.
+- `verseCount` — distinct scripture passages this Note references (`scripture-reference` References). Counts canonical passages, not text occurrences: "John 3:16" written five times, or once as "Jn 3:16", is one.
+
+Load-bearing invariants:
+
+- **Distinctness is inherited, not re-derived.** `parseReferences` dedupes per `(type, target)` before edges enter the graph, so each qualifying Reference row counts once. `buildNoteStats` counts rows; uniqueness is the parser's documented contract.
+- **Self-references (`source === target`) are excluded** from every count — a Note is not its own Backlink.
+- **Trusts the graph on referential integrity.** Does not take `notes[]` to verify a backlink's source Note still exists; `deleteReferencesFor` owns that invariant.
+
+Scoped deliberately to graph-derived counts so it doesn't drift into "all note metadata." Does **not** own: word count (§tiptap-text), folder name, type labels, or date formatting — those are view concerns that stay in `InfoPanel`.
+
 ## GraphView
 
 The deepened module that owns the d3-force simulation, canvas rendering, and pointer interaction for the knowledge graph. Surfaced as a `GraphView` class extending `Observable<GraphViewState>`, instantiated by `GraphPane` and attached to a canvas element. `GraphPane` becomes the view shell: controls panel, canvas + popover-overlay markup, and `useEffect`-bound forwarders to `view.setData`, `view.setMode`, `view.setFilters`, `view.setSettings`.
