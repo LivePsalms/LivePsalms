@@ -146,7 +146,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
     >
       {/* Hidden SVG defs for the mask clip-path */}
       <HeroMaskClipDef />
-      <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
+      <div className="relative w-full flex flex-col items-center justify-center pt-6 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
         <div
           ref={quoteRef}

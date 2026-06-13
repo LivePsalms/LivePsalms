@@ -262,7 +262,7 @@ describe('HeroMobile content', () => {
     expect(video?.className).not.toContain('aspect-video');
   });
 
-  it('outer column wrapper uses the breathing-room spacing (pt-20 pb-16 px-5 gap-10)', async () => {
+  it('outer column wrapper uses the breathing-room spacing (pt-6 pb-16 px-5 gap-10)', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     setMatchMedia({ mobile: true });
     vi.resetModules();
@@ -272,7 +272,9 @@ describe('HeroMobile content', () => {
     // The column wrapper is the first child div inside the root.
     const column = root.querySelector<HTMLDivElement>(':scope > div.flex.flex-col');
     expect(column).not.toBeNull();
-    expect(column?.className).toContain('pt-20');
+    // Reduced top padding (pt-6, was pt-20) lifts the whole stack up so the
+    // Notepad pill clears the floating bottom dock; inter-element gap-10 is kept.
+    expect(column?.className).toContain('pt-6');
     expect(column?.className).toContain('pb-16');
     expect(column?.className).toContain('px-5');
     expect(column?.className).toContain('gap-10');
