@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BEATS } from './mid-section-motion-content';
-import {
-  mountCurlLinesScene,
-  type CurlLinesIntensity,
-} from './mid-section-webgpu-scene';
+// Type-only import — erased at build, so it does NOT pull `three/webgpu` into
+// this chunk. The scene module (and three) is loaded lazily via dynamic
+// import() inside the mount effect below, only when renderMode === 'webgpu'.
+import type { CurlLinesIntensity } from './mid-section-webgpu-scene';
 import { computeIntensityState } from './mid-section-intensity';
 import { applyKeyframes } from './motion-keyframes';
 import { buildMidSectionBeatKeyframes } from './mid-section-beat-keyframes';
@@ -38,7 +38,11 @@ export function MidSectionMotion() {
     let disposed = false;
     let mountedHandle: { dispose: () => void } | null = null;
 
-    mountCurlLinesScene(canvas)
+    // Lazy-load the WebGPU scene (and three) only now that we know this browser
+    // is in webgpu render mode. Keeps three/webgpu out of the homepage's main
+    // bundle for every non-WebGPU visitor.
+    import('./mid-section-webgpu-scene')
+      .then(({ mountCurlLinesScene }) => mountCurlLinesScene(canvas))
       .then((handle) => {
         if (disposed) {
           handle.dispose();
@@ -49,8 +53,9 @@ export function MidSectionMotion() {
         setIntensityReady(true);
       })
       .catch((err) => {
-        // navigator.gpu existed but mount failed (requestAdapter returned null,
-        // or the renderer init threw). Escalate to MP4 fallback.
+        // navigator.gpu existed but the chunk failed to load, or mount failed
+        // (requestAdapter returned null, or the renderer init threw). Escalate
+        // to MP4 fallback.
         console.warn('[MidSectionMotion] WebGPU init failed, falling back to video', err);
         if (!disposed) setRenderMode('video');
       });

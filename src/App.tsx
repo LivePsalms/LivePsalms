@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { decideHeroIntro, persistIntroPlayed } from '@/components/sections/hero-intro-gate';
 import { Header } from '@/components/layout/Header';
@@ -10,14 +10,6 @@ import { MidSectionMotion } from '@/components/sections/MidSectionMotion';
 import { TwoPathInterlude } from '@/components/sections/TwoPathInterlude';
 import { PurposeGrid } from '@/components/sections/PurposeGrid';
 import { FinalReflectionCta } from '@/components/sections/FinalReflectionCta';
-import { PurposeStack } from '@/components/sections/PurposeStack';
-import { PurposeDetail } from '@/components/sections/PurposeDetail';
-import { NotepadLanding } from '@/notepad-landing';
-import { LegacyNotepadRoute, VanityNotepadRoute } from '@/auth/username/NotepadRoutes';
-import { CommunityComingSoon } from '@/components/sections/CommunityComingSoon';
-import { Contact } from '@/components/sections/Contact';
-import { PrivacyPolicy } from '@/components/sections/PrivacyPolicy';
-import { Terms } from '@/components/sections/Terms';
 import { WaterRipple } from '@/components/ui-custom/WaterRipple';
 import { SplitTransition } from '@/components/ui-custom/SplitTransition';
 import type { TransitionPhase } from '@/components/ui-custom/SplitTransition';
@@ -29,14 +21,58 @@ import { cn } from '@/lib/utils';
 import { useProjectColors } from '@/hooks/useProjectColors';
 import type { Project } from '@/types';
 import { AuthProvider } from '@/auth/context/AuthProvider';
-import { LoginPage } from '@/auth/LoginPage';
-import { ProfilePage } from '@/auth/ProfilePage';
-import { UpdatePasswordPage } from '@/auth/UpdatePasswordPage';
-import { WelcomePage } from '@/auth/WelcomePage';
-import { AdminLamplightPage } from '@/admin/AdminLamplightPage';
 import { useRouteTransition } from '@/transitions/useRouteTransition';
 import { RouteTransitionProvider } from '@/transitions/RouteTransitionContext';
 import './App.css';
+
+// ── Route-level code splitting ───────────────────────────────────────────────
+// Only the homepage (Hero / MidSection / TwoPath / PurposeGrid) and the app
+// shell (Header / Footer / dock / transitions) load eagerly — they're the LCP
+// path. Every other route is split into its own chunk, so a visitor landing on
+// `/` never downloads the notepad editor (tiptap), the admin charts (recharts),
+// the auth pages, or the purpose deep-dives until they actually navigate there.
+const NotepadLanding = lazy(() =>
+  import('@/notepad-landing').then((m) => ({ default: m.NotepadLanding })),
+);
+const LegacyNotepadRoute = lazy(() =>
+  import('@/auth/username/NotepadRoutes').then((m) => ({ default: m.LegacyNotepadRoute })),
+);
+const VanityNotepadRoute = lazy(() =>
+  import('@/auth/username/NotepadRoutes').then((m) => ({ default: m.VanityNotepadRoute })),
+);
+const CommunityComingSoon = lazy(() =>
+  import('@/components/sections/CommunityComingSoon').then((m) => ({ default: m.CommunityComingSoon })),
+);
+const Contact = lazy(() =>
+  import('@/components/sections/Contact').then((m) => ({ default: m.Contact })),
+);
+const PrivacyPolicy = lazy(() =>
+  import('@/components/sections/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })),
+);
+const Terms = lazy(() =>
+  import('@/components/sections/Terms').then((m) => ({ default: m.Terms })),
+);
+const LoginPage = lazy(() =>
+  import('@/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const ProfilePage = lazy(() =>
+  import('@/auth/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+);
+const UpdatePasswordPage = lazy(() =>
+  import('@/auth/UpdatePasswordPage').then((m) => ({ default: m.UpdatePasswordPage })),
+);
+const WelcomePage = lazy(() =>
+  import('@/auth/WelcomePage').then((m) => ({ default: m.WelcomePage })),
+);
+const AdminLamplightPage = lazy(() =>
+  import('@/admin/AdminLamplightPage').then((m) => ({ default: m.AdminLamplightPage })),
+);
+const PurposeStack = lazy(() =>
+  import('@/components/sections/PurposeStack').then((m) => ({ default: m.PurposeStack })),
+);
+const PurposeDetail = lazy(() =>
+  import('@/components/sections/PurposeDetail').then((m) => ({ default: m.PurposeDetail })),
+);
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'manual';
@@ -178,6 +214,15 @@ function App() {
           {dockMounted && <Header darkText={isDetailPage || isPurposePage} showNav={headerVisible} onNavTrigger={handleNavTrigger} />}
           {dockMounted && <MobileBottomDock onNavTrigger={handleNavTrigger} />}
 
+          <Suspense
+            fallback={
+              <div
+                className="min-h-screen"
+                aria-hidden="true"
+                style={{ background: 'var(--app-bg)' }}
+              />
+            }
+          >
           <Routes>
             <Route
               path="/"
@@ -224,6 +269,7 @@ function App() {
               }
             />
           </Routes>
+          </Suspense>
 
           {!hideFooter && <FinalReflectionCta />}
         </div>

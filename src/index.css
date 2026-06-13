@@ -1,5 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Shadows+Into+Light&family=Permanent+Marker&family=Sacramento&family=Homemade+Apple&family=Patrick+Hand&family=Indie+Flower&family=Just+Another+Hand&family=Architects+Daughter&family=Dancing+Script:wght@400;700&family=Pacifico&family=Amatic+SC:wght@400;700&family=Marck+Script&family=Cookie&display=swap');
+/* Marketing fonts (Cormorant Garamond + Outfit) are loaded via non-blocking
+   <link> tags in index.html — see <head>. They were previously pulled in here
+   via CSS @import, which serializes html → css → font-css → woff2 and blocks
+   render. The 16 handwriting Google fonts that used to load here were dead CSS
+   (no code references Caveat/Pacifico/Dancing Script/etc.) and were removed. */
 
 @font-face {
   font-family: 'The Softly Serif';
