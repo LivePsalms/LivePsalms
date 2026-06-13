@@ -31,16 +31,26 @@ export interface HeroNotepadLinkProps {
   onNavTrigger?: () => void;
   className?: string;
   style?: CSSProperties;
+  /** Visible link text. Defaults to the full phrase; mobile passes "Open your Notepad". */
+  label?: string;
+  /** When true, the arrow gently slides left↔right to invite a tap (mobile). */
+  animateArrow?: boolean;
 }
 
-export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadLinkProps) {
+export function HeroNotepadLink({
+  onNavTrigger,
+  className,
+  style,
+  label = LINK_LABEL,
+  animateArrow = false,
+}: HeroNotepadLinkProps) {
   const navigate = useNavigate();
 
   return (
     <TextStaggerHover
       as="a"
       href={NOTEPAD_NOTES_PATH}
-      aria-label={LINK_LABEL}
+      aria-label={label}
       data-testid="hero-notepad-link"
       className={[
         'psalms-nav-link hero-notepad-link',
@@ -63,12 +73,12 @@ export function HeroNotepadLink({ onNavTrigger, className, style }: HeroNotepadL
         navigate(NOTEPAD_NOTES_PATH);
       }}
     >
-      <TextStaggerHoverActive animation="blur">{LINK_LABEL}</TextStaggerHoverActive>
-      <TextStaggerHoverHidden animation="blur">{LINK_LABEL}</TextStaggerHoverHidden>
+      <TextStaggerHoverActive animation="blur">{label}</TextStaggerHoverActive>
+      <TextStaggerHoverHidden animation="blur">{label}</TextStaggerHoverHidden>
       <span
         data-testid="hero-notepad-arrow"
         aria-hidden="true"
-        className="hero-notepad-arrow inline-block"
+        className={`hero-notepad-arrow inline-block${animateArrow ? ' hero-notepad-arrow--bob' : ''}`}
       >
         →
       </span>

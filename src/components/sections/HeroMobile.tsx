@@ -8,8 +8,8 @@ import { WORDMARK_COLLAPSE } from './hero-choreography/wordmark-geometry';
 import { MOBILE_TIME_SCALE } from '@/lib/motion-scale';
 import { cn } from '@/lib/utils';
 import { useIntersectionStage } from '@/notepad-landing/hooks/use-intersection-stage';
-import { Link } from 'react-router-dom';
 import type { HeroProps } from './HeroDesktop';
+import { HeroNotepadLink } from './HeroNotepadLink';
 import { HeroMaskClipDef } from '@/components/ui-custom/HeroMaskClipDef';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -146,7 +146,7 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
     >
       {/* Hidden SVG defs for the mask clip-path */}
       <HeroMaskClipDef />
-      <div className="relative w-full flex flex-col items-center justify-center pt-20 pb-16 px-5 gap-10">
+      <div className="relative w-full flex flex-col items-center justify-center pt-10 pb-16 px-5 gap-10">
         <PsalmsWordmarkSvg ref={svgRef} className="w-[88vw] max-w-md" />
         <div
           ref={quoteRef}
@@ -189,21 +189,10 @@ export function HeroMobile({ introActive = false, onIntroComplete, onHandoff, on
             className="w-full h-full object-cover"
           />
         </div>
-        {/* Primary CTA into the journaling space — the app's pill button,
-            centered directly under the video mask. Fires the same loading-veil
-            nav-trigger as the rest of the hero before routing to the editor. */}
-        <Link
-          to="/notepad/notes"
-          aria-label="Open your Notepad"
-          data-testid="hero-mobile-notepad-cta"
-          className="two-path-cta two-path-cta-notepad"
-          // Trim the inherited .two-path-cta margin-top (36px) so the pill sits
-          // a little closer beneath the video mask.
-          style={{ marginTop: '0.5rem' }}
-          onClick={() => onNavTrigger?.()}
-        >
-          <span className="two-path-cta-label">Open your Notepad</span>
-        </Link>
+        {/* Primary CTA into the journaling space — the hero text link with arrow
+            (no pill), centered directly under the video mask. Fires the same
+            loading-veil nav-trigger as the rest of the hero. */}
+        <HeroNotepadLink onNavTrigger={onNavTrigger} label="Open your Notepad" animateArrow />
         {prefersReducedMotion ? (
           <section
             ref={bridgeRef}
