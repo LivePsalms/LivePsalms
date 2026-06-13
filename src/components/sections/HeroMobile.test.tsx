@@ -262,7 +262,7 @@ describe('HeroMobile content', () => {
     expect(video?.className).not.toContain('aspect-video');
   });
 
-  it('outer column wrapper uses the breathing-room spacing (pt-6 pb-16 px-5 gap-10)', async () => {
+  it('outer column wrapper uses the breathing-room spacing (pt-10 pb-16 px-5 gap-10)', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     setMatchMedia({ mobile: true });
     vi.resetModules();
@@ -272,9 +272,9 @@ describe('HeroMobile content', () => {
     // The column wrapper is the first child div inside the root.
     const column = root.querySelector<HTMLDivElement>(':scope > div.flex.flex-col');
     expect(column).not.toBeNull();
-    // Reduced top padding (pt-6, was pt-20) lifts the whole stack up so the
-    // Notepad pill clears the floating bottom dock; inter-element gap-10 is kept.
-    expect(column?.className).toContain('pt-6');
+    // Reduced top padding (pt-10, was pt-20) lifts the whole stack up so the
+    // Notepad link clears the floating bottom dock; inter-element gap-10 is kept.
+    expect(column?.className).toContain('pt-10');
     expect(column?.className).toContain('pb-16');
     expect(column?.className).toContain('px-5');
     expect(column?.className).toContain('gap-10');
@@ -308,17 +308,19 @@ describe('HeroMobile content', () => {
     expect(quote.className).not.toContain('px-8');
   });
 
-  it('renders the pill "Open your Notepad" CTA (two-path-cta-notepad) linking to /notepad/notes', async () => {
+  it('renders the "Open your Notepad" text link (arrow, no pill) linking to /notepad/notes', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
     setMatchMedia({ mobile: true });
     vi.resetModules();
     const { Hero } = await import('./Hero');
     const { getByTestId } = render(<Hero introActive={false} />);
-    const cta = getByTestId('hero-mobile-notepad-cta');
+    const cta = getByTestId('hero-notepad-link');
     expect(cta.tagName).toBe('A');
     expect(cta).toHaveAttribute('href', '/notepad/notes');
-    expect(cta.className).toContain('two-path-cta-notepad');
+    // No pill chrome — it's the hero text link with an arrow.
+    expect(cta.className).not.toContain('two-path-cta-notepad');
     expect(cta).toHaveTextContent('Open your Notepad');
+    expect(cta.querySelector('[data-testid="hero-notepad-arrow"]')).not.toBeNull();
   });
 
   it('quote container is sized to w-[70vw]', async () => {
